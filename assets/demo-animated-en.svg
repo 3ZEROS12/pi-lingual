@@ -1,0 +1,169 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 480" width="880" height="480">
+  <defs>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="115%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#000000" flood-opacity="0.5" />
+    </filter>
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2b3339" />
+      <stop offset="100%" stop-color="#232a2e" />
+    </linearGradient>
+    <style>
+      @keyframes blink {
+        0%, 45% { opacity: 1; }
+        50%, 100% { opacity: 0; }
+      }
+      @keyframes typeIn {
+        0% { clip-path: inset(0 100% 0 0); }
+        25%, 100% { clip-path: inset(0 0% 0 0); }
+      }
+      @keyframes hudReveal {
+        0%, 30% { opacity: 0; transform: translateY(-6px); }
+        36%, 92% { opacity: 1; transform: translateY(0); }
+        98%, 100% { opacity: 0; transform: translateY(-6px); }
+      }
+      @keyframes aiStream {
+        0%, 48% { opacity: 0; }
+        55%, 92% { opacity: 1; }
+        98%, 100% { opacity: 0; }
+      }
+      @keyframes statusChange {
+        0%, 25% { opacity: 1; }
+        28%, 34% { opacity: 0.3; }
+        36%, 100% { opacity: 1; }
+      }
+      .cursor-block {
+        animation: blink 0.9s infinite;
+      }
+      .typed-text {
+        animation: typeIn 8s infinite cubic-bezier(0.2, 0.8, 0.4, 1);
+      }
+      .hud-card {
+        animation: hudReveal 8s infinite cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      .ai-response {
+        animation: aiStream 8s infinite ease-out;
+      }
+      .status-badge {
+        animation: statusChange 8s infinite ease;
+      }
+    </style>
+  </defs>
+
+  <!-- Window Container with Shadow -->
+  <g filter="url(#shadow)">
+    <rect x="20" y="15" width="840" height="450" rx="12" fill="#1e2326" stroke="#343f44" stroke-width="1.2" />
+
+    <!-- Titlebar -->
+    <path d="M 20,27 A 12,12 0 0,1 32,15 L 848,15 A 12,12 0 0,1 860,27 L 860,52 L 20,52 Z" fill="url(#headerGrad)" stroke="#343f44" stroke-width="1" />
+    <line x1="20" y1="52" x2="860" y2="52" stroke="#2d353b" stroke-width="1" />
+
+    <!-- Window Controls (macOS Dots) -->
+    <circle cx="44" cy="33.5" r="5.5" fill="#e67e80" />
+    <circle cx="62" cy="33.5" r="5.5" fill="#dbbc7f" />
+    <circle cx="80" cy="33.5" r="5.5" fill="#a7c080" />
+
+    <!-- Window Title -->
+    <text x="440" y="38" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="500" fill="#859289" letter-spacing="0.3">
+      pi-lingual (v0.3.12) · Dual-Register Developer Companion for Pi
+    </text>
+  </g>
+
+  <!-- Terminal Content -->
+  <g font-family="'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, Consolas, monospace" font-size="12.5" xml:space="preserve">
+    <!-- Prompt Command Line -->
+    <text x="45" y="84">
+      <tspan fill="#a7c080" font-weight="bold">~/Workspace/projects</tspan>
+      <tspan fill="#7fbbb3"> ❯ </tspan>
+      <tspan fill="#d3c6aa">pi</tspan>
+    </text>
+
+    <!-- Pi Session Greeting -->
+    <text x="45" y="112" fill="#859289">
+      <tspan fill="#7fbbb3">●</tspan>
+      <tspan fill="#859289"> pi-coding-agent · mode: interactive · model: session-model</tspan>
+    </text>
+
+    <!-- User Input Line with Animated Typing -->
+    <g>
+      <text x="45" y="146">
+        <tspan fill="#7fbbb3" font-weight="bold">&gt; </tspan>
+        <tspan fill="#e5c07b" font-weight="bold" class="typed-text">メモリリークの可能性があるので、クリーンアップ処理を追加してください</tspan>
+      </text>
+    </g>
+
+    <!-- Animated Trifecta Left-Rail Tree Branch (HUD Card) -->
+    <g class="hud-card">
+      <!-- Source Text Anchor -->
+      <text x="45" y="180">
+        <tspan fill="#7a8478">  · </tspan>
+        <tspan fill="#859289">[Source] </tspan>
+        <tspan fill="#d3c6aa">メモリリークの可能性があるので、クリーンアップ処理を追加してください</tspan>
+      </text>
+
+      <!-- Spoken Register -->
+      <text x="45" y="206">
+        <tspan fill="#7a8478">  ┌ </tspan>
+        <tspan fill="#a7c080" font-weight="bold">[Spoken]   </tspan>
+        <tspan fill="#e5c07b">There might be a memory leak here, so let's make sure we </tspan>
+        <tspan fill="#e5c07b" text-decoration="underline">toss in</tspan>
+        <tspan fill="#e5c07b"> some cleanup logic.</tspan>
+      </text>
+      <text x="45" y="226">
+        <tspan fill="#7a8478">  │            </tspan>
+        <tspan fill="#859289">(Casual team huddle · conversational phrasal verbs)</tspan>
+      </text>
+
+      <!-- Written Register -->
+      <text x="45" y="254">
+        <tspan fill="#7a8478">  ├ </tspan>
+        <tspan fill="#7fbbb3" font-weight="bold">[Written]  </tspan>
+        <tspan fill="#83a598">To prevent potential memory leaks, please </tspan>
+        <tspan fill="#83a598" text-decoration="underline">incorporate</tspan>
+        <tspan fill="#83a598"> explicit cleanup and </tspan>
+        <tspan fill="#83a598" text-decoration="underline">resource disposal routines</tspan>
+        <tspan fill="#83a598">.</tspan>
+      </text>
+      <text x="45" y="274">
+        <tspan fill="#7a8478">  │            </tspan>
+        <tspan fill="#859289">(Architecture-grade specification · formal RFC style)</tspan>
+      </text>
+
+      <!-- Vocab Collocations Stream -->
+      <text x="45" y="302">
+        <tspan fill="#7a8478">  └ </tspan>
+        <tspan fill="#dbbc7f" font-weight="bold">[Vocab]    </tspan>
+        <tspan fill="#d3c6aa">toss in </tspan><tspan fill="#7a8478">(casual addition) </tspan>
+        <tspan fill="#859289">· </tspan>
+        <tspan fill="#d3c6aa">cleanup logic </tspan><tspan fill="#7a8478">(teardown) </tspan>
+        <tspan fill="#859289">· </tspan>
+        <tspan fill="#d3c6aa">resource disposal routines </tspan><tspan fill="#7a8478">(lifecycle cleanup)</tspan>
+      </text>
+    </g>
+
+    <!-- AI Assistant Response Stream (Animated Fade In) -->
+    <g class="ai-response">
+      <line x1="45" y1="324" x2="835" y2="324" stroke="#2d353b" stroke-width="1" stroke-dasharray="4,4" />
+      <text x="45" y="348">
+        <tspan fill="#7fbbb3" font-weight="bold">AI</tspan>
+        <tspan fill="#859289"> ❯ </tspan>
+        <tspan fill="#d3c6aa">Understood. I will add explicit cleanup and resource disposal routines</tspan>
+      </text>
+      <text x="45" y="370" fill="#d3c6aa">
+        to the lifecycle teardown hook, ensuring all stream handles and timers unbind properly.
+      </text>
+    </g>
+
+    <!-- Status Bar / Footer -->
+    <rect x="21" y="425" width="838" height="38" rx="0" fill="#181b1d" />
+    <line x1="20" y1="425" x2="860" y2="425" stroke="#2d353b" stroke-width="1" />
+
+    <text x="40" y="449" font-size="11.5">
+      <tspan fill="#859289">[session-model]  [thinking: low]  [context: 12.4k / 4.2%]</tspan>
+    </text>
+
+    <text x="840" y="449" text-anchor="end" font-size="11.5" class="status-badge">
+      <tspan fill="#a7c080" font-weight="bold">ja ⇄ en</tspan>
+      <tspan fill="#7a8478"> (type /lingual to cycle)</tspan>
+    </text>
+  </g>
+</svg>

@@ -64,7 +64,7 @@
 
     <!-- Window Title -->
     <text x="440" y="38" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="500" fill="#859289" letter-spacing="0.3">
-      pi-lingual (v0.3.3) · Dual-Register Developer Companion for Pi
+      pi-lingual (v0.3.12) · Dual-Register Developer Companion for Pi
     </text>
   </g>
 
@@ -167,7 +167,7 @@
 
     <text x="840" y="449" text-anchor="end" font-size="11.5" class="status-badge">
       <tspan fill="#a7c080" font-weight="bold">zh ⇄ en</tspan>
-      <tspan fill="#7a8478"> (按 /2 切换模式)</tspan>
+      <tspan fill="#7a8478"> (输入 /lingual 切换模式)</tspan>
     </text>
   </g>
 </svg>

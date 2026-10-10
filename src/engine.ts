@@ -420,7 +420,7 @@ export async function translatePrompt(
     const vocabLabel = labels.vocabLabel || "Vocab";
     const sourceLabel = labels.sourceLabel || "Source";
 
-    const effectiveSourceText = (isLongInput && payload.summary && payload.summary.trim())
+    const effectiveSourceText = (trimmed.length > 80 && isLongInput && payload.summary && payload.summary.trim())
       ? payload.summary.trim()
       : trimmed;
 

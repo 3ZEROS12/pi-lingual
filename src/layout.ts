@@ -690,9 +690,14 @@ export function renderCardLayout(
       if (pureLines.length <= maxLines) {
         lines = pureLines;
       } else {
-        // 约束 Tier 4: 按可用行数预算严格裁剪
+        // 约束 Tier 4: 智能非对称行预算分配（优先保障核心译文完整度，压缩词汇至单行，绝不浪费行预算！）
         const availForBranches = Math.max(1, maxLines - clampedSourceLines.length);
-        const perBranchBudget = Math.max(1, Math.floor(availForBranches / Math.max(1, numBranches)));
+        const vocabCount = contentBranches.filter((b) => b.role === "vocab").length;
+        const transCount = Math.max(1, numBranches - vocabCount);
+        const availForTrans = Math.max(1, availForBranches - vocabCount);
+
+        let remainingBudget = availForBranches;
+        let transHandled = 0;
 
         const clampedBranchLines: string[] = [...clampedSourceLines];
         for (let i = 0; i < numBranches; i++) {
@@ -717,12 +722,26 @@ export function renderCardLayout(
             maxCols
           );
 
-          if (branchRendered.length <= perBranchBudget) {
-            clampedBranchLines.push(...branchRendered);
+          let branchBudget: number;
+          if (isVocab) {
+            branchBudget = Math.max(1, Math.min(remainingBudget, 1));
           } else {
-            const sliced = branchRendered.slice(0, perBranchBudget);
+            const transLeft = Math.max(1, transCount - transHandled);
+            const reservedForRest = (transLeft - 1) + vocabCount;
+            const maxPossible = Math.max(1, remainingBudget - reservedForRest);
+            const fairShare = Math.ceil(availForTrans / transCount);
+            branchBudget = Math.min(maxPossible, Math.max(fairShare, Math.min(branchRendered.length, maxPossible)));
+            transHandled++;
+          }
+
+          if (branchRendered.length <= branchBudget) {
+            clampedBranchLines.push(...branchRendered);
+            remainingBudget -= branchRendered.length;
+          } else {
+            const sliced = branchRendered.slice(0, branchBudget);
             sliced[sliced.length - 1] = truncateVisual(sliced[sliced.length - 1] + "...", maxCols);
             clampedBranchLines.push(...sliced);
+            remainingBudget -= sliced.length;
           }
         }
         lines = clampedBranchLines.slice(0, maxLines);

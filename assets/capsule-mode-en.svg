@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 380" width="880" height="380">
+  <defs>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="115%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#000000" flood-opacity="0.5" />
+    </filter>
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2b3339" />
+      <stop offset="100%" stop-color="#232a2e" />
+    </linearGradient>
+  </defs>
+
+  <!-- Container -->
+  <g filter="url(#shadow)">
+    <rect x="20" y="15" width="840" height="345" rx="12" fill="#1e2326" stroke="#343f44" stroke-width="1.2" />
+
+    <!-- Titlebar -->
+    <path d="M 20,27 A 12,12 0 0,1 32,15 L 848,15 A 12,12 0 0,1 860,27 L 860,52 L 20,52 Z" fill="url(#headerGrad)" stroke="#343f44" stroke-width="1" />
+    <line x1="20" y1="52" x2="860" y2="52" stroke="#2d353b" stroke-width="1" />
+
+    <!-- Window Controls -->
+    <circle cx="44" cy="33.5" r="5.5" fill="#e67e80" />
+    <circle cx="62" cy="33.5" r="5.5" fill="#dbbc7f" />
+    <circle cx="80" cy="33.5" r="5.5" fill="#a7c080" />
+
+    <!-- Window Title -->
+    <text x="440" y="38" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="500" fill="#859289" letter-spacing="0.3">
+      pi-lingual (v0.3.12) · Layout Morphing (Full Tree Branch vs Single-Line Capsule Mode)
+    </text>
+  </g>
+
+  <!-- Terminal Content -->
+  <g font-family="'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, Consolas, monospace" font-size="12" xml:space="preserve">
+    
+    <!-- Section 1: Full Tree Layout -->
+    <text x="45" y="82">
+      <tspan fill="#7fbbb3" font-weight="bold"># Default Tree HUD</tspan>
+      <tspan fill="#859289"> (Comprehensive dual-register nuance and collocation learning · 5~6 lines)</tspan>
+    </text>
+
+    <text x="45" y="106">
+      <tspan fill="#7a8478">  · </tspan><tspan fill="#859289">[Source] </tspan><tspan fill="#d3c6aa">メモリリークの可能性があるので、クリーンアップ処理を追加してください</tspan>
+    </text>
+    <text x="45" y="126">
+      <tspan fill="#7a8478">  ┌ </tspan><tspan fill="#a7c080" font-weight="bold">[Spoken]   </tspan><tspan fill="#e5c07b">There might be a memory leak here, so let's make sure we toss in some cleanup logic.</tspan>
+    </text>
+    <text x="45" y="144">
+      <tspan fill="#7a8478">  │            </tspan><tspan fill="#859289">(Casual team huddle · conversational phrasal verbs)</tspan>
+    </text>
+    <text x="45" y="164">
+      <tspan fill="#7a8478">  ├ </tspan><tspan fill="#7fbbb3" font-weight="bold">[Written]  </tspan><tspan fill="#83a598">To prevent potential memory leaks, please incorporate explicit cleanup and resource disposal routines.</tspan>
+    </text>
+    <text x="45" y="182">
+      <tspan fill="#7a8478">  │            </tspan><tspan fill="#859289">(Architecture-grade specification · formal RFC style)</tspan>
+    </text>
+    <text x="45" y="202">
+      <tspan fill="#7a8478">  └ </tspan><tspan fill="#dbbc7f" font-weight="bold">[Vocab]    </tspan><tspan fill="#d3c6aa">toss in (casual addition) · cleanup logic (teardown) · resource disposal routines</tspan>
+    </text>
+
+    <!-- Transition Divider -->
+    <line x1="45" y1="226" x2="835" y2="226" stroke="#343f44" stroke-width="1" stroke-dasharray="4,4" />
+
+    <text x="440" y="246" text-anchor="middle" fill="#dbbc7f" font-size="11.5" font-weight="bold">
+      ▼ Toggle via /lingual compact or dynamically enabled in narrow tiling split-panes (rows &lt; 22)
+    </text>
+
+    <!-- Section 2: Capsule Mode -->
+    <text x="45" y="278">
+      <tspan fill="#a7c080" font-weight="bold"># Capsule Mode</tspan>
+      <tspan fill="#859289"> (Ultra-dense single-line layout · Strictly 1 line · Zero distraction for 3~4 pane tiling)</tspan>
+    </text>
+
+    <!-- Single line capsule box -->
+    <rect x="45" y="294" width="790" height="30" rx="4" fill="#232a2e" stroke="#343f44" stroke-width="1" />
+    <text x="58" y="314">
+      <tspan fill="#7fbbb3" font-weight="bold">ja ⇄ en </tspan>
+      <tspan fill="#859289">· </tspan>
+      <tspan fill="#a7c080" font-weight="bold">[Spk] </tspan>
+      <tspan fill="#e5c07b">There might be a memory leak here, so let's make sure we toss in... </tspan>
+      <tspan fill="#7a8478">│ </tspan>
+      <tspan fill="#7fbbb3" font-weight="bold">[Wrt] </tspan>
+      <tspan fill="#83a598">To prevent potential memory leaks, please incorporate explicit cleanup...</tspan>
+    </text>
+
+  </g>
+</svg>

@@ -371,9 +371,9 @@ ${jsonProps.join(",\n")}
     const condensationDirective2 = isLongInput ? `
 
 [LONG INPUT CONDENSATION DIRECTIVE]:
-The user's input text is long (>90 chars). DO NOT translate verbatim line by line with wordy padding.
-First, distill and synthesize the core intent/question into a concise headline ("summary") in native ${spec.name} (strictly under 20 words).
-Then, render the expressions concisely in ${targetName} so the translation fits cleanly without information bloat.` : "";
+The user's input text has multiple clauses or sentences.
+1. You MUST preserve and translate EVERY clause and question from start to finish \u2014 NEVER drop the second half or final question of the user's message!
+2. Keep the phrasing tight and high-density (under 20 words) so the complete meaning of all sentences fits cleanly on 1-2 lines without mid-sentence truncation.` : "";
     const contextDirective2 = context && context.trim() ? `
 
 [CONVERSATION & THREAD CONTEXT]:
@@ -413,9 +413,9 @@ Output: ${JSON.stringify({
   const condensationDirective = isLongInput ? `
 
 [LONG INPUT CONDENSATION DIRECTIVE]:
-The user's input text is long (>90 chars). DO NOT translate verbatim line by line with wordy padding.
-First, distill and synthesize the core architectural/technical intent or question into a concise headline ("summary") in native ${spec.name} (strictly under 20 words).
-Then, translate that distilled intent into concise, punchy spoken and written expressions in ${targetName} (strictly under 25 words each) so that the translation fits cleanly on a single card without information bloat.` : "";
+The user's input text has multiple clauses or sentences.
+1. You MUST preserve and translate EVERY clause and question from start to finish (both in "summary" and in "spoken"/"written") \u2014 NEVER omit the second half or final question of the user's message!
+2. Express all points tightly and concisely (under 22 words each) so the complete meaning fits cleanly within 2 lines without truncation.` : "";
   const contextDirective = context && context.trim() ? `
 
 [CONVERSATION & THREAD CONTEXT]:

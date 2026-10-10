@@ -24,7 +24,7 @@
 
     <!-- Window Title -->
     <text x="440" y="38" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="500" fill="#859289" letter-spacing="0.3">
-      pi-lingual · Layout Morphing (Full Tree Branch vs Single-Line Capsule Mode)
+      pi-lingual (v0.3.12) · Layout Morphing (Full Tree Branch vs Single-Line Capsule Mode)
     </text>
   </g>
 
@@ -60,7 +60,7 @@
     <line x1="45" y1="226" x2="835" y2="226" stroke="#343f44" stroke-width="1" stroke-dasharray="4,4" />
 
     <text x="440" y="246" text-anchor="middle" fill="#dbbc7f" font-size="11.5" font-weight="bold">
-      ▼ Toggle via /2-compact or dynamically enabled in narrow tiling split-panes (rows &lt; 22)
+      ▼ 输入 /lingual compact 随时切换，或在窄分屏终端 (rows &lt; 22) 下自适应开启
     </text>
 
     <!-- Section 2: Capsule Mode -->
