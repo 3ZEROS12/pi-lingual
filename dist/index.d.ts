@@ -291,19 +291,19 @@ declare function generatePromptCandidates(text: string, userConfig?: Partial<Lin
  * (unless the user explicitly mentions `lingual` or `伴学` to re-configure it), guaranteeing 0.00 bytes of LLM context overhead.
  */
 declare function stripLingualContextWhenOff(systemPrompt: string, lastUserText?: string): string;
-declare const CURRENT_FEATURE_BANNER_VERSION = "0.5.1";
+declare const CURRENT_FEATURE_BANNER_VERSION = "0.5.2";
 /**
  * 4-Stage Multi-Probe Native Language Resolution for the In-Pi Release Banner:
  * 1. Explicit `sourceLang` persisted in `~/.pi/agent/lingual.json` (highest priority).
  * 2. Recent user message script inspection from `ctx.sessionManager.getEntries()` or `~/.config/rpiv-i18n/config.json`.
- * 3. Host OS & shell locale (`Intl.DateTimeFormat().resolvedOptions().locale`, `LANG`, `LC_ALL`).
+ * 3. Host OS & shell locale (`LC_ALL`, `LANGUAGE`, `LANG`, `Intl.DateTimeFormat().resolvedOptions().locale`).
  * 4. Safe fallback to universal English (`"en"`).
  */
 declare function resolveReleaseBannerLang(explicitSourceLang?: string, sessionEntries?: any[]): string;
 /**
- * Render a one-time plain, grounded, emoji-free "What's New" feature card above the editor (`aboveEditor`).
- * Tone follows `notes/` style: candid, unhurried, focused on human agency & weight balance,
- * with concrete operational mechanics in parentheses.
+ * Render a one-time plain, grounded, emoji-free "What's New in v0.5.2" card above the editor (`aboveEditor`).
+ * Covers all 9 supported languages (`zh`, `tw`, `ja`, `ko`, `es`, `fr`, `de`, `ru`, `en`).
+ * Every line is strictly bounded within 78 visual columns so zero text is ever truncated on 80-col terminals.
  */
 declare function formatReleaseBannerLines(sourceLang?: string, maxCols?: number, fg?: (color: string, text: string) => string): string[];
 

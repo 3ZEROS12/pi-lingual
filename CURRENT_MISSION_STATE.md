@@ -151,12 +151,12 @@
 🧪 Fleet Physical Pre-Flight: Passed: 1 | Failed: 0
 ```
 
-## 🕒 Last Session Snapshot (2026/10/12 01:09:33)
-- **Session ID**: `01a12b48-d4f0-71b4-9a14-3c7a0f12ee0f`
-- **User Intent**: 不要用表情包，然后大版本可以变一下了。到了0.5了。然后稍微详细一点，具体的哪些操作实现了这些，至少要让用户明白和信服，放在括号里，我看看效果。
+## 🕒 Last Session Snapshot (2026/10/12 01:52:31)
+- **Session ID**: `01a12c16-da72-76ca-bbab-4e49cdb80431`
+- **User Intent**: You are Subagent Auditor #1 (Upgrade Lifecycle Verifier). Inspect D:/Workspace/projects/pi-lingual/.tmp/task.mjs and src
 - **Last Assistant State**:
-> 已在 **`pi-lingual v0.4.5`（Commit `61a6db6` · `95/95` 单测全绿 · 已上线 npm 与 GitHub）** 中把母语识别与全语种兜底逻辑彻底锁死：
+> - **Command**: `node D:/Workspace/projects/pi-lingual/.tmp/task.mjs`
+> - **Exit Status**: `0 (Success)`
+> - **Simulation Coverage**: Clean npm package pull & extraction of `pi-lingual@0.3.16`, configuration persistence across 10 distinct user upgrade scenarios (explicit language switching, OS fallback, clean upgrades), and verification of `v0.5.2` session lifecycle.
 > ---
-> ✦ [pi-lingual v0.4 更新速览] 提示词优化引擎与四态架构已就绪 (发消息后自动收起)
-> ┌ [⚡english重写] 升级为「提示词规范化重写」：理顺杂乱口语，支持切中/英输出与叠加规范
-> ├ [✦select多选]  新增「多风格候选填入」：一次生成 极简/规范/深度 3 个候选挑一个发送
+> | Lang Code | (1) 1st `session_start` Banner | Exact Lines | 0.5.x Apology Included | (2) Input Dismissal | Persisted `last

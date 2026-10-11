@@ -429,17 +429,25 @@ test("v0.4.1 Mode 4 Active 0-Token Context Shield in off mode & /lingual select 
   // Teardown back to original
   await registeredCommands["lingual"].handler("original", mockCtx);
 
-  // Verify localized What's New release banner above editor (zh, ja, en - 9 lines, zero emojis)
-  const zhBanner = formatReleaseBannerLines("zh", 130);
-  assert.equal(zhBanner.length, 9);
-  assert.ok(zhBanner.some((l) => l.includes("english 重写模式") && l.includes("理顺为清晰的工程指令")));
+  // Verify localized What's New release banner above editor (all 9 languages, 8 lines, zero emojis, apology included)
+  const zhBanner = formatReleaseBannerLines("zh", 80);
+  assert.equal(zhBanner.length, 8);
+  assert.ok(zhBanner.some((l) => l.includes("抱歉连发了几个 0.5 小版本")));
+  assert.ok(zhBanner.some((l) => l.includes("english 重写模式")));
   assert.ok(zhBanner.some((l) => l.includes("select 候选模式")));
-  assert.ok(zhBanner.some((l) => l.includes("off 模式彻底净空")));
-  assert.ok(zhBanner.some((l) => l.includes("0 Token")));
+  assert.ok(zhBanner.some((l) => l.includes("off 模式彻底净空") && l.includes("0 Token")));
+  assert.ok(zhBanner.every((l) => !l.endsWith("...")), "No line should be truncated on an 80-col terminal");
 
-  const enBanner = formatReleaseBannerLines("en", 150);
-  assert.equal(enBanner.length, 9);
-  assert.ok(enBanner.some((l) => l.includes("english Mode Upgraded")));
-  assert.ok(enBanner.some((l) => l.includes("0-token overhead")));
+  const enBanner = formatReleaseBannerLines("en", 80);
+  assert.equal(enBanner.length, 8);
+  assert.ok(enBanner.some((l) => l.includes("Sorry for the rapid 0.5.x patches")));
+  assert.ok(enBanner.some((l) => l.includes("english Mode")));
+  assert.ok(enBanner.every((l) => !l.endsWith("...")), "No English line should be truncated on an 80-col terminal");
+
+  for (const lang of ["tw", "ja", "ko", "es", "fr", "de", "ru"]) {
+    const lines = formatReleaseBannerLines(lang, 80);
+    assert.equal(lines.length, 8, `Banner for ${lang} must have 8 lines`);
+    assert.ok(lines.every((l) => !l.endsWith("...")), `Banner for ${lang} must not truncate on 80-col terminal`);
+  }
 });
 

@@ -79,7 +79,7 @@ function isTestEnvironment(): boolean {
     process.env.NODE_ENV === "test" ||
     process.env.NODE_TEST_CONTEXT !== undefined ||
     process.execArgv.some((a) => a.startsWith("--test") || a === "--test") ||
-    process.argv.some((a) => a.includes(".test.") || a.includes("test")) ||
+    process.argv.some((a) => a === "--test" || a.startsWith("--test=") || /\.(?:test|spec)\.[cm]?[jt]s$/i.test(a)) ||
     process.env.npm_lifecycle_event === "test"
   );
 }
