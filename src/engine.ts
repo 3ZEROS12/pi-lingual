@@ -787,15 +787,36 @@ export function stripLingualContextWhenOff(systemPrompt: string, lastUserText = 
 export const CURRENT_FEATURE_BANNER_VERSION = "0.4";
 
 /**
+ * Resolve the exact language for the release banner:
+ * 1. If the user explicitly chose a native language (`diskConfig.sourceLang` via `/lang`), use it 100% deterministically.
+ * 2. Otherwise inspect OS locale (`Intl.DateTimeFormat().resolvedOptions().locale`); if unrecognized, fall back to universal English (`"en"`).
+ */
+export function resolveReleaseBannerLang(explicitSourceLang?: string): string {
+  const supported = new Set(["zh", "tw", "ja", "ko", "es", "fr", "de", "ru", "en"]);
+  if (explicitSourceLang && explicitSourceLang.trim()) {
+    const clean = explicitSourceLang.trim().toLowerCase().split(/[-_]/)[0];
+    if (supported.has(clean)) return clean;
+    return "en";
+  }
+  try {
+    const sysLocale = (Intl.DateTimeFormat().resolvedOptions().locale || process.env.LANG || "en").toLowerCase();
+    if (sysLocale.startsWith("zh-tw") || sysLocale.startsWith("zh-hk")) return "tw";
+    const prefix = sysLocale.split(/[-_.]/)[0];
+    if (supported.has(prefix)) return prefix;
+  } catch {}
+  return "en";
+}
+
+/**
  * Render a one-time localized "What's New" feature card above the editor (`aboveEditor`)
  * when the user upgrades to the v0.4 4-Mode Prompt Optimizer architecture.
  */
 export function formatReleaseBannerLines(
-  sourceLang = "zh",
+  sourceLang = "en",
   maxCols = 88,
   fg: (color: string, text: string) => string = (_c, t) => t
 ): string[] {
-  const norm = (sourceLang || "zh").toLowerCase().split("-")[0];
+  const norm = (sourceLang || "en").toLowerCase().split("-")[0];
 
   const copyByLang: Record<string, { title: string; items: [string, string, string, string] }> = {
     zh: {
@@ -832,6 +853,42 @@ export function formatReleaseBannerLines(
         "├ [✦select후보선택] 신규 모드: 간결/구조화/심층 3가지 스타일 후보 중 하나를 골라 전송",
         "├ [🤖자유도향상]   에이전트에게 자연어로 말해 학습 슬롯과 프롬프트 스타일을 자유롭게 커스텀",
         "└ [🛡️off부담제로]  off 모드 시 시스템 프롬프트에서 스킬 블록까지 제거하여 0 토큰 달성",
+      ],
+    },
+    es: {
+      title: "✦ [Novedades en pi-lingual v0.4] Optimizador de Prompts y 4 Modos (se oculta al enviar)",
+      items: [
+        "┌ [⚡english] Reescritura directa de prompts: estructura ideas confusas (EN/Nativo + reglas)",
+        "├ [✦select]  Nuevo selector N-opciones: genera candidatos Conciso / Estructurado / Profundo",
+        "├ [🤖Libertad] Pide a tu Agente en lenguaje natural personalizar ranuras o estilos de prompt",
+        "└ [🛡️off 0-Tok] El modo `off` elimina activamente su contexto del sistema (0 bytes de sobrecarga)",
+      ],
+    },
+    fr: {
+      title: "✦ [Nouveautés pi-lingual v0.4] Optimiseur de Prompts & 4 Modes (masqué dès l'envoi)",
+      items: [
+        "┌ [⚡english] Réécriture directe : structure vos idées brouillonnes (EN/Langue natale + règles)",
+        "├ [✦select]  Nouveau sélecteur à N choix : génère 3 candidats (Concis / Structuré / Approfondi)",
+        "├ [🤖Liberté] Demandez à votre Agent en langage naturel de personnaliser vos styles et emplacements",
+        "└ [🛡️off 0-Tok] Le mode `off` retire activement son contexte système (0 octet de charge LLM)",
+      ],
+    },
+    de: {
+      title: "✦ [Neu in pi-lingual v0.4] Prompt-Optimierer & 4-Modus-Architektur (blendet bei Eingabe aus)",
+      items: [
+        "┌ [⚡english] Direkte Prompt-Optimierung: strukturiert unklare Eingaben (EN/Muttersprache + Regeln)",
+        "├ [✦select]  Neuer N-Auswahl-Modus: generiert 3 Kandidaten (Prägnant / Strukturiert / Tiefgründig)",
+        "├ [🤖Freiheit] Passen Sie Lern-Slots und Prompt-Stile einfach per natürlicher Sprache beim Agenten an",
+        "└ [🛡️off 0-Tok] Der `off`-Modus entfernt aktiv seinen Skill-Kontext für 0 Byte System-Prompt-Last",
+      ],
+    },
+    ru: {
+      title: "✦ [Что нового в pi-lingual v0.4] Оптимизатор промптов и 4 режима (скроется при вводе)",
+      items: [
+        "┌ [⚡english] Прямая оптимизация промптов: структурирует черновой ввод (EN/Родной язык + правила)",
+        "├ [✦select]  Новый режим выбора из N вариантов: Краткий / Структурный / Глубокий промпт",
+        "├ [🤖Свобода] Настраивайте слоты и стили промптов обычным текстом через вашего Агента",
+        "└ [🛡️off 0-Tok] Режим `off` полностью удаляет контекст навыка из системного промпта (0 токенов)",
       ],
     },
     en: {

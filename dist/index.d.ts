@@ -293,9 +293,15 @@ declare function generatePromptCandidates(text: string, userConfig?: Partial<Lin
 declare function stripLingualContextWhenOff(systemPrompt: string, lastUserText?: string): string;
 declare const CURRENT_FEATURE_BANNER_VERSION = "0.4";
 /**
+ * Resolve the exact language for the release banner:
+ * 1. If the user explicitly chose a native language (`diskConfig.sourceLang` via `/lang`), use it 100% deterministically.
+ * 2. Otherwise inspect OS locale (`Intl.DateTimeFormat().resolvedOptions().locale`); if unrecognized, fall back to universal English (`"en"`).
+ */
+declare function resolveReleaseBannerLang(explicitSourceLang?: string): string;
+/**
  * Render a one-time localized "What's New" feature card above the editor (`aboveEditor`)
  * when the user upgrades to the v0.4 4-Mode Prompt Optimizer architecture.
  */
 declare function formatReleaseBannerLines(sourceLang?: string, maxCols?: number, fg?: (color: string, text: string) => string): string[];
 
-export { CANNOT_START_LINE_CHARS, CURRENT_FEATURE_BANNER_VERSION, DEFAULT_CONFIG, LINGUAL_SYSTEM_PROMPT, LINGUA_SYSTEM_PROMPT, LingualConfig, LingualI18nLabels, LingualResult, LingualSessionController, MAX_TRANSLATION_CHARS, MAX_TRANSLATION_LINES, type PaginationSnapshot, PromptCandidate, type SessionRequestToken, SlotConfig, extractVocabPhrases, formatCapsuleLine, formatNativeReplyGuardHint, formatReleaseBannerLines, formatSubRail, formatTerminalAnnotation, formatTreeBranch, formatVocabItemsAtomic, generatePromptCandidates, getEffectiveMaxCols, getVisualWidth, invalidateUserConfigCache, isDynamicLongInput, isNonEnglish, loadUserConfig, loadUserLingualConfig, renderCardLayout, rewritePromptDirect, shouldInjectNativeReplyGuard, shouldTriggerTranslation, splitSemanticChunks, spotlightPhrases, stripLinguaAnnotation, stripLingualAnnotation, stripLingualContextWhenOff, translatePrompt, truncateVisual, wrapVisualText };
+export { CANNOT_START_LINE_CHARS, CURRENT_FEATURE_BANNER_VERSION, DEFAULT_CONFIG, LINGUAL_SYSTEM_PROMPT, LINGUA_SYSTEM_PROMPT, LingualConfig, LingualI18nLabels, LingualResult, LingualSessionController, MAX_TRANSLATION_CHARS, MAX_TRANSLATION_LINES, type PaginationSnapshot, PromptCandidate, type SessionRequestToken, SlotConfig, extractVocabPhrases, formatCapsuleLine, formatNativeReplyGuardHint, formatReleaseBannerLines, formatSubRail, formatTerminalAnnotation, formatTreeBranch, formatVocabItemsAtomic, generatePromptCandidates, getEffectiveMaxCols, getVisualWidth, invalidateUserConfigCache, isDynamicLongInput, isNonEnglish, loadUserConfig, loadUserLingualConfig, renderCardLayout, resolveReleaseBannerLang, rewritePromptDirect, shouldInjectNativeReplyGuard, shouldTriggerTranslation, splitSemanticChunks, spotlightPhrases, stripLinguaAnnotation, stripLingualAnnotation, stripLingualContextWhenOff, translatePrompt, truncateVisual, wrapVisualText };

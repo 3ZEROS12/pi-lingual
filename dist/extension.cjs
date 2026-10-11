@@ -2939,8 +2939,24 @@ function stripLingualContextWhenOff(systemPrompt, lastUserText = "") {
   );
 }
 var CURRENT_FEATURE_BANNER_VERSION = "0.4";
-function formatReleaseBannerLines(sourceLang = "zh", maxCols = 88, fg = (_c, t) => t) {
-  const norm = (sourceLang || "zh").toLowerCase().split("-")[0];
+function resolveReleaseBannerLang(explicitSourceLang) {
+  const supported = /* @__PURE__ */ new Set(["zh", "tw", "ja", "ko", "es", "fr", "de", "ru", "en"]);
+  if (explicitSourceLang && explicitSourceLang.trim()) {
+    const clean = explicitSourceLang.trim().toLowerCase().split(/[-_]/)[0];
+    if (supported.has(clean)) return clean;
+    return "en";
+  }
+  try {
+    const sysLocale = (Intl.DateTimeFormat().resolvedOptions().locale || process.env.LANG || "en").toLowerCase();
+    if (sysLocale.startsWith("zh-tw") || sysLocale.startsWith("zh-hk")) return "tw";
+    const prefix = sysLocale.split(/[-_.]/)[0];
+    if (supported.has(prefix)) return prefix;
+  } catch {
+  }
+  return "en";
+}
+function formatReleaseBannerLines(sourceLang = "en", maxCols = 88, fg = (_c, t) => t) {
+  const norm = (sourceLang || "en").toLowerCase().split("-")[0];
   const copyByLang = {
     zh: {
       title: "\u2726 [pi-lingual v0.4 \u66F4\u65B0\u901F\u89C8] \u63D0\u793A\u8BCD\u4F18\u5316\u5F15\u64CE\u4E0E\u56DB\u6001\u67B6\u6784\u5DF2\u5C31\u7EEA (\u53D1\u6D88\u606F\u540E\u81EA\u52A8\u6536\u8D77)",
@@ -2976,6 +2992,42 @@ function formatReleaseBannerLines(sourceLang = "zh", maxCols = 88, fg = (_c, t) 
         "\u251C [\u2726select\uD6C4\uBCF4\uC120\uD0DD] \uC2E0\uADDC \uBAA8\uB4DC: \uAC04\uACB0/\uAD6C\uC870\uD654/\uC2EC\uCE35 3\uAC00\uC9C0 \uC2A4\uD0C0\uC77C \uD6C4\uBCF4 \uC911 \uD558\uB098\uB97C \uACE8\uB77C \uC804\uC1A1",
         "\u251C [\u{1F916}\uC790\uC720\uB3C4\uD5A5\uC0C1]   \uC5D0\uC774\uC804\uD2B8\uC5D0\uAC8C \uC790\uC5F0\uC5B4\uB85C \uB9D0\uD574 \uD559\uC2B5 \uC2AC\uB86F\uACFC \uD504\uB86C\uD504\uD2B8 \uC2A4\uD0C0\uC77C\uC744 \uC790\uC720\uB86D\uAC8C \uCEE4\uC2A4\uD140",
         "\u2514 [\u{1F6E1}\uFE0Foff\uBD80\uB2F4\uC81C\uB85C]  off \uBAA8\uB4DC \uC2DC \uC2DC\uC2A4\uD15C \uD504\uB86C\uD504\uD2B8\uC5D0\uC11C \uC2A4\uD0AC \uBE14\uB85D\uAE4C\uC9C0 \uC81C\uAC70\uD558\uC5EC 0 \uD1A0\uD070 \uB2EC\uC131"
+      ]
+    },
+    es: {
+      title: "\u2726 [Novedades en pi-lingual v0.4] Optimizador de Prompts y 4 Modos (se oculta al enviar)",
+      items: [
+        "\u250C [\u26A1english] Reescritura directa de prompts: estructura ideas confusas (EN/Nativo + reglas)",
+        "\u251C [\u2726select]  Nuevo selector N-opciones: genera candidatos Conciso / Estructurado / Profundo",
+        "\u251C [\u{1F916}Libertad] Pide a tu Agente en lenguaje natural personalizar ranuras o estilos de prompt",
+        "\u2514 [\u{1F6E1}\uFE0Foff 0-Tok] El modo `off` elimina activamente su contexto del sistema (0 bytes de sobrecarga)"
+      ]
+    },
+    fr: {
+      title: "\u2726 [Nouveaut\xE9s pi-lingual v0.4] Optimiseur de Prompts & 4 Modes (masqu\xE9 d\xE8s l'envoi)",
+      items: [
+        "\u250C [\u26A1english] R\xE9\xE9criture directe : structure vos id\xE9es brouillonnes (EN/Langue natale + r\xE8gles)",
+        "\u251C [\u2726select]  Nouveau s\xE9lecteur \xE0 N choix : g\xE9n\xE8re 3 candidats (Concis / Structur\xE9 / Approfondi)",
+        "\u251C [\u{1F916}Libert\xE9] Demandez \xE0 votre Agent en langage naturel de personnaliser vos styles et emplacements",
+        "\u2514 [\u{1F6E1}\uFE0Foff 0-Tok] Le mode `off` retire activement son contexte syst\xE8me (0 octet de charge LLM)"
+      ]
+    },
+    de: {
+      title: "\u2726 [Neu in pi-lingual v0.4] Prompt-Optimierer & 4-Modus-Architektur (blendet bei Eingabe aus)",
+      items: [
+        "\u250C [\u26A1english] Direkte Prompt-Optimierung: strukturiert unklare Eingaben (EN/Muttersprache + Regeln)",
+        "\u251C [\u2726select]  Neuer N-Auswahl-Modus: generiert 3 Kandidaten (Pr\xE4gnant / Strukturiert / Tiefgr\xFCndig)",
+        "\u251C [\u{1F916}Freiheit] Passen Sie Lern-Slots und Prompt-Stile einfach per nat\xFCrlicher Sprache beim Agenten an",
+        "\u2514 [\u{1F6E1}\uFE0Foff 0-Tok] Der `off`-Modus entfernt aktiv seinen Skill-Kontext f\xFCr 0 Byte System-Prompt-Last"
+      ]
+    },
+    ru: {
+      title: "\u2726 [\u0427\u0442\u043E \u043D\u043E\u0432\u043E\u0433\u043E \u0432 pi-lingual v0.4] \u041E\u043F\u0442\u0438\u043C\u0438\u0437\u0430\u0442\u043E\u0440 \u043F\u0440\u043E\u043C\u043F\u0442\u043E\u0432 \u0438 4 \u0440\u0435\u0436\u0438\u043C\u0430 (\u0441\u043A\u0440\u043E\u0435\u0442\u0441\u044F \u043F\u0440\u0438 \u0432\u0432\u043E\u0434\u0435)",
+      items: [
+        "\u250C [\u26A1english] \u041F\u0440\u044F\u043C\u0430\u044F \u043E\u043F\u0442\u0438\u043C\u0438\u0437\u0430\u0446\u0438\u044F \u043F\u0440\u043E\u043C\u043F\u0442\u043E\u0432: \u0441\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u0438\u0440\u0443\u0435\u0442 \u0447\u0435\u0440\u043D\u043E\u0432\u043E\u0439 \u0432\u0432\u043E\u0434 (EN/\u0420\u043E\u0434\u043D\u043E\u0439 \u044F\u0437\u044B\u043A + \u043F\u0440\u0430\u0432\u0438\u043B\u0430)",
+        "\u251C [\u2726select]  \u041D\u043E\u0432\u044B\u0439 \u0440\u0435\u0436\u0438\u043C \u0432\u044B\u0431\u043E\u0440\u0430 \u0438\u0437 N \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u043E\u0432: \u041A\u0440\u0430\u0442\u043A\u0438\u0439 / \u0421\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u043D\u044B\u0439 / \u0413\u043B\u0443\u0431\u043E\u043A\u0438\u0439 \u043F\u0440\u043E\u043C\u043F\u0442",
+        "\u251C [\u{1F916}\u0421\u0432\u043E\u0431\u043E\u0434\u0430] \u041D\u0430\u0441\u0442\u0440\u0430\u0438\u0432\u0430\u0439\u0442\u0435 \u0441\u043B\u043E\u0442\u044B \u0438 \u0441\u0442\u0438\u043B\u0438 \u043F\u0440\u043E\u043C\u043F\u0442\u043E\u0432 \u043E\u0431\u044B\u0447\u043D\u044B\u043C \u0442\u0435\u043A\u0441\u0442\u043E\u043C \u0447\u0435\u0440\u0435\u0437 \u0432\u0430\u0448\u0435\u0433\u043E \u0410\u0433\u0435\u043D\u0442\u0430",
+        "\u2514 [\u{1F6E1}\uFE0Foff 0-Tok] \u0420\u0435\u0436\u0438\u043C `off` \u043F\u043E\u043B\u043D\u043E\u0441\u0442\u044C\u044E \u0443\u0434\u0430\u043B\u044F\u0435\u0442 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442 \u043D\u0430\u0432\u044B\u043A\u0430 \u0438\u0437 \u0441\u0438\u0441\u0442\u0435\u043C\u043D\u043E\u0433\u043E \u043F\u0440\u043E\u043C\u043F\u0442\u0430 (0 \u0442\u043E\u043A\u0435\u043D\u043E\u0432)"
       ]
     },
     en: {
@@ -3487,12 +3539,13 @@ function extension_default(pi) {
   let resizeTimer;
   let lastRawInputText = "";
   let showingReleaseBanner = false;
-  const renderReleaseBanner = (ctx) => {
+  const renderReleaseBanner = (ctx, explicitLang) => {
     if (!hasActiveUI(ctx)) return;
     try {
       const maxCols = getEffectiveMaxCols();
       const fg = ctx.ui.theme?.fg ? (c, t) => ctx.ui.theme.fg(c, t) : (_c, t) => t;
-      const lines = formatReleaseBannerLines(state.sourceLang, maxCols, fg);
+      const bannerLang = resolveReleaseBannerLang(explicitLang);
+      const lines = formatReleaseBannerLines(bannerLang, maxCols, fg);
       ctx.ui.setWidget("lingual_hud", lines, { placement: "aboveEditor" });
       showingReleaseBanner = true;
     } catch {
@@ -3533,7 +3586,7 @@ function extension_default(pi) {
       safeClearWidget(ctx);
       const diskCfg = loadUserLingualConfig();
       if (!isTestEnvironment2() && event?.reason !== "resume" && diskCfg.lastSeenVersion !== CURRENT_FEATURE_BANNER_VERSION) {
-        renderReleaseBanner(ctx);
+        renderReleaseBanner(ctx, diskCfg.sourceLang);
         saveUserLingualConfig({ lastSeenVersion: CURRENT_FEATURE_BANNER_VERSION });
       }
     }
@@ -4009,7 +4062,8 @@ Switch modes: /lingual <original|english|select|off> \xB7 Switch language: /lang
       return;
     }
     if (sub === "news" || sub === "whatsnew" || sub === "changelog") {
-      renderReleaseBanner(ctx);
+      const diskCfg = loadUserLingualConfig();
+      renderReleaseBanner(ctx, diskCfg.sourceLang || state.sourceLang);
       return;
     }
     if (sub === "mode" || sub === "original" || sub === "english" || sub === "refine" || sub === "rewrite" || sub === "select" || sub === "choices" || sub === "pick" || sub === "off" || sub === "orig" || sub === "disable" || sub === "stop") {

@@ -23,6 +23,7 @@ import {
   generatePromptCandidates,
   stripLingualContextWhenOff,
   formatReleaseBannerLines,
+  resolveReleaseBannerLang,
   CURRENT_FEATURE_BANNER_VERSION,
   getDefaultPromptSlots,
   shouldTriggerTranslation,
@@ -315,14 +316,15 @@ export default function (pi: ExtensionAPI) {
   let lastRawInputText = "";
   let showingReleaseBanner = false;
 
-  const renderReleaseBanner = (ctx: ExtensionContext) => {
+  const renderReleaseBanner = (ctx: ExtensionContext, explicitLang?: string) => {
     if (!hasActiveUI(ctx)) return;
     try {
       const maxCols = getEffectiveMaxCols();
       const fg = ctx.ui.theme?.fg
         ? (c: string, t: string) => ctx.ui.theme.fg(c as any, t)
         : (_c: string, t: string) => t;
-      const lines = formatReleaseBannerLines(state.sourceLang, maxCols, fg);
+      const bannerLang = resolveReleaseBannerLang(explicitLang);
+      const lines = formatReleaseBannerLines(bannerLang, maxCols, fg);
       ctx.ui.setWidget("lingual_hud", lines, { placement: "aboveEditor" });
       showingReleaseBanner = true;
     } catch {}
@@ -366,7 +368,7 @@ export default function (pi: ExtensionAPI) {
       // 重大功能升级速览卡片：当用户首次升级到 v0.4 四态架构时，在输入框上方按用户母语展示一次更新速览，发消息后自动收起
       const diskCfg = loadUserLingualConfig();
       if (!isTestEnvironment() && event?.reason !== "resume" && diskCfg.lastSeenVersion !== CURRENT_FEATURE_BANNER_VERSION) {
-        renderReleaseBanner(ctx);
+        renderReleaseBanner(ctx, diskCfg.sourceLang);
         saveUserLingualConfig({ lastSeenVersion: CURRENT_FEATURE_BANNER_VERSION });
       }
     }
@@ -956,7 +958,8 @@ export default function (pi: ExtensionAPI) {
 
     // 6.1 子命令路由: 查看本版本新特性速览卡片 (/lingual news 或 /lingual whatsnew)
     if (sub === "news" || sub === "whatsnew" || sub === "changelog") {
-      renderReleaseBanner(ctx);
+      const diskCfg = loadUserLingualConfig();
+      renderReleaseBanner(ctx, diskCfg.sourceLang || state.sourceLang);
       return;
     }
 
