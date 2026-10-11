@@ -7,7 +7,7 @@
 [![npm version](https://img.shields.io/npm/v/pi-lingual?color=blue)](https://www.npmjs.com/package/pi-lingual)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Built for Pi](https://img.shields.io/badge/Built%20for-Pi%20Coding%20Agent-orange)](https://github.com/earendil-works/pi-coding-agent)
-[![Tests](https://img.shields.io/badge/Tests-93%2F93%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
+[![Tests](https://img.shields.io/badge/Tests-95%2F95%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict%20Zero%20Error-blue)](tsconfig.json)
 
 [English](./README.md) | **简体中文**
@@ -63,19 +63,25 @@ pi install npm:pi-lingual
 
 ---
 
-## 三大工作模式
+## 四大工作模式
 
-终端中输入 `/lingual` 随时平滑切换：
+终端中输入 `/lingual <original|english|select|off>` 随时切换：
 
-```text
-  /lingual （循环轮转：原文模式 ➔ 英文模式 ➔ 关闭 ➔ 原文模式）
-```
-
-| 模式 | 你输入什么 | 发给 AI 的内容 | 视窗展示内容 | 适用场景 |
+| 模式 | 你输入什么 | 引擎执行逻辑 | 界面即时反馈 | 适用场景 |
 | :--- | :--- | :--- | :--- | :--- |
-| **`original`** *(默认·原文伴学)* | 母语 *(如中文/日文)* | **母语原文** (0ms 透传) | 终端双语视窗 *(口语 + 写作 + 重点短语)* | 个人日常开发，顺便积累专业英文表达 |
-| **`english`** *(英文代发增强)* | 母语 *(如中文/日文)* | **规范技术英文** | 预览生成的英文卡片 | 参与开源或团队项目，确保代码和提交纯英文 |
-| **`off`** *(彻底关闭)* | 任意输入 | **母语原文** | 不显示，插件静默 | 专注纯代码、不需要任何界面辅助时 |
+| **`original`** *(默认·伴学模式)* | 母语 *(如中文/日文)* | **0ms 原文直发主 AI** + 后台异步生成伴学词卡 (`slots`) | 终端双语视窗 *(口语 + 写作 + 重点词汇)* | 日常高速开发，顺带利用等待间隙积累硅谷地道表达 |
+| **`english`** *(直出提示词重写)* | 杂乱口语想法 / 母语指令 | **1 对 1 提示词结构化、规范化、高效率重写** *(默认英文，可设 `promptLang: "zh"` 保持母语，不生成背单词卡)* | 仅清爽预览重写后的新提示词 (`└ [⚡EN] ...`) | 思路很乱描述不清时，专注将口语转化为高质量工程指令 |
+| **`select`** *(多风格候选填入)* | 杂乱口语想法 / 母语指令 | 按 `promptSlots` 一次生成 **$N$ 个不同风格的优化提示词候选** *(默认：极简高效 / 结构规范 / 深度严谨)* | 视窗展示全部候选 + 弹出交互菜单选一个填入发送 | 重要复杂需求，对比多个优化版本后挑选最满意的一条发送 |
+| **`off`** *(主动 0-Token 屏蔽)* | 任意输入 | **停止拦截，并在 `before_agent_start` 中主动剥离自身技能上下文** | 完全隐形（对大模型实现 **0.00 字节 / 0 Token** 绝对净空） | 不需要任何辅助时，连系统提示词里的技能说明也彻底隐身 |
+
+### 双引擎自由定制 (`lingual-tuner` · 无需手敲配置命令)
+`pi-lingual` 内置升级版 `lingual-tuner` 技能，区分 **「伴学词卡」** 与 **「提示词优化」** 两大独立定制域。你只需直接对当前 Agent 说一句话，Agent 就会自动修改 `~/.pi/agent/lingual.json` 即刻生效：
+1. **定制【伴学模式 (`original` ➔ `slots`)】**：
+   - 自由增删改语感伴学槽位（如口语、书面语、重点词汇、推文风格），或移除 `source` 槽位隐藏中文原文。
+2. **定制【提示词优化模式 (`english` 直出重写 & `select` 多风格候选填入 ➔ `promptLang` / `promptRule` / `promptSlots`)】**：
+   - **输出语言 (`promptLang`)**：默认输出英文 (`"en"`)；若想让模型用中文帮你把乱糟糟的话总结提炼为规范中文指令，直接对 AI 说 *“把提示词重写模式设为中文输出”* (`"promptLang": "zh"`)。
+   - **叠加规范要求 (`promptRule`)**：在提炼提示词的基础上自由叠加任意规范（例如 *“叠加上最小工作 Diff 与直击根因要求”*）。
+   - **自定义 $N$ 个候选风格槽位 (`promptSlots`)**：在 `select` 模式下默认提供「极简高效 (`concise`)」、「结构规范 (`spec`)」、「深度严谨 (`deep`)」3 个槽位，你可以像定制伴学槽位一样任意修改或扩展为 $N$ 个专属提示词风格。
 
 ### 混合意图嫁接（代码与堆栈绝不乱翻）
 在 `english` 模式下，粘贴大段代码块或报错日志时，插件**绝不翻译代码**：

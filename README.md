@@ -7,7 +7,7 @@ Code in your native language. See real-time Silicon Valley spoken phrasing and f
 [![npm version](https://img.shields.io/npm/v/pi-lingual?color=blue)](https://www.npmjs.com/package/pi-lingual)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Built for Pi](https://img.shields.io/badge/Built%20for-Pi%20Coding%20Agent-orange)](https://github.com/earendil-works/pi-coding-agent)
-[![Tests](https://img.shields.io/badge/Tests-93%2F93%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
+[![Tests](https://img.shields.io/badge/Tests-95%2F95%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict%20Zero%20Error-blue)](tsconfig.json)
 
 **English** | [简体中文](./README_zh.md)
@@ -63,19 +63,25 @@ Traditional closed rectangular boxes (`│ ... │`) fracture when character wid
 
 ---
 
-## Three Operating Modes
+## Four Operating Modes
 
-Toggle modes anytime with `/lingual`:
+Switch modes anytime with `/lingual <original|english|select|off>`:
 
-```text
-  /lingual (cycles: original ➔ english ➔ off ➔ original)
-```
-
-| Mode | What You Type | What the AI Receives | What You See | Best For |
+| Mode | What You Type | What the Engine Does | What You See | Best For |
 | :--- | :--- | :--- | :--- | :--- |
-| **`original`** *(Default)* | Native Language *(e.g. Chinese / Japanese)* | **Raw Native Prompt**<br>*(0ms pass-through, 0 context pollution)* | Interactive dual-register HUD *(Spoken + Written + Vocab)* | Solo coding while absorbing authentic engineering phrasing |
-| **`english`** *(Transform)* | Native Language *(e.g. Chinese / Japanese)* | **Standard Technical English**<br>*(Rewrites prompts into RFC-grade English)* | Companion card previewing the generated English | Team/open-source repos requiring English comments and commits |
-| **`off`** | Any Text | **Raw Text** *(0 background calls, 0 widgets)* | Hidden / disabled | Pure coding sessions with zero UI overlays |
+| **`original`** *(Default · Companion)* | Native Language *(e.g. Chinese / Japanese)* | **0ms Pass-Through** to main AI + async companion card (`slots`) | Dual-register HUD *(Spoken + Written + Vocab)* | Coding at full speed while absorbing authentic engineering phrasing |
+| **`english`** *(Direct Prompt Rewrite)* | Messy / Colloquial Input | **Direct 1-to-1 Prompt Optimization** *(structures, standardizes & sharpens in English or `promptLang`, 0 vocab bloat)* | Clean preview of the rewritten prompt (`└ [⚡EN] ...`) | Turning messy thoughts into structured, high-efficiency instructions |
+| **`select`** *(N-Choice Prompt Picker)* | Messy / Colloquial Input | Generates **$N$ Candidate Prompts** across preset styles (`promptSlots`: *Concise*, *Structured*, *Deep Rigor*) | Interactive selector menu (`[1]..[N]`) + full candidate preview | Comparing multiple prompt styles and picking the best one to send |
+| **`off`** *(Active 0-Token Shield)* | Any Text | **Disables hooks & strips skill block from `systemPrompt`** (`before_agent_start`) | Hidden (`0.00 bytes` of LLM context overhead) | Pure coding sessions with zero UI overlays and zero token footprint |
+
+### Dual-Engine Customization via `lingual-tuner` (Zero CLI Memorization)
+`pi-lingual` ships with an upgraded `lingual-tuner` skill that lets you customize **both** engines simply by talking to your Agent (stored in `~/.pi/agent/lingual.json`):
+1. **Customize Companion Mode (`original` ➔ `slots`)**:
+   - Add, remove, or reorder language-learning slots (`Spoken`, `Written`, `Vocab`, `Tweet`), or omit `{ "role": "source" }` to hide original text.
+2. **Customize Prompt Optimizer Mode (`english` Direct Rewrite & `select` N-Choice Picker ➔ `promptLang`, `promptRule`, `promptSlots`)**:
+   - **Output Language (`promptLang`)**: Defaults to `"en"` (English), or set `"zh"` / `"native"` to structure and sharpen messy thoughts in your own native language.
+   - **Stacked Custom Rules (`promptRule`)**: Layer custom engineering rules (e.g. *"Enforce smallest working diff and root-cause triage"*) onto every optimized prompt.
+   - **Custom N-Choice Styles (`promptSlots`)**: Customize the 3 default candidate styles (`concise`, `spec`, `deep`) or define your own $1..N$ prompt optimization slots.
 
 ### Hybrid Intent Grafting (Code Stays Untouched)
 In `english` mode, pasting code blocks or error logs never translates the code:

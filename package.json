@@ -1,6 +1,6 @@
 {
   "name": "pi-lingual",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Bilingual companion & Prompt Optimizer for Pi — live Spoken/Written HUD cards (original), direct 1-to-1 prompt rewriting (english), N-choice multi-style prompt selector (select), and 0-token active context shield (off).",
   "type": "module",
   "main": "dist/index.js",
