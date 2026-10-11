@@ -5,24 +5,23 @@ A bilingual terminal HUD and prompt transformer for Pi Coding Agent.
 Code in your native language. See real-time Silicon Valley spoken phrasing and formal technical prose—or transform prompts into clean technical English to keep your code, comments, and commits consistent.
 
 [![npm version](https://img.shields.io/npm/v/pi-lingual?color=blue)](https://www.npmjs.com/package/pi-lingual)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![npm downloads](https://img.shields.io/npm/dm/pi-lingual?color=22c55e&label=downloads)](https://www.npmjs.com/package/pi-lingual)
+[![GitHub stars](https://img.shields.io/github/stars/3ZEROS12/pi-lingual?style=flat&color=f59e0b)](https://github.com/3ZEROS12/pi-lingual/stargazers)
 [![Built for Pi](https://img.shields.io/badge/Built%20for-Pi%20Coding%20Agent-orange)](https://github.com/earendil-works/pi-coding-agent)
 [![Tests](https://img.shields.io/badge/Tests-93%2F93%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
-[![TypeScript](https://img.shields.io/badge/TypeScript-Strict%20Zero%20Error-blue)](tsconfig.json)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-**English** | [简体中文](./README_zh.md)
+**English** | [日本語](./README_ja.md) | [简体中文](./README_zh.md)
 
 <p align="center">
   <img src="assets/demo.gif" alt="pi-lingual Terminal Companion HUD Experience" width="840">
 </p>
 
 ```text
-  · [Original] 这个方案有点过度设计了，不如直接用标准库实现
-  ┌ [Spoken]   This feels a bit over-engineered; we'd be much better off sticking with the standard library.
-  │            (感觉有点过度设计了，用标准库划算得多)
-  ├ [Written]  The proposed approach introduces unnecessary complexity. Leveraging native standard library implementations is preferred.
-  │            (该方案引入了不必要的复杂度，建议优先采用原生标准库实现)
-  └ [Vocab]    over-engineered (过度工程化) · be better off (更合适) · stick with (沿用) · leverage (利用)
+  · [Original] El PR es demasiado grande, sugiero dividirlo en dos cambios atómicos (es / ja / de / zh ➔ en)
+  ┌ [Spoken]   This PR is huge; we'd be much better off splitting it into two atomic changes.
+  ├ [Written]  The pull request scope is overly broad. Decomposing it into two discrete, atomic commits is recommended.
+  └ [Vocab]    overly broad · be better off · split into · atomic commits
 ```
 
 ## Quick Start
@@ -49,7 +48,7 @@ In `english` mode: You type naturally in your native language. `pi-lingual` auto
 ### 2. Catching the 5-Second Generation Gap
 After hitting Enter, an LLM typically takes 5 to 15 seconds to synthesize code or execute refactorings.
 That window is too short to switch to a browser, yet long enough for your focus to drift into idle staring.
-`pi-lingual` creates a low-cognitive-load window right above your prompt. During that brief generation gap, glance at how the same thought maps between daily engineering chat (Slack / standups) and formal documentation (RFCs / PRs), cultivating authentic fluency effortlessly.
+`pi-lingual` renders a low-cognitive-load window right above your prompt. During that brief generation gap, glance at how the same thought maps between daily engineering chat (Slack / standups) and formal documentation (RFCs / PRs) to build active fluency in context.
 
 ### 3. Zero Context Pollution & Zero Token Waste
 Standard translation tools append English translations directly onto your prompt.
@@ -73,29 +72,27 @@ Toggle modes anytime with `/lingual`:
 
 | Mode | What You Type | What the AI Receives | What You See | Best For |
 | :--- | :--- | :--- | :--- | :--- |
-| **`original`** *(Default)* | Native Language *(e.g. Chinese / Japanese)* | **Raw Native Prompt**<br>*(0ms pass-through, 0 context pollution)* | Interactive dual-register HUD *(Spoken + Written + Vocab)* | Solo coding while absorbing authentic engineering phrasing |
-| **`english`** *(Transform)* | Native Language *(e.g. Chinese / Japanese)* | **Standard Technical English**<br>*(Rewrites prompts into RFC-grade English)* | Companion card previewing the generated English | Team/open-source repos requiring English comments and commits |
+| **`original`** *(Default)* | Native Language *(e.g. Spanish / Japanese / German / Chinese)* | **Raw Native Prompt**<br>*(0ms pass-through, 0 context pollution)* | Interactive dual-register HUD *(Spoken + Written + Vocab)* | Solo coding while absorbing idiomatic engineering phrasing |
+| **`english`** *(Transform)* | Native Language *(e.g. Spanish / Japanese / German / Chinese)* | **Standard Technical English**<br>*(Rewrites prompts into RFC-grade English)* | Companion card previewing the generated English | Team/open-source repos requiring English comments and commits |
 | **`off`** | Any Text | **Raw Text** *(0 background calls, 0 widgets)* | Hidden / disabled | Pure coding sessions with zero UI overlays |
 
-### Hybrid Intent Grafting (Code Stays Untouched)
+### Code & Stack-Trace Passthrough (Code Stays Untouched)
 In `english` mode, pasting code blocks or error logs never translates the code:
-- **Translates intent only**: Converts natural language instructions into crisp technical English.
-- **Keeps code untouched**: Grafts your original code block or stack trace right back onto the prompt.
-- **The result**: Clean English instructions paired with complete technical context.
+- **Rewrites prose only**: Converts natural language instructions into concise technical English.
+- **Preserves code verbatim**: Reattaches your original code block or stack trace directly onto the transformed prompt.
+- **The result**: Clean English instructions paired with exact technical context.
 
 ---
 
-## In Action: Dual-Register Philosophy
+## In Action: Dual-Register Design
 
-Memorizing isolated vocabulary lists does not build expressive capability. Real software engineering naturally divides into two distinct registers:
+Memorizing isolated vocabulary lists does not build expressive capability. Day-to-day software engineering splits into two distinct registers:
 
 ```text
-  · [Original] 这个方案有点过度设计了，不如直接用标准库实现
-  ┌ [Spoken]   This feels a bit over-engineered; we'd be much better off sticking with the standard library.
-  │            (感觉有点过度设计了，用标准库划算得多)
-  ├ [Written]  The proposed approach introduces unnecessary complexity. Leveraging native standard library implementations is preferred.
-  │            (该方案引入了不必要的复杂度，建议优先采用原生标准库实现)
-  └ [Vocab]    over-engineered (过度工程化) · be better off (更合适) · stick with (沿用) · leverage (利用)
+  · [Original] メモリリークの可能性があるので、クリーンアップ処理を追加してください
+  ┌ [Spoken]   There might be a memory leak here, so let's make sure we toss in some cleanup logic.
+  ├ [Written]  To prevent potential memory leaks, please incorporate explicit cleanup and resource disposal routines.
+  └ [Vocab]    memory leak · toss in · resource disposal · incorporate
 ```
 
 * **`[Spoken] (Conversational Register)`**: High-frequency phrasing used by Silicon Valley engineering teams. Includes daily standups, Slack huddles, pair-programming chats, and common phrasal verbs.
@@ -124,13 +121,13 @@ Memorizing isolated vocabulary lists does not build expressive capability. Real 
 Two layouts designed to protect your editor workspace:
 
 <p align="center">
-  <img src="assets/capsule-mode.svg" alt="pi-lingual Layout Modes" width="840">
+  <img src="assets/capsule-mode-en.svg" alt="pi-lingual Layout Modes" width="840">
 </p>
 
 1. **Left-Rail Tree HUD (Default)**: Open-branch layout (`· ┌ ├ └`) using Unicode UAX #11 metrics. Eliminates closed borders to prevent terminal wrapping tears. Stays strictly within 9 lines to avoid host widget truncation warnings.
-2. **Single-Line Capsule Mode (`/compact`)**: Compresses the HUD into a dense single-line stream:
+2. **Single-Line Capsule Mode (`/lingual compact`)**: Compresses the HUD into a dense single-line stream:
    ```text
-   zh ⇄ en · [Spk] This feels over-engineered... │ [Wrt] Proposed approach introduces unnecessary complexity...
+   ja ⇄ en · [Spk] There might be a memory leak... │ [Wrt] Incorporate explicit cleanup routines...
    ```
    *Saves over 80% vertical space in tight split panes (tmux, WezTerm). Activates automatically when terminal height is $< 22$ lines.*
 
@@ -138,7 +135,7 @@ Two layouts designed to protect your editor workspace:
 
 ## Real-World Multilingual Matrix
 
-Translating into English is the primary focus, but major languages are supported bidirectionally:
+Translating into English is the primary workflow, with full bidirectional support across major languages:
 
 <p align="center">
   <img src="assets/multilingual-showcase.svg" alt="Multilingual Matrix" width="840">
@@ -146,10 +143,10 @@ Translating into English is the primary focus, but major languages are supported
 
 | Source | Scenario | Input Prompt | [Spoken] Daily Standup / Slack | [Written] RFC / PR Review |
 | :--- | :--- | :--- | :--- | :--- |
-| **🇨🇳 zh** | Architecture | `这个方案过度设计了，不如直接用标准库` | `This feels a bit over-engineered; let's stick with the standard library.` | `The proposed approach introduces unnecessary complexity. Leveraging native standard library implementations is preferred.` |
-| **🇯🇵 ja** | Systems | `メモリリークの可能性があるので、クリーンアップ処理を追加してください` | `There might be a memory leak here, so let's make sure we toss in some cleanup logic.` | `To prevent potential memory leaks, please incorporate explicit cleanup and resource disposal routines.` |
 | **🇪🇸 es** | Code Review | `El PR es demasiado grande, sugiero dividirlo en dos cambios atómicos` | `This PR is huge — how about we split it into a couple of bite-sized PRs instead?` | `The PR scope is excessively broad; decomposing it into two discrete, atomic commits is advised.` |
+| **🇯🇵 ja** | Systems | `メモリリークの可能性があるので、クリーンアップ処理を追加してください` | `There might be a memory leak here, so let's make sure we toss in some cleanup logic.` | `To prevent potential memory leaks, please incorporate explicit cleanup and resource disposal routines.` |
 | **🇩🇪 de** | Distributed | `Wir müssen sicherstellen, dass diese Schnittstelle idempotent ist` | `We've gotta make sure this endpoint is strictly idempotent so duplicate requests don't bite us.` | `It is imperative to guarantee strict idempotency for this API endpoint to prevent duplicate mutations.` |
+| **🇨🇳 zh** | Architecture | `这个方案过度设计了，不如直接用标准库` | `This feels a bit over-engineered; let's stick with the standard library.` | `The proposed approach introduces unnecessary complexity. Leveraging native standard library implementations is preferred.` |
 
 Switch language pairs anytime:
 ```bash
@@ -255,6 +252,19 @@ npm run typecheck   # Strict tsc --noEmit check (0 errors)
 npm test            # 93/93 test assertions passing (100% green)
 npm run build       # Multi-entry compilation via tsup (extension + core engine)
 ```
+
+---
+
+## Ecosystem: Pi Terminal Suite
+
+Each extension occupies a distinct terminal slot (`aboveEditor`, `belowEditor`, `status-only` footer, and runtime tool hooks) so all four run together with zero widget overlap:
+
+| Package | Terminal Slot & Mechanism | Install |
+| :--- | :--- | :--- |
+| **[`pi-lingual`](https://github.com/3ZEROS12/pi-lingual)** *(Current)* | `二 ⇄ two` `aboveEditor` HUD (≤9 lines, UAX #11 tree layout) & prompt-to-English transformer (0 chat history tokens) | `pi install npm:pi-lingual` |
+| **[`toolflow`](https://github.com/3ZEROS12/toolflow)** | `⌬` Runtime tool hooks — stage-gated MCP mounting & >40-line log dehydration to disk (-95% log tokens) | `pi install npm:toolflow` |
+| **[`pi-tui-status-beautifier`](https://github.com/3ZEROS12/pi-tui-status-beautifier)** | `status-only` footer hook — 6 badge presets, `<80`-col idle folding `(+N idle)`, 0 render-loop disk reads | `pi install npm:pi-tui-status-beautifier` |
+| **[`pi-anchor`](https://github.com/3ZEROS12/anchor)** | `⌖` `belowEditor` 1-line sticky strip, 0ms `pin:` intercept, `[■■□□]` step bar & `↪` session jump | `pi install npm:pi-anchor` |
 
 ---
 

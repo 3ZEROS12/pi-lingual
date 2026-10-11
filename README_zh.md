@@ -5,12 +5,13 @@
 敲母语写代码。输入框上方实时显示地道技术口语与书面语；也可一键将提示词转写为规范技术英文，保持代码、注释与提交全英文规范。
 
 [![npm version](https://img.shields.io/npm/v/pi-lingual?color=blue)](https://www.npmjs.com/package/pi-lingual)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![npm downloads](https://img.shields.io/npm/dm/pi-lingual?color=22c55e&label=downloads)](https://www.npmjs.com/package/pi-lingual)
+[![GitHub stars](https://img.shields.io/github/stars/3ZEROS12/pi-lingual?style=flat&color=f59e0b)](https://github.com/3ZEROS12/pi-lingual/stargazers)
 [![Built for Pi](https://img.shields.io/badge/Built%20for-Pi%20Coding%20Agent-orange)](https://github.com/earendil-works/pi-coding-agent)
 [![Tests](https://img.shields.io/badge/Tests-93%2F93%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
-[![TypeScript](https://img.shields.io/badge/TypeScript-Strict%20Zero%20Error-blue)](tsconfig.json)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-[English](./README.md) | **简体中文**
+[English](./README.md) | [日本語](./README_ja.md) | **简体中文**
 
 <p align="center">
   <img src="assets/demo.gif" alt="pi-lingual 终端伴学视窗交互实录" width="840">
@@ -77,10 +78,10 @@ pi install npm:pi-lingual
 | **`english`** *(英文代发增强)* | 母语 *(如中文/日文)* | **规范技术英文** | 预览生成的英文卡片 | 参与开源或团队项目，确保代码和提交纯英文 |
 | **`off`** *(彻底关闭)* | 任意输入 | **母语原文** | 不显示，插件静默 | 专注纯代码、不需要任何界面辅助时 |
 
-### 混合意图嫁接（代码与堆栈绝不乱翻）
+### 代码与报错堆栈原样透传（代码与堆栈绝不乱翻）
 在 `english` 模式下，粘贴大段代码块或报错日志时，插件**绝不翻译代码**：
 - **只翻人话**：仅提取指令前方的自然语言提问，转写为精准专业的技术英文；
-- **原样拼接**：原始代码块、编译器诊断或报错堆栈 100% 原样保留，缝合在英文指令后方；
+- **原样拼接**：原始代码块、编译器诊断或报错堆栈 100% 原样保留，拼接在英文指令后方；
 - **最终效果**：AI 收到地道规范的英文指令，同时拥有完整的代码与报错上下文。
 
 ---
@@ -128,7 +129,7 @@ pi install npm:pi-lingual
 </p>
 
 1. **左导轨树状架构（默认）**：开放式单侧边框（`· ┌ ├ └`）。基于 Unicode UAX #11 计算列宽，窄分屏下也绝不断行重影；严格限制不超过 9 行，避免触发宿主终端小部件截断报错。
-2. **单行胶囊模式（`/compact`）**：将视窗压缩为单行高密度流：
+2. **单行胶囊模式（`/lingual compact`）**：将视窗压缩为单行高密度流：
    ```text
    zh ⇄ en · [口] This feels over-engineered... │ [写] Proposed approach introduces unnecessary complexity...
    ```
@@ -168,7 +169,7 @@ pi install npm:pi-lingual
 ## 底层硬核机制
 
 - **输入流拦截**：在 `original` 模式下通过 `{ action: "continue" }` 实现 0ms 零延迟放行；在 `english` 模式下通过 `{ action: "transform", text: english }` 动态重写提示词。
-- **即时请求熔断**：敲回车或新输入到达时，单调递增世代令牌（Generation Token）立刻用 `AbortController` 物理掐断上一轮未完成的后台网络请求，杜绝幽灵响应与 Token 浪费。
+- **即时请求中断**：敲回车或新输入到达时，单调递增的请求序号立刻用 `AbortController` 物理中断上一轮未完成的后台网络请求，杜绝幽灵响应与 Token 浪费。
 - **零延迟清屏与避峰**：敲回车瞬间立即清空旧卡片，底栏切换为 `polishing...`；在 `original` 模式下伴学请求延迟 80ms 触发，让出连接池给主任务完成首包握手，彻底免除排队互斥。
 - **命令行与代码护盾**：40+ 常见 CLI 命令（`git`, `docker`, `npm`, `cargo`, `python`）及代码块以 0ms 直通放行，不耗费任何请求。
 - **内存极速缓存**：内置 50 条 LRU 缓存，高频确认词（“继续”、“开始吧”、“认同”）0ms 瞬间直出。
@@ -254,6 +255,19 @@ npm run typecheck   # TypeScript 严格类型检查 (0 错误)
 npm test            # 全套自动化单元测试 (93/93 全绿通过)
 npm run build       # 多入口生产构建 (插件 + 核心语言引擎)
 ```
+
+---
+
+## 配套生态套件 (Pi Terminal Suite)
+
+四款扩展分别挂载于终端的不同物理槽位（`aboveEditor`、`belowEditor`、`status-only` 底栏与运行时工具钩子），独立运行或组合安装均不产生小部件重叠：
+
+| 插件仓库 | 终端挂载槽位与核心机制 | 一键安装 |
+| :--- | :--- | :--- |
+| **[`pi-lingual`](https://github.com/3ZEROS12/pi-lingual)** *(当前)* | `二 ⇄ two` `aboveEditor` 双语伴学视窗（≤9 行 UAX #11 树状排版）与母语提示词转写（0 会话历史 Token 注入） | `pi install npm:pi-lingual` |
+| **[`toolflow`](https://github.com/3ZEROS12/toolflow)** | `⌬` 运行时工具钩子 —— 按阶段动态挂载重型 MCP，>40 行终端长日志自动落盘脱水（削减 95% 日志 Token） | `pi install npm:toolflow` |
+| **[`pi-tui-status-beautifier`](https://github.com/3ZEROS12/pi-tui-status-beautifier)** | `status-only` 底栏微钩子 —— 6 套徽章预设、`<80` 列窄屏折叠 `(+N idle)`、重绘循环 0 磁盘读取 | `pi install npm:pi-tui-status-beautifier` |
+| **[`pi-anchor`](https://github.com/3ZEROS12/anchor)** | `⌖` `belowEditor` 1 行常驻便签条、0ms `pin:` 输入拦截、迷你进度条 `[■■□□]` 与原会话跳转 `↪` | `pi install npm:pi-anchor` |
 
 ---
 
