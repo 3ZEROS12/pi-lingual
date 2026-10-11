@@ -34,7 +34,7 @@ import path from "node:path";
 import os from "node:os";
 import type { LingualConfig, LingualResult, TranslationPayload } from "./types.js";
 import { resolveLabelsForLang, resolveSlotsForPreset } from "./presets.js";
-import { buildSystemPrompt } from "./prompts.js";
+import { buildSystemPrompt, buildRefineSystemPrompt, REFINE_PRESETS, normalizeRefinePreset } from "./prompts.js";
 import { shouldShieldBypass } from "./shield.js";
 import { LingualLruCache, globalLingualCache } from "./cache.js";
 
@@ -122,6 +122,9 @@ export function loadUserLingualConfig(): Partial<LingualConfig> {
     const selectedModel = target.selectedModel || target.model;
     const sourceLang = target.sourceLang;
     const targetLang = target.targetLang;
+    const refinePreset = typeof target.refinePreset === "string" ? target.refinePreset : undefined;
+    const refineLang = typeof target.refineLang === "string" ? target.refineLang : undefined;
+    const refineRule = typeof target.refineRule === "string" ? target.refineRule : undefined;
     const compact = target.compact;
     const slotPreset = target.slotPreset;
     const slots = Array.isArray(target.slots)
@@ -145,6 +148,9 @@ export function loadUserLingualConfig(): Partial<LingualConfig> {
       ...(slots ? { slots } : {}),
       ...(sourceLang ? { sourceLang } : {}),
       ...(targetLang ? { targetLang } : {}),
+      ...(refinePreset ? { refinePreset } : {}),
+      ...(refineLang ? { refineLang } : {}),
+      ...(refineRule ? { refineRule } : {}),
       ...(reasoning ? { reasoning } : {}),
       ...(timeoutMs ? { timeoutMs } : {}),
       ...(replyInSourceLang !== undefined ? { replyInSourceLang } : {}),
@@ -181,7 +187,7 @@ export const DEFAULT_CONFIG: LingualConfig = {
  * 5. 水平自适应重点词汇提取，单行紧凑流排列
  */
 export const LINGUAL_SYSTEM_PROMPT = buildSystemPrompt("zh", "en");
-export { buildSystemPrompt };
+export { buildSystemPrompt, buildRefineSystemPrompt, REFINE_PRESETS, normalizeRefinePreset };
 
 /**
  * Check if the text contains non-English natural language scripts (CJK, accented Latin, Cyrillic, etc.)
@@ -202,7 +208,7 @@ export const MAX_TRANSLATION_LINES = 30;
  * - Centrally delegates to shouldShieldBypass (Single Source of Truth) to exclude code statements, SQL, and 40+ CLI commands;
  * - [Safety Gate]: Rejects oversized payloads (> 1500 chars), monolithic multi-line code (> 8 lines), markdown headings, and code fences.
  */
-export function shouldTriggerTranslation(text: string, sourceLang = "zh"): boolean {
+export function shouldTriggerTranslation(text: string, sourceLang = "zh", allowSameLangRefine = false): boolean {
   const trimmed = text.trim();
   if (!trimmed) return false;
 
@@ -222,6 +228,14 @@ export function shouldTriggerTranslation(text: string, sourceLang = "zh"): boole
   // 2. Code & Shell Shield: 0ms bypass for pure commands, code fences, and data structures
   if (shouldShieldBypass(trimmed)) {
     return false;
+  }
+
+  // 2b. When Prompt Refiner mode is active (allowSameLangRefine = true), trigger on ANY natural language input
+  //     (either CJK/non-English scripts OR multi-word alphabetic sentences) regardless of sourceLang!
+  if (allowSameLangRefine) {
+    if (isNonEnglish(trimmed)) return true;
+    const words = trimmed.split(/\s+/);
+    return words.length >= 2 && /[a-zA-Z]{2,}/.test(trimmed);
   }
 
   // 3. Non-Latin scripts (Chinese, Japanese, Korean, Russian, Arabic) must contain native script characters
@@ -349,9 +363,14 @@ export async function translatePrompt(
 
   const diskConfig = loadUserLingualConfig();
   const cfg = { ...DEFAULT_CONFIG, ...diskConfig, ...userConfig };
+  const useRefiner = Boolean(
+    (cfg.refinePreset && cfg.refinePreset !== "translate") ||
+    cfg.refineLang ||
+    (cfg.refineRule && cfg.refineRule.trim())
+  );
 
-  // Language-aware bidirectional trigger check
-  if (!shouldTriggerTranslation(trimmed, cfg.sourceLang)) {
+  // Language-aware bidirectional trigger check (allows same-language structuring when refiner options are active)
+  if (!shouldTriggerTranslation(trimmed, cfg.sourceLang, useRefiner)) {
     return null;
   }
 
@@ -362,9 +381,13 @@ export async function translatePrompt(
 
   // In-Memory LRU Cache: 0ms hit for high-frequency phrases (e.g. "继续", "认同", "开始吧")
   const effectiveSlots = cfg.slots || (cfg.slotPreset ? resolveSlotsForPreset(cfg.slotPreset, cfg.sourceLang) : undefined);
-  const slotSig = Array.isArray(effectiveSlots)
+  const baseSlotSig = Array.isArray(effectiveSlots)
     ? effectiveSlots.filter((s) => s.enabled !== false).map((s) => s.id).join(",")
-    : undefined;
+    : "";
+  const refineSig = useRefiner
+    ? `|ref:${cfg.refinePreset || "translate"}:${cfg.refineLang || ""}:${cfg.refineRule || ""}`
+    : "";
+  const slotSig = (baseSlotSig + refineSig) || undefined;
   const cacheKey = LingualLruCache.buildKey(trimmed, cfg.sourceLang, cfg.targetLang, slotSig);
   const cached = globalLingualCache.get(cacheKey);
   if (cached) {
@@ -385,7 +408,16 @@ export async function translatePrompt(
   try {
     let content: string | null = null;
     const isLongInput = isDynamicLongInput(trimmed, cfg.sourceLang);
-    const sysPrompt = buildSystemPrompt(cfg.sourceLang, cfg.targetLang, isLongInput, undefined, "general", effectiveSlots);
+    const sysPrompt = useRefiner
+      ? buildRefineSystemPrompt({
+          sourceLang: cfg.sourceLang,
+          targetLang: cfg.targetLang,
+          refinePreset: cfg.refinePreset,
+          refineLang: cfg.refineLang,
+          refineRule: cfg.refineRule,
+          isLongInput,
+        })
+      : buildSystemPrompt(cfg.sourceLang, cfg.targetLang, isLongInput, undefined, "general", effectiveSlots);
 
     // 1. If custom complete callback is provided (e.g. Pi native ModelRegistry / ctx.model):
     if (typeof cfg.complete === "function") {
@@ -446,6 +478,7 @@ export async function translatePrompt(
       spokenMeaning: payload.spokenMeaning,
       written: payload.written || "",
       writtenMeaning: payload.writtenMeaning,
+      refined: payload.refined || payload.written || payload.spoken,
       vocab: payload.vocab,
       summary: payload.summary,
       sourceText: effectiveSourceText,

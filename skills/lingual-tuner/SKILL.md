@@ -1,6 +1,6 @@
 ---
 name: lingual-tuner
-description: Zero-friction companion slot tuner and prompt architect for pi-lingual. Triggers on '定制伴学', '配置伴学', '定制槽位', '修改槽位', '不要原文', 'customize lingual slots', 'hide original text', or '/lingual-agent'.
+description: Zero-friction companion slot tuner and prompt refiner architect for pi-lingual. Triggers on '定制伴学', '配置伴学', '定制槽位', '修改槽位', '不要原文', '规范提示词', '提炼提示词', 'customize lingual slots', 'hide original text', 'prompt refiner', or '/lingual-agent'.
 ---
 
 # LINGUAL COMPANION TUNER
@@ -137,3 +137,19 @@ Delete the `"slots"` key or write clean defaults to `~/.pi/agent/lingual.json`:
   ]
 }
 ```
+
+### Pattern D: Prompt Refiner & Structurer (`refinePreset`, `refineLang`, `refineRule`)
+*User intent: "我平时写提示词很乱，帮我把 pi-lingual 配置为提示词提炼模式，用中文（或者英文）帮我总结深化，并且叠加上最小改动原则"*
+Write to `~/.pi/agent/lingual.json`:
+```json
+{
+  "mode": "english",
+  "refinePreset": "spec",
+  "refineLang": "zh",
+  "refineRule": "遵循最小工作 Diff 原则，明确目标与边界条件，拒绝过度设计与无关重构。"
+}
+```
+- `refinePreset`: `"translate"` (default) | `"spec"` (Structured Engineering Spec) | `"surgical"` (Smallest Working Diff) | `"tdd"` (Test-Verified Contract) | `"debug"` (Root-Cause Triage).
+- `refineLang`: `"en"` (default English) | `"zh"` / `"native"` (keep refined prompt in native language) | `"ja"` | `"ko"` | `"es"` | `"fr"` | `"de"` | `"ru"`.
+- `refineRule`: Optional custom engineering rule or constraint stacked onto the refiner prompt.
+

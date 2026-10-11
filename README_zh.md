@@ -8,7 +8,7 @@
 [![npm downloads](https://img.shields.io/npm/dm/pi-lingual?color=22c55e&label=downloads)](https://www.npmjs.com/package/pi-lingual)
 [![GitHub stars](https://img.shields.io/github/stars/3ZEROS12/pi-lingual?style=flat&color=f59e0b)](https://github.com/3ZEROS12/pi-lingual/stargazers)
 [![Built for Pi](https://img.shields.io/badge/Built%20for-Pi%20Coding%20Agent-orange)](https://github.com/earendil-works/pi-coding-agent)
-[![Tests](https://img.shields.io/badge/Tests-93%2F93%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
+[![Tests](https://img.shields.io/badge/Tests-94%2F94%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 [English](./README.md) | [日本語](./README_ja.md) | **简体中文**
@@ -74,9 +74,24 @@ pi install npm:pi-lingual
 
 | 模式 | 你输入什么 | 发给 AI 的内容 | 视窗展示内容 | 适用场景 |
 | :--- | :--- | :--- | :--- | :--- |
-| **`original`** *(默认·原文伴学)* | 母语 *(如中文/日文)* | **母语原文** (0ms 透传) | 终端双语视窗 *(口语 + 写作 + 重点短语)* | 个人日常开发，顺便积累专业英文表达 |
-| **`english`** *(英文代发增强)* | 母语 *(如中文/日文)* | **规范技术英文** | 预览生成的英文卡片 | 参与开源或团队项目，确保代码和提交纯英文 |
+| **`original`** *(默认·原文伴学)* | 母语 *(或加 `>>` 触发单次提炼)* | **母语原文** (0ms 透传) | 终端双语视窗 *(口语 + 写作 + 重点短语)* | 个人日常开发，顺便积累专业英文表达 |
+| **`english` / `refine`** *(提炼与转译)* | 杂乱口语想法 / 母语指令 | **提炼深化后的规范提示词**<br>*(默认英文；可切 `/refine zh` 保持母语 + 叠加规范)* | 预览提炼后的结构化指令与双语卡片 | 脑子很乱描述不清需求时，自动提炼为结构化工程规范 (`spec`/`surgical`/`tdd`/`debug`) |
 | **`off`** *(彻底关闭)* | 任意输入 | **母语原文** | 不显示，插件静默 | 专注纯代码、不需要任何界面辅助时 |
+
+### 提示词提炼与叠加规范引擎 (`v0.4.0` · `/refine` & `>>`)
+不再局限于单纯的“翻译成英文”。当你写提示词思路很乱、描述不清具体边界时，可以把轻量翻译模型当成**前置提示词规范师**：
+- **5 大内置提炼预设**：
+  - `/refine translate` *(默认)*：标准架构技术转译。
+  - `/refine spec` *(结构化工程需求)*：将杂乱、跳跃的口语描述提炼为「核心目标 + 约束边界 + 预期产出」的结构化工程指令。
+  - `/refine surgical` *(最小改动与防过度设计)*：提炼核心意图，并自动叠加上「最小工作 Diff、直击根因、拒绝无关重构」约束。
+  - `/refine tdd` *(测试驱动契约)*：要求覆盖边界条件并通过真实测试验证。
+  - `/refine debug` *(根因溯源排障)*：将模糊报错抱怨转化为全链路根因排查指令。
+- **自由切换输出语言（`/refine zh` / `/refine native`）**：
+  英文是默认情况，但如果你希望发给主 Agent 的提示词**保持中文**（只是帮你把乱糟糟的中文总结深化成严谨的中文工程指令），直接敲 `/refine zh spec` 即可！
+- **自由叠加自定义规范（`/refine + <你的要求>`）**：
+  在提炼基础上随时叠加任意个人规范：`/refine zh surgical + 遵循RFC2119，严禁引入外部依赖`（敲 `/refine reset` 一键恢复默认）。
+- **伴学模式下单次随手提炼（`>> <乱糟糟的想法>` 或 `提炼: ...`）**：
+  平时保持 `original` 0ms 伴学模式，遇到某一句复杂需求觉得自己没表达清楚时，直接在开头敲 **`>> 那个登录刷新老掉线，帮我看看是不是cookie没设好...`**，当场为你提炼深化后再发给主 Agent！
 
 ### 代码与报错堆栈原样透传（代码与堆栈绝不乱翻）
 在 `english` 模式下，粘贴大段代码块或报错日志时，插件**绝不翻译代码**：

@@ -8,7 +8,7 @@ Code in your native language. See real-time Silicon Valley spoken phrasing and f
 [![npm downloads](https://img.shields.io/npm/dm/pi-lingual?color=22c55e&label=downloads)](https://www.npmjs.com/package/pi-lingual)
 [![GitHub stars](https://img.shields.io/github/stars/3ZEROS12/pi-lingual?style=flat&color=f59e0b)](https://github.com/3ZEROS12/pi-lingual/stargazers)
 [![Built for Pi](https://img.shields.io/badge/Built%20for-Pi%20Coding%20Agent-orange)](https://github.com/earendil-works/pi-coding-agent)
-[![Tests](https://img.shields.io/badge/Tests-93%2F93%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
+[![Tests](https://img.shields.io/badge/Tests-94%2F94%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 **English** | [日本語](./README_ja.md) | [简体中文](./README_zh.md)
@@ -72,9 +72,24 @@ Toggle modes anytime with `/lingual`:
 
 | Mode | What You Type | What the AI Receives | What You See | Best For |
 | :--- | :--- | :--- | :--- | :--- |
-| **`original`** *(Default)* | Native Language *(e.g. Spanish / Japanese / German / Chinese)* | **Raw Native Prompt**<br>*(0ms pass-through, 0 context pollution)* | Interactive dual-register HUD *(Spoken + Written + Vocab)* | Solo coding while absorbing idiomatic engineering phrasing |
-| **`english`** *(Transform)* | Native Language *(e.g. Spanish / Japanese / German / Chinese)* | **Standard Technical English**<br>*(Rewrites prompts into RFC-grade English)* | Companion card previewing the generated English | Team/open-source repos requiring English comments and commits |
+| **`original`** *(Default)* | Native Language *(or prefix `>>` for 1-shot refine)* | **Raw Native Prompt**<br>*(0ms pass-through, 0 context pollution)* | Interactive dual-register HUD *(Spoken + Written + Vocab)* | Solo coding while absorbing idiomatic engineering phrasing |
+| **`english` / `refine`** *(Transform & Structure)* | Messy or Native Language Input | **Refined & Structured Prompt**<br>*(Default: English; or `/refine zh` + custom rules)* | Companion card previewing the refined instruction | Structuring messy thoughts into crisp specs (`spec`, `surgical`, `tdd`, `debug`) |
 | **`off`** | Any Text | **Raw Text** *(0 background calls, 0 widgets)* | Hidden / disabled | Pure coding sessions with zero UI overlays |
+
+### Prompt Refiner & Stackable Engineering Specs (`v0.4.0`)
+Instead of limiting Transform mode to literal English translation, `/refine` turns your companion model into a **Prompt Structurer** before your message reaches the main coding agent:
+- **5 Built-in Refinement Presets**:
+  - `/refine translate` *(Default)*: Standard architectural translation.
+  - `/refine spec`: Distills messy, stream-of-consciousness thoughts into a structured engineering specification (Goal + Constraints + Deliverable).
+  - `/refine surgical`: Clarifies intent and enforces **Smallest Working Diff & Root-Cause** guardrails.
+  - `/refine tdd`: Requires edge-case coverage and physical test verification.
+  - `/refine debug`: Transforms vague bug complaints into systematic root-cause triage directives.
+- **Keep Native Language or Switch Target (`/refine zh` / `/refine native`)**:
+  Want to refine messy Chinese thoughts into crystal-clear, structured **Chinese** prompts without switching to English? Run `/refine zh spec`.
+- **Stack Custom Rules (`/refine + <rule>`)**:
+  Layer your own coding standards onto every refined prompt: `/refine zh surgical + Follow RFC 2119 and zero external dependencies`.
+- **One-Shot Prefix in Learn Mode (`>> <messy prompt>`)**:
+  Stay in `original` (0ms pass-through) mode and prefix any complex, messy thought with `>> ` (or `refine: ` / `提炼: `) to structure that single turn on the spot.
 
 ### Code & Stack-Trace Passthrough (Code Stays Untouched)
 In `english` mode, pasting code blocks or error logs never translates the code:

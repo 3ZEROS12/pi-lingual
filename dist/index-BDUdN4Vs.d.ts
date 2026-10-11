@@ -83,6 +83,7 @@ type LinguaI18nLabels = LingualI18nLabels;
 
 type LingualMode = "original" | "english" | "off";
 type LinguaMode = LingualMode;
+type RefinePreset = "translate" | "spec" | "surgical" | "tdd" | "debug";
 type SlotRole = "source" | "translation" | "vocab" | "custom";
 interface SlotConfig {
     id: string;
@@ -112,6 +113,9 @@ interface LingualRequest {
     text: string;
     sourceLang?: string;
     targetLang?: string;
+    refinePreset?: RefinePreset | string;
+    refineLang?: string;
+    refineRule?: string;
     context?: string;
     tone?: "general" | "social" | "tech";
     isLongInput?: boolean;
@@ -122,6 +126,7 @@ interface LingualResponse {
     spokenMeaning?: string;
     written?: string;
     writtenMeaning?: string;
+    refined?: string;
     vocab?: string;
     summary?: string;
     slots?: SlotResult[];
@@ -143,6 +148,9 @@ interface LingualConfig {
     slots?: SlotConfig[];
     sourceLang?: string;
     targetLang?: string;
+    refinePreset?: RefinePreset | string;
+    refineLang?: string;
+    refineRule?: string;
     replyInSourceLang?: boolean;
     labels?: Partial<LingualI18nLabels>;
     temperature?: number;
@@ -157,6 +165,7 @@ interface LingualResult {
     spokenMeaning?: string;
     written?: string;
     writtenMeaning?: string;
+    refined?: string;
     vocab?: string;
     sourceText: string;
     summary?: string;
@@ -173,6 +182,7 @@ interface TranslationPayload {
     spokenMeaning?: string;
     written?: string;
     writtenMeaning?: string;
+    refined?: string;
     vocab?: string;
     summary?: string;
     slots?: SlotResult[];
@@ -182,6 +192,16 @@ interface TranslationPayload {
     }>;
 }
 
+interface RefinePresetSpec {
+    id: RefinePreset;
+    name: string;
+    zhName: string;
+    description: string;
+    zhDescription: string;
+    directive: string;
+}
+declare const REFINE_PRESETS: Record<RefinePreset, RefinePresetSpec>;
+declare function normalizeRefinePreset(raw?: string): RefinePreset;
 declare function getDefaultSlots(sourceLang?: string): SlotConfig[];
 declare const LEGACY_SLOT_PRESETS: Record<string, {
     slot1: SlotDefinition;
@@ -192,6 +212,18 @@ declare const LEGACY_SLOT_PRESETS: Record<string, {
  * 支持长输入总结 (isLongInput)、上下文注入 (context) 和风格侧重 (tone: "general" | "social" | "tech")。
  */
 declare function buildSystemPrompt(sourceLang?: string, targetLang?: string, isLongInput?: boolean, context?: string, tone?: "general" | "social" | "tech", customSlots?: SlotConfig[] | CustomSlotsConfig): string;
+/**
+ * Build a dedicated Prompt Refiner + Dual-Register Companion system prompt when in Transform/Refine mode
+ * or when custom `refinePreset` / `refineLang` / `refineRule` options are active.
+ */
+declare function buildRefineSystemPrompt(options: {
+    sourceLang?: string;
+    targetLang?: string;
+    refinePreset?: RefinePreset | string;
+    refineLang?: string;
+    refineRule?: string;
+    isLongInput?: boolean;
+}): string;
 
 /**
  * In-Memory LRU Cache for Lingual Translations (会话级 0 依赖极速缓存)
@@ -348,4 +380,4 @@ interface SanitizedPromptResult {
  */
 declare function sanitizePromptForTranslation(raw: string): SanitizedPromptResult;
 
-export { getDefaultSlots as A, globalLinguaCache as B, type CacheStats as C, globalLingualCache as D, moveSlotInList as E, parseLlmResponse as F, removeSlotFromList as G, resolveLabelsForLang as H, resolveSlotsForPreset as I, sanitizePromptForTranslation as J, shouldShieldBypass as K, type LingualResult as L, toggleSlotInList as M, translateCore as N, updateSlotInList as O, type SlotConfig as S, type TranslationPayload as T, type LingualI18nLabels as a, type LingualConfig as b, type CustomSlotsConfig as c, LANGUAGE_PRESETS as d, LEGACY_SLOT_PRESETS as e, type LinguaConfig as f, type LinguaI18nLabels as g, LinguaLruCache as h, type LinguaMode as i, type LinguaResult as j, type LingualCoreOptions as k, LingualLruCache as l, type LingualMode as m, type LingualRequest as n, type LingualResponse as o, SLOT_PRESETS as p, type SanitizedPromptResult as q, type SlotDefinition as r, type SlotPresetDefinition as s, type SlotResult as t, type SlotRole as u, addSlotToList as v, buildSystemPrompt as w, createCustomSlot as x, formatModelSelectionMessage as y, formatStatusReport as z };
+export { createCustomSlot as A, formatModelSelectionMessage as B, type CacheStats as C, formatStatusReport as D, getDefaultSlots as E, globalLinguaCache as F, globalLingualCache as G, moveSlotInList as H, normalizeRefinePreset as I, parseLlmResponse as J, removeSlotFromList as K, type LingualResult as L, resolveLabelsForLang as M, resolveSlotsForPreset as N, sanitizePromptForTranslation as O, shouldShieldBypass as P, toggleSlotInList as Q, REFINE_PRESETS as R, type SlotConfig as S, type TranslationPayload as T, translateCore as U, updateSlotInList as V, type LingualI18nLabels as a, type LingualConfig as b, type CustomSlotsConfig as c, LANGUAGE_PRESETS as d, LEGACY_SLOT_PRESETS as e, type LinguaConfig as f, type LinguaI18nLabels as g, LinguaLruCache as h, type LinguaMode as i, type LinguaResult as j, type LingualCoreOptions as k, LingualLruCache as l, type LingualMode as m, type LingualRequest as n, type LingualResponse as o, type RefinePreset as p, type RefinePresetSpec as q, SLOT_PRESETS as r, type SanitizedPromptResult as s, type SlotDefinition as t, type SlotPresetDefinition as u, type SlotResult as v, type SlotRole as w, addSlotToList as x, buildRefineSystemPrompt as y, buildSystemPrompt as z };

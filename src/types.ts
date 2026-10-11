@@ -3,6 +3,7 @@ export type {
   LingualResponse,
   LingualMode,
   LinguaMode,
+  RefinePreset,
   LingualConfig,
   LinguaConfig,
   LingualResult,

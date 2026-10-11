@@ -1,7 +1,7 @@
 import type { LingualRequest, LingualResponse, TranslationPayload, SlotConfig, SlotResult } from "./types.js";
 import { shouldShieldBypass } from "../shield.js";
 import { LingualLruCache, globalLingualCache } from "../cache.js";
-import { buildSystemPrompt, getDefaultSlots } from "./prompts.js";
+import { buildSystemPrompt, buildRefineSystemPrompt, getDefaultSlots } from "./prompts.js";
 
 /**
  * Featherweight JSON repair for LLM responses with unescaped quotes or trailing commas
@@ -58,8 +58,9 @@ export function parseLlmResponse(raw: string): TranslationPayload | null {
 
     const spoken = toCleanString(parsed.spoken ?? parsed.casual ?? parsed.slot1);
     const spokenMeaning = toCleanString(parsed.spoken_meaning ?? parsed.spokenMeaning);
-    const written = toCleanString(parsed.written ?? parsed.academic ?? parsed.slot2);
-    const writtenMeaning = toCleanString(parsed.written_meaning ?? parsed.writtenMeaning);
+    const written = toCleanString(parsed.written ?? parsed.refined ?? parsed.academic ?? parsed.slot2);
+    const writtenMeaning = toCleanString(parsed.written_meaning ?? parsed.writtenMeaning ?? parsed.refined_meaning);
+    const refined = toCleanString(parsed.refined ?? parsed.written ?? parsed.spoken);
     const vocab = toCleanString(parsed.vocab);
     const summary = toCleanString(parsed.summary ?? parsed.core_intent ?? parsed.coreIntent);
 
@@ -88,6 +89,7 @@ export function parseLlmResponse(raw: string): TranslationPayload | null {
         spokenMeaning: effectiveSpokenMeaning || undefined,
         written: written || undefined,
         writtenMeaning: writtenMeaning || undefined,
+        refined: refined || effectiveSpoken,
         vocab: vocab || undefined,
         summary: summary || undefined,
         slotOutputs: Object.keys(slotOutputs).length > 0 ? slotOutputs : undefined,
@@ -138,9 +140,13 @@ export async function translateCore(
 
   // 2. In-memory LRU Cache check
   const cache = options?.cache || globalLingualCache;
-  const slotSig = Array.isArray(req.slots)
+  const baseSlotSig = Array.isArray(req.slots)
     ? req.slots.filter((s) => s.enabled !== false).map((s) => s.id).join(",")
-    : undefined;
+    : "";
+  const refineSig = req.refinePreset || req.refineLang || req.refineRule
+    ? `|ref:${req.refinePreset || "translate"}:${req.refineLang || ""}:${req.refineRule || ""}`
+    : "";
+  const slotSig = (baseSlotSig + refineSig) || undefined;
   const cacheKey = LingualLruCache.buildKey(text, sourceLang, targetLang, slotSig);
   const cached = cache.get(cacheKey);
   if (cached) {
@@ -149,6 +155,7 @@ export async function translateCore(
       spokenMeaning: cached.spokenMeaning,
       written: cached.written || cached.spoken,
       writtenMeaning: cached.writtenMeaning,
+      refined: cached.refined || cached.written || cached.spoken,
       vocab: cached.vocab,
       summary: cached.summary,
       cached: true,
@@ -161,20 +168,35 @@ export async function translateCore(
     return {
       spoken: text,
       written: text,
+      refined: text,
       cached: false,
       shieldBypassed: false,
     };
   }
 
-  // 4. Build system prompt with context, tone, and dynamic custom slot adaptations
-  const systemPrompt = buildSystemPrompt(
-    sourceLang,
-    targetLang,
-    Boolean(req.isLongInput),
-    req.context,
-    req.tone || "general",
-    req.slots
+  // 4. Build system prompt (use Prompt Refiner when refine options are active)
+  const useRefiner = Boolean(
+    (req.refinePreset && req.refinePreset !== "translate") ||
+    req.refineLang ||
+    (req.refineRule && req.refineRule.trim())
   );
+  const systemPrompt = useRefiner
+    ? buildRefineSystemPrompt({
+        sourceLang,
+        targetLang,
+        refinePreset: req.refinePreset,
+        refineLang: req.refineLang,
+        refineRule: req.refineRule,
+        isLongInput: Boolean(req.isLongInput),
+      })
+    : buildSystemPrompt(
+        sourceLang,
+        targetLang,
+        Boolean(req.isLongInput),
+        req.context,
+        req.tone || "general",
+        req.slots
+      );
 
   // 5. Invoke LLM completion
   const raw = await options.completer(text, systemPrompt, options.signal);
@@ -229,6 +251,7 @@ export async function translateCore(
       spokenMeaning: parsed.spokenMeaning,
       written: parsed.written || parsed.spoken,
       writtenMeaning: parsed.writtenMeaning,
+      refined: parsed.refined || parsed.written || parsed.spoken,
       vocab: parsed.vocab,
       summary: parsed.summary,
       slots: slotResults,

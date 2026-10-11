@@ -517,6 +517,64 @@ import path from "path";
 import os from "os";
 
 // src/core/prompts.ts
+var REFINE_PRESETS = {
+  translate: {
+    id: "translate",
+    name: "Standard Architectural Translation",
+    zhName: "\u6807\u51C6\u67B6\u6784\u82F1\u6587\u8F6C\u8BD1",
+    description: "Translate colloquial input into crisp, modern technical prose in the target language.",
+    zhDescription: "\u5C06\u53E3\u8BED\u8F93\u5165\u8F6C\u8BD1\u4E3A\u6E05\u6670\u7CBE\u51C6\u7684\u76EE\u6807\u8BED\u8A00\u6280\u672F\u6307\u4EE4\uFF08\u9ED8\u8BA4\u82F1\u6587\uFF09\u3002",
+    directive: "Translate and clarify the user's message into clear, precise, modern technical prose. Preserve exact intent without adding unrequested scope."
+  },
+  spec: {
+    id: "spec",
+    name: "Structured Engineering Spec",
+    zhName: "\u7ED3\u6784\u5316\u5DE5\u7A0B\u9700\u6C42\u63D0\u70BC",
+    description: "Distill messy, stream-of-consciousness thoughts into a structured engineering specification (Goal, Constraints, Deliverable).",
+    zhDescription: "\u5C06\u6742\u4E71\u3001\u53E3\u8BED\u5316\u3001\u8DF3\u8DC3\u7684\u63CF\u8FF0\u63D0\u70BC\u4E3A\u903B\u8F91\u4E25\u5BC6\u7684\u7ED3\u6784\u5316\u5DE5\u7A0B\u6307\u4EE4\uFF08\u6838\u5FC3\u76EE\u6807 + \u7EA6\u675F\u8FB9\u754C + \u9884\u671F\u7ED3\u679C\uFF09\u3002",
+    directive: "The user's raw input may be messy, colloquial, or stream-of-consciousness. Distill, organize, and sharpen it into a crystal-clear, structured engineering prompt for an AI coding agent: state the exact objective first, clarify implicit technical constraints/edge cases, and keep it direct and actionable without inventing unrequested features."
+  },
+  surgical: {
+    id: "surgical",
+    name: "Surgical Minimal Diff",
+    zhName: "\u6700\u5C0F\u6539\u52A8\u4E0E\u9632\u8FC7\u5EA6\u8BBE\u8BA1\u89C4\u8303",
+    description: "Refine the prompt and enforce smallest working diff, root-cause focus, and zero unrequested refactoring.",
+    zhDescription: "\u63D0\u70BC\u6838\u5FC3\u610F\u56FE\u5E76\u81EA\u52A8\u53E0\u52A0\u4E0A\u300C\u6700\u5C0F\u5DE5\u4F5CDiff\u3001\u76F4\u51FB\u6839\u56E0\u3001\u4E25\u7981\u8FC7\u5EA6\u8BBE\u8BA1\u4E0E\u65E0\u5173\u91CD\u6784\u300D\u7EA6\u675F\u3002",
+    directive: "Clarify the user's messy request into a sharp engineering directive, and explicitly append strict execution constraints: deliver the smallest working diff, fix the root cause directly, and strictly avoid unrequested refactoring or speculative scaffolding."
+  },
+  tdd: {
+    id: "tdd",
+    name: "Test-Verified Contract",
+    zhName: "\u6D4B\u8BD5\u9A71\u52A8\u4E0E\u8FB9\u754C\u9A8C\u8BC1\u89C4\u8303",
+    description: "Refine the prompt into a testable contract requiring boundary-case checks and physical test verification.",
+    zhDescription: "\u5C06\u6A21\u7CCA\u9700\u6C42\u8F6C\u5316\u4E3A\u53EF\u9A8C\u8BC1\u5951\u7EA6\uFF0C\u8981\u6C42\u8986\u76D6\u8FB9\u754C\u6761\u4EF6\u5E76\u901A\u8FC7\u771F\u5B9E\u6D4B\u8BD5\u9A8C\u8BC1\u3002",
+    directive: "Structure the user's request into a verifiable engineering task, explicitly requiring edge-case coverage and physical test verification before completion."
+  },
+  debug: {
+    id: "debug",
+    name: "Root-Cause Triage",
+    zhName: "\u6839\u56E0\u6EAF\u6E90\u6392\u969C\u89C4\u8303",
+    description: "Turn a vague bug complaint into a systematic end-to-end root-cause diagnostic directive.",
+    zhDescription: "\u5C06\u6A21\u7CCA\u7684\u62A5\u9519\u62B1\u6028\u63D0\u70BC\u4E3A\u7CFB\u7EDF\u6027\u7684\u5168\u94FE\u8DEF\u6839\u56E0\u6392\u67E5\u6307\u4EE4\uFF08\u62D2\u7EDD\u8868\u9762\u6253\u8865\u4E01\uFF09\u3002",
+    directive: "Transform the user's bug report or complaint into a rigorous root-cause diagnostic prompt: trace the end-to-end execution flow, identify the underlying state or logic flaw, and fix the root cause rather than applying superficial symptom patches."
+  }
+};
+function normalizeRefinePreset(raw) {
+  const clean = (raw || "").trim().toLowerCase();
+  if (clean === "spec" || clean === "struct" || clean === "structure" || clean === "\u89C4\u8303" || clean === "\u63D0\u70BC") {
+    return "spec";
+  }
+  if (clean === "surgical" || clean === "minimal" || clean === "diff" || clean === "\u6781\u7B80" || clean === "\u6700\u5C0F\u6539\u52A8") {
+    return "surgical";
+  }
+  if (clean === "tdd" || clean === "test" || clean === "verify" || clean === "\u6D4B\u8BD5") {
+    return "tdd";
+  }
+  if (clean === "debug" || clean === "fix" || clean === "triage" || clean === "\u6392\u969C" || clean === "\u6839\u56E0") {
+    return "debug";
+  }
+  return "translate";
+}
 function getDefaultSlots(sourceLang = "en") {
   const norm = (sourceLang || "en").toLowerCase().split("-")[0];
   const labels = {
@@ -1084,6 +1142,62 @@ ${anchorText}
 
 ${jsonFormatHint}
 Output valid JSON ONLY. Never output markdown code fences, backticks, quotes, or explanations.`;
+}
+function buildRefineSystemPrompt(options) {
+  const normSource = (options.sourceLang || "zh").toLowerCase().split("-")[0];
+  const normTarget = (options.targetLang || "en").toLowerCase().split("-")[0];
+  const spec = LANGUAGE_SPECS[normSource] || LANGUAGE_SPECS.zh;
+  const TARGET_LANGUAGE_NAMES = {
+    en: "English",
+    zh: "Chinese (Simplified)",
+    tw: "Chinese (Traditional)",
+    ja: "Japanese",
+    ko: "Korean",
+    es: "Spanish",
+    fr: "French",
+    de: "German",
+    ru: "Russian",
+    pt: "Portuguese",
+    it: "Italian"
+  };
+  const companionTargetName = TARGET_LANGUAGE_NAMES[normTarget] || "English";
+  const rawRefineLang = (options.refineLang || "").trim().toLowerCase();
+  const effectiveRefineLangCode = !rawRefineLang || rawRefineLang === "default" || rawRefineLang === "auto" ? normTarget : rawRefineLang === "native" || rawRefineLang === "source" || rawRefineLang === "\u6BCD\u8BED" ? normSource : rawRefineLang.split("-")[0];
+  const refineTargetName = TARGET_LANGUAGE_NAMES[effectiveRefineLangCode] || companionTargetName;
+  const presetKey = normalizeRefinePreset(options.refinePreset);
+  const preset = REFINE_PRESETS[presetKey];
+  const customRuleBlock = options.refineRule && options.refineRule.trim() ? `
+
+[USER STACKED SPECIFICATION & CUSTOM RULES - MANDATORY]:
+You MUST weave and enforce the following user-specified rules/constraints directly into the refined prompt ("written" / "refined"):
+"""
+${options.refineRule.trim()}
+"""` : "";
+  return `You are an elite AI Coding Prompt Architect and Bilingual Developer Coach.
+The user is typing a potentially messy, colloquial, or fragmented prompt in ${spec.name}.
+Your job is to transform their raw input into a high-clarity, well-structured engineering prompt for an AI coding agent, while also providing authentic ${companionTargetName} companion expressions:
+
+1. "written" (Refined Agent Prompt in **${refineTargetName}**):
+   - Language: MUST be written in **${refineTargetName}**.
+   - Refinement Strategy (${preset.name}): ${preset.directive}
+   - Turn messy, colloquial, or ambiguous phrasing into a clear, structured, high-signal instruction that an AI coding agent can execute immediately without guessing.
+2. "written_meaning": A concise summary of the structured intent ${spec.meaningInstruction}.
+3. "spoken" (Authentic ${companionTargetName} Spoken Register): Natural Silicon Valley spoken phrasing in ${companionTargetName} for daily standups/Slack.
+4. "spoken_meaning": The exact nuance of "spoken" ${spec.meaningInstruction}.
+5. "vocab": Key idiomatic collocations or technical terms extracted from the expression ${spec.vocabInstruction}.
+
+[CODE & SYMBOL SHIELD - STRICT RULE]:
+All inline code (\`foo()\`), file paths (@file, path/to/file), CLI flags, variable names, and technical identifiers MUST be preserved 100% verbatim. Never drop or alter code tokens.${customRuleBlock}
+
+Strict JSON format:
+{
+  "spoken": "...",
+  "spoken_meaning": "...",
+  "written": "...",
+  "written_meaning": "...",
+  "vocab": "..."
+}
+Output valid JSON ONLY. Never output markdown code fences or explanations.`;
 }
 
 // src/presets.ts
@@ -2234,8 +2348,9 @@ function parseLlmResponse(raw) {
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
     const spoken = toCleanString(parsed.spoken ?? parsed.casual ?? parsed.slot1);
     const spokenMeaning = toCleanString(parsed.spoken_meaning ?? parsed.spokenMeaning);
-    const written = toCleanString(parsed.written ?? parsed.academic ?? parsed.slot2);
-    const writtenMeaning = toCleanString(parsed.written_meaning ?? parsed.writtenMeaning);
+    const written = toCleanString(parsed.written ?? parsed.refined ?? parsed.academic ?? parsed.slot2);
+    const writtenMeaning = toCleanString(parsed.written_meaning ?? parsed.writtenMeaning ?? parsed.refined_meaning);
+    const refined = toCleanString(parsed.refined ?? parsed.written ?? parsed.spoken);
     const vocab = toCleanString(parsed.vocab);
     const summary = toCleanString(parsed.summary ?? parsed.core_intent ?? parsed.coreIntent);
     const slotOutputs = /* @__PURE__ */ Object.create(null);
@@ -2259,6 +2374,7 @@ function parseLlmResponse(raw) {
         spokenMeaning: effectiveSpokenMeaning || void 0,
         written: written || void 0,
         writtenMeaning: writtenMeaning || void 0,
+        refined: refined || effectiveSpoken,
         vocab: vocab || void 0,
         summary: summary || void 0,
         slotOutputs: Object.keys(slotOutputs).length > 0 ? slotOutputs : void 0
@@ -2331,6 +2447,9 @@ function loadUserLingualConfig() {
     const selectedModel = target.selectedModel || target.model;
     const sourceLang = target.sourceLang;
     const targetLang = target.targetLang;
+    const refinePreset = typeof target.refinePreset === "string" ? target.refinePreset : void 0;
+    const refineLang = typeof target.refineLang === "string" ? target.refineLang : void 0;
+    const refineRule = typeof target.refineRule === "string" ? target.refineRule : void 0;
     const compact = target.compact;
     const slotPreset = target.slotPreset;
     const slots = Array.isArray(target.slots) ? target.slots.filter((s) => s && typeof s === "object" && typeof s.id === "string" && typeof s.label === "string") : void 0;
@@ -2349,6 +2468,9 @@ function loadUserLingualConfig() {
       ...slots ? { slots } : {},
       ...sourceLang ? { sourceLang } : {},
       ...targetLang ? { targetLang } : {},
+      ...refinePreset ? { refinePreset } : {},
+      ...refineLang ? { refineLang } : {},
+      ...refineRule ? { refineRule } : {},
       ...reasoning ? { reasoning } : {},
       ...timeoutMs ? { timeoutMs } : {},
       ...replyInSourceLang !== void 0 ? { replyInSourceLang } : {},
@@ -2379,7 +2501,7 @@ function isNonEnglish(text) {
 }
 var MAX_TRANSLATION_CHARS = 2500;
 var MAX_TRANSLATION_LINES = 30;
-function shouldTriggerTranslation(text, sourceLang = "zh") {
+function shouldTriggerTranslation(text, sourceLang = "zh", allowSameLangRefine = false) {
   const trimmed = text.trim();
   if (!trimmed) return false;
   if (trimmed.length > MAX_TRANSLATION_CHARS) {
@@ -2394,6 +2516,11 @@ function shouldTriggerTranslation(text, sourceLang = "zh") {
   }
   if (shouldShieldBypass(trimmed)) {
     return false;
+  }
+  if (allowSameLangRefine) {
+    if (isNonEnglish(trimmed)) return true;
+    const words2 = trimmed.split(/\s+/);
+    return words2.length >= 2 && /[a-zA-Z]{2,}/.test(trimmed);
   }
   const normSource = (sourceLang || "zh").toLowerCase().split("-")[0];
   const nonLatinLangs = /* @__PURE__ */ new Set(["zh", "tw", "ja", "ko", "ru", "ar"]);
@@ -2431,14 +2558,19 @@ async function translatePrompt(text, userConfig = {}) {
   if (!trimmed) return null;
   const diskConfig = loadUserLingualConfig();
   const cfg = { ...DEFAULT_CONFIG, ...diskConfig, ...userConfig };
-  if (!shouldTriggerTranslation(trimmed, cfg.sourceLang)) {
+  const useRefiner = Boolean(
+    cfg.refinePreset && cfg.refinePreset !== "translate" || cfg.refineLang || cfg.refineRule && cfg.refineRule.trim()
+  );
+  if (!shouldTriggerTranslation(trimmed, cfg.sourceLang, useRefiner)) {
     return null;
   }
   if (shouldShieldBypass(trimmed)) {
     return null;
   }
   const effectiveSlots = cfg.slots || (cfg.slotPreset ? resolveSlotsForPreset(cfg.slotPreset, cfg.sourceLang) : void 0);
-  const slotSig = Array.isArray(effectiveSlots) ? effectiveSlots.filter((s) => s.enabled !== false).map((s) => s.id).join(",") : void 0;
+  const baseSlotSig = Array.isArray(effectiveSlots) ? effectiveSlots.filter((s) => s.enabled !== false).map((s) => s.id).join(",") : "";
+  const refineSig = useRefiner ? `|ref:${cfg.refinePreset || "translate"}:${cfg.refineLang || ""}:${cfg.refineRule || ""}` : "";
+  const slotSig = baseSlotSig + refineSig || void 0;
   const cacheKey = LingualLruCache.buildKey(trimmed, cfg.sourceLang, cfg.targetLang, slotSig);
   const cached = globalLingualCache.get(cacheKey);
   if (cached) {
@@ -2456,7 +2588,14 @@ async function translatePrompt(text, userConfig = {}) {
   try {
     let content = null;
     const isLongInput = isDynamicLongInput(trimmed, cfg.sourceLang);
-    const sysPrompt = buildSystemPrompt(cfg.sourceLang, cfg.targetLang, isLongInput, void 0, "general", effectiveSlots);
+    const sysPrompt = useRefiner ? buildRefineSystemPrompt({
+      sourceLang: cfg.sourceLang,
+      targetLang: cfg.targetLang,
+      refinePreset: cfg.refinePreset,
+      refineLang: cfg.refineLang,
+      refineRule: cfg.refineRule,
+      isLongInput
+    }) : buildSystemPrompt(cfg.sourceLang, cfg.targetLang, isLongInput, void 0, "general", effectiveSlots);
     if (typeof cfg.complete === "function") {
       content = await cfg.complete(trimmed, sysPrompt, controller.signal);
     } else if (cfg.endpoint) {
@@ -2503,6 +2642,7 @@ async function translatePrompt(text, userConfig = {}) {
       spokenMeaning: payload.spokenMeaning,
       written: payload.written || "",
       writtenMeaning: payload.writtenMeaning,
+      refined: payload.refined || payload.written || payload.spoken,
       vocab: payload.vocab,
       summary: payload.summary,
       sourceText: effectiveSourceText,
@@ -2860,6 +3000,10 @@ function sanitizePromptForTranslation(raw) {
 }
 
 // src/extension.ts
+function parseOneShotRefinePrefix(text) {
+  const m = (text || "").trim().match(/^(?:>>|refine\s*[:：]|polish\s*[:：]|提炼\s*[:：]|润色\s*[:：])\s*(.+)$/is);
+  return m && m[1].trim() ? m[1].trim() : null;
+}
 function isTestEnvironment2() {
   return process.env.NODE_ENV === "test" || process.env.NODE_TEST_CONTEXT !== void 0 || process.execArgv.some((a) => a.startsWith("--test") || a === "--test") || process.argv.some((a) => a.includes(".test.") || a.includes("test")) || process.env.npm_lifecycle_event === "test";
 }
@@ -2877,6 +3021,9 @@ var state = {
   selectedModel: initialDiskConfig.selectedModel || "auto",
   slotPreset: initialSlotPreset || "",
   slots: initialSlots,
+  refinePreset: normalizeRefinePreset(initialDiskConfig.refinePreset),
+  refineLang: initialDiskConfig.refineLang || "",
+  refineRule: initialDiskConfig.refineRule || "",
   labels: initialLabels
 };
 function saveUserLingualConfig(patch) {
@@ -2897,7 +3044,7 @@ function saveUserLingualConfig(patch) {
       }
     }
     for (const [k, v] of Object.entries(patch)) {
-      if (v === void 0 || v === "auto" || v === "original" || k === "compact" && v === false) {
+      if (v === void 0 || v === "" || v === "auto" || v === "original" || k === "refinePreset" && v === "translate" || k === "compact" && v === false) {
         delete existing[k];
       } else {
         existing[k] = v;
@@ -2955,6 +3102,12 @@ function updateFooter(ctx) {
       pair += ` \xB7 ${enabledSlots.length}s`;
     } else if (state.slotPreset) {
       pair += ` \xB7 ${state.slotPreset}`;
+    }
+    if (state.mode === "english") {
+      const refLangTag = state.refineLang ? `\u2794${state.refineLang}` : "";
+      const refPresetTag = state.refinePreset && state.refinePreset !== "translate" ? state.refinePreset : "refine";
+      const ruleTag = state.refineRule ? "+" : "";
+      pair += ` \xB7 \u26A1${refPresetTag}${refLangTag}${ruleTag}`;
     }
     switch (state.mode) {
       case "original":
@@ -3083,7 +3236,7 @@ function extension_default(pi) {
     session.abortActive();
     const trimmed = args?.trim().toLowerCase();
     let nextMode;
-    if (trimmed === "english" || trimmed === "en" || trimmed === "eng" || trimmed === "2") {
+    if (trimmed === "english" || trimmed === "en" || trimmed === "eng" || trimmed === "refine" || trimmed === "polish" || trimmed === "2") {
       nextMode = "english";
     } else if (trimmed === "original" || trimmed === "orig" || trimmed === "1") {
       nextMode = "original";
@@ -3377,8 +3530,134 @@ ${lbl.slotsCliTitle}
       layout: state.compact ? "capsule" : "tree",
       cacheStats: globalLingualCache.getStats()
     }) + `
-\u2022 Slots Preset: [${state.slotPreset || "developer"}] (${(state.slots || []).filter((s) => s.enabled).map((s) => s.label).join(", ")})`;
+\u2022 Slots Preset: [${state.slotPreset || "developer"}] (${(state.slots || []).filter((s) => s.enabled).map((s) => s.label).join(", ")})
+\u2022 Prompt Refiner: [${state.refinePreset || "translate"}] (Output Lang: ${state.refineLang || state.targetLang}${state.refineRule ? `, Rule: "${state.refineRule}"` : ""})`;
     ctx.ui.notify(statusMsg, "info");
+  };
+  const switchRefineHandler = async (args, ctx) => {
+    const trimmed = (args || "").trim();
+    const isZh = state.sourceLang === "zh" || state.sourceLang === "tw";
+    if (!trimmed || trimmed === "status" || trimmed === "list" || trimmed === "help" || trimmed === "?") {
+      if (!trimmed) {
+        state.mode = "english";
+        saveUserLingualConfig({ mode: "english" });
+        updateFooter(ctx);
+      }
+      const presetObj = REFINE_PRESETS[state.refinePreset] || REFINE_PRESETS.translate;
+      const outLang2 = state.refineLang || state.targetLang;
+      const presetList = Object.values(REFINE_PRESETS).map((p) => {
+        const mark = p.id === state.refinePreset ? "\u25CF" : "\u25CB";
+        const desc = isZh ? `${p.zhName} \u2014 ${p.zhDescription}` : `${p.name} \u2014 ${p.description}`;
+        return `  ${mark} ${p.id.padEnd(10)} ${desc}`;
+      }).join("\n");
+      const msg = isZh ? `\u26A1 [${state.labels.hudTitle}] \u63D0\u793A\u8BCD\u63D0\u70BC\u4E0E\u89C4\u8303\u5316\u5F15\u64CE (\u5DF2\u6FC0\u6D3B):
+\u2022 \u5F53\u524D\u7B56\u7565: [${presetObj.id}] ${presetObj.zhName}
+\u2022 \u8F93\u51FA\u7ED9 AI \u7684\u8BED\u8A00: [${outLang2}] (\u9ED8\u8BA4\u82F1\u6587 en\uFF0C\u53EF\u5207 zh/native \u4FDD\u6301\u6BCD\u8BED\u7ED3\u6784\u5316\u63D0\u70BC)
+\u2022 \u53E0\u52A0\u81EA\u5B9A\u4E49\u89C4\u8303: ${state.refineRule ? `"${state.refineRule}"` : "(\u65E0)"}
+
+\u9884\u8BBE\u7B56\u7565\u5217\u8868:
+${presetList}
+
+\u5FEB\u6377\u7528\u6CD5:
+  \u2022 /refine spec              \u5207\u6362\u4E3A\u300C\u7ED3\u6784\u5316\u5DE5\u7A0B\u9700\u6C42\u63D0\u70BC\u300D
+  \u2022 /refine surgical          \u5207\u6362\u4E3A\u300C\u6700\u5C0F\u6539\u52A8\u4E0E\u9632\u8FC7\u5EA6\u8BBE\u8BA1\u89C4\u8303\u300D
+  \u2022 /refine zh                \u4FDD\u6301\u7528\u4E2D\u6587\u5411\u4E3B Agent \u53D1\u9001\u63D0\u70BC\u540E\u7684\u89C4\u8303\u63D0\u793A\u8BCD
+  \u2022 /refine + \u8981\u6C42\u9075\u5FAARFC2119  \u53E0\u52A0\u81EA\u5B9A\u4E49\u89C4\u8303\u8981\u6C42 (/refine clear \u6E05\u7A7A)
+  \u2022 \u4F34\u5B66\u6A21\u5F0F\u4E0B\u5355\u6B21\u89E6\u53D1:       \u8F93\u5165\u6846\u76F4\u63A5\u6572 ">> \u4E71\u7CDF\u7CDF\u7684\u60F3\u6CD5..." \u6216 "\u63D0\u70BC: ..."` : `\u26A1 [${state.labels.hudTitle}] Prompt Refiner & Structurer (Active):
+\u2022 Active Preset: [${presetObj.id}] ${presetObj.name}
+\u2022 Output Language to Agent: [${outLang2}] (default ${state.targetLang}, or set zh/native)
+\u2022 Stacked Custom Rule: ${state.refineRule ? `"${state.refineRule}"` : "(none)"}
+
+Available Presets:
+${presetList}
+
+Quick Commands:
+  \u2022 /refine spec              Switch to Structured Engineering Spec
+  \u2022 /refine surgical          Switch to Surgical Minimal Diff
+  \u2022 /refine native            Refine messy thoughts in your native language
+  \u2022 /refine + <custom rule>   Stack custom constraints (/refine clear to reset)
+  \u2022 One-shot in Learn mode:   Prefix input with ">> <messy prompt>" or "refine: ..."`;
+      ctx.ui.notify(msg, "info");
+      return;
+    }
+    if (trimmed === "reset" || trimmed === "clear" || trimmed === "default") {
+      state.refinePreset = "translate";
+      state.refineLang = "";
+      state.refineRule = "";
+      saveUserLingualConfig({ refinePreset: "translate", refineLang: "", refineRule: "" });
+      globalLingualCache.clear();
+      updateFooter(ctx);
+      ctx.ui.notify(
+        isZh ? `[${state.labels.hudTitle}] \u5DF2\u91CD\u7F6E\u63D0\u793A\u8BCD\u63D0\u70BC\u5668\u4E3A\u9ED8\u8BA4\u6807\u51C6\u82F1\u6587\u8F6C\u8BD1 (translate)` : `[${state.labels.hudTitle}] Reset Prompt Refiner to default architectural translation`,
+        "info"
+      );
+      return;
+    }
+    let remaining = trimmed;
+    const plusMatch = remaining.match(/(?:^|\s)(?:\+|rule\s*[:：]?)\s*(.+)$/is);
+    if (plusMatch && plusMatch[1]) {
+      const ruleText = plusMatch[1].trim();
+      if (ruleText === "clear" || ruleText === "none" || ruleText === "off") {
+        state.refineRule = "";
+      } else {
+        state.refineRule = ruleText;
+      }
+      remaining = remaining.slice(0, plusMatch.index).trim();
+    }
+    const tokens = remaining.split(/\s+/).filter(Boolean);
+    for (const tok of tokens) {
+      const lowerTok = tok.toLowerCase();
+      if (lowerTok === "on") {
+        state.mode = "english";
+        continue;
+      }
+      if (lowerTok === "off") {
+        state.mode = "original";
+        continue;
+      }
+      if (lowerTok === "translate" || lowerTok === "spec" || lowerTok === "struct" || lowerTok === "structure" || lowerTok === "\u89C4\u8303" || lowerTok === "\u63D0\u70BC" || lowerTok === "surgical" || lowerTok === "minimal" || lowerTok === "diff" || lowerTok === "\u6781\u7B80" || lowerTok === "tdd" || lowerTok === "test" || lowerTok === "debug" || lowerTok === "fix" || lowerTok === "triage") {
+        state.refinePreset = normalizeRefinePreset(lowerTok);
+        continue;
+      }
+      if (lowerTok === "native" || lowerTok === "source" || lowerTok === "\u6BCD\u8BED") {
+        state.refineLang = state.sourceLang;
+        continue;
+      }
+      const normLang = normalizeLangCode(lowerTok);
+      if (LANGUAGE_PRESETS[normLang] || ["en", "zh", "ja", "ko", "es", "fr", "de", "ru", "pt", "it"].includes(normLang)) {
+        state.refineLang = normLang === state.targetLang ? "" : normLang;
+        continue;
+      }
+    }
+    if (tokens.length > 0 && !plusMatch) {
+      const allRecognized = tokens.every((tok) => {
+        const l = tok.toLowerCase();
+        const nl = normalizeLangCode(l);
+        return ["on", "off", "translate", "spec", "struct", "structure", "\u89C4\u8303", "\u63D0\u70BC", "surgical", "minimal", "diff", "\u6781\u7B80", "tdd", "test", "debug", "fix", "triage", "native", "source", "\u6BCD\u8BED"].includes(l) || Boolean(LANGUAGE_PRESETS[nl]) || ["en", "zh", "ja", "ko", "es", "fr", "de", "ru", "pt", "it"].includes(nl);
+      });
+      if (!allRecognized) {
+        state.refineRule = remaining;
+        if (state.refinePreset === "translate") {
+          state.refinePreset = "spec";
+        }
+      }
+    }
+    state.mode = "english";
+    saveUserLingualConfig({
+      mode: state.mode,
+      refinePreset: state.refinePreset,
+      refineLang: state.refineLang,
+      refineRule: state.refineRule
+    });
+    globalLingualCache.clear();
+    updateFooter(ctx);
+    const activePreset = REFINE_PRESETS[state.refinePreset] || REFINE_PRESETS.translate;
+    const outLang = state.refineLang || state.targetLang;
+    const ruleSuffix = state.refineRule ? ` + "${state.refineRule}"` : "";
+    ctx.ui.notify(
+      isZh ? `\u26A1 [${state.labels.hudTitle}] \u5DF2\u542F\u7528\u63D0\u793A\u8BCD\u63D0\u70BC [${activePreset.id} \xB7 ${activePreset.zhName}] \u2794 \u8F93\u51FA\u8BED\u8A00 [${outLang}]${ruleSuffix}` : `\u26A1 [${state.labels.hudTitle}] Prompt Refiner active [${activePreset.id} \xB7 ${activePreset.name}] \u2794 Output [${outLang}]${ruleSuffix}`,
+      "info"
+    );
   };
   const showLastHandler = async (_args, ctx) => {
     if (session.getReadyPages().length > 0) {
@@ -3499,6 +3778,10 @@ To switch native language: /lang <zh|ja|en|es|fr|de>.`;
       await switchSlotsHandler(subArgs, ctx);
       return;
     }
+    if (sub === "refine" || sub === "polish" || sub === "enhance" || sub === "spec") {
+      await switchRefineHandler(sub === "spec" ? `spec ${subArgs}`.trim() : subArgs, ctx);
+      return;
+    }
     if (sub === "model") {
       await setModelHandler(subArgs, ctx);
       return;
@@ -3537,6 +3820,14 @@ To switch native language: /lang <zh|ja|en|es|fr|de>.`;
   pi.registerCommand("lingual-mode", {
     description: state.labels.cmdDescMode || "Set companion mode: /lingual-mode <original|english|off>",
     handler: setModeHandler
+  });
+  pi.registerCommand("refine", {
+    description: "Configure or activate Prompt Refiner & Structurer: /refine [translate|spec|surgical|tdd|debug|zh|en|+ rule]",
+    handler: switchRefineHandler
+  });
+  pi.registerCommand("lingual-refine", {
+    description: "Configure or activate Prompt Refiner (alias): /lingual-refine [spec|surgical|tdd|debug|zh|en|+ rule]",
+    handler: switchRefineHandler
   });
   pi.registerCommand("slots", {
     description: state.labels.cmdDescSlots || "Inspect, add, remove, or customize dynamic slots: /slots [add|rm|toggle|reset]",
@@ -3664,6 +3955,15 @@ To switch native language: /lang <zh|ja|en|es|fr|de>.`;
     if (latestDisk.slots && Array.isArray(latestDisk.slots)) {
       state.slots = latestDisk.slots;
     }
+    if (latestDisk.refinePreset !== void 0) {
+      state.refinePreset = normalizeRefinePreset(latestDisk.refinePreset);
+    }
+    if (latestDisk.refineLang !== void 0) {
+      state.refineLang = latestDisk.refineLang;
+    }
+    if (latestDisk.refineRule !== void 0) {
+      state.refineRule = latestDisk.refineRule;
+    }
     const raw = event.text.trim();
     if (!raw) return { action: "continue" };
     if (raw.startsWith("/") || raw.startsWith("!")) {
@@ -3674,9 +3974,16 @@ To switch native language: /lang <zh|ja|en|es|fr|de>.`;
       }
       return { action: "continue" };
     }
-    const sanitized = sanitizePromptForTranslation(raw);
+    const oneShotRefineText = parseOneShotRefinePrefix(raw);
+    const effectiveRaw = oneShotRefineText !== null ? oneShotRefineText : raw;
+    const isTransformTurn = state.mode === "english" || oneShotRefineText !== null;
+    const activeRefinePreset = oneShotRefineText !== null && state.refinePreset === "translate" ? "spec" : state.refinePreset;
+    const useRefiner = Boolean(
+      oneShotRefineText !== null || activeRefinePreset && activeRefinePreset !== "translate" || state.refineLang || state.refineRule && state.refineRule.trim()
+    );
+    const sanitized = sanitizePromptForTranslation(effectiveRaw);
     const promptToTranslate = sanitized.distilledText;
-    if (!sanitized.hasNaturalLanguage || !shouldTriggerTranslation(promptToTranslate, state.sourceLang)) {
+    if (!sanitized.hasNaturalLanguage || !shouldTriggerTranslation(promptToTranslate, state.sourceLang, useRefiner)) {
       clearPendingTimers();
       session.abortActive();
       session.clearPagination();
@@ -3690,7 +3997,7 @@ To switch native language: /lang <zh|ja|en|es|fr|de>.`;
     const { generation, signal } = session.beginRequest();
     const completer = createModelCompleter(ctx);
     session.initPagination(1);
-    if (state.mode === "original") {
+    if (!isTransformTurn) {
       if (hasActiveUI(ctx)) {
         try {
           ctx.ui.setWidget("lingual_hud", void 0);
@@ -3748,12 +4055,13 @@ To switch native language: /lang <zh|ja|en|es|fr|de>.`;
     }
     if (hasActiveUI(ctx)) {
       try {
+        const statusHint = useRefiner ? "refining prompt..." : "polishing...";
         ctx.ui.setWidget(
           "lingual_hud",
-          [ctx.ui.theme.fg("muted", "  \u22EF \u21C4 [lingual] polishing...")],
+          [ctx.ui.theme.fg("muted", `  \u22EF \u21C4 [lingual] ${statusHint}`)],
           { placement: "aboveEditor" }
         );
-        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", "\u21C4 [lingual] polishing..."));
+        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", `\u21C4 [lingual] ${statusHint}`));
       } catch {
       }
     }
@@ -3761,6 +4069,9 @@ To switch native language: /lang <zh|ja|en|es|fr|de>.`;
       const result = await translatePrompt(promptToTranslate, {
         sourceLang: state.sourceLang,
         targetLang: state.targetLang,
+        refinePreset: activeRefinePreset,
+        refineLang: state.refineLang || void 0,
+        refineRule: state.refineRule || void 0,
         labels: state.labels,
         slots: state.slots,
         slotPreset: state.slotPreset,
@@ -3830,5 +4141,6 @@ ${sanitized.rawPayload}` : combinedEnglish;
   });
 }
 export {
-  extension_default as default
+  extension_default as default,
+  parseOneShotRefinePrefix
 };

@@ -1,5 +1,5 @@
-import { L as LingualResult, a as LingualI18nLabels, S as SlotConfig, b as LingualConfig } from './index-KTu0f0gK.js';
-export { C as CacheStats, c as CustomSlotsConfig, d as LANGUAGE_PRESETS, e as LEGACY_SLOT_PRESETS, f as LinguaConfig, g as LinguaI18nLabels, h as LinguaLruCache, i as LinguaMode, j as LinguaResult, k as LingualCoreOptions, l as LingualLruCache, m as LingualMode, n as LingualRequest, o as LingualResponse, p as SLOT_PRESETS, q as SanitizedPromptResult, r as SlotDefinition, s as SlotPresetDefinition, t as SlotResult, u as SlotRole, T as TranslationPayload, v as addSlotToList, w as buildSystemPrompt, x as createCustomSlot, y as formatModelSelectionMessage, z as formatStatusReport, A as getDefaultSlots, B as globalLinguaCache, D as globalLingualCache, E as moveSlotInList, F as parseLlmResponse, G as removeSlotFromList, H as resolveLabelsForLang, I as resolveSlotsForPreset, J as sanitizePromptForTranslation, K as shouldShieldBypass, M as toggleSlotInList, N as translateCore, O as updateSlotInList } from './index-KTu0f0gK.js';
+import { L as LingualResult, a as LingualI18nLabels, S as SlotConfig, b as LingualConfig } from './index-BDUdN4Vs.js';
+export { C as CacheStats, c as CustomSlotsConfig, d as LANGUAGE_PRESETS, e as LEGACY_SLOT_PRESETS, f as LinguaConfig, g as LinguaI18nLabels, h as LinguaLruCache, i as LinguaMode, j as LinguaResult, k as LingualCoreOptions, l as LingualLruCache, m as LingualMode, n as LingualRequest, o as LingualResponse, R as REFINE_PRESETS, p as RefinePreset, q as RefinePresetSpec, r as SLOT_PRESETS, s as SanitizedPromptResult, t as SlotDefinition, u as SlotPresetDefinition, v as SlotResult, w as SlotRole, T as TranslationPayload, x as addSlotToList, y as buildRefineSystemPrompt, z as buildSystemPrompt, A as createCustomSlot, B as formatModelSelectionMessage, D as formatStatusReport, E as getDefaultSlots, F as globalLinguaCache, G as globalLingualCache, H as moveSlotInList, I as normalizeRefinePreset, J as parseLlmResponse, K as removeSlotFromList, M as resolveLabelsForLang, N as resolveSlotsForPreset, O as sanitizePromptForTranslation, P as shouldShieldBypass, Q as toggleSlotInList, U as translateCore, V as updateSlotInList } from './index-BDUdN4Vs.js';
 
 /**
  * Splits text into atomic natural sentence chunks when long.
@@ -238,7 +238,7 @@ declare const MAX_TRANSLATION_LINES = 30;
  * - Centrally delegates to shouldShieldBypass (Single Source of Truth) to exclude code statements, SQL, and 40+ CLI commands;
  * - [Safety Gate]: Rejects oversized payloads (> 1500 chars), monolithic multi-line code (> 8 lines), markdown headings, and code fences.
  */
-declare function shouldTriggerTranslation(text: string, sourceLang?: string): boolean;
+declare function shouldTriggerTranslation(text: string, sourceLang?: string, allowSameLangRefine?: boolean): boolean;
 
 /**
  * Strip annotations and recover purely clean text to prevent LLM prompt pollution

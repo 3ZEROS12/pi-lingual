@@ -34,8 +34,10 @@ __export(core_exports, {
   LEGACY_SLOT_PRESETS: () => LEGACY_SLOT_PRESETS,
   LinguaLruCache: () => LinguaLruCache,
   LingualLruCache: () => LingualLruCache,
+  REFINE_PRESETS: () => REFINE_PRESETS,
   SLOT_PRESETS: () => SLOT_PRESETS,
   addSlotToList: () => addSlotToList,
+  buildRefineSystemPrompt: () => buildRefineSystemPrompt,
   buildSystemPrompt: () => buildSystemPrompt,
   createCustomSlot: () => createCustomSlot,
   formatModelSelectionMessage: () => formatModelSelectionMessage,
@@ -44,6 +46,7 @@ __export(core_exports, {
   globalLinguaCache: () => globalLinguaCache,
   globalLingualCache: () => globalLingualCache,
   moveSlotInList: () => moveSlotInList,
+  normalizeRefinePreset: () => normalizeRefinePreset,
   parseLlmResponse: () => parseLlmResponse,
   removeSlotFromList: () => removeSlotFromList,
   resolveLabelsForLang: () => resolveLabelsForLang,
@@ -57,6 +60,64 @@ __export(core_exports, {
 module.exports = __toCommonJS(core_exports);
 
 // src/core/prompts.ts
+var REFINE_PRESETS = {
+  translate: {
+    id: "translate",
+    name: "Standard Architectural Translation",
+    zhName: "\u6807\u51C6\u67B6\u6784\u82F1\u6587\u8F6C\u8BD1",
+    description: "Translate colloquial input into crisp, modern technical prose in the target language.",
+    zhDescription: "\u5C06\u53E3\u8BED\u8F93\u5165\u8F6C\u8BD1\u4E3A\u6E05\u6670\u7CBE\u51C6\u7684\u76EE\u6807\u8BED\u8A00\u6280\u672F\u6307\u4EE4\uFF08\u9ED8\u8BA4\u82F1\u6587\uFF09\u3002",
+    directive: "Translate and clarify the user's message into clear, precise, modern technical prose. Preserve exact intent without adding unrequested scope."
+  },
+  spec: {
+    id: "spec",
+    name: "Structured Engineering Spec",
+    zhName: "\u7ED3\u6784\u5316\u5DE5\u7A0B\u9700\u6C42\u63D0\u70BC",
+    description: "Distill messy, stream-of-consciousness thoughts into a structured engineering specification (Goal, Constraints, Deliverable).",
+    zhDescription: "\u5C06\u6742\u4E71\u3001\u53E3\u8BED\u5316\u3001\u8DF3\u8DC3\u7684\u63CF\u8FF0\u63D0\u70BC\u4E3A\u903B\u8F91\u4E25\u5BC6\u7684\u7ED3\u6784\u5316\u5DE5\u7A0B\u6307\u4EE4\uFF08\u6838\u5FC3\u76EE\u6807 + \u7EA6\u675F\u8FB9\u754C + \u9884\u671F\u7ED3\u679C\uFF09\u3002",
+    directive: "The user's raw input may be messy, colloquial, or stream-of-consciousness. Distill, organize, and sharpen it into a crystal-clear, structured engineering prompt for an AI coding agent: state the exact objective first, clarify implicit technical constraints/edge cases, and keep it direct and actionable without inventing unrequested features."
+  },
+  surgical: {
+    id: "surgical",
+    name: "Surgical Minimal Diff",
+    zhName: "\u6700\u5C0F\u6539\u52A8\u4E0E\u9632\u8FC7\u5EA6\u8BBE\u8BA1\u89C4\u8303",
+    description: "Refine the prompt and enforce smallest working diff, root-cause focus, and zero unrequested refactoring.",
+    zhDescription: "\u63D0\u70BC\u6838\u5FC3\u610F\u56FE\u5E76\u81EA\u52A8\u53E0\u52A0\u4E0A\u300C\u6700\u5C0F\u5DE5\u4F5CDiff\u3001\u76F4\u51FB\u6839\u56E0\u3001\u4E25\u7981\u8FC7\u5EA6\u8BBE\u8BA1\u4E0E\u65E0\u5173\u91CD\u6784\u300D\u7EA6\u675F\u3002",
+    directive: "Clarify the user's messy request into a sharp engineering directive, and explicitly append strict execution constraints: deliver the smallest working diff, fix the root cause directly, and strictly avoid unrequested refactoring or speculative scaffolding."
+  },
+  tdd: {
+    id: "tdd",
+    name: "Test-Verified Contract",
+    zhName: "\u6D4B\u8BD5\u9A71\u52A8\u4E0E\u8FB9\u754C\u9A8C\u8BC1\u89C4\u8303",
+    description: "Refine the prompt into a testable contract requiring boundary-case checks and physical test verification.",
+    zhDescription: "\u5C06\u6A21\u7CCA\u9700\u6C42\u8F6C\u5316\u4E3A\u53EF\u9A8C\u8BC1\u5951\u7EA6\uFF0C\u8981\u6C42\u8986\u76D6\u8FB9\u754C\u6761\u4EF6\u5E76\u901A\u8FC7\u771F\u5B9E\u6D4B\u8BD5\u9A8C\u8BC1\u3002",
+    directive: "Structure the user's request into a verifiable engineering task, explicitly requiring edge-case coverage and physical test verification before completion."
+  },
+  debug: {
+    id: "debug",
+    name: "Root-Cause Triage",
+    zhName: "\u6839\u56E0\u6EAF\u6E90\u6392\u969C\u89C4\u8303",
+    description: "Turn a vague bug complaint into a systematic end-to-end root-cause diagnostic directive.",
+    zhDescription: "\u5C06\u6A21\u7CCA\u7684\u62A5\u9519\u62B1\u6028\u63D0\u70BC\u4E3A\u7CFB\u7EDF\u6027\u7684\u5168\u94FE\u8DEF\u6839\u56E0\u6392\u67E5\u6307\u4EE4\uFF08\u62D2\u7EDD\u8868\u9762\u6253\u8865\u4E01\uFF09\u3002",
+    directive: "Transform the user's bug report or complaint into a rigorous root-cause diagnostic prompt: trace the end-to-end execution flow, identify the underlying state or logic flaw, and fix the root cause rather than applying superficial symptom patches."
+  }
+};
+function normalizeRefinePreset(raw) {
+  const clean = (raw || "").trim().toLowerCase();
+  if (clean === "spec" || clean === "struct" || clean === "structure" || clean === "\u89C4\u8303" || clean === "\u63D0\u70BC") {
+    return "spec";
+  }
+  if (clean === "surgical" || clean === "minimal" || clean === "diff" || clean === "\u6781\u7B80" || clean === "\u6700\u5C0F\u6539\u52A8") {
+    return "surgical";
+  }
+  if (clean === "tdd" || clean === "test" || clean === "verify" || clean === "\u6D4B\u8BD5") {
+    return "tdd";
+  }
+  if (clean === "debug" || clean === "fix" || clean === "triage" || clean === "\u6392\u969C" || clean === "\u6839\u56E0") {
+    return "debug";
+  }
+  return "translate";
+}
 function getDefaultSlots(sourceLang = "en") {
   const norm = (sourceLang || "en").toLowerCase().split("-")[0];
   const labels = {
@@ -625,6 +686,62 @@ ${anchorText}
 ${jsonFormatHint}
 Output valid JSON ONLY. Never output markdown code fences, backticks, quotes, or explanations.`;
 }
+function buildRefineSystemPrompt(options) {
+  const normSource = (options.sourceLang || "zh").toLowerCase().split("-")[0];
+  const normTarget = (options.targetLang || "en").toLowerCase().split("-")[0];
+  const spec = LANGUAGE_SPECS[normSource] || LANGUAGE_SPECS.zh;
+  const TARGET_LANGUAGE_NAMES = {
+    en: "English",
+    zh: "Chinese (Simplified)",
+    tw: "Chinese (Traditional)",
+    ja: "Japanese",
+    ko: "Korean",
+    es: "Spanish",
+    fr: "French",
+    de: "German",
+    ru: "Russian",
+    pt: "Portuguese",
+    it: "Italian"
+  };
+  const companionTargetName = TARGET_LANGUAGE_NAMES[normTarget] || "English";
+  const rawRefineLang = (options.refineLang || "").trim().toLowerCase();
+  const effectiveRefineLangCode = !rawRefineLang || rawRefineLang === "default" || rawRefineLang === "auto" ? normTarget : rawRefineLang === "native" || rawRefineLang === "source" || rawRefineLang === "\u6BCD\u8BED" ? normSource : rawRefineLang.split("-")[0];
+  const refineTargetName = TARGET_LANGUAGE_NAMES[effectiveRefineLangCode] || companionTargetName;
+  const presetKey = normalizeRefinePreset(options.refinePreset);
+  const preset = REFINE_PRESETS[presetKey];
+  const customRuleBlock = options.refineRule && options.refineRule.trim() ? `
+
+[USER STACKED SPECIFICATION & CUSTOM RULES - MANDATORY]:
+You MUST weave and enforce the following user-specified rules/constraints directly into the refined prompt ("written" / "refined"):
+"""
+${options.refineRule.trim()}
+"""` : "";
+  return `You are an elite AI Coding Prompt Architect and Bilingual Developer Coach.
+The user is typing a potentially messy, colloquial, or fragmented prompt in ${spec.name}.
+Your job is to transform their raw input into a high-clarity, well-structured engineering prompt for an AI coding agent, while also providing authentic ${companionTargetName} companion expressions:
+
+1. "written" (Refined Agent Prompt in **${refineTargetName}**):
+   - Language: MUST be written in **${refineTargetName}**.
+   - Refinement Strategy (${preset.name}): ${preset.directive}
+   - Turn messy, colloquial, or ambiguous phrasing into a clear, structured, high-signal instruction that an AI coding agent can execute immediately without guessing.
+2. "written_meaning": A concise summary of the structured intent ${spec.meaningInstruction}.
+3. "spoken" (Authentic ${companionTargetName} Spoken Register): Natural Silicon Valley spoken phrasing in ${companionTargetName} for daily standups/Slack.
+4. "spoken_meaning": The exact nuance of "spoken" ${spec.meaningInstruction}.
+5. "vocab": Key idiomatic collocations or technical terms extracted from the expression ${spec.vocabInstruction}.
+
+[CODE & SYMBOL SHIELD - STRICT RULE]:
+All inline code (\`foo()\`), file paths (@file, path/to/file), CLI flags, variable names, and technical identifiers MUST be preserved 100% verbatim. Never drop or alter code tokens.${customRuleBlock}
+
+Strict JSON format:
+{
+  "spoken": "...",
+  "spoken_meaning": "...",
+  "written": "...",
+  "written_meaning": "...",
+  "vocab": "..."
+}
+Output valid JSON ONLY. Never output markdown code fences or explanations.`;
+}
 
 // src/shield.ts
 var SHELL_COMMAND_PREFIXES = [
@@ -843,8 +960,9 @@ function parseLlmResponse(raw) {
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
     const spoken = toCleanString(parsed.spoken ?? parsed.casual ?? parsed.slot1);
     const spokenMeaning = toCleanString(parsed.spoken_meaning ?? parsed.spokenMeaning);
-    const written = toCleanString(parsed.written ?? parsed.academic ?? parsed.slot2);
-    const writtenMeaning = toCleanString(parsed.written_meaning ?? parsed.writtenMeaning);
+    const written = toCleanString(parsed.written ?? parsed.refined ?? parsed.academic ?? parsed.slot2);
+    const writtenMeaning = toCleanString(parsed.written_meaning ?? parsed.writtenMeaning ?? parsed.refined_meaning);
+    const refined = toCleanString(parsed.refined ?? parsed.written ?? parsed.spoken);
     const vocab = toCleanString(parsed.vocab);
     const summary = toCleanString(parsed.summary ?? parsed.core_intent ?? parsed.coreIntent);
     const slotOutputs = /* @__PURE__ */ Object.create(null);
@@ -868,6 +986,7 @@ function parseLlmResponse(raw) {
         spokenMeaning: effectiveSpokenMeaning || void 0,
         written: written || void 0,
         writtenMeaning: writtenMeaning || void 0,
+        refined: refined || effectiveSpoken,
         vocab: vocab || void 0,
         summary: summary || void 0,
         slotOutputs: Object.keys(slotOutputs).length > 0 ? slotOutputs : void 0
@@ -899,7 +1018,9 @@ async function translateCore(req, options) {
     };
   }
   const cache = options?.cache || globalLingualCache;
-  const slotSig = Array.isArray(req.slots) ? req.slots.filter((s) => s.enabled !== false).map((s) => s.id).join(",") : void 0;
+  const baseSlotSig = Array.isArray(req.slots) ? req.slots.filter((s) => s.enabled !== false).map((s) => s.id).join(",") : "";
+  const refineSig = req.refinePreset || req.refineLang || req.refineRule ? `|ref:${req.refinePreset || "translate"}:${req.refineLang || ""}:${req.refineRule || ""}` : "";
+  const slotSig = baseSlotSig + refineSig || void 0;
   const cacheKey = LingualLruCache.buildKey(text, sourceLang, targetLang, slotSig);
   const cached = cache.get(cacheKey);
   if (cached) {
@@ -908,6 +1029,7 @@ async function translateCore(req, options) {
       spokenMeaning: cached.spokenMeaning,
       written: cached.written || cached.spoken,
       writtenMeaning: cached.writtenMeaning,
+      refined: cached.refined || cached.written || cached.spoken,
       vocab: cached.vocab,
       summary: cached.summary,
       cached: true,
@@ -918,11 +1040,22 @@ async function translateCore(req, options) {
     return {
       spoken: text,
       written: text,
+      refined: text,
       cached: false,
       shieldBypassed: false
     };
   }
-  const systemPrompt = buildSystemPrompt(
+  const useRefiner = Boolean(
+    req.refinePreset && req.refinePreset !== "translate" || req.refineLang || req.refineRule && req.refineRule.trim()
+  );
+  const systemPrompt = useRefiner ? buildRefineSystemPrompt({
+    sourceLang,
+    targetLang,
+    refinePreset: req.refinePreset,
+    refineLang: req.refineLang,
+    refineRule: req.refineRule,
+    isLongInput: Boolean(req.isLongInput)
+  }) : buildSystemPrompt(
     sourceLang,
     targetLang,
     Boolean(req.isLongInput),
@@ -971,6 +1104,7 @@ async function translateCore(req, options) {
       spokenMeaning: parsed.spokenMeaning,
       written: parsed.written || parsed.spoken,
       writtenMeaning: parsed.writtenMeaning,
+      refined: parsed.refined || parsed.written || parsed.spoken,
       vocab: parsed.vocab,
       summary: parsed.summary,
       slots: slotResults,
@@ -2113,8 +2247,10 @@ function sanitizePromptForTranslation(raw) {
   LEGACY_SLOT_PRESETS,
   LinguaLruCache,
   LingualLruCache,
+  REFINE_PRESETS,
   SLOT_PRESETS,
   addSlotToList,
+  buildRefineSystemPrompt,
   buildSystemPrompt,
   createCustomSlot,
   formatModelSelectionMessage,
@@ -2123,6 +2259,7 @@ function sanitizePromptForTranslation(raw) {
   globalLinguaCache,
   globalLingualCache,
   moveSlotInList,
+  normalizeRefinePreset,
   parseLlmResponse,
   removeSlotFromList,
   resolveLabelsForLang,

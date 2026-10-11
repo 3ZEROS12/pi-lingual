@@ -7,7 +7,7 @@ import type {
   InputEvent,
   InputEventResult,
 } from "@earendil-works/pi-coding-agent";
-import type { LingualMode, LingualI18nLabels, LingualResult, SlotConfig, SlotResult } from "./types.js";
+import type { LingualMode, LingualI18nLabels, LingualResult, RefinePreset, SlotConfig, SlotResult } from "./types.js";
 import { getEffectiveMaxCols } from "./layout.js";
 import {
   translatePrompt,
@@ -26,6 +26,8 @@ import {
   wrapVisualText,
   formatVocabItemsAtomic,
   renderCardLayout,
+  REFINE_PRESETS,
+  normalizeRefinePreset,
 } from "./engine.js";
 import {
   resolveLabelsForLang,
@@ -53,7 +55,19 @@ interface ExtensionState {
   selectedModel: string;
   slotPreset: string;
   slots: SlotConfig[];
+  refinePreset: RefinePreset;
+  refineLang: string;
+  refineRule: string;
   labels: LingualI18nLabels;
+}
+
+/**
+ * Parse one-shot prompt refiner prefix (`>> <messy input>`, `提炼: <messy input>`, `refine: <messy input>`).
+ * Allows users in `original` (Learn) mode to refine and structure a specific messy prompt on the spot!
+ */
+export function parseOneShotRefinePrefix(text: string): string | null {
+  const m = (text || "").trim().match(/^(?:>>|refine\s*[:：]|polish\s*[:：]|提炼\s*[:：]|润色\s*[:：])\s*(.+)$/is);
+  return m && m[1].trim() ? m[1].trim() : null;
 }
 
 function isTestEnvironment(): boolean {
@@ -83,6 +97,9 @@ const state: ExtensionState = {
   selectedModel: initialDiskConfig.selectedModel || "auto",
   slotPreset: initialSlotPreset || "",
   slots: initialSlots,
+  refinePreset: normalizeRefinePreset(initialDiskConfig.refinePreset),
+  refineLang: initialDiskConfig.refineLang || "",
+  refineRule: initialDiskConfig.refineRule || "",
   labels: initialLabels,
 };
 
@@ -108,7 +125,14 @@ function saveUserLingualConfig(patch: Record<string, any>) {
     }
 
     for (const [k, v] of Object.entries(patch)) {
-      if (v === undefined || v === "auto" || v === "original" || (k === "compact" && v === false)) {
+      if (
+        v === undefined ||
+        v === "" ||
+        v === "auto" ||
+        v === "original" ||
+        (k === "refinePreset" && v === "translate") ||
+        (k === "compact" && v === false)
+      ) {
         delete existing[k]; // 恢复默认值时物理移除键，零残留回滚 (RFC 2119 Invariant 1)
       } else {
         existing[k] = v;
@@ -173,6 +197,13 @@ function updateFooter(ctx: ExtensionContext | null | undefined) {
       pair += ` · ${enabledSlots.length}s`;
     } else if (state.slotPreset) {
       pair += ` · ${state.slotPreset}`;
+    }
+
+    if (state.mode === "english") {
+      const refLangTag = state.refineLang ? `➔${state.refineLang}` : "";
+      const refPresetTag = state.refinePreset && state.refinePreset !== "translate" ? state.refinePreset : "refine";
+      const ruleTag = state.refineRule ? "+" : "";
+      pair += ` · ⚡${refPresetTag}${refLangTag}${ruleTag}`;
     }
 
     switch (state.mode) {
@@ -336,7 +367,14 @@ export default function (pi: ExtensionAPI) {
     const trimmed = args?.trim().toLowerCase();
     let nextMode: LingualMode;
 
-    if (trimmed === "english" || trimmed === "en" || trimmed === "eng" || trimmed === "2") {
+    if (
+      trimmed === "english" ||
+      trimmed === "en" ||
+      trimmed === "eng" ||
+      trimmed === "refine" ||
+      trimmed === "polish" ||
+      trimmed === "2"
+    ) {
       nextMode = "english";
     } else if (trimmed === "original" || trimmed === "orig" || trimmed === "1") {
       nextMode = "original";
@@ -679,9 +717,173 @@ export default function (pi: ExtensionAPI) {
       activeModel,
       layout: state.compact ? "capsule" : "tree",
       cacheStats: globalLingualCache.getStats(),
-    }) + `\n• Slots Preset: [${state.slotPreset || "developer"}] (${(state.slots || []).filter(s => s.enabled).map(s => s.label).join(", ")})`;
+    }) +
+      `\n• Slots Preset: [${state.slotPreset || "developer"}] (${(state.slots || []).filter(s => s.enabled).map(s => s.label).join(", ")})` +
+      `\n• Prompt Refiner: [${state.refinePreset || "translate"}] (Output Lang: ${state.refineLang || state.targetLang}${state.refineRule ? `, Rule: "${state.refineRule}"` : ""})`;
 
     ctx.ui.notify(statusMsg, "info");
+  };
+
+  // 提示词提炼与规范化控制器 (/refine [preset|lang|rule ...])
+  const switchRefineHandler = async (args: string, ctx: ExtensionContext) => {
+    const trimmed = (args || "").trim();
+    const isZh = state.sourceLang === "zh" || state.sourceLang === "tw";
+
+    // 1. 无参数：切换到 Refine/Transform 模式 (`mode = "english"`) 并展示当前提炼规范配置
+    if (!trimmed || trimmed === "status" || trimmed === "list" || trimmed === "help" || trimmed === "?") {
+      if (!trimmed) {
+        state.mode = "english";
+        saveUserLingualConfig({ mode: "english" });
+        updateFooter(ctx);
+      }
+      const presetObj = REFINE_PRESETS[state.refinePreset] || REFINE_PRESETS.translate;
+      const outLang = state.refineLang || state.targetLang;
+      const presetList = Object.values(REFINE_PRESETS)
+        .map((p) => {
+          const mark = p.id === state.refinePreset ? "●" : "○";
+          const desc = isZh ? `${p.zhName} — ${p.zhDescription}` : `${p.name} — ${p.description}`;
+          return `  ${mark} ${p.id.padEnd(10)} ${desc}`;
+        })
+        .join("\n");
+
+      const msg = isZh
+        ? `⚡ [${state.labels.hudTitle}] 提示词提炼与规范化引擎 (已激活):\n` +
+          `• 当前策略: [${presetObj.id}] ${presetObj.zhName}\n` +
+          `• 输出给 AI 的语言: [${outLang}] (默认英文 en，可切 zh/native 保持母语结构化提炼)\n` +
+          `• 叠加自定义规范: ${state.refineRule ? `"${state.refineRule}"` : "(无)"}\n\n` +
+          `预设策略列表:\n${presetList}\n\n` +
+          `快捷用法:\n` +
+          `  • /refine spec              切换为「结构化工程需求提炼」\n` +
+          `  • /refine surgical          切换为「最小改动与防过度设计规范」\n` +
+          `  • /refine zh                保持用中文向主 Agent 发送提炼后的规范提示词\n` +
+          `  • /refine + 要求遵循RFC2119  叠加自定义规范要求 (/refine clear 清空)\n` +
+          `  • 伴学模式下单次触发:       输入框直接敲 ">> 乱糟糟的想法..." 或 "提炼: ..."`
+        : `⚡ [${state.labels.hudTitle}] Prompt Refiner & Structurer (Active):\n` +
+          `• Active Preset: [${presetObj.id}] ${presetObj.name}\n` +
+          `• Output Language to Agent: [${outLang}] (default ${state.targetLang}, or set zh/native)\n` +
+          `• Stacked Custom Rule: ${state.refineRule ? `"${state.refineRule}"` : "(none)"}\n\n` +
+          `Available Presets:\n${presetList}\n\n` +
+          `Quick Commands:\n` +
+          `  • /refine spec              Switch to Structured Engineering Spec\n` +
+          `  • /refine surgical          Switch to Surgical Minimal Diff\n` +
+          `  • /refine native            Refine messy thoughts in your native language\n` +
+          `  • /refine + <custom rule>   Stack custom constraints (/refine clear to reset)\n` +
+          `  • One-shot in Learn mode:   Prefix input with ">> <messy prompt>" or "refine: ..."`;
+
+      ctx.ui.notify(msg, "info");
+      return;
+    }
+
+    // 2. 重置 / 清空自定义提炼规范: `/refine reset` or `/refine clear`
+    if (trimmed === "reset" || trimmed === "clear" || trimmed === "default") {
+      state.refinePreset = "translate";
+      state.refineLang = "";
+      state.refineRule = "";
+      saveUserLingualConfig({ refinePreset: "translate", refineLang: "", refineRule: "" });
+      globalLingualCache.clear();
+      updateFooter(ctx);
+      ctx.ui.notify(
+        isZh
+          ? `[${state.labels.hudTitle}] 已重置提示词提炼器为默认标准英文转译 (translate)`
+          : `[${state.labels.hudTitle}] Reset Prompt Refiner to default architectural translation`,
+        "info"
+      );
+      return;
+    }
+
+    // 3. 解析叠加规则 (`+ ...` 或 `rule ...`)、语言代码与预设名称（支持组合如 `/refine zh spec + 最小改动`）
+    let remaining = trimmed;
+    const plusMatch = remaining.match(/(?:^|\s)(?:\+|rule\s*[:：]?)\s*(.+)$/is);
+    if (plusMatch && plusMatch[1]) {
+      const ruleText = plusMatch[1].trim();
+      if (ruleText === "clear" || ruleText === "none" || ruleText === "off") {
+        state.refineRule = "";
+      } else {
+        state.refineRule = ruleText;
+      }
+      remaining = remaining.slice(0, plusMatch.index).trim();
+    }
+
+    const tokens = remaining.split(/\s+/).filter(Boolean);
+    for (const tok of tokens) {
+      const lowerTok = tok.toLowerCase();
+      if (lowerTok === "on") {
+        state.mode = "english";
+        continue;
+      }
+      if (lowerTok === "off") {
+        state.mode = "original";
+        continue;
+      }
+      if (
+        lowerTok === "translate" ||
+        lowerTok === "spec" ||
+        lowerTok === "struct" ||
+        lowerTok === "structure" ||
+        lowerTok === "规范" ||
+        lowerTok === "提炼" ||
+        lowerTok === "surgical" ||
+        lowerTok === "minimal" ||
+        lowerTok === "diff" ||
+        lowerTok === "极简" ||
+        lowerTok === "tdd" ||
+        lowerTok === "test" ||
+        lowerTok === "debug" ||
+        lowerTok === "fix" ||
+        lowerTok === "triage"
+      ) {
+        state.refinePreset = normalizeRefinePreset(lowerTok);
+        continue;
+      }
+      if (lowerTok === "native" || lowerTok === "source" || lowerTok === "母语") {
+        state.refineLang = state.sourceLang;
+        continue;
+      }
+      const normLang = normalizeLangCode(lowerTok);
+      if (LANGUAGE_PRESETS[normLang] || ["en", "zh", "ja", "ko", "es", "fr", "de", "ru", "pt", "it"].includes(normLang)) {
+        state.refineLang = normLang === state.targetLang ? "" : normLang;
+        continue;
+      }
+    }
+
+    // 若用户输入了非预设/非语言的自由文本（例如 `/refine 用中文提炼并遵循RFC2119`），直接作为叠加规则！
+    if (tokens.length > 0 && !plusMatch) {
+      const allRecognized = tokens.every((tok) => {
+        const l = tok.toLowerCase();
+        const nl = normalizeLangCode(l);
+        return (
+          ["on", "off", "translate", "spec", "struct", "structure", "规范", "提炼", "surgical", "minimal", "diff", "极简", "tdd", "test", "debug", "fix", "triage", "native", "source", "母语"].includes(l) ||
+          Boolean(LANGUAGE_PRESETS[nl]) ||
+          ["en", "zh", "ja", "ko", "es", "fr", "de", "ru", "pt", "it"].includes(nl)
+        );
+      });
+      if (!allRecognized) {
+        state.refineRule = remaining;
+        if (state.refinePreset === "translate") {
+          state.refinePreset = "spec";
+        }
+      }
+    }
+
+    state.mode = "english";
+    saveUserLingualConfig({
+      mode: state.mode,
+      refinePreset: state.refinePreset,
+      refineLang: state.refineLang,
+      refineRule: state.refineRule,
+    });
+    globalLingualCache.clear();
+    updateFooter(ctx);
+
+    const activePreset = REFINE_PRESETS[state.refinePreset] || REFINE_PRESETS.translate;
+    const outLang = state.refineLang || state.targetLang;
+    const ruleSuffix = state.refineRule ? ` + "${state.refineRule}"` : "";
+    ctx.ui.notify(
+      isZh
+        ? `⚡ [${state.labels.hudTitle}] 已启用提示词提炼 [${activePreset.id} · ${activePreset.zhName}] ➔ 输出语言 [${outLang}]${ruleSuffix}`
+        : `⚡ [${state.labels.hudTitle}] Prompt Refiner active [${activePreset.id} · ${activePreset.name}] ➔ Output [${outLang}]${ruleSuffix}`,
+      "info"
+    );
   };
 
   const showLastHandler = async (_args: string, ctx: ExtensionContext) => {
@@ -810,6 +1012,12 @@ export default function (pi: ExtensionAPI) {
       return;
     }
 
+    // 1.2 子命令路由: 提示词提炼与规范化 (/lingual refine [args...])
+    if (sub === "refine" || sub === "polish" || sub === "enhance" || sub === "spec") {
+      await switchRefineHandler(sub === "spec" ? `spec ${subArgs}`.trim() : subArgs, ctx);
+      return;
+    }
+
     // 2. 子命令路由: 模型查看与切换 (/lingual model [id])
     if (sub === "model") {
       await setModelHandler(subArgs, ctx);
@@ -874,6 +1082,17 @@ export default function (pi: ExtensionAPI) {
   pi.registerCommand("lingual-mode", {
     description: state.labels.cmdDescMode || "Set companion mode: /lingual-mode <original|english|off>",
     handler: setModeHandler,
+  });
+
+  // 独立提示词提炼与规范化命令 (/refine, /lingual-refine)
+  pi.registerCommand("refine", {
+    description: "Configure or activate Prompt Refiner & Structurer: /refine [translate|spec|surgical|tdd|debug|zh|en|+ rule]",
+    handler: switchRefineHandler,
+  });
+
+  pi.registerCommand("lingual-refine", {
+    description: "Configure or activate Prompt Refiner (alias): /lingual-refine [spec|surgical|tdd|debug|zh|en|+ rule]",
+    handler: switchRefineHandler,
   });
 
   // 独立槽位架构配置命令 (/slots, /lingual-slots)
@@ -1044,6 +1263,15 @@ export default function (pi: ExtensionAPI) {
     if (latestDisk.slots && Array.isArray(latestDisk.slots)) {
       state.slots = latestDisk.slots;
     }
+    if (latestDisk.refinePreset !== undefined) {
+      state.refinePreset = normalizeRefinePreset(latestDisk.refinePreset);
+    }
+    if (latestDisk.refineLang !== undefined) {
+      state.refineLang = latestDisk.refineLang;
+    }
+    if (latestDisk.refineRule !== undefined) {
+      state.refineRule = latestDisk.refineRule;
+    }
 
     const raw = event.text.trim();
     if (!raw) return { action: "continue" };
@@ -1058,15 +1286,30 @@ export default function (pi: ExtensionAPI) {
       return { action: "continue" };
     }
 
+    // 检测单次提炼前缀 (`>> <messy input>` / `提炼: <messy input>` / `refine: <messy input>`)
+    const oneShotRefineText = parseOneShotRefinePrefix(raw);
+    const effectiveRaw = oneShotRefineText !== null ? oneShotRefineText : raw;
+    const isTransformTurn = state.mode === "english" || oneShotRefineText !== null;
+    const activeRefinePreset: RefinePreset =
+      oneShotRefineText !== null && state.refinePreset === "translate"
+        ? "spec"
+        : state.refinePreset;
+    const useRefiner = Boolean(
+      oneShotRefineText !== null ||
+      (activeRefinePreset && activeRefinePreset !== "translate") ||
+      state.refineLang ||
+      (state.refineRule && state.refineRule.trim())
+    );
+
     // 智能审查与意图萃取：剥离剪贴板图片、折叠多行堆栈追踪与代码块为 [...]，提炼真实自然语言核心
-    const sanitized = sanitizePromptForTranslation(raw);
+    const sanitized = sanitizePromptForTranslation(effectiveRaw);
     const promptToTranslate = sanitized.distilledText;
 
     // 判定 1：若整段输入经过审查后，发现毫无自然语言意图 (纯堆栈/纯代码/纯命令)
     // 判定 2：或命中底层代码与 CLI 盾牌及字符长度防护 (由 shouldTriggerTranslation 统一管控)
     if (
       !sanitized.hasNaturalLanguage ||
-      !shouldTriggerTranslation(promptToTranslate, state.sourceLang)
+      !shouldTriggerTranslation(promptToTranslate, state.sourceLang, useRefiner)
     ) {
       // 【关键体验防线 1 · 绝无僵尸残留与幽灵复活】：当前输入不触发翻译时，立刻中止在途请求、物理销毁旧卡片，并彻底清空分页池！
       clearPendingTimers();
@@ -1086,8 +1329,8 @@ export default function (pi: ExtensionAPI) {
     // 【单卡高密度意图凝练流】：短句常规直译，长句由模型自动注入 Condensation 提炼为精悍单卡，彻底消除多切片轮询复杂性
     session.initPagination(1);
 
-    // 【原文模式】(original · 默认)：彻底非阻塞 (0ms 立即放行原始输入)，后台异步微任务渲染卡片视窗
-    if (state.mode === "original") {
+    // 【原文伴学模式】(original · 默认，且未使用单次 `>>` 提炼前缀)：彻底非阻塞 (0ms 立即放行原始输入)
+    if (!isTransformTurn) {
       if (hasActiveUI(ctx)) {
         try {
           // 立即物理销毁上一轮的旧卡片，清爽等待新卡片，绝不悬挂陈旧内容导致卡死错觉
@@ -1152,15 +1395,16 @@ export default function (pi: ExtensionAPI) {
       return { action: "continue" };
     }
 
-    // 【英文模式】(english)：同步等待获取纯技术英文以替换发送给 AI 的 Prompt
+    // 【转译与提炼模式】(english / refine / 单次 `>>` 提炼)：同步通过模型提炼深化后再发送给主 Agent
     if (hasActiveUI(ctx)) {
       try {
+        const statusHint = useRefiner ? "refining prompt..." : "polishing...";
         ctx.ui.setWidget(
           "lingual_hud",
-          [ctx.ui.theme.fg("muted", "  ⋯ ⇄ [lingual] polishing...")],
+          [ctx.ui.theme.fg("muted", `  ⋯ ⇄ [lingual] ${statusHint}`)],
           { placement: "aboveEditor" }
         );
-        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", "⇄ [lingual] polishing..."));
+        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", `⇄ [lingual] ${statusHint}`));
       } catch {}
     }
 
@@ -1168,6 +1412,9 @@ export default function (pi: ExtensionAPI) {
       const result = await translatePrompt(promptToTranslate, {
         sourceLang: state.sourceLang,
         targetLang: state.targetLang,
+        refinePreset: activeRefinePreset,
+        refineLang: state.refineLang || undefined,
+        refineRule: state.refineRule || undefined,
         labels: state.labels,
         slots: state.slots,
         slotPreset: state.slotPreset,

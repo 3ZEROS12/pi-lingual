@@ -1,7 +1,7 @@
 {
   "name": "pi-lingual",
-  "version": "0.3.16",
-  "description": "Type prompts in your native language — shows live Spoken & Written English translations + key vocab above your editor as you code, or auto-translates prompts on Enter.",
+  "version": "0.4.0",
+  "description": "Bilingual companion & Prompt Refiner for Pi — shows live Spoken & Written English + vocab above your editor as you code, or refines messy thoughts into structured engineering prompts (/refine, >>) in English or your native language.",
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.js",

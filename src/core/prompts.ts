@@ -1,4 +1,73 @@
-import type { SlotDefinition, CustomSlotsConfig, SlotConfig, SlotRole } from "./types.js";
+import type { SlotDefinition, CustomSlotsConfig, SlotConfig, SlotRole, RefinePreset } from "./types.js";
+
+export interface RefinePresetSpec {
+  id: RefinePreset;
+  name: string;
+  zhName: string;
+  description: string;
+  zhDescription: string;
+  directive: string;
+}
+
+export const REFINE_PRESETS: Record<RefinePreset, RefinePresetSpec> = {
+  translate: {
+    id: "translate",
+    name: "Standard Architectural Translation",
+    zhName: "标准架构英文转译",
+    description: "Translate colloquial input into crisp, modern technical prose in the target language.",
+    zhDescription: "将口语输入转译为清晰精准的目标语言技术指令（默认英文）。",
+    directive: "Translate and clarify the user's message into clear, precise, modern technical prose. Preserve exact intent without adding unrequested scope.",
+  },
+  spec: {
+    id: "spec",
+    name: "Structured Engineering Spec",
+    zhName: "结构化工程需求提炼",
+    description: "Distill messy, stream-of-consciousness thoughts into a structured engineering specification (Goal, Constraints, Deliverable).",
+    zhDescription: "将杂乱、口语化、跳跃的描述提炼为逻辑严密的结构化工程指令（核心目标 + 约束边界 + 预期结果）。",
+    directive: "The user's raw input may be messy, colloquial, or stream-of-consciousness. Distill, organize, and sharpen it into a crystal-clear, structured engineering prompt for an AI coding agent: state the exact objective first, clarify implicit technical constraints/edge cases, and keep it direct and actionable without inventing unrequested features.",
+  },
+  surgical: {
+    id: "surgical",
+    name: "Surgical Minimal Diff",
+    zhName: "最小改动与防过度设计规范",
+    description: "Refine the prompt and enforce smallest working diff, root-cause focus, and zero unrequested refactoring.",
+    zhDescription: "提炼核心意图并自动叠加上「最小工作Diff、直击根因、严禁过度设计与无关重构」约束。",
+    directive: "Clarify the user's messy request into a sharp engineering directive, and explicitly append strict execution constraints: deliver the smallest working diff, fix the root cause directly, and strictly avoid unrequested refactoring or speculative scaffolding.",
+  },
+  tdd: {
+    id: "tdd",
+    name: "Test-Verified Contract",
+    zhName: "测试驱动与边界验证规范",
+    description: "Refine the prompt into a testable contract requiring boundary-case checks and physical test verification.",
+    zhDescription: "将模糊需求转化为可验证契约，要求覆盖边界条件并通过真实测试验证。",
+    directive: "Structure the user's request into a verifiable engineering task, explicitly requiring edge-case coverage and physical test verification before completion.",
+  },
+  debug: {
+    id: "debug",
+    name: "Root-Cause Triage",
+    zhName: "根因溯源排障规范",
+    description: "Turn a vague bug complaint into a systematic end-to-end root-cause diagnostic directive.",
+    zhDescription: "将模糊的报错抱怨提炼为系统性的全链路根因排查指令（拒绝表面打补丁）。",
+    directive: "Transform the user's bug report or complaint into a rigorous root-cause diagnostic prompt: trace the end-to-end execution flow, identify the underlying state or logic flaw, and fix the root cause rather than applying superficial symptom patches.",
+  },
+};
+
+export function normalizeRefinePreset(raw?: string): RefinePreset {
+  const clean = (raw || "").trim().toLowerCase();
+  if (clean === "spec" || clean === "struct" || clean === "structure" || clean === "规范" || clean === "提炼") {
+    return "spec";
+  }
+  if (clean === "surgical" || clean === "minimal" || clean === "diff" || clean === "极简" || clean === "最小改动") {
+    return "surgical";
+  }
+  if (clean === "tdd" || clean === "test" || clean === "verify" || clean === "测试") {
+    return "tdd";
+  }
+  if (clean === "debug" || clean === "fix" || clean === "triage" || clean === "排障" || clean === "根因") {
+    return "debug";
+  }
+  return "translate";
+}
 
 export function getDefaultSlots(sourceLang = "en"): SlotConfig[] {
   const norm = (sourceLang || "en").toLowerCase().split("-")[0];
@@ -614,4 +683,81 @@ ${anchorText}
 
 ${jsonFormatHint}
 Output valid JSON ONLY. Never output markdown code fences, backticks, quotes, or explanations.`;
+}
+
+/**
+ * Build a dedicated Prompt Refiner + Dual-Register Companion system prompt when in Transform/Refine mode
+ * or when custom `refinePreset` / `refineLang` / `refineRule` options are active.
+ */
+export function buildRefineSystemPrompt(options: {
+  sourceLang?: string;
+  targetLang?: string;
+  refinePreset?: RefinePreset | string;
+  refineLang?: string;
+  refineRule?: string;
+  isLongInput?: boolean;
+}): string {
+  const normSource = (options.sourceLang || "zh").toLowerCase().split("-")[0];
+  const normTarget = (options.targetLang || "en").toLowerCase().split("-")[0];
+  const spec = LANGUAGE_SPECS[normSource] || LANGUAGE_SPECS.zh;
+  const TARGET_LANGUAGE_NAMES: Record<string, string> = {
+    en: "English",
+    zh: "Chinese (Simplified)",
+    tw: "Chinese (Traditional)",
+    ja: "Japanese",
+    ko: "Korean",
+    es: "Spanish",
+    fr: "French",
+    de: "German",
+    ru: "Russian",
+    pt: "Portuguese",
+    it: "Italian",
+  };
+
+  const companionTargetName = TARGET_LANGUAGE_NAMES[normTarget] || "English";
+  const rawRefineLang = (options.refineLang || "").trim().toLowerCase();
+  const effectiveRefineLangCode =
+    !rawRefineLang || rawRefineLang === "default" || rawRefineLang === "auto"
+      ? normTarget
+      : rawRefineLang === "native" || rawRefineLang === "source" || rawRefineLang === "母语"
+        ? normSource
+        : rawRefineLang.split("-")[0];
+  const refineTargetName = TARGET_LANGUAGE_NAMES[effectiveRefineLangCode] || companionTargetName;
+
+  const presetKey = normalizeRefinePreset(options.refinePreset);
+  const preset = REFINE_PRESETS[presetKey];
+
+  const customRuleBlock = options.refineRule && options.refineRule.trim()
+    ? `\n\n[USER STACKED SPECIFICATION & CUSTOM RULES - MANDATORY]:
+You MUST weave and enforce the following user-specified rules/constraints directly into the refined prompt ("written" / "refined"):
+"""
+${options.refineRule.trim()}
+"""`
+    : "";
+
+  return `You are an elite AI Coding Prompt Architect and Bilingual Developer Coach.
+The user is typing a potentially messy, colloquial, or fragmented prompt in ${spec.name}.
+Your job is to transform their raw input into a high-clarity, well-structured engineering prompt for an AI coding agent, while also providing authentic ${companionTargetName} companion expressions:
+
+1. "written" (Refined Agent Prompt in **${refineTargetName}**):
+   - Language: MUST be written in **${refineTargetName}**.
+   - Refinement Strategy (${preset.name}): ${preset.directive}
+   - Turn messy, colloquial, or ambiguous phrasing into a clear, structured, high-signal instruction that an AI coding agent can execute immediately without guessing.
+2. "written_meaning": A concise summary of the structured intent ${spec.meaningInstruction}.
+3. "spoken" (Authentic ${companionTargetName} Spoken Register): Natural Silicon Valley spoken phrasing in ${companionTargetName} for daily standups/Slack.
+4. "spoken_meaning": The exact nuance of "spoken" ${spec.meaningInstruction}.
+5. "vocab": Key idiomatic collocations or technical terms extracted from the expression ${spec.vocabInstruction}.
+
+[CODE & SYMBOL SHIELD - STRICT RULE]:
+All inline code (\`foo()\`), file paths (@file, path/to/file), CLI flags, variable names, and technical identifiers MUST be preserved 100% verbatim. Never drop or alter code tokens.${customRuleBlock}
+
+Strict JSON format:
+{
+  "spoken": "...",
+  "spoken_meaning": "...",
+  "written": "...",
+  "written_meaning": "...",
+  "vocab": "..."
+}
+Output valid JSON ONLY. Never output markdown code fences or explanations.`;
 }
