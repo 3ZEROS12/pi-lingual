@@ -1,7 +1,7 @@
 {
   "name": "pi-lingual",
-  "version": "0.3.15",
-  "description": "Zero-friction developer translator & bilingual companion (Spoken vs Written) for AI coding agents",
+  "version": "0.3.16",
+  "description": "Type prompts in your native language — shows live Spoken & Written English translations + key vocab above your editor as you code, or auto-translates prompts on Enter.",
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -38,7 +38,8 @@
     ],
     "skills": [
       "skills/lingual-tuner"
-    ]
+    ],
+    "image": "https://raw.githubusercontent.com/3ZEROS12/pi-lingual/main/assets/demo-animated-en.svg"
   },
   "scripts": {
     "build": "tsup src/index.ts src/extension.ts src/core/index.ts --format esm,cjs --dts --clean --no-splitting",
