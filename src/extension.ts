@@ -145,6 +145,17 @@ function hasActiveUI(ctx: ExtensionContext | null | undefined): ctx is Extension
   }
 }
 
+function safeClearWidget(ctx: ExtensionContext | null | undefined) {
+  if (!ctx) return;
+  try {
+    if (ctx.ui && typeof ctx.ui.setWidget === "function") {
+      ctx.ui.setWidget("lingual_hud", undefined);
+    }
+  } catch {
+    // Gracefully ignore stale context during session replacement or teardown
+  }
+}
+
 function updateFooter(ctx: ExtensionContext | null | undefined) {
   if (!hasActiveUI(ctx)) return;
   try {
@@ -271,6 +282,11 @@ export default function (pi: ExtensionAPI) {
       }
     }, 120);
   };
+  const prevResize = (globalThis as any).__piLingualResizeListener;
+  if (prevResize && process.stdout && typeof (process.stdout as any).off === "function") {
+    (process.stdout as any).off("resize", prevResize);
+  }
+  (globalThis as any).__piLingualResizeListener = onResize;
   process.stdout?.on("resize", onResize);
 
   const clearPendingTimers = () => {
@@ -299,6 +315,9 @@ export default function (pi: ExtensionAPI) {
     if (process.stdout && typeof (process.stdout as any).off === "function") {
       (process.stdout as any).off("resize", onResize);
     }
+    if ((globalThis as any).__piLingualResizeListener === onResize) {
+      (globalThis as any).__piLingualResizeListener = undefined;
+    }
   });
 
   const setModeHandler = async (args: string, ctx: ExtensionContext) => {
@@ -323,14 +342,18 @@ export default function (pi: ExtensionAPI) {
     updateFooter(ctx);
 
     if (nextMode === "english") {
-      ctx.ui.notify(state.labels.notifyEnglish || `[${state.labels.hudTitle}] Switched to [English] mode: Input to AI will be converted to technical English`, "info");
+      try {
+        ctx.ui.notify(state.labels.notifyEnglish || `[${state.labels.hudTitle}] Switched to [English] mode: Input to AI will be converted to technical English`, "info");
+      } catch {}
     } else if (nextMode === "off") {
-      if (ctx.hasUI && typeof ctx.ui.setWidget === "function") {
-        ctx.ui.setWidget("lingual_hud", undefined);
-      }
-      ctx.ui.notify(state.labels.notifyOff || `[${state.labels.hudTitle}] Companion turned off`, "info");
+      safeClearWidget(ctx);
+      try {
+        ctx.ui.notify(state.labels.notifyOff || `[${state.labels.hudTitle}] Companion turned off`, "info");
+      } catch {}
     } else {
-      ctx.ui.notify(state.labels.notifyOriginal || `[${state.labels.hudTitle}] Switched to [Original] mode: Input kept in native language, translations shown above`, "info");
+      try {
+        ctx.ui.notify(state.labels.notifyOriginal || `[${state.labels.hudTitle}] Switched to [Original] mode: Input kept in native language, translations shown above`, "info");
+      } catch {}
     }
   };
 
@@ -952,14 +975,20 @@ export default function (pi: ExtensionAPI) {
 
         // 【超时熔断】：默认 15s 充裕超时（支持 lingual.json 配置 timeoutMs），杜绝 30s 终端输入假死，同时无缝协同中断信号
         const timeoutMs = diskConfig.timeoutMs || 15000;
-        const timeoutPromise = new Promise<null>((_, reject) =>
-          setTimeout(() => reject(new Error("Lingual translation timed out")), timeoutMs)
-        );
+        let timeoutHandle: NodeJS.Timeout | undefined;
+        const timeoutPromise = new Promise<null>((_, reject) => {
+          timeoutHandle = setTimeout(() => reject(new Error("Lingual translation timed out")), timeoutMs);
+        });
         const abortPromise = new Promise<null>((_, reject) => {
           if (signal?.aborted) reject(new Error("Lingual translation aborted"));
           signal?.addEventListener("abort", () => reject(new Error("Lingual translation aborted")), { once: true });
         });
-        const res = (await Promise.race([stream.result(), timeoutPromise, abortPromise])) as any;
+        let res: any;
+        try {
+          res = await Promise.race([stream.result(), timeoutPromise, abortPromise]);
+        } finally {
+          if (timeoutHandle) clearTimeout(timeoutHandle);
+        }
         if (!res) return null;
         const content = res.content
           ?.filter((c: any) => c.type === "text")
@@ -997,8 +1026,8 @@ export default function (pi: ExtensionAPI) {
       !shouldTriggerTranslation(promptToTranslate, state.sourceLang)
     ) {
       // 【关键体验防线 1 · 绝无僵尸残留与幽灵复活】：当前输入不触发翻译时，立刻物理销毁旧卡片，并彻底清空分页池！
-      if (ctx.hasUI) {
-        ctx.ui.setWidget("lingual_hud", undefined);
+      if (hasActiveUI(ctx)) {
+        safeClearWidget(ctx);
       }
       session.clearPagination();
       return { action: "continue" };

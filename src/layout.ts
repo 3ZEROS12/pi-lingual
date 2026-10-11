@@ -31,19 +31,33 @@ export function getEffectiveMaxCols(requested?: number): number {
   return Math.max(25, raw); // 无论终端如何缩放，物理保底 25 列，防止除零或负数溢出
 }
 
+const ANSI_ESCAPE_REGEX = /\x1b\[[0-9;?]*[a-zA-Z]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g;
+
 /**
  * Unicode Standard Annex #11 视觉单元格宽度测算:
- * - ANSI 转义序列 = 0 单元格
+ * - ANSI 转义序列 (CSI / OSC) = 0 单元格
+ * - 零宽字符 (ZWJ / 变体选择符 / 组合音标) = 0 单元格
  * - CJK 宽字符、全角字符、Emoji = 2 单元格
  * - ASCII 西文字符 = 1 单元格
  */
 export function getVisualWidth(str: string): number {
   let width = 0;
-  const clean = str.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, "");
+  const clean = str.replace(ANSI_ESCAPE_REGEX, "");
   for (const char of clean) {
     const code = char.codePointAt(0) || 0;
     if (
+      code === 0x200d ||
+      code === 0xfe0f ||
+      code === 0xfe0e ||
+      (code >= 0x0300 && code <= 0x036f) ||
+      (code >= 0x200b && code <= 0x200f)
+    ) {
+      continue;
+    }
+    if (
       (code >= 0x1100 && code <= 0x115f) ||
+      (code >= 0x231a && code <= 0x23ff) ||
+      (code >= 0x2600 && code <= 0x27bf) ||
       (code >= 0x2e80 && code <= 0xa4cf) ||
       (code >= 0xac00 && code <= 0xd7a3) ||
       (code >= 0xf900 && code <= 0xfaff) ||
@@ -52,7 +66,9 @@ export function getVisualWidth(str: string): number {
       (code >= 0xff00 && code <= 0xff60) ||
       (code >= 0xffe0 && code <= 0xffe6) ||
       (code >= 0x1f300 && code <= 0x1f64f) ||
-      (code >= 0x1f900 && code <= 0x1f9ff)
+      (code >= 0x1f680 && code <= 0x1f6ff) ||
+      (code >= 0x1f900 && code <= 0x1faff) ||
+      (code >= 0x20000 && code <= 0x2fa1f)
     ) {
       width += 2;
     } else {
@@ -63,26 +79,45 @@ export function getVisualWidth(str: string): number {
 }
 
 /**
- * 基于视觉单元格的无溢出截断 (截断后总宽度严格 <= maxVisualCols)
+ * 基于视觉单元格与 ANSI 安全边界的无溢出截断 (截断后总宽度严格 <= maxVisualCols)
  */
 export function truncateVisual(str: string, maxVisualCols: number): string {
   if (maxVisualCols <= 0) return "";
-  const fullWidth = getVisualWidth(str);
-  if (fullWidth <= maxVisualCols) return str;
+  const singleLine = str.replace(/[\r\n\t]+/g, " ");
+  const fullWidth = getVisualWidth(singleLine);
+  if (fullWidth <= maxVisualCols) return singleLine;
+  if (maxVisualCols <= 3) return ".".repeat(maxVisualCols);
 
   // 必须提前扣除省略号 "..." 的 3 列物理预算，确保拼接后总宽度严格 <= maxVisualCols
   const targetCols = Math.max(1, maxVisualCols - 3);
   let curWidth = 0;
   let result = "";
-  for (const char of str) {
-    const w = getVisualWidth(char);
+  let i = 0;
+
+  while (i < singleLine.length) {
+    ANSI_ESCAPE_REGEX.lastIndex = i;
+    const ansiMatch = ANSI_ESCAPE_REGEX.exec(singleLine);
+    if (ansiMatch && ansiMatch.index === i) {
+      result += ansiMatch[0];
+      i += ansiMatch[0].length;
+      continue;
+    }
+
+    const code = singleLine.codePointAt(i) || 0;
+    const charLen = code > 0xffff ? 2 : 1;
+    const ch = singleLine.slice(i, i + charLen);
+    const w = getVisualWidth(ch);
+
     if (curWidth + w > targetCols) {
       break;
     }
-    result += char;
+    result += ch;
     curWidth += w;
+    i += charLen;
   }
-  return result + "...";
+
+  result = result.replace(/\s*[\(\[\{（【]$/, "");
+  return result + (singleLine.includes("\x1b") ? "\x1b[0m" : "") + "...";
 }
 
 /**
@@ -146,16 +181,26 @@ export function wrapVisualText(text: string, maxWidth: number): string[] {
     rawLines.push(currentLine.trimEnd());
   }
 
-  // 标点禁则后处理：若某一行以禁止行首标点开头，强行将其吸附到上一行行尾
+  // 标点禁则后处理：若某一行以禁止行首标点开头，在不突破 maxWidth 的前提下将其吸附到上一行，否则将上一行末字下移
   const lines: string[] = [];
   for (let i = 0; i < rawLines.length; i++) {
     let line = rawLines[i];
-    if (i > 0 && line.length > 0) {
+    if (i > 0 && line.length > 0 && lines.length > 0) {
       const firstChar = line[0];
       if (CANNOT_START_LINE_CHARS.has(firstChar)) {
         const prevIdx = lines.length - 1;
-        lines[prevIdx] = lines[prevIdx] + firstChar;
-        line = line.slice(1).trimStart();
+        const prevLine = lines[prevIdx];
+        if (getVisualWidth(prevLine) + getVisualWidth(firstChar) <= maxWidth) {
+          lines[prevIdx] = prevLine + firstChar;
+          line = line.slice(1).trimStart();
+        } else {
+          const prevChars = Array.from(prevLine);
+          if (prevChars.length > 1) {
+            const pulledChar = prevChars.pop()!;
+            lines[prevIdx] = prevChars.join("");
+            line = pulledChar + line;
+          }
+        }
       }
     }
     if (line.trim()) {
@@ -753,5 +798,5 @@ export function renderCardLayout(
     lines = lines.slice(0, maxLines);
   }
 
-  return lines;
+  return lines.map((line) => (getVisualWidth(line) > maxCols ? truncateVisual(line, maxCols) : line));
 }

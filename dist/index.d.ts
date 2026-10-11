@@ -34,13 +34,14 @@ declare const CANNOT_START_LINE_CHARS: Set<string>;
 declare function getEffectiveMaxCols(requested?: number): number;
 /**
  * Unicode Standard Annex #11 视觉单元格宽度测算:
- * - ANSI 转义序列 = 0 单元格
+ * - ANSI 转义序列 (CSI / OSC) = 0 单元格
+ * - 零宽字符 (ZWJ / 变体选择符 / 组合音标) = 0 单元格
  * - CJK 宽字符、全角字符、Emoji = 2 单元格
  * - ASCII 西文字符 = 1 单元格
  */
 declare function getVisualWidth(str: string): number;
 /**
- * 基于视觉单元格的无溢出截断 (截断后总宽度严格 <= maxVisualCols)
+ * 基于视觉单元格与 ANSI 安全边界的无溢出截断 (截断后总宽度严格 <= maxVisualCols)
  */
 declare function truncateVisual(str: string, maxVisualCols: number): string;
 /**

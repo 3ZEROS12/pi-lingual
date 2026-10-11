@@ -151,12 +151,12 @@
 🧪 Fleet Physical Pre-Flight: Passed: 1 | Failed: 0
 ```
 
-## 🕒 Last Session Snapshot (2026/10/10 18:22:27)
-- **Session ID**: `01a12419-a49f-7616-a7f6-3cec70c27c5d`
-- **User Intent**: 可以，然后我想说的是这里又得考虑语言问题了，我们尽量代码里全部是英文比较通用，然后如果用户不改的话就默认用英文来问，保证初始状态全部是英文即可。
+## 🕒 Last Session Snapshot (2026/10/11 15:22:26)
+- **Session ID**: `01a125fa-c24f-7616-a7f6-3cfc84c8f8d6`
+- **User Intent**: 还有我们的软件不能占用任何键位，我们没必要啊，我们只需要检测就行了，跟之前的pi-lingual一样啊，为什么非得要进行这些呢？现在我用enterdou
 - **Last Assistant State**:
-> 针对您提的这个问题，我们从**“Agent 会问什么”**和**“Agent 得到答案后能否轻易修改”**两个维度来做透彻剖析：
+> 针对您提出的这几项非常关键的质感与逻辑问题，已全部彻底排查并完成修复与重构。新版本已编译、测试通过，并打包为 **`Lingual v0.2.10`（Commit `5629732`）**，桌面程序已在后台重新启动就绪：
 > ---
-> 根据我们在 `AGENTS.md`（Invariant 9: Agent Active Confirmation Protocol）中设立的规范，当您向 Agent 表达想要调整伴学或翻译风格时，合格的 Agent 会主动向您确认 **3 个清晰的维度**（而不是直接甩一套死板的固定模板）：
-> 1. **槽位数量（期望展示几行输出）**：
-> > *“您期望伴学卡片展示几个维度的输出？（例如：1 槽极简纯译文、2 槽双轨对照、还是 3 槽带多风格提炼？）”*
+> * **技术根因（Preload 预加载脚本静默崩溃）**：
+> 1. 在 `package.json` 的打包命令中，`tsup` 把 `preload.ts` 编译成了 ESM 格式（带有 `import { contextBridge } from "electron"`）；
+> 2. 但在 Electron 底层沙箱机制中，**预加载脚本（Preload）强制必须使用 CommonJS（`require`）格式**；

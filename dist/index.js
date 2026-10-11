@@ -1523,12 +1523,16 @@ function getEffectiveMaxCols(requested) {
   const raw = typeof requested === "number" ? requested : typeof terminalCols === "number" && terminalCols > 0 ? terminalCols - 8 : 80;
   return Math.max(25, raw);
 }
+var ANSI_ESCAPE_REGEX = /\x1b\[[0-9;?]*[a-zA-Z]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g;
 function getVisualWidth(str) {
   let width = 0;
-  const clean = str.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, "");
+  const clean = str.replace(ANSI_ESCAPE_REGEX, "");
   for (const char of clean) {
     const code = char.codePointAt(0) || 0;
-    if (code >= 4352 && code <= 4447 || code >= 11904 && code <= 42191 || code >= 44032 && code <= 55203 || code >= 63744 && code <= 64255 || code >= 65040 && code <= 65049 || code >= 65072 && code <= 65135 || code >= 65280 && code <= 65376 || code >= 65504 && code <= 65510 || code >= 127744 && code <= 128591 || code >= 129280 && code <= 129535) {
+    if (code === 8205 || code === 65039 || code === 65038 || code >= 768 && code <= 879 || code >= 8203 && code <= 8207) {
+      continue;
+    }
+    if (code >= 4352 && code <= 4447 || code >= 8986 && code <= 9215 || code >= 9728 && code <= 10175 || code >= 11904 && code <= 42191 || code >= 44032 && code <= 55203 || code >= 63744 && code <= 64255 || code >= 65040 && code <= 65049 || code >= 65072 && code <= 65135 || code >= 65280 && code <= 65376 || code >= 65504 && code <= 65510 || code >= 127744 && code <= 128591 || code >= 128640 && code <= 128767 || code >= 129280 && code <= 129791 || code >= 131072 && code <= 195103) {
       width += 2;
     } else {
       width += 1;
@@ -1538,20 +1542,35 @@ function getVisualWidth(str) {
 }
 function truncateVisual(str, maxVisualCols) {
   if (maxVisualCols <= 0) return "";
-  const fullWidth = getVisualWidth(str);
-  if (fullWidth <= maxVisualCols) return str;
+  const singleLine = str.replace(/[\r\n\t]+/g, " ");
+  const fullWidth = getVisualWidth(singleLine);
+  if (fullWidth <= maxVisualCols) return singleLine;
+  if (maxVisualCols <= 3) return ".".repeat(maxVisualCols);
   const targetCols = Math.max(1, maxVisualCols - 3);
   let curWidth = 0;
   let result = "";
-  for (const char of str) {
-    const w = getVisualWidth(char);
+  let i = 0;
+  while (i < singleLine.length) {
+    ANSI_ESCAPE_REGEX.lastIndex = i;
+    const ansiMatch = ANSI_ESCAPE_REGEX.exec(singleLine);
+    if (ansiMatch && ansiMatch.index === i) {
+      result += ansiMatch[0];
+      i += ansiMatch[0].length;
+      continue;
+    }
+    const code = singleLine.codePointAt(i) || 0;
+    const charLen = code > 65535 ? 2 : 1;
+    const ch = singleLine.slice(i, i + charLen);
+    const w = getVisualWidth(ch);
     if (curWidth + w > targetCols) {
       break;
     }
-    result += char;
+    result += ch;
     curWidth += w;
+    i += charLen;
   }
-  return result + "...";
+  result = result.replace(/\s*[\(\[\{（【]$/, "");
+  return result + (singleLine.includes("\x1B") ? "\x1B[0m" : "") + "...";
 }
 function wrapVisualText(text, maxWidth) {
   if (maxWidth <= 0) return [text];
@@ -1607,12 +1626,22 @@ function wrapVisualText(text, maxWidth) {
   const lines = [];
   for (let i = 0; i < rawLines.length; i++) {
     let line = rawLines[i];
-    if (i > 0 && line.length > 0) {
+    if (i > 0 && line.length > 0 && lines.length > 0) {
       const firstChar = line[0];
       if (CANNOT_START_LINE_CHARS.has(firstChar)) {
         const prevIdx = lines.length - 1;
-        lines[prevIdx] = lines[prevIdx] + firstChar;
-        line = line.slice(1).trimStart();
+        const prevLine = lines[prevIdx];
+        if (getVisualWidth(prevLine) + getVisualWidth(firstChar) <= maxWidth) {
+          lines[prevIdx] = prevLine + firstChar;
+          line = line.slice(1).trimStart();
+        } else {
+          const prevChars = Array.from(prevLine);
+          if (prevChars.length > 1) {
+            const pulledChar = prevChars.pop();
+            lines[prevIdx] = prevChars.join("");
+            line = pulledChar + line;
+          }
+        }
       }
     }
     if (line.trim()) {
@@ -2025,7 +2054,7 @@ function renderCardLayout(card, labels, options = {}) {
   if (lines.length > maxLines) {
     lines = lines.slice(0, maxLines);
   }
-  return lines;
+  return lines.map((line) => getVisualWidth(line) > maxCols ? truncateVisual(line, maxCols) : line);
 }
 
 // src/engine.ts

@@ -93,3 +93,47 @@ test("extension input handler - original mode returns continue immediately and r
   assert.ok(lines.some((l: string) => l.includes("├") && (l.includes("[写作]") || l.includes("[Written]"))), "Widget must contain slot 2 branch with '├'");
   assert.ok(lines.some((l: string) => l.includes("└") && (l.includes("[重点]") || l.includes("[Vocab]"))), "Widget must contain vocab branch with '└'");
 });
+
+test("extension stale ctx & resize listener hygiene - survives stale ctx getter throws and deduplicates stdout resize listeners", async () => {
+  let registeredInputHandler: any = null;
+  const registeredCommands: Record<string, any> = {};
+
+  const mockPi: any = {
+    on(event: string, handler: any) {
+      if (event === "input") registeredInputHandler = handler;
+    },
+    registerCommand(name: string, def: any) {
+      registeredCommands[name] = def;
+    },
+    registerShortcut() {},
+  };
+
+  // Reloading extension multiple times must NOT accumulate resize listeners
+  const beforeCount = process.stdout?.listenerCount ? process.stdout.listenerCount("resize") : 0;
+  extensionFactory(mockPi);
+  extensionFactory(mockPi);
+  extensionFactory(mockPi);
+  const afterCount = process.stdout?.listenerCount ? process.stdout.listenerCount("resize") : 0;
+  assert.ok(afterCount - beforeCount <= 1, `Resize listener must be deduplicated across reloads (delta=${afterCount - beforeCount})`);
+
+  // Simulate Pi's stale ExtensionContext where accessing ctx.hasUI or ctx.ui throws ExtensionRunner.assertActive
+  const staleCtx: any = {
+    get hasUI() {
+      throw new Error("This extension ctx is stale after session replacement or reload.");
+    },
+    get ui() {
+      throw new Error("This extension ctx is stale after session replacement or reload.");
+    },
+  };
+
+  // 1. Non-translating input with stale ctx must not throw
+  const res1 = await registeredInputHandler({ type: "input", text: "git status", source: "interactive" }, staleCtx);
+  assert.equal(res1.action, "continue");
+
+  // 2. Mode switch to off & back to original with stale ctx must not throw
+  await assert.doesNotReject(async () => {
+    await registeredCommands["lingual-mode"].handler("off", staleCtx);
+    await registeredCommands["lingual-mode"].handler("original", staleCtx);
+  });
+});
+

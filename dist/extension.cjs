@@ -66,12 +66,16 @@ function getEffectiveMaxCols(requested) {
   const raw = typeof requested === "number" ? requested : typeof terminalCols === "number" && terminalCols > 0 ? terminalCols - 8 : 80;
   return Math.max(25, raw);
 }
+var ANSI_ESCAPE_REGEX = /\x1b\[[0-9;?]*[a-zA-Z]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g;
 function getVisualWidth(str) {
   let width = 0;
-  const clean = str.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, "");
+  const clean = str.replace(ANSI_ESCAPE_REGEX, "");
   for (const char of clean) {
     const code = char.codePointAt(0) || 0;
-    if (code >= 4352 && code <= 4447 || code >= 11904 && code <= 42191 || code >= 44032 && code <= 55203 || code >= 63744 && code <= 64255 || code >= 65040 && code <= 65049 || code >= 65072 && code <= 65135 || code >= 65280 && code <= 65376 || code >= 65504 && code <= 65510 || code >= 127744 && code <= 128591 || code >= 129280 && code <= 129535) {
+    if (code === 8205 || code === 65039 || code === 65038 || code >= 768 && code <= 879 || code >= 8203 && code <= 8207) {
+      continue;
+    }
+    if (code >= 4352 && code <= 4447 || code >= 8986 && code <= 9215 || code >= 9728 && code <= 10175 || code >= 11904 && code <= 42191 || code >= 44032 && code <= 55203 || code >= 63744 && code <= 64255 || code >= 65040 && code <= 65049 || code >= 65072 && code <= 65135 || code >= 65280 && code <= 65376 || code >= 65504 && code <= 65510 || code >= 127744 && code <= 128591 || code >= 128640 && code <= 128767 || code >= 129280 && code <= 129791 || code >= 131072 && code <= 195103) {
       width += 2;
     } else {
       width += 1;
@@ -81,20 +85,35 @@ function getVisualWidth(str) {
 }
 function truncateVisual(str, maxVisualCols) {
   if (maxVisualCols <= 0) return "";
-  const fullWidth = getVisualWidth(str);
-  if (fullWidth <= maxVisualCols) return str;
+  const singleLine = str.replace(/[\r\n\t]+/g, " ");
+  const fullWidth = getVisualWidth(singleLine);
+  if (fullWidth <= maxVisualCols) return singleLine;
+  if (maxVisualCols <= 3) return ".".repeat(maxVisualCols);
   const targetCols = Math.max(1, maxVisualCols - 3);
   let curWidth = 0;
   let result = "";
-  for (const char of str) {
-    const w = getVisualWidth(char);
+  let i = 0;
+  while (i < singleLine.length) {
+    ANSI_ESCAPE_REGEX.lastIndex = i;
+    const ansiMatch = ANSI_ESCAPE_REGEX.exec(singleLine);
+    if (ansiMatch && ansiMatch.index === i) {
+      result += ansiMatch[0];
+      i += ansiMatch[0].length;
+      continue;
+    }
+    const code = singleLine.codePointAt(i) || 0;
+    const charLen = code > 65535 ? 2 : 1;
+    const ch = singleLine.slice(i, i + charLen);
+    const w = getVisualWidth(ch);
     if (curWidth + w > targetCols) {
       break;
     }
-    result += char;
+    result += ch;
     curWidth += w;
+    i += charLen;
   }
-  return result + "...";
+  result = result.replace(/\s*[\(\[\{（【]$/, "");
+  return result + (singleLine.includes("\x1B") ? "\x1B[0m" : "") + "...";
 }
 function wrapVisualText(text, maxWidth) {
   if (maxWidth <= 0) return [text];
@@ -150,12 +169,22 @@ function wrapVisualText(text, maxWidth) {
   const lines = [];
   for (let i = 0; i < rawLines.length; i++) {
     let line = rawLines[i];
-    if (i > 0 && line.length > 0) {
+    if (i > 0 && line.length > 0 && lines.length > 0) {
       const firstChar = line[0];
       if (CANNOT_START_LINE_CHARS.has(firstChar)) {
         const prevIdx = lines.length - 1;
-        lines[prevIdx] = lines[prevIdx] + firstChar;
-        line = line.slice(1).trimStart();
+        const prevLine = lines[prevIdx];
+        if (getVisualWidth(prevLine) + getVisualWidth(firstChar) <= maxWidth) {
+          lines[prevIdx] = prevLine + firstChar;
+          line = line.slice(1).trimStart();
+        } else {
+          const prevChars = Array.from(prevLine);
+          if (prevChars.length > 1) {
+            const pulledChar = prevChars.pop();
+            lines[prevIdx] = prevChars.join("");
+            line = pulledChar + line;
+          }
+        }
       }
     }
     if (line.trim()) {
@@ -508,7 +537,7 @@ function renderCardLayout(card, labels, options = {}) {
   if (lines.length > maxLines) {
     lines = lines.slice(0, maxLines);
   }
-  return lines;
+  return lines.map((line) => getVisualWidth(line) > maxCols ? truncateVisual(line, maxCols) : line);
 }
 
 // src/engine.ts
@@ -2624,6 +2653,15 @@ function hasActiveUI(ctx) {
     return false;
   }
 }
+function safeClearWidget(ctx) {
+  if (!ctx) return;
+  try {
+    if (ctx.ui && typeof ctx.ui.setWidget === "function") {
+      ctx.ui.setWidget("lingual_hud", void 0);
+    }
+  } catch {
+  }
+}
 function updateFooter(ctx) {
   if (!hasActiveUI(ctx)) return;
   try {
@@ -2721,6 +2759,11 @@ function extension_default(pi) {
       }
     }, 120);
   };
+  const prevResize = globalThis.__piLingualResizeListener;
+  if (prevResize && process.stdout && typeof process.stdout.off === "function") {
+    process.stdout.off("resize", prevResize);
+  }
+  globalThis.__piLingualResizeListener = onResize;
   process.stdout?.on("resize", onResize);
   const clearPendingTimers = () => {
     if (polishTimer) {
@@ -2745,6 +2788,9 @@ function extension_default(pi) {
     if (process.stdout && typeof process.stdout.off === "function") {
       process.stdout.off("resize", onResize);
     }
+    if (globalThis.__piLingualResizeListener === onResize) {
+      globalThis.__piLingualResizeListener = void 0;
+    }
   });
   const setModeHandler = async (args, ctx) => {
     session.abortActive();
@@ -2763,14 +2809,21 @@ function extension_default(pi) {
     saveUserLingualConfig({ mode: nextMode });
     updateFooter(ctx);
     if (nextMode === "english") {
-      ctx.ui.notify(state.labels.notifyEnglish || `[${state.labels.hudTitle}] Switched to [English] mode: Input to AI will be converted to technical English`, "info");
-    } else if (nextMode === "off") {
-      if (ctx.hasUI && typeof ctx.ui.setWidget === "function") {
-        ctx.ui.setWidget("lingual_hud", void 0);
+      try {
+        ctx.ui.notify(state.labels.notifyEnglish || `[${state.labels.hudTitle}] Switched to [English] mode: Input to AI will be converted to technical English`, "info");
+      } catch {
       }
-      ctx.ui.notify(state.labels.notifyOff || `[${state.labels.hudTitle}] Companion turned off`, "info");
+    } else if (nextMode === "off") {
+      safeClearWidget(ctx);
+      try {
+        ctx.ui.notify(state.labels.notifyOff || `[${state.labels.hudTitle}] Companion turned off`, "info");
+      } catch {
+      }
     } else {
-      ctx.ui.notify(state.labels.notifyOriginal || `[${state.labels.hudTitle}] Switched to [Original] mode: Input kept in native language, translations shown above`, "info");
+      try {
+        ctx.ui.notify(state.labels.notifyOriginal || `[${state.labels.hudTitle}] Switched to [Original] mode: Input kept in native language, translations shown above`, "info");
+      } catch {
+      }
     }
   };
   const setModelHandler = async (args, ctx) => {
@@ -3274,14 +3327,20 @@ To switch native language: /lang <zh|ja|en|es|fr|de>.`;
           requestOptions
         );
         const timeoutMs = diskConfig.timeoutMs || 15e3;
-        const timeoutPromise = new Promise(
-          (_, reject) => setTimeout(() => reject(new Error("Lingual translation timed out")), timeoutMs)
-        );
+        let timeoutHandle;
+        const timeoutPromise = new Promise((_, reject) => {
+          timeoutHandle = setTimeout(() => reject(new Error("Lingual translation timed out")), timeoutMs);
+        });
         const abortPromise = new Promise((_, reject) => {
           if (signal?.aborted) reject(new Error("Lingual translation aborted"));
           signal?.addEventListener("abort", () => reject(new Error("Lingual translation aborted")), { once: true });
         });
-        const res = await Promise.race([stream.result(), timeoutPromise, abortPromise]);
+        let res;
+        try {
+          res = await Promise.race([stream.result(), timeoutPromise, abortPromise]);
+        } finally {
+          if (timeoutHandle) clearTimeout(timeoutHandle);
+        }
         if (!res) return null;
         const content = res.content?.filter((c) => c.type === "text")?.map((c) => c.text)?.join("");
         return content && content.trim() ? content.trim() : null;
@@ -3301,8 +3360,8 @@ To switch native language: /lang <zh|ja|en|es|fr|de>.`;
     const sanitized = sanitizePromptForTranslation(raw);
     const promptToTranslate = sanitized.distilledText;
     if (!sanitized.hasNaturalLanguage || !shouldTriggerTranslation(promptToTranslate, state.sourceLang)) {
-      if (ctx.hasUI) {
-        ctx.ui.setWidget("lingual_hud", void 0);
+      if (hasActiveUI(ctx)) {
+        safeClearWidget(ctx);
       }
       session.clearPagination();
       return { action: "continue" };
