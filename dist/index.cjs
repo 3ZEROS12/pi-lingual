@@ -3314,18 +3314,40 @@ function stripLingualContextWhenOff(systemPrompt, lastUserText = "") {
     ""
   );
 }
-var CURRENT_FEATURE_BANNER_VERSION = "0.5.0";
-function resolveReleaseBannerLang(explicitSourceLang) {
+var CURRENT_FEATURE_BANNER_VERSION = "0.5.1";
+function resolveReleaseBannerLang(explicitSourceLang, sessionEntries) {
   const supported = /* @__PURE__ */ new Set(["zh", "tw", "ja", "ko", "es", "fr", "de", "ru", "en"]);
   if (explicitSourceLang && explicitSourceLang.trim()) {
     const clean = explicitSourceLang.trim().toLowerCase().split(/[-_]/)[0];
     if (supported.has(clean)) return clean;
     return "en";
   }
+  if (Array.isArray(sessionEntries) && sessionEntries.length > 0) {
+    for (let i = sessionEntries.length - 1; i >= 0; i--) {
+      const e = sessionEntries[i];
+      if (e?.type === "message" && e?.message?.role === "user") {
+        const text = Array.isArray(e.message.content) ? e.message.content.map((c) => c?.text || "").join(" ") : String(e.message.content || "");
+        if (/[\u3040-\u309f\u30a0-\u30ff]/.test(text)) return "ja";
+        if (/[\uac00-\ud7af]/.test(text)) return "ko";
+        if (/[\u4e00-\u9fa5]/.test(text)) return "zh";
+      }
+    }
+  }
   try {
-    const sysLocale = (Intl.DateTimeFormat().resolvedOptions().locale || process.env.LANG || "en").toLowerCase();
-    if (sysLocale.startsWith("zh-tw") || sysLocale.startsWith("zh-hk")) return "tw";
-    const prefix = sysLocale.split(/[-_.]/)[0];
+    const i18nFile = import_node_path.default.join(import_node_os.default.homedir(), ".config", "rpiv-i18n", "config.json");
+    if (import_node_fs.default.existsSync(i18nFile)) {
+      const raw = JSON.parse(import_node_fs.default.readFileSync(i18nFile, "utf8"));
+      const loc = String(raw?.locale || raw?.lang || "").toLowerCase();
+      if (loc.startsWith("zh-tw") || loc.startsWith("zh-hk")) return "tw";
+      const prefix = loc.split(/[-_]/)[0];
+      if (supported.has(prefix)) return prefix;
+    }
+  } catch {
+  }
+  try {
+    const envLocale = (process.env.LC_ALL || process.env.LANGUAGE || process.env.LANG || Intl.DateTimeFormat().resolvedOptions().locale || "en").toLowerCase();
+    if (envLocale.startsWith("zh-tw") || envLocale.startsWith("zh-hk")) return "tw";
+    const prefix = envLocale.split(/[-_.]/)[0];
     if (supported.has(prefix)) return prefix;
   } catch {
   }
@@ -3335,107 +3357,107 @@ function formatReleaseBannerLines(sourceLang = "en", maxCols = 96, fg = (_c, t) 
   const norm = (sourceLang || "en").toLowerCase().split("-")[0];
   const copyByLang = {
     zh: {
-      title: "\xB7 [pi-lingual v0.5.0 \u66F4\u65B0\u8BF4\u660E] (\u53D1\u9001\u4EFB\u610F\u6D88\u606F\u540E\u81EA\u52A8\u6536\u8D77)",
+      title: "\xB7 [pi-lingual v0.5 \u66F4\u65B0\u8BF4\u660E] \u5199\u4EE3\u7801\u65F6\u4E0D\u540C\u5FC3\u5883\u4E0B\u7684\u6743\u91CD\u5E73\u8861 (\u53D1\u6D88\u606F\u540E\u81EA\u52A8\u6536\u8D77)",
       entries: [
         {
-          main: "\u250C [english \u6A21\u5F0F\u5347\u7EA7] \u4ECE\u5355\u7EAF\u7FFB\u8BD1\u5347\u7EA7\u4E3A\u300C\u63D0\u793A\u8BCD\u89C4\u8303\u5316\u91CD\u5199\u300D\uFF1A\u5148\u5C06\u6742\u4E71\u53E3\u8BED\u63D0\u70BC\u4E3A\u7ED3\u6784\u5316\u6307\u4EE4\u518D\u53D1\u7ED9 AI",
-          detail: '\u2502                    (\u901A\u8FC7 /lingual english \u5F00\u542F\uFF1B\u9ED8\u8BA4\u8F93\u51FA\u82F1\u6587\uFF0C\u53EF\u8BBE promptLang: "native" \u4FDD\u6301\u6BCD\u8BED\u6216\u53E0\u52A0 promptRule \u89C4\u8303)'
+          main: "\u250C [english \u91CD\u5199\u6A21\u5F0F] \u601D\u8DEF\u4E71\u3001\u8BCD\u4E0D\u8FBE\u610F\u65F6\uFF0C\u5148\u5E2E\u4F60\u628A\u96F6\u6563\u53E3\u8BED\u7406\u987A\u4E3A\u6E05\u6670\u7684\u5DE5\u7A0B\u6307\u4EE4\u518D\u53D1\u7ED9 AI",
+          detail: '\u2502   (\u6572 /lingual english \u5207\u6362\uFF1B\u9ED8\u8BA4\u8F93\u51FA\u82F1\u6587\uFF0C\u53EF\u8BBE promptLang: "native" \u4FDD\u6301\u6BCD\u8BED\u6216\u53E0\u52A0 promptRule \u89C4\u8303)'
         },
         {
-          main: "\u251C [\u65B0\u589E select \u6A21\u5F0F] \u652F\u6301\u300C\u591A\u98CE\u683C\u5019\u9009\u9009\u62E9\u300D\uFF1A\u4E00\u6B21\u751F\u6210 \u6781\u7B80\u9AD8\u6548 / \u7ED3\u6784\u89C4\u8303 / \u6DF1\u5EA6\u4E25\u8C28 3 \u4E2A\u5019\u9009\uFF0C\u5F39\u7A97\u6311\u4E00\u4E2A\u53D1\u9001",
-          detail: "\u2502                    (\u901A\u8FC7 /lingual select \u5F00\u542F\uFF1B\u6309\u56DE\u8F66\u9009 [1]~[3] \u66FF\u6362\u53D1\u9001\uFF0C\u9009 [0] \u6216\u6309 Esc \u5219\u4FDD\u6301\u539F\u8BDD\u76F4\u53D1)"
+          main: "\u251C [select \u5019\u9009\u6A21\u5F0F]  \u62FF\u4E0D\u51C6\u600E\u4E48\u8868\u8FF0\u66F4\u597D\u65F6\uFF0C\u4E00\u6B21\u7ED9\u51FA \u6781\u7B80\u9AD8\u6548 / \u7ED3\u6784\u89C4\u8303 / \u6DF1\u5EA6\u4E25\u8C28 3 \u79CD\u5199\u6CD5\u4F9B\u4F60\u6311\u9009",
+          detail: "\u2502   (\u6572 /lingual select \u5207\u6362\uFF1B\u56DE\u8F66\u9009 [1]~[3] \u66FF\u6362\u53D1\u9001\uFF0C\u9009 [0] \u6216\u6309 Esc \u4FDD\u6301\u539F\u8BDD\u76F4\u53D1\uFF0C\u4E0D\u88AB\u5DE5\u5177\u88F9\u631F)"
         },
         {
-          main: "\u251C [\u53CC\u6A21\u5F0F\u81EA\u7531\u5B9A\u5236]   \u4F34\u5B66\u4E0E\u63D0\u793A\u8BCD\u91CD\u5199\u652F\u6301\u72EC\u7ACB\u5B9A\u5236\uFF1A\u76F4\u63A5\u7528\u81EA\u7136\u8BED\u8A00\u8BA9\u5F53\u524D AI \u4FEE\u6539\u69FD\u4F4D\u6570\u91CF\u3001\u8F93\u51FA\u8BED\u8A00\u6216\u5019\u9009\u98CE\u683C",
-          detail: "\u2502                    (\u5185\u7F6E lingual-tuner \u6280\u80FD\u7D22\u5F15\uFF1B\u76F4\u63A5\u5BF9 AI \u8BF4\u201C\u628A\u63D0\u793A\u8BCD\u91CD\u5199\u8BBE\u4E3A\u6BCD\u8BED\u5E76\u52A0\u4E0A\u6700\u5C0F\u6539\u52A8\u8981\u6C42\u201D\u5373\u53EF\u81EA\u52A8\u5199\u5165 lingual.json)"
+          main: "\u251C [\u53CC\u6A21\u5F0F\u987A\u624B\u5B9A\u5236]   \u4F34\u5B66\u8BCD\u5361\u4E0E\u63D0\u793A\u8BCD\u91CD\u5199\u5404\u81EA\u72EC\u7ACB\uFF0C\u4E0D\u7528\u8BB0\u547D\u4EE4\uFF0C\u76F4\u63A5\u8DDF\u5F53\u524D AI \u8BF4\u53E5\u8BDD\u5C31\u80FD\u6539\u597D",
+          detail: "\u2502   (\u5185\u7F6E lingual-tuner \u7D22\u5F15\uFF1B\u5BF9 AI \u8BF4\u201C\u628A\u63D0\u793A\u8BCD\u91CD\u5199\u8BBE\u4E3A\u6BCD\u8BED\u5E76\u52A0\u4E0A\u6700\u5C0F\u6539\u52A8\u8981\u6C42\u201D\u5373\u81EA\u52A8\u5199\u5165 lingual.json)"
         },
         {
-          main: "\u2514 [off \u6A21\u5F0F\u96F6\u4E0A\u4E0B\u6587] \u5F7B\u5E95\u5173\u95ED\u65F6\u4E0D\u7559\u9690\u6027\u8D1F\u62C5\uFF1A\u9664\u505C\u6B62\u8F93\u5165\u62E6\u622A\u5916\uFF0C\u6BCF\u6B21\u8BF7\u6C42\u524D\u4E3B\u52A8\u4ECE\u7CFB\u7EDF\u63D0\u793A\u8BCD\u4E2D\u79FB\u9664\u81EA\u8EAB\u6280\u80FD\u8BF4\u660E",
-          detail: "                     (\u901A\u8FC7 /lingual off \u5F00\u542F\uFF1B\u7531 before_agent_start \u94A9\u5B50\u5265\u79BB lingual-tuner \u5757\uFF0C\u5B9E\u73B0 0 Token \u5360\u7528)"
+          main: "\u2514 [off \u6A21\u5F0F\u5F7B\u5E95\u51C0\u7A7A] \u60F3\u5B89\u9759\u5199\u4EE3\u7801\u65F6\u5C31\u5F7B\u5E95\u8BA9\u51FA\u7A7A\u95F4\uFF1A\u9664\u505C\u7528\u8F93\u5165\u62E6\u622A\u5916\uFF0C\u6BCF\u6B21\u8BF7\u6C42\u524D\u4E3B\u52A8\u79FB\u9664\u81EA\u8EAB\u6280\u80FD\u8BF4\u660E",
+          detail: "    (\u6572 /lingual off \u5207\u6362\uFF1B\u7531 before_agent_start \u94A9\u5B50\u5265\u79BB lingual-tuner \u5757\uFF0C\u5B9E\u73B0 0 Token \u96F6\u8D1F\u62C5)"
         }
       ]
     },
     tw: {
-      title: "\xB7 [pi-lingual v0.5.0 \u66F4\u65B0\u8AAA\u660E] (\u767C\u9001\u4EFB\u610F\u8A0A\u606F\u5F8C\u81EA\u52D5\u6536\u8D77)",
+      title: "\xB7 [pi-lingual v0.5 \u66F4\u65B0\u8AAA\u660E] \u5BEB\u7A0B\u5F0F\u6642\u4E0D\u540C\u5FC3\u5883\u4E0B\u7684\u6B0A\u91CD\u5E73\u8861 (\u767C\u8A0A\u606F\u5F8C\u81EA\u52D5\u6536\u8D77)",
       entries: [
         {
-          main: "\u250C [english \u6A21\u5F0F\u5347\u7D1A] \u5F9E\u55AE\u7D14\u7FFB\u8B6F\u5347\u7D1A\u70BA\u300C\u63D0\u793A\u8A5E\u898F\u7BC4\u5316\u91CD\u5BEB\u300D\uFF1A\u5148\u5C07\u96DC\u4E82\u53E3\u8A9E\u63D0\u7149\u70BA\u7D50\u69CB\u5316\u6307\u4EE4\u518D\u767C\u7D66 AI",
-          detail: '\u2502                    (\u900F\u904E /lingual english \u958B\u555F\uFF1B\u9810\u8A2D\u8F38\u51FA\u82F1\u6587\uFF0C\u53EF\u8A2D promptLang: "native" \u4FDD\u6301\u6BCD\u8A9E\u6216\u758A\u52A0 promptRule \u898F\u7BC4)'
+          main: "\u250C [english \u91CD\u5BEB\u6A21\u5F0F] \u601D\u8DEF\u4E82\u3001\u8A5E\u4E0D\u9054\u610F\u6642\uFF0C\u5148\u5E6B\u4F60\u628A\u96F6\u6563\u53E3\u8A9E\u7406\u9806\u70BA\u6E05\u6670\u7684\u5DE5\u7A0B\u6307\u4EE4\u518D\u767C\u7D66 AI",
+          detail: '\u2502   (\u6572 /lingual english \u5207\u63DB\uFF1B\u9810\u8A2D\u8F38\u51FA\u82F1\u6587\uFF0C\u53EF\u8A2D promptLang: "native" \u4FDD\u6301\u6BCD\u8A9E\u6216\u758A\u52A0 promptRule \u898F\u7BC4)'
         },
         {
-          main: "\u251C [\u65B0\u589E select \u6A21\u5F0F] \u652F\u63F4\u300C\u591A\u98A8\u683C\u5019\u9078\u9078\u64C7\u300D\uFF1A\u4E00\u6B21\u751F\u6210 \u6975\u7C21\u9AD8\u6548 / \u7D50\u69CB\u898F\u7BC4 / \u6DF1\u5EA6\u56B4\u8B39 3 \u500B\u5019\u9078\uFF0C\u5F48\u7A97\u6311\u4E00\u500B\u767C\u9001",
-          detail: "\u2502                    (\u900F\u904E /lingual select \u958B\u555F\uFF1B\u6309 Enter \u9078 [1]~[3] \u66FF\u63DB\u767C\u9001\uFF0C\u9078 [0] \u6216\u6309 Esc \u5247\u4FDD\u6301\u539F\u8A71\u76F4\u767C)"
+          main: "\u251C [select \u5019\u9078\u6A21\u5F0F]  \u62FF\u4E0D\u6E96\u600E\u9EBC\u8868\u8FF0\u66F4\u597D\u6642\uFF0C\u4E00\u6B21\u7D66\u51FA \u6975\u7C21\u9AD8\u6548 / \u7D50\u69CB\u898F\u7BC4 / \u6DF1\u5EA6\u56B4\u8B39 3 \u7A2E\u5BEB\u6CD5\u4F9B\u4F60\u6311\u9078",
+          detail: "\u2502   (\u6572 /lingual select \u5207\u63DB\uFF1B\u6309 Enter \u9078 [1]~[3] \u66FF\u63DB\u767C\u9001\uFF0C\u9078 [0] \u6216\u6309 Esc \u4FDD\u6301\u539F\u8A71\u76F4\u767C\uFF0C\u4E0D\u88AB\u5DE5\u5177\u88F9\u633E)"
         },
         {
-          main: "\u251C [\u96D9\u6A21\u5F0F\u81EA\u7531\u5B9A\u5236]   \u4F34\u5B78\u8207\u63D0\u793A\u8A5E\u91CD\u5BEB\u652F\u63F4\u7368\u7ACB\u5B9A\u5236\uFF1A\u76F4\u63A5\u7528\u81EA\u7136\u8A9E\u8A00\u8B93\u7576\u524D AI \u4FEE\u6539\u69FD\u4F4D\u6578\u91CF\u3001\u8F38\u51FA\u8A9E\u8A00\u6216\u5019\u9078\u98A8\u683C",
-          detail: "\u2502                    (\u5167\u5EFA lingual-tuner \u6280\u80FD\u7D22\u5F15\uFF1B\u76F4\u63A5\u5C0D AI \u8AAA\u300C\u628A\u63D0\u793A\u8A5E\u91CD\u5BEB\u8A2D\u70BA\u6BCD\u8A9E\u4E26\u52A0\u4E0A\u6700\u5C0F\u6539\u52D5\u8981\u6C42\u300D\u5373\u53EF\u81EA\u52D5\u5BEB\u5165 lingual.json)"
+          main: "\u251C [\u96D9\u6A21\u5F0F\u9806\u624B\u5B9A\u5236]   \u4F34\u5B78\u8A5E\u5361\u8207\u63D0\u793A\u8A5E\u91CD\u5BEB\u5404\u81EA\u7368\u7ACB\uFF0C\u4E0D\u7528\u8A18\u547D\u4EE4\uFF0C\u76F4\u63A5\u8DDF\u7576\u524D AI \u8AAA\u53E5\u8A71\u5C31\u80FD\u6539\u597D",
+          detail: "\u2502   (\u5167\u5EFA lingual-tuner \u7D22\u5F15\uFF1B\u5C0D AI \u8AAA\u300C\u628A\u63D0\u793A\u8A5E\u91CD\u5BEB\u8A2D\u70BA\u6BCD\u8A9E\u4E26\u52A0\u4E0A\u6700\u5C0F\u6539\u52D5\u8981\u6C42\u300D\u5373\u81EA\u52D5\u5BEB\u5165 lingual.json)"
         },
         {
-          main: "\u2514 [off \u6A21\u5F0F\u96F6\u4E0A\u4E0B\u6587] \u5FB9\u5E95\u95DC\u9589\u6642\u4E0D\u7559\u96B1\u6027\u8CA0\u64D4\uFF1A\u9664\u505C\u6B62\u8F38\u5165\u6514\u622A\u5916\uFF0C\u6BCF\u6B21\u8ACB\u6C42\u524D\u4E3B\u52D5\u5F9E\u7CFB\u7D71\u63D0\u793A\u8A5E\u4E2D\u79FB\u9664\u81EA\u8EAB\u6280\u80FD\u8AAA\u660E",
-          detail: "                     (\u900F\u904E /lingual off \u958B\u555F\uFF1B\u7531 before_agent_start \u9264\u5B50\u525D\u96E2 lingual-tuner \u5340\u584A\uFF0C\u5BE6\u73FE 0 Token \u4F54\u7528)"
+          main: "\u2514 [off \u6A21\u5F0F\u5FB9\u5E95\u6DE8\u7A7A] \u60F3\u5B89\u975C\u5BEB\u7A0B\u5F0F\u6642\u5C31\u5FB9\u5E95\u8B93\u51FA\u7A7A\u9593\uFF1A\u9664\u505C\u7528\u8F38\u5165\u6514\u622A\u5916\uFF0C\u6BCF\u6B21\u8ACB\u6C42\u524D\u4E3B\u52D5\u79FB\u9664\u81EA\u8EAB\u6280\u80FD\u8AAA\u660E",
+          detail: "    (\u6572 /lingual off \u5207\u63DB\uFF1B\u7531 before_agent_start \u9264\u5B50\u525D\u96E2 lingual-tuner \u5340\u584A\uFF0C\u5BE6\u73FE 0 Token \u96F6\u8CA0\u64D4)"
         }
       ]
     },
     ja: {
-      title: "\xB7 [pi-lingual v0.5.0 \u66F4\u65B0\u5185\u5BB9] (\u4EFB\u610F\u306E\u30E1\u30C3\u30BB\u30FC\u30B8\u3092\u9001\u4FE1\u3059\u308B\u3068\u81EA\u52D5\u7684\u306B\u9589\u3058\u307E\u3059)",
+      title: "\xB7 [pi-lingual v0.5 \u66F4\u65B0\u6848\u5185] \u601D\u8003\u306E\u30DA\u30FC\u30B9\u306B\u5408\u308F\u305B\u305F4\u3064\u306E\u30E2\u30FC\u30C9 (\u30E1\u30C3\u30BB\u30FC\u30B8\u9001\u4FE1\u3067\u81EA\u52D5\u7684\u306B\u9589\u3058\u307E\u3059)",
       entries: [
         {
-          main: "\u250C [english \u30E2\u30FC\u30C9\u5237\u65B0] \u5358\u306A\u308B\u7FFB\u8A33\u304B\u3089\u300C\u30D7\u30ED\u30F3\u30D7\u30C8\u69CB\u9020\u5316\u30FB\u6700\u9069\u5316\u300D\u3078\u9032\u5316\uFF1A\u66D6\u6627\u306A\u53E3\u8A9E\u3092\u6574\u7406\u3057\u3066 AI \u3078\u9001\u4FE1",
-          detail: '\u2502                      (/lingual english \u3067\u6709\u52B9\u5316\uFF1B\u65E2\u5B9A\u306F\u82F1\u8A9E\u51FA\u529B\u3001promptLang: "native" \u3067\u6BCD\u8A9E\u51FA\u529B\u3084 promptRule \u898F\u7D04\u8FFD\u52A0\u306B\u5BFE\u5FDC)'
+          main: "\u250C [english \u30E2\u30FC\u30C9\u5237\u65B0] \u8003\u3048\u304C\u307E\u3068\u307E\u3089\u306A\u3044\u6642\u3001\u6563\u6F2B\u306A\u53E3\u8A9E\u3092\u660E\u5FEB\u306A\u6280\u8853\u6307\u793A\u3078\u6574\u7406\u3057\u3066\u304B\u3089 AI \u3078\u9001\u4FE1",
+          detail: '\u2502   (/lingual english \u3067\u5207\u66FF\uFF1B\u65E2\u5B9A\u306F\u82F1\u8A9E\u51FA\u529B\u3001promptLang: "native" \u3067\u6BCD\u8A9E\u7DAD\u6301\u3084 promptRule \u898F\u7D04\u8FFD\u52A0\u306B\u5BFE\u5FDC)'
         },
         {
-          main: "\u251C [select \u30E2\u30FC\u30C9\u8FFD\u52A0]  \u300C\u8907\u6570\u30B9\u30BF\u30A4\u30EB\u5019\u88DC\u9078\u629E\u300D\u306B\u5BFE\u5FDC\uFF1A\u7C21\u6F54\u30FB\u69CB\u9020\u5316\u30FB\u53B3\u5BC6\u306E 3 \u5019\u88DC\u3092\u751F\u6210\u3057\u3001\u9078\u3093\u3067\u9001\u4FE1",
-          detail: "\u2502                      (/lingual select \u3067\u6709\u52B9\u5316\uFF1B[1]~[3] \u3067\u7F6E\u63DB\u9001\u4FE1\u3001[0] \u307E\u305F\u306F Esc \u30AD\u30FC\u3067\u539F\u6587\u306E\u307E\u307E\u9001\u4FE1)"
+          main: "\u251C [select \u30E2\u30FC\u30C9\u8FFD\u52A0]  \u8868\u73FE\u306B\u8FF7\u3046\u6642\u3001\u7C21\u6F54\u30FB\u69CB\u9020\u5316\u30FB\u53B3\u5BC6\u306E 3 \u5019\u88DC\u3092\u4E26\u3079\u3066\u3001\u3057\u3063\u304F\u308A\u304F\u308B\u3082\u306E\u3092\u9078\u3093\u3067\u9001\u4FE1",
+          detail: "\u2502   (/lingual select \u3067\u5207\u66FF\uFF1B[1]~[3] \u3067\u7F6E\u63DB\u9001\u4FE1\u3001[0] \u307E\u305F\u306F Esc \u3067\u539F\u6587\u306E\u307E\u307E\u9001\u4FE1\u3057\u4E3B\u5C0E\u6A29\u3092\u30AD\u30FC\u30D7)"
         },
         {
-          main: "\u251C [2\u30E2\u30FC\u30C9\u81EA\u5728\u8ABF\u6574]    \u8A9E\u5B66\u4F34\u8D70\u3068\u30D7\u30ED\u30F3\u30D7\u30C8\u6700\u9069\u5316\u3092\u500B\u5225\u306B\u8A2D\u5B9A\u53EF\u80FD\uFF1A\u73FE\u5728\u306E AI \u306B\u81EA\u7136\u8A00\u8A9E\u3067\u4F1D\u3048\u308B\u3060\u3051\u3067\u5373\u5EA7\u306B\u53CD\u6620",
-          detail: "\u2502                      (lingual-tuner \u30B9\u30AD\u30EB\u7D22\u5F15\u3092\u5185\u8535\uFF1B\u300C\u30D7\u30ED\u30F3\u30D7\u30C8\u6700\u9069\u5316\u3092\u6BCD\u8A9E\u51FA\u529B\u306B\u3057\u3066\u6700\u5C0F\u5909\u66F4\u539F\u5247\u3092\u8FFD\u52A0\u3057\u3066\u300D\u3068\u4F1D\u3048\u308B\u3060\u3051\u3067 lingual.json \u3092\u81EA\u52D5\u66F4\u65B0)"
+          main: "\u251C [\u81EA\u7136\u8A00\u8A9E\u3067\u81EA\u5728\u8ABF\u6574] \u8A9E\u5B66\u4F34\u8D70\u3068\u30D7\u30ED\u30F3\u30D7\u30C8\u6700\u9069\u5316\u306F\u72EC\u7ACB\u8A2D\u8A08\u3002\u73FE\u5728\u306E AI \u306B\u81EA\u7136\u8A00\u8A9E\u3067\u4F1D\u3048\u308B\u3060\u3051\u3067\u8A2D\u5B9A\u5B8C\u4E86",
+          detail: "\u2502   (lingual-tuner \u7D22\u5F15\u3092\u5185\u8535\uFF1B\u300C\u30D7\u30ED\u30F3\u30D7\u30C8\u6700\u9069\u5316\u3092\u6BCD\u8A9E\u51FA\u529B\u306B\u3057\u3066\u6700\u5C0F\u5909\u66F4\u539F\u5247\u3092\u8FFD\u52A0\u3057\u3066\u300D\u3067 lingual.json \u66F4\u65B0)"
         },
         {
-          main: "\u2514 [off \u30E2\u30FC\u30C9\u8CA0\u8377\u30BC\u30ED] \u505C\u6B62\u6642\u306F\u5165\u529B\u30D5\u30C3\u30AF\u89E3\u9664\u306B\u52A0\u3048\u3001\u30B7\u30B9\u30C6\u30E0\u30D7\u30ED\u30F3\u30D7\u30C8\u304B\u3089\u81EA\u8EAB\u306E\u30B9\u30AD\u30EB\u5B9A\u7FA9\u3082\u81EA\u52D5\u7684\u306B\u9664\u53BB",
-          detail: "                       (/lingual off \u3067\u6709\u52B9\u5316\uFF1Bbefore_agent_start \u30D5\u30C3\u30AF\u3067 lingual-tuner \u30D6\u30ED\u30C3\u30AF\u3092\u9664\u53BB\u3057 0 Token \u3092\u5B9F\u73FE)"
+          main: "\u2514 [off \u3067\u5B8C\u5168\u306A\u7A7A\u767D\u306B] \u96C6\u4E2D\u3057\u305F\u3044\u6642\u306F\u88CF\u5074\u306E\u8CA0\u8377\u3082\u30BC\u30ED\u306B\uFF1A\u5165\u529B\u30D5\u30C3\u30AF\u505C\u6B62\u306B\u52A0\u3048\u3001\u81EA\u8EAB\u306E\u30B9\u30AD\u30EB\u5B9A\u7FA9\u3082\u81EA\u52D5\u9664\u53BB",
+          detail: "    (/lingual off \u3067\u5207\u66FF\uFF1Bbefore_agent_start \u30D5\u30C3\u30AF\u304C lingual-tuner \u30D6\u30ED\u30C3\u30AF\u3092\u5265\u304C\u3057 0 Token \u3092\u4FDD\u8A3C)"
         }
       ]
     },
     ko: {
-      title: "\xB7 [pi-lingual v0.5.0 \uC5C5\uB370\uC774\uD2B8 \uC548\uB0B4] (\uBA54\uC2DC\uC9C0 \uC785\uB825 \uC2DC \uC790\uB3D9\uC73C\uB85C \uB2EB\uD799\uB2C8\uB2E4)",
+      title: "\xB7 [pi-lingual v0.5 \uC5C5\uB370\uC774\uD2B8] \uC791\uC5C5 \uD750\uB984\uACFC \uBE44\uC911\uC5D0 \uB9DE\uCD98 4\uAC00\uC9C0 \uBAA8\uB4DC (\uBA54\uC2DC\uC9C0 \uC785\uB825 \uC2DC \uC790\uB3D9\uC73C\uB85C \uB2EB\uD799\uB2C8\uB2E4)",
       entries: [
         {
-          main: "\u250C [english \uBAA8\uB4DC \uC5C5\uADF8\uB808\uC774\uB4DC] \uB2E8\uC21C \uBC88\uC5ED\uC5D0\uC11C '\uD504\uB86C\uD504\uD2B8 \uAD6C\uC870\uD654 \uC7AC\uC791\uC131'\uC73C\uB85C \uC9C4\uD654: \uAD6C\uC5B4\uCCB4 \uC785\uB825\uC744 \uCCB4\uACC4\uC801\uC778 \uC9C0\uC2DC\uBB38\uC73C\uB85C \uCD5C\uC801\uD654",
-          detail: '\u2502                           (/lingual english \uB85C \uD65C\uC131\uD654; \uAE30\uBCF8 \uC601\uC5B4 \uCD9C\uB825, promptLang: "native" \uBAA8\uAD6D\uC5B4 \uC720\uC9C0 \uBC0F promptRule \uADDC\uCE59 \uCD94\uAC00 \uC9C0\uC6D0)'
+          main: "\u250C [english \uBAA8\uB4DC \uAC1C\uD3B8] \uC0DD\uAC01\uC774 \uBCF5\uC7A1\uD560 \uB54C \uB450\uC11C\uC5C6\uB294 \uAD6C\uC5B4\uCCB4\uB97C \uBA85\uD655\uD55C \uC5D4\uC9C0\uB2C8\uC5B4\uB9C1 \uC9C0\uC2DC\uBB38\uC73C\uB85C \uB2E4\uB4EC\uC5B4 \uC804\uC1A1",
+          detail: '\u2502   (/lingual english \uB85C \uC804\uD658; \uAE30\uBCF8 \uC601\uC5B4 \uCD9C\uB825, promptLang: "native" \uBAA8\uAD6D\uC5B4 \uC720\uC9C0 \uBC0F promptRule \uADDC\uCE59 \uCD94\uAC00 \uC9C0\uC6D0)'
         },
         {
-          main: "\u251C [select \uBAA8\uB4DC \uCD94\uAC00]        '\uB2E4\uC911 \uC2A4\uD0C0\uC77C \uD6C4\uBCF4 \uC120\uD0DD' \uC9C0\uC6D0: \uAC04\uACB0/\uAD6C\uC870\uD654/\uC2EC\uCE35 3\uAC00\uC9C0 \uD6C4\uBCF4\uB97C \uC0DD\uC131\uD558\uC5EC \uC120\uD0DD \uC804\uC1A1",
-          detail: "\u2502                           (/lingual select \uB85C \uD65C\uC131\uD654; [1]~[3] \uC120\uD0DD \uC2DC \uBCC0\uD658 \uC804\uC1A1, [0] \uB610\uB294 Esc \uC785\uB825 \uC2DC \uC6D0\uBB38 \uADF8\uB300\uB85C \uC804\uC1A1)"
+          main: "\u251C [select \uBAA8\uB4DC \uCD94\uAC00]  \uC5B4\uB5BB\uAC8C \uC4F8\uC9C0 \uACE0\uBBFC\uB420 \uB54C \uAC04\uACB0/\uAD6C\uC870\uD654/\uC2EC\uCE35 3\uAC00\uC9C0 \uD6C4\uBCF4\uB97C \uBCF4\uACE0 \uC6D0\uD558\uB294 \uD45C\uD604\uC744 \uACE8\uB77C \uC804\uC1A1",
+          detail: "\u2502   (/lingual select \uB85C \uC804\uD658; [1]~[3] \uC120\uD0DD \uC2DC \uBCC0\uD658 \uC804\uC1A1, [0] \uB610\uB294 Esc \uB85C \uC6D0\uBB38 \uADF8\uB300\uB85C \uC804\uC1A1)"
         },
         {
-          main: "\u251C [\uB4C0\uC5BC \uBAA8\uB4DC \uC790\uC720 \uCEE4\uC2A4\uD140]   \uD559\uC2B5 \uC2AC\uB86F\uACFC \uD504\uB86C\uD504\uD2B8 \uCD5C\uC801\uD654\uB97C \uC790\uC5F0\uC5B4\uB85C \uC124\uC815: \uD604\uC7AC AI\uC5D0\uAC8C \uB9D0\uD558\uBA74 \uC124\uC815 \uD30C\uC77C \uC989\uC2DC \uBC18\uC601",
-          detail: '\u2502                           (lingual-tuner \uC2A4\uD0AC \uC0C9\uC778 \uB0B4\uC7A5; AI\uC5D0\uAC8C "\uD504\uB86C\uD504\uD2B8 \uC7AC\uC791\uC131\uC744 \uBAA8\uAD6D\uC5B4\uB85C \uC124\uC815\uD558\uACE0 \uCD5C\uC18C \uBCC0\uACBD \uC6D0\uCE59\uC744 \uCD94\uAC00\uD574\uC918"\uB77C\uACE0 \uB9D0\uD558\uBA74 lingual.json \uC790\uB3D9 \uC218\uC815)'
+          main: "\u251C [\uC790\uC5F0\uC5B4 \uB9DE\uCDA4 \uC124\uC815]  \uC5B4\uD559 \uCE74\uB4DC\uC640 \uD504\uB86C\uD504\uD2B8 \uCD5C\uC801\uD654\uB294 \uB3C5\uB9BD \uB3D9\uC791\uD558\uBA70, \uBA85\uB839\uC5B4 \uC5C6\uC774 \uD604\uC7AC AI\uC5D0\uAC8C \uB9D0\uD558\uBA74 \uC989\uC2DC \uBC18\uC601",
+          detail: '\u2502   (lingual-tuner \uC0C9\uC778 \uB0B4\uC7A5; AI\uC5D0\uAC8C "\uD504\uB86C\uD504\uD2B8 \uC7AC\uC791\uC131\uC744 \uBAA8\uAD6D\uC5B4\uB85C \uD558\uACE0 \uCD5C\uC18C \uBCC0\uACBD \uC6D0\uCE59\uC744 \uCD94\uAC00\uD574\uC918"\uB77C\uACE0 \uB9D0\uD558\uBA74 \uC790\uB3D9 \uAC31\uC2E0)'
         },
         {
-          main: "\u2514 [off \uBAA8\uB4DC \uC81C\uB85C \uCEE8\uD14D\uC2A4\uD2B8]  \uC885\uB8CC \uC2DC \uC785\uB825 \uD6C4\uD06C \uD574\uC81C\uBFD0\uB9CC \uC544\uB2C8\uB77C \uC2DC\uC2A4\uD15C \uD504\uB86C\uD504\uD2B8\uC5D0\uC11C \uC790\uCCB4 \uC2A4\uD0AC \uC124\uBA85\uAE4C\uC9C0 \uB2A5\uB3D9\uC801\uC73C\uB85C \uC81C\uAC70",
-          detail: "                            (/lingual off \uB85C \uD65C\uC131\uD654; before_agent_start \uD6C4\uD06C\uAC00 lingual-tuner \uBE14\uB85D\uC744 \uBD84\uB9AC\uD558\uC5EC 0 Token \uB2EC\uC131)"
+          main: "\u2514 [off \uBAA8\uB4DC \uC644\uC804 \uBE44\uC6C0] \uC870\uC6A9\uD788 \uCF54\uB529\uD560 \uB550 \uC228\uC740 \uBD80\uB2F4\uB3C4 \uC5C6\uB3C4\uB85D: \uC785\uB825 \uD6C4\uD06C \uD574\uC81C\uC640 \uD568\uAED8 \uC790\uCCB4 \uC2A4\uD0AC \uC124\uBA85\uAE4C\uC9C0 \uC81C\uAC70",
+          detail: "    (/lingual off \uB85C \uC804\uD658; before_agent_start \uD6C4\uD06C\uAC00 lingual-tuner \uBE14\uB85D\uC744 \uBD84\uB9AC\uD558\uC5EC 0 Token \uBCF4\uC7A5)"
         }
       ]
     },
     en: {
-      title: "\xB7 [pi-lingual v0.5.0 Release Notes] (auto-closes on your next message)",
+      title: "\xB7 [pi-lingual v0.5 Release Notes] Balancing agency and flow across 4 modes (auto-closes on next message)",
       entries: [
         {
-          main: "\u250C [english Mode Upgraded] Evolved from literal translation into Direct Prompt Rewrite: structures messy input before sending",
-          detail: '\u2502                         (Enable via /lingual english; defaults to English, or set promptLang: "native" and stack custom promptRule constraints)'
+          main: "\u250C [english Mode Upgraded] When thoughts are tangled, it structures messy phrasing into a clear engineering instruction",
+          detail: '\u2502   (Switch via /lingual english; defaults to English, or set promptLang: "native" and stack promptRule constraints)'
         },
         {
-          main: "\u251C [New select Mode]       Added N-Choice Prompt Picker: generates Concise / Structured / Deep Rigor candidates to choose from",
-          detail: "\u2502                         (Enable via /lingual select; pick [1]~[3] to send optimized prompt, or [0] / Esc to send original text)"
+          main: "\u251C [New select Mode]       When you want options, it generates Concise / Structured / Deep Rigor candidates to pick from",
+          detail: "\u2502   (Switch via /lingual select; pick [1]~[3] to send rewritten prompt, or [0] / Esc to keep your original words)"
         },
         {
-          main: "\u251C [Dual-Engine Freedom]   Customize Companion Mode or Prompt Optimizer independently by talking to your current Agent",
-          detail: '\u2502                         (Indexed in lingual-tuner skill; tell your Agent "Set prompt rewrite to my native language and enforce minimal diff" to update lingual.json)'
+          main: "\u251C [Plain-Language Tuning] Companion cards and Prompt Optimizer are independent \u2014 customize either by asking your Agent",
+          detail: '\u2502   (Indexed in lingual-tuner skill; tell Agent "Set prompt rewrite to my native language and enforce minimal diff")'
         },
         {
-          main: "\u2514 [Zero-Context off Mode] Turning off leaves zero hidden burden: stops input hooks and strips its own skill block from system prompt",
-          detail: "                          (Enable via /lingual off; before_agent_start hook removes the lingual-tuner block for 0-token overhead)"
+          main: "\u2514 [Zero-Context off Mode] When you want a quiet screen, turning off leaves zero hidden weight in your context window",
+          detail: "    (Switch via /lingual off; before_agent_start hook strips the lingual-tuner skill block for 0-token overhead)"
         }
       ]
     }

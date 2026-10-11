@@ -143,8 +143,14 @@
     *(Note: omitting `{ role: "source" }` physically eliminates the source line from HUD rendering).*
 
 ### Invariant 10: One-Time Localized `aboveEditor` Release Banner for Major Feature Upgrades (RFC 2119)
-- Whenever a release introduces substantive user-facing feature upgrades (not minor bugfixes or internal refactoring), the extension MUST bump `CURRENT_FEATURE_BANNER_VERSION` and update `formatReleaseBannerLines` in `src/engine.ts`.
-- On `session_start` (`event?.reason !== "resume"`), if `diskConfig.lastSeenVersion !== CURRENT_FEATURE_BANNER_VERSION`, the extension renders a concise 5-line localized "What's New" card above the editor (`aboveEditor`) in the user's configured native language (`state.sourceLang`), records `lastSeenVersion` in `~/.pi/agent/lingual.json` so it only appears once per feature release, and auto-dismisses it on the first user input.
+- Whenever a release introduces substantive user-facing feature upgrades (not minor bugfixes or internal refactoring), the extension MUST bump `CURRENT_FEATURE_BANNER_VERSION` and update `formatReleaseBannerLines` in `src/engine.ts` tailored specifically to the new capabilities.
+- **Style & Structure**:
+  - **Zero Emojis**: Use clean open-tree branches (`· / ┌ / │ / ├ / └`) with zero decorative emojis.
+  - **Voice (`D:/College/docs/notes/` Reference)**: Calm, plain-spoken, candid prose emphasizing human agency and workflow balance.
+  - **Parenthetical Mechanism Proof**: Each item MUST include a parenthetical sub-line (`│ (...)`) explaining the exact trigger command and physical implementation mechanism so the user knows how to use it and why it is trustworthy.
+- **4-Stage Native Language Detection (`resolveReleaseBannerLang`)**:
+  Resolves language via: (1) explicit `lingual.json -> sourceLang`, (2) recent user message scripts in `ctx.sessionManager.getEntries()` / `rpiv-i18n`, (3) OS locale (`Intl`), and (4) universal English (`"en"`) fallback.
+- On `session_start` (`event?.reason !== "resume"`), if `diskConfig.lastSeenVersion !== CURRENT_FEATURE_BANNER_VERSION`, the extension renders the banner above the editor (`aboveEditor`), records `lastSeenVersion` in `~/.pi/agent/lingual.json`, and auto-dismisses it on the first user input.
 
 ---
 

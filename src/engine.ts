@@ -784,26 +784,67 @@ export function stripLingualContextWhenOff(systemPrompt: string, lastUserText = 
   );
 }
 
-export const CURRENT_FEATURE_BANNER_VERSION = "0.5.0";
+export const CURRENT_FEATURE_BANNER_VERSION = "0.5.1";
 
 /**
- * Resolve the exact language for the release banner:
- * 1. If the user explicitly chose a native language (`diskConfig.sourceLang` via `/lang`), use it 100% deterministically.
- * 2. Otherwise inspect OS locale (`Intl.DateTimeFormat().resolvedOptions().locale`); if unrecognized, fall back to universal English (`"en"`).
+ * 4-Stage Multi-Probe Native Language Resolution for the In-Pi Release Banner:
+ * 1. Explicit `sourceLang` persisted in `~/.pi/agent/lingual.json` (highest priority).
+ * 2. Recent user message script inspection from `ctx.sessionManager.getEntries()` or `~/.config/rpiv-i18n/config.json`.
+ * 3. Host OS & shell locale (`Intl.DateTimeFormat().resolvedOptions().locale`, `LANG`, `LC_ALL`).
+ * 4. Safe fallback to universal English (`"en"`).
  */
-export function resolveReleaseBannerLang(explicitSourceLang?: string): string {
+export function resolveReleaseBannerLang(explicitSourceLang?: string, sessionEntries?: any[]): string {
   const supported = new Set(["zh", "tw", "ja", "ko", "es", "fr", "de", "ru", "en"]);
+
+  // Probe 1: Explicit user config in lingual.json
   if (explicitSourceLang && explicitSourceLang.trim()) {
     const clean = explicitSourceLang.trim().toLowerCase().split(/[-_]/)[0];
     if (supported.has(clean)) return clean;
     return "en";
   }
+
+  // Probe 2: Recent user messages in the active Pi session (if any)
+  if (Array.isArray(sessionEntries) && sessionEntries.length > 0) {
+    for (let i = sessionEntries.length - 1; i >= 0; i--) {
+      const e = sessionEntries[i];
+      if (e?.type === "message" && e?.message?.role === "user") {
+        const text = Array.isArray(e.message.content)
+          ? e.message.content.map((c: any) => c?.text || "").join(" ")
+          : String(e.message.content || "");
+        if (/[\u3040-\u309f\u30a0-\u30ff]/.test(text)) return "ja";
+        if (/[\uac00-\ud7af]/.test(text)) return "ko";
+        if (/[\u4e00-\u9fa5]/.test(text)) return "zh";
+      }
+    }
+  }
+
+  // Probe 2b: Check rpiv-i18n config if present on disk
   try {
-    const sysLocale = (Intl.DateTimeFormat().resolvedOptions().locale || process.env.LANG || "en").toLowerCase();
-    if (sysLocale.startsWith("zh-tw") || sysLocale.startsWith("zh-hk")) return "tw";
-    const prefix = sysLocale.split(/[-_.]/)[0];
+    const i18nFile = path.join(os.homedir(), ".config", "rpiv-i18n", "config.json");
+    if (fs.existsSync(i18nFile)) {
+      const raw = JSON.parse(fs.readFileSync(i18nFile, "utf8"));
+      const loc = String(raw?.locale || raw?.lang || "").toLowerCase();
+      if (loc.startsWith("zh-tw") || loc.startsWith("zh-hk")) return "tw";
+      const prefix = loc.split(/[-_]/)[0];
+      if (supported.has(prefix)) return prefix;
+    }
+  } catch {}
+
+  // Probe 3: OS & environment locale
+  try {
+    const envLocale = (
+      process.env.LC_ALL ||
+      process.env.LANGUAGE ||
+      process.env.LANG ||
+      Intl.DateTimeFormat().resolvedOptions().locale ||
+      "en"
+    ).toLowerCase();
+    if (envLocale.startsWith("zh-tw") || envLocale.startsWith("zh-hk")) return "tw";
+    const prefix = envLocale.split(/[-_.]/)[0];
     if (supported.has(prefix)) return prefix;
   } catch {}
+
+  // Probe 4: Universal English fallback
   return "en";
 }
 
@@ -813,8 +854,9 @@ interface BannerEntry {
 }
 
 /**
- * Render a one-time plain, emoji-free localized "What's New in v0.5.0" feature card above the editor (`aboveEditor`)
- * with concrete operational details in parentheses.
+ * Render a one-time plain, grounded, emoji-free "What's New" feature card above the editor (`aboveEditor`).
+ * Tone follows `notes/` style: candid, unhurried, focused on human agency & weight balance,
+ * with concrete operational mechanics in parentheses.
  */
 export function formatReleaseBannerLines(
   sourceLang = "en",
@@ -825,107 +867,107 @@ export function formatReleaseBannerLines(
 
   const copyByLang: Record<string, { title: string; entries: [BannerEntry, BannerEntry, BannerEntry, BannerEntry] }> = {
     zh: {
-      title: "· [pi-lingual v0.5.0 更新说明] (发送任意消息后自动收起)",
+      title: "· [pi-lingual v0.5 更新说明] 写代码时不同心境下的权重平衡 (发消息后自动收起)",
       entries: [
         {
-          main: "┌ [english 模式升级] 从单纯翻译升级为「提示词规范化重写」：先将杂乱口语提炼为结构化指令再发给 AI",
-          detail: "│                    (通过 /lingual english 开启；默认输出英文，可设 promptLang: \"native\" 保持母语或叠加 promptRule 规范)",
+          main: "┌ [english 重写模式] 思路乱、词不达意时，先帮你把零散口语理顺为清晰的工程指令再发给 AI",
+          detail: "│   (敲 /lingual english 切换；默认输出英文，可设 promptLang: \"native\" 保持母语或叠加 promptRule 规范)",
         },
         {
-          main: "├ [新增 select 模式] 支持「多风格候选选择」：一次生成 极简高效 / 结构规范 / 深度严谨 3 个候选，弹窗挑一个发送",
-          detail: "│                    (通过 /lingual select 开启；按回车选 [1]~[3] 替换发送，选 [0] 或按 Esc 则保持原话直发)",
+          main: "├ [select 候选模式]  拿不准怎么表述更好时，一次给出 极简高效 / 结构规范 / 深度严谨 3 种写法供你挑选",
+          detail: "│   (敲 /lingual select 切换；回车选 [1]~[3] 替换发送，选 [0] 或按 Esc 保持原话直发，不被工具裹挟)",
         },
         {
-          main: "├ [双模式自由定制]   伴学与提示词重写支持独立定制：直接用自然语言让当前 AI 修改槽位数量、输出语言或候选风格",
-          detail: "│                    (内置 lingual-tuner 技能索引；直接对 AI 说“把提示词重写设为母语并加上最小改动要求”即可自动写入 lingual.json)",
+          main: "├ [双模式顺手定制]   伴学词卡与提示词重写各自独立，不用记命令，直接跟当前 AI 说句话就能改好",
+          detail: "│   (内置 lingual-tuner 索引；对 AI 说“把提示词重写设为母语并加上最小改动要求”即自动写入 lingual.json)",
         },
         {
-          main: "└ [off 模式零上下文] 彻底关闭时不留隐性负担：除停止输入拦截外，每次请求前主动从系统提示词中移除自身技能说明",
-          detail: "                     (通过 /lingual off 开启；由 before_agent_start 钩子剥离 lingual-tuner 块，实现 0 Token 占用)",
+          main: "└ [off 模式彻底净空] 想安静写代码时就彻底让出空间：除停用输入拦截外，每次请求前主动移除自身技能说明",
+          detail: "    (敲 /lingual off 切换；由 before_agent_start 钩子剥离 lingual-tuner 块，实现 0 Token 零负担)",
         },
       ],
     },
     tw: {
-      title: "· [pi-lingual v0.5.0 更新說明] (發送任意訊息後自動收起)",
+      title: "· [pi-lingual v0.5 更新說明] 寫程式時不同心境下的權重平衡 (發訊息後自動收起)",
       entries: [
         {
-          main: "┌ [english 模式升級] 從單純翻譯升級為「提示詞規範化重寫」：先將雜亂口語提煉為結構化指令再發給 AI",
-          detail: "│                    (透過 /lingual english 開啟；預設輸出英文，可設 promptLang: \"native\" 保持母語或疊加 promptRule 規範)",
+          main: "┌ [english 重寫模式] 思路亂、詞不達意時，先幫你把零散口語理順為清晰的工程指令再發給 AI",
+          detail: "│   (敲 /lingual english 切換；預設輸出英文，可設 promptLang: \"native\" 保持母語或疊加 promptRule 規範)",
         },
         {
-          main: "├ [新增 select 模式] 支援「多風格候選選擇」：一次生成 極簡高效 / 結構規範 / 深度嚴謹 3 個候選，彈窗挑一個發送",
-          detail: "│                    (透過 /lingual select 開啟；按 Enter 選 [1]~[3] 替換發送，選 [0] 或按 Esc 則保持原話直發)",
+          main: "├ [select 候選模式]  拿不準怎麼表述更好時，一次給出 極簡高效 / 結構規範 / 深度嚴謹 3 種寫法供你挑選",
+          detail: "│   (敲 /lingual select 切換；按 Enter 選 [1]~[3] 替換發送，選 [0] 或按 Esc 保持原話直發，不被工具裹挾)",
         },
         {
-          main: "├ [雙模式自由定制]   伴學與提示詞重寫支援獨立定制：直接用自然語言讓當前 AI 修改槽位數量、輸出語言或候選風格",
-          detail: "│                    (內建 lingual-tuner 技能索引；直接對 AI 說「把提示詞重寫設為母語並加上最小改動要求」即可自動寫入 lingual.json)",
+          main: "├ [雙模式順手定制]   伴學詞卡與提示詞重寫各自獨立，不用記命令，直接跟當前 AI 說句話就能改好",
+          detail: "│   (內建 lingual-tuner 索引；對 AI 說「把提示詞重寫設為母語並加上最小改動要求」即自動寫入 lingual.json)",
         },
         {
-          main: "└ [off 模式零上下文] 徹底關閉時不留隱性負擔：除停止輸入攔截外，每次請求前主動從系統提示詞中移除自身技能說明",
-          detail: "                     (透過 /lingual off 開啟；由 before_agent_start 鉤子剝離 lingual-tuner 區塊，實現 0 Token 佔用)",
+          main: "└ [off 模式徹底淨空] 想安靜寫程式時就徹底讓出空間：除停用輸入攔截外，每次請求前主動移除自身技能說明",
+          detail: "    (敲 /lingual off 切換；由 before_agent_start 鉤子剝離 lingual-tuner 區塊，實現 0 Token 零負擔)",
         },
       ],
     },
     ja: {
-      title: "· [pi-lingual v0.5.0 更新内容] (任意のメッセージを送信すると自動的に閉じます)",
+      title: "· [pi-lingual v0.5 更新案内] 思考のペースに合わせた4つのモード (メッセージ送信で自動的に閉じます)",
       entries: [
         {
-          main: "┌ [english モード刷新] 単なる翻訳から「プロンプト構造化・最適化」へ進化：曖昧な口語を整理して AI へ送信",
-          detail: "│                      (/lingual english で有効化；既定は英語出力、promptLang: \"native\" で母語出力や promptRule 規約追加に対応)",
+          main: "┌ [english モード刷新] 考えがまとまらない時、散漫な口語を明快な技術指示へ整理してから AI へ送信",
+          detail: "│   (/lingual english で切替；既定は英語出力、promptLang: \"native\" で母語維持や promptRule 規約追加に対応)",
         },
         {
-          main: "├ [select モード追加]  「複数スタイル候補選択」に対応：簡潔・構造化・厳密の 3 候補を生成し、選んで送信",
-          detail: "│                      (/lingual select で有効化；[1]~[3] で置換送信、[0] または Esc キーで原文のまま送信)",
+          main: "├ [select モード追加]  表現に迷う時、簡潔・構造化・厳密の 3 候補を並べて、しっくりくるものを選んで送信",
+          detail: "│   (/lingual select で切替；[1]~[3] で置換送信、[0] または Esc で原文のまま送信し主導権をキープ)",
         },
         {
-          main: "├ [2モード自在調整]    語学伴走とプロンプト最適化を個別に設定可能：現在の AI に自然言語で伝えるだけで即座に反映",
-          detail: "│                      (lingual-tuner スキル索引を内蔵；「プロンプト最適化を母語出力にして最小変更原則を追加して」と伝えるだけで lingual.json を自動更新)",
+          main: "├ [自然言語で自在調整] 語学伴走とプロンプト最適化は独立設計。現在の AI に自然言語で伝えるだけで設定完了",
+          detail: "│   (lingual-tuner 索引を内蔵；「プロンプト最適化を母語出力にして最小変更原則を追加して」で lingual.json 更新)",
         },
         {
-          main: "└ [off モード負荷ゼロ] 停止時は入力フック解除に加え、システムプロンプトから自身のスキル定義も自動的に除去",
-          detail: "                       (/lingual off で有効化；before_agent_start フックで lingual-tuner ブロックを除去し 0 Token を実現)",
+          main: "└ [off で完全な空白に] 集中したい時は裏側の負荷もゼロに：入力フック停止に加え、自身のスキル定義も自動除去",
+          detail: "    (/lingual off で切替；before_agent_start フックが lingual-tuner ブロックを剥がし 0 Token を保証)",
         },
       ],
     },
     ko: {
-      title: "· [pi-lingual v0.5.0 업데이트 안내] (메시지 입력 시 자동으로 닫힙니다)",
+      title: "· [pi-lingual v0.5 업데이트] 작업 흐름과 비중에 맞춘 4가지 모드 (메시지 입력 시 자동으로 닫힙니다)",
       entries: [
         {
-          main: "┌ [english 모드 업그레이드] 단순 번역에서 '프롬프트 구조화 재작성'으로 진화: 구어체 입력을 체계적인 지시문으로 최적화",
-          detail: "│                           (/lingual english 로 활성화; 기본 영어 출력, promptLang: \"native\" 모국어 유지 및 promptRule 규칙 추가 지원)",
+          main: "┌ [english 모드 개편] 생각이 복잡할 때 두서없는 구어체를 명확한 엔지니어링 지시문으로 다듬어 전송",
+          detail: "│   (/lingual english 로 전환; 기본 영어 출력, promptLang: \"native\" 모국어 유지 및 promptRule 규칙 추가 지원)",
         },
         {
-          main: "├ [select 모드 추가]        '다중 스타일 후보 선택' 지원: 간결/구조화/심층 3가지 후보를 생성하여 선택 전송",
-          detail: "│                           (/lingual select 로 활성화; [1]~[3] 선택 시 변환 전송, [0] 또는 Esc 입력 시 원문 그대로 전송)",
+          main: "├ [select 모드 추가]  어떻게 쓸지 고민될 때 간결/구조화/심층 3가지 후보를 보고 원하는 표현을 골라 전송",
+          detail: "│   (/lingual select 로 전환; [1]~[3] 선택 시 변환 전송, [0] 또는 Esc 로 원문 그대로 전송)",
         },
         {
-          main: "├ [듀얼 모드 자유 커스텀]   학습 슬롯과 프롬프트 최적화를 자연어로 설정: 현재 AI에게 말하면 설정 파일 즉시 반영",
-          detail: "│                           (lingual-tuner 스킬 색인 내장; AI에게 \"프롬프트 재작성을 모국어로 설정하고 최소 변경 원칙을 추가해줘\"라고 말하면 lingual.json 자동 수정)",
+          main: "├ [자연어 맞춤 설정]  어학 카드와 프롬프트 최적화는 독립 동작하며, 명령어 없이 현재 AI에게 말하면 즉시 반영",
+          detail: "│   (lingual-tuner 색인 내장; AI에게 \"프롬프트 재작성을 모국어로 하고 최소 변경 원칙을 추가해줘\"라고 말하면 자동 갱신)",
         },
         {
-          main: "└ [off 모드 제로 컨텍스트]  종료 시 입력 후크 해제뿐만 아니라 시스템 프롬프트에서 자체 스킬 설명까지 능동적으로 제거",
-          detail: "                            (/lingual off 로 활성화; before_agent_start 후크가 lingual-tuner 블록을 분리하여 0 Token 달성)",
+          main: "└ [off 모드 완전 비움] 조용히 코딩할 땐 숨은 부담도 없도록: 입력 후크 해제와 함께 자체 스킬 설명까지 제거",
+          detail: "    (/lingual off 로 전환; before_agent_start 후크가 lingual-tuner 블록을 분리하여 0 Token 보장)",
         },
       ],
     },
     en: {
-      title: "· [pi-lingual v0.5.0 Release Notes] (auto-closes on your next message)",
+      title: "· [pi-lingual v0.5 Release Notes] Balancing agency and flow across 4 modes (auto-closes on next message)",
       entries: [
         {
-          main: "┌ [english Mode Upgraded] Evolved from literal translation into Direct Prompt Rewrite: structures messy input before sending",
-          detail: "│                         (Enable via /lingual english; defaults to English, or set promptLang: \"native\" and stack custom promptRule constraints)",
+          main: "┌ [english Mode Upgraded] When thoughts are tangled, it structures messy phrasing into a clear engineering instruction",
+          detail: "│   (Switch via /lingual english; defaults to English, or set promptLang: \"native\" and stack promptRule constraints)",
         },
         {
-          main: "├ [New select Mode]       Added N-Choice Prompt Picker: generates Concise / Structured / Deep Rigor candidates to choose from",
-          detail: "│                         (Enable via /lingual select; pick [1]~[3] to send optimized prompt, or [0] / Esc to send original text)",
+          main: "├ [New select Mode]       When you want options, it generates Concise / Structured / Deep Rigor candidates to pick from",
+          detail: "│   (Switch via /lingual select; pick [1]~[3] to send rewritten prompt, or [0] / Esc to keep your original words)",
         },
         {
-          main: "├ [Dual-Engine Freedom]   Customize Companion Mode or Prompt Optimizer independently by talking to your current Agent",
-          detail: "│                         (Indexed in lingual-tuner skill; tell your Agent \"Set prompt rewrite to my native language and enforce minimal diff\" to update lingual.json)",
+          main: "├ [Plain-Language Tuning] Companion cards and Prompt Optimizer are independent — customize either by asking your Agent",
+          detail: "│   (Indexed in lingual-tuner skill; tell Agent \"Set prompt rewrite to my native language and enforce minimal diff\")",
         },
         {
-          main: "└ [Zero-Context off Mode] Turning off leaves zero hidden burden: stops input hooks and strips its own skill block from system prompt",
-          detail: "                          (Enable via /lingual off; before_agent_start hook removes the lingual-tuner block for 0-token overhead)",
+          main: "└ [Zero-Context off Mode] When you want a quiet screen, turning off leaves zero hidden weight in your context window",
+          detail: "    (Switch via /lingual off; before_agent_start hook strips the lingual-tuner skill block for 0-token overhead)",
         },
       ],
     },

@@ -432,14 +432,14 @@ test("v0.4.1 Mode 4 Active 0-Token Context Shield in off mode & /lingual select 
   // Verify localized What's New release banner above editor (zh, ja, en - 9 lines, zero emojis)
   const zhBanner = formatReleaseBannerLines("zh", 130);
   assert.equal(zhBanner.length, 9);
-  assert.ok(zhBanner.some((l) => l.includes("english 模式升级") && l.includes("提示词规范化重写")));
-  assert.ok(zhBanner.some((l) => l.includes("新增 select 模式")));
-  assert.ok(zhBanner.some((l) => l.includes("off 模式零上下文")));
+  assert.ok(zhBanner.some((l) => l.includes("english 重写模式") && l.includes("理顺为清晰的工程指令")));
+  assert.ok(zhBanner.some((l) => l.includes("select 候选模式")));
+  assert.ok(zhBanner.some((l) => l.includes("off 模式彻底净空")));
   assert.ok(zhBanner.some((l) => l.includes("0 Token")));
 
   const enBanner = formatReleaseBannerLines("en", 150);
   assert.equal(enBanner.length, 9);
-  assert.ok(enBanner.some((l) => l.includes("Direct Prompt Rewrite")));
+  assert.ok(enBanner.some((l) => l.includes("english Mode Upgraded")));
   assert.ok(enBanner.some((l) => l.includes("0-token overhead")));
 });
 

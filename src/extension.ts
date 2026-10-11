@@ -323,7 +323,8 @@ export default function (pi: ExtensionAPI) {
       const fg = ctx.ui.theme?.fg
         ? (c: string, t: string) => ctx.ui.theme.fg(c as any, t)
         : (_c: string, t: string) => t;
-      const bannerLang = resolveReleaseBannerLang(explicitLang);
+      const entries = (ctx as any).sessionManager?.getEntries?.() || [];
+      const bannerLang = resolveReleaseBannerLang(explicitLang, entries);
       const lines = formatReleaseBannerLines(bannerLang, maxCols, fg);
       ctx.ui.setWidget("lingual_hud", lines, { placement: "aboveEditor" });
       showingReleaseBanner = true;
