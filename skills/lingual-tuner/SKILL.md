@@ -1,95 +1,68 @@
 ---
 name: lingual-tuner
-description: Zero-friction companion slot tuner and prompt optimizer architect for pi-lingual. Triggers on '定制伴学', '配置伴学', '定制槽位', '修改槽位', '不要原文', '优化提示词', '定制提示词模式', '提示词槽位', 'customize lingual slots', 'hide original text', 'customize prompt optimizer', or '/lingual-agent'.
+description: Configure pi-lingual (~/.pi/agent/lingual.json) for Companion Mode (`slots`) or Prompt Optimizer Mode (`mode`, `promptLang`, `promptRule`, `promptSlots`). Triggers on '定制伴学', '配置伴学', '定制槽位', '不要原文', '提示词重写', '把提示词重写设为', '最小改动', '定制提示词', '候选风格', 'select模式', 'customize lingual', 'prompt rewrite', 'prompt optimizer', or '/lingual-agent'.
 ---
 
-# LINGUAL DUAL-ENGINE TUNER (COMPANION & PROMPT OPTIMIZER)
+# LINGUAL CONFIGURATION & PROMPT OPTIMIZER ARCHITECT (`~/.pi/agent/lingual.json`)
 
-Zero-friction configuration architect for `pi-lingual`.
-Allows AI coding agents to customize **both** of `pi-lingual`'s engines on behalf of the user by writing directly to `~/.pi/agent/lingual.json` without requiring manual CLI command authoring:
-1. **Engine 1 — Language Companion Mode (`mode: "original"`)**: Customizes `slots` (`Spoken`, `Written`, `Vocab`, custom registers, or hiding `source` text).
-2. **Engine 2 — Prompt Optimizer Mode (`mode: "english"` Direct Rewrite & `mode: "select"` N-Choice Interactive Selector)**: Customizes `promptLang` (output language: `"en"` default vs `"zh"` / `"native"`), `promptRule` (stacked custom engineering constraints), and `promptSlots` (the 3 default or N custom prompt optimization styles for `select` mode).
+## 0. Quick Index (Action ➔ Exact JSON Key in `~/.pi/agent/lingual.json`)
+
+When the user asks you in natural language to customize `pi-lingual`, read `~/.pi/agent/lingual.json` (if it exists), merge the requested keys below, and write it back in a single `write` or `edit` tool call:
+
+| User Intent (Natural Language) | Target JSON Key & Value in `~/.pi/agent/lingual.json` |
+| :--- | :--- |
+| Switch to **Companion Mode** (learn while coding) | `"mode": "original"` |
+| Switch to **Direct Prompt Rewrite Mode** (1-to-1 rewrite) | `"mode": "english"` |
+| Switch to **Multi-Style Candidate Picker Mode** (N choices) | `"mode": "select"` |
+| Turn **Off** (0-token context shield) | `"mode": "off"` |
+| Keep rewritten prompts in **user's native language** (e.g. Chinese/Japanese) | `"promptLang": "native"` (or `"zh"`, `"ja"`, `"ko"`, `"es"`, `"fr"`, `"de"`, `"ru"`, `"en"`) |
+| Stack a **custom rule/constraint** onto rewritten prompts (e.g. minimal diff, RFC 2119) | `"promptRule": "<exact user rule>"` |
+| Customize the **$N$ candidate prompt styles** in `select` mode | `"promptSlots": [ { "id": "...", "label": "...", "instruction": "...", "enabled": true } ]` |
+| Customize **language-learning card rows** in `original` mode | `"slots": [ { "id": "...", "label": "...", "role": "translation", "instruction": "...", "showMeaning": true, "enabled": true } ]` |
+| **Hide original source text** row on companion cards | Omit `{ "role": "source" }` from `"slots"` array |
+| **Reset** prompt optimizer or companion slots to default | Delete `"promptLang"`, `"promptRule"`, `"promptSlots"`, or `"slots"` from `~/.pi/agent/lingual.json` |
 
 ---
 
 ## 1. Golden Rules (RFC 2119)
 
-1. **Zero-User-Friction**:
-   - Never ask the user to type CLI flags or manually edit JSON files.
-   - Directly apply the configuration by writing/editing `~/.pi/agent/lingual.json` in a single tool call.
+1. **Direct File Modification (Zero CLI Homework)**:
+   - Never ask the user to run `/slots` commands or manually edit JSON files.
+   - Apply changes directly to `~/.pi/agent/lingual.json` using `write` or `edit`. `pi-lingual` hot-reloads `~/.pi/agent/lingual.json` on the very next input without restarting Pi.
 2. **Language Mirroring**:
-   - Mirror the user's active conversation language (Chinese, English, Japanese, Korean, Spanish, French, German, Russian).
-3. **Distinguish the Two Engines Clearly**:
-   - When the user asks to customize `pi-lingual`, identify whether they are customizing **Companion Mode (`original`)** or **Prompt Optimizer Mode (`english` / `select`)** (or ask if ambiguous).
+   - Reply and author slot `label` fields in the user's active conversation language.
+3. **Two Distinct Engines**:
+   - **Engine 1 (`mode: "original"` — Companion Mode)**: Controlled by `slots`. Renders real-time language learning cards above the editor while passing original input to the AI in 0ms.
+   - **Engine 2 (`mode: "english"` Direct Rewrite & `mode: "select"` N-Choice Picker — Prompt Optimizer Mode)**: Controlled by `promptLang`, `promptRule`, and `promptSlots`. Rewrites messy user input into structured engineering prompts before sending to the AI.
 
 ---
 
-## 2. Clarification Protocol
+## 2. Clarification Protocol (Only When User Request Is Ambiguous)
 
-### A. When Customizing Engine 1: Companion Mode (`original`)
-Query and confirm:
-1. **Slot Count**: How many output slots (e.g. 1-slot minimal translation, 2-slot dual register, 3-slot with twitter/deep)?
-2. **Tone per Slot**: What style or role per slot (e.g. casual Slack, formal RFC/PR, viral tweet, technical insight, vocab)?
-3. **Source Text Retention**: **"Do you want to keep the original source text row, or remove it entirely to save terminal vertical space?"** (Omit `{ "role": "source" }` to hide original text).
-
-### B. When Customizing Engine 2: Prompt Optimizer Mode (`english` Direct Rewrite / `select` N-Choice Picker)
-Query and confirm:
-1. **Optimization Workflow (`english` vs `select`)**:
-   - **`english` (Direct 1-to-1 Rewrite)**: Directly rewrites messy input into one structured, standardized, high-efficiency prompt and sends it immediately (does not generate learning cards).
-   - **`select` (N-Choice Interactive Selector)**: Generates $N$ candidate optimized prompts across distinct preset styles so the user can pick one from a menu before sending.
-2. **Output Language (`promptLang`)**:
-   - Default is `"en"` (English), or set `"zh"` / `"native"` to structure and refine messy thoughts while keeping the output prompt in the user's native language!
-3. **Custom Stacked Rules (`promptRule`) & Candidate Styles (`promptSlots`)**:
-   - Built-in 3 default `promptSlots`: `concise` (极简高效), `spec` (结构规范), `deep` (深度严谨). Users can customize these 3 or define $1..N$ custom styles and stack any custom engineering rule (`promptRule`).
+- **If customizing Companion Mode (`original`)** without specifics, ask:
+  1. How many translation rows (`slots`) do you want, and what tone for each (e.g. casual spoken, formal RFC, social tweet, vocab)?
+  2. Do you want to keep or hide the original source text row (`role: "source"`)?
+- **If customizing Prompt Optimizer Mode (`english` / `select`)** without specifics, ask:
+  1. Do you prefer direct 1-to-1 rewriting (`"mode": "english"`) or picking from $N$ candidate styles (`"mode": "select"`)?
+  2. Should the optimized prompt be in English (`"promptLang": "en"`) or your native language (`"promptLang": "native"`)?
+  3. What custom engineering rules (`promptRule`) or candidate styles (`promptSlots`) should be enforced?
 
 ---
 
-## 3. Configuration Target & Schema (`~/.pi/agent/lingual.json`)
+## 3. Ready-to-Use JSON Templates (`~/.pi/agent/lingual.json`)
 
-```typescript
-interface LingualDiskConfig {
-  mode?: "original" | "english" | "select" | "off";
-
-  // Engine 1: Language Companion (`original` mode)
-  slots?: Array<{
-    id: string;            // e.g. "source", "spoken", "written", "vocab", "twitter"
-    label: string;         // e.g. "原文", "口语", "写作", "重点"
-    role: "source" | "translation" | "vocab" | "custom";
-    instruction?: string;
-    showMeaning?: boolean;
-    enabled: boolean;
-  }>;
-
-  // Engine 2: Prompt Optimizer (`english` Direct Rewrite & `select` N-Choice Picker)
-  promptLang?: string;     // "en" (default) | "zh" | "native" | "ja" | etc.
-  promptRule?: string;     // Custom engineering rule stacked onto prompt optimization
-  promptSlots?: Array<{
-    id: string;            // e.g. "concise", "spec", "deep", "tdd"
-    label: string;         // e.g. "极简高效", "结构规范", "深度严谨", "TDD契约"
-    instruction: string;   // Optimization directive for this candidate style
-    enabled: boolean;
-  }>;
-}
-```
-
----
-
-## 4. Execution Patterns (Direct File Modification)
-
-### Pattern A: Direct Prompt Rewrite in Native Language + Custom Engineering Rule (`english` mode)
-*User intent: "我写提示词很乱，帮我把提示词重写模式设为中文输出，并且叠加上最小改动和直击根因的要求"*
-Write to `~/.pi/agent/lingual.json`:
+### Template A: Rewrite Prompts in Native Language + Stack Custom Rule (`english` mode)
+*Example user prompt: "把提示词重写设为中文（或母语）输出，并加上最小改动要求"*
 ```json
 {
   "mode": "english",
-  "promptLang": "zh",
-  "promptRule": "提炼核心目标与隐含边界条件，要求遵循最小工作 Diff（Smallest Working Diff），直击根因，严禁无关重构。"
+  "promptLang": "native",
+  "promptRule": "提炼核心目标与边界条件，遵循最小工作改动面（Smallest Working Diff），直击根因，严禁无关重构。"
 }
 ```
 
-### Pattern B: N-Choice Interactive Prompt Selector with Custom Styles (`select` mode)
-*User intent: "帮我开启多选提示词优化模式，给我生成极简指令、结构化规范、TDD测试驱动 3 个英文候选提示词让我选"*
-Write to `~/.pi/agent/lingual.json`:
+### Template B: Multi-Style Candidate Picker with Custom Styles (`select` mode)
+*Example user prompt: "开启 select 多风格候选模式，给我生成极简高效、结构规范、TDD测试驱动 3 个候选提示词"*
 ```json
 {
   "mode": "select",
@@ -109,7 +82,7 @@ Write to `~/.pi/agent/lingual.json`:
     },
     {
       "id": "tdd",
-      "label": "TDD测试驱动",
+      "label": "TDD契约",
       "instruction": "Testable engineering contract: require boundary edge-case coverage and physical test verification before completion.",
       "enabled": true
     }
@@ -117,9 +90,8 @@ Write to `~/.pi/agent/lingual.json`:
 }
 ```
 
-### Pattern C: Companion Mode Without Source Text (`original` mode)
-*User intent: "伴学卡片不要显示中文原文，只要口语和书面语译文"*
-Write to `~/.pi/agent/lingual.json`:
+### Template C: Companion Mode Without Original Text Row (`original` mode)
+*Example user prompt: "伴学卡片不要显示原文，只保留口语和书面语两行"*
 ```json
 {
   "mode": "original",

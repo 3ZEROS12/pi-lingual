@@ -291,7 +291,7 @@ declare function generatePromptCandidates(text: string, userConfig?: Partial<Lin
  * (unless the user explicitly mentions `lingual` or `伴学` to re-configure it), guaranteeing 0.00 bytes of LLM context overhead.
  */
 declare function stripLingualContextWhenOff(systemPrompt: string, lastUserText?: string): string;
-declare const CURRENT_FEATURE_BANNER_VERSION = "0.4";
+declare const CURRENT_FEATURE_BANNER_VERSION = "0.5.0";
 /**
  * Resolve the exact language for the release banner:
  * 1. If the user explicitly chose a native language (`diskConfig.sourceLang` via `/lang`), use it 100% deterministically.
@@ -299,8 +299,8 @@ declare const CURRENT_FEATURE_BANNER_VERSION = "0.4";
  */
 declare function resolveReleaseBannerLang(explicitSourceLang?: string): string;
 /**
- * Render a one-time localized "What's New" feature card above the editor (`aboveEditor`)
- * when the user upgrades to the v0.4 4-Mode Prompt Optimizer architecture.
+ * Render a one-time plain, emoji-free localized "What's New in v0.5.0" feature card above the editor (`aboveEditor`)
+ * with concrete operational details in parentheses.
  */
 declare function formatReleaseBannerLines(sourceLang?: string, maxCols?: number, fg?: (color: string, text: string) => string): string[];
 

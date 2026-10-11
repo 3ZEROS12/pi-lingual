@@ -151,12 +151,12 @@
 🧪 Fleet Physical Pre-Flight: Passed: 1 | Failed: 0
 ```
 
-## 🕒 Last Session Snapshot (2026/10/12 00:45:09)
-- **Session ID**: `01a12bd8-26a3-7383-a7eb-764e2b237aa0`
-- **User Intent**: You are an independent Senior QA & UX Critic Subagent executing SOP 5 (5-Persona Adversarial Simulation) on D:/Workspace
+## 🕒 Last Session Snapshot (2026/10/12 01:09:33)
+- **Session ID**: `01a12b48-d4f0-71b4-9a14-3c7a0f12ee0f`
+- **User Intent**: 不要用表情包，然后大版本可以变一下了。到了0.5了。然后稍微详细一点，具体的哪些操作实现了这些，至少要让用户明白和信服，放在括号里，我看看效果。
 - **Last Assistant State**:
-> **Target**: `pi-lingual` (v0.4.2 4-Mode Architecture: `original`, `english`, `select`, `off`)
-> **Audited Sources**: `src/core/types.ts`, `src/core/prompts.ts`, `src/engine.ts`, `src/extension.ts`, `skills/lingual-tuner/SKILL.md`
+> 已在 **`pi-lingual v0.4.5`（Commit `61a6db6` · `95/95` 单测全绿 · 已上线 npm 与 GitHub）** 中把母语识别与全语种兜底逻辑彻底锁死：
 > ---
-> *Workflow*: Invokes Pi in headless / pipe / non-interactive CLI environments (`--print`, scripts, or minimal terminal runtimes where `ctx.ui.select` is unavailable or undefined), using Mode 3 (`select`).
-> - **Simulated Flow**: User triggers an input in `select`
+> ✦ [pi-lingual v0.4 更新速览] 提示词优化引擎与四态架构已就绪 (发消息后自动收起)
+> ┌ [⚡english重写] 升级为「提示词规范化重写」：理顺杂乱口语，支持切中/英输出与叠加规范
+> ├ [✦select多选]  新增「多风格候选填入」：一次生成 极简/规范/深度 3 个候选挑一个发送

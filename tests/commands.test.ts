@@ -429,16 +429,17 @@ test("v0.4.1 Mode 4 Active 0-Token Context Shield in off mode & /lingual select 
   // Teardown back to original
   await registeredCommands["lingual"].handler("original", mockCtx);
 
-  // Verify localized What's New release banner above editor (zh, ja, en)
-  const zhBanner = formatReleaseBannerLines("zh", 88);
-  assert.equal(zhBanner.length, 5);
-  assert.ok(zhBanner.some((l) => l.includes("english重写") && l.includes("规范化")));
-  assert.ok(zhBanner.some((l) => l.includes("select多选")));
-  assert.ok(zhBanner.some((l) => l.includes("off零负担")));
+  // Verify localized What's New release banner above editor (zh, ja, en - 9 lines, zero emojis)
+  const zhBanner = formatReleaseBannerLines("zh", 130);
+  assert.equal(zhBanner.length, 9);
+  assert.ok(zhBanner.some((l) => l.includes("english 模式升级") && l.includes("提示词规范化重写")));
+  assert.ok(zhBanner.some((l) => l.includes("新增 select 模式")));
+  assert.ok(zhBanner.some((l) => l.includes("off 模式零上下文")));
+  assert.ok(zhBanner.some((l) => l.includes("0 Token")));
 
-  const enBanner = formatReleaseBannerLines("en", 88);
-  assert.equal(enBanner.length, 5);
+  const enBanner = formatReleaseBannerLines("en", 150);
+  assert.equal(enBanner.length, 9);
   assert.ok(enBanner.some((l) => l.includes("Direct Prompt Rewrite")));
-  assert.ok(enBanner.some((l) => l.includes("0.00-byte")));
+  assert.ok(enBanner.some((l) => l.includes("0-token overhead")));
 });
 

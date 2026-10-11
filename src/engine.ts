@@ -784,7 +784,7 @@ export function stripLingualContextWhenOff(systemPrompt: string, lastUserText = 
   );
 }
 
-export const CURRENT_FEATURE_BANNER_VERSION = "0.4";
+export const CURRENT_FEATURE_BANNER_VERSION = "0.5.0";
 
 /**
  * Resolve the exact language for the release banner:
@@ -807,107 +807,135 @@ export function resolveReleaseBannerLang(explicitSourceLang?: string): string {
   return "en";
 }
 
+interface BannerEntry {
+  main: string;
+  detail: string;
+}
+
 /**
- * Render a one-time localized "What's New" feature card above the editor (`aboveEditor`)
- * when the user upgrades to the v0.4 4-Mode Prompt Optimizer architecture.
+ * Render a one-time plain, emoji-free localized "What's New in v0.5.0" feature card above the editor (`aboveEditor`)
+ * with concrete operational details in parentheses.
  */
 export function formatReleaseBannerLines(
   sourceLang = "en",
-  maxCols = 88,
+  maxCols = 96,
   fg: (color: string, text: string) => string = (_c, t) => t
 ): string[] {
   const norm = (sourceLang || "en").toLowerCase().split("-")[0];
 
-  const copyByLang: Record<string, { title: string; items: [string, string, string, string] }> = {
+  const copyByLang: Record<string, { title: string; entries: [BannerEntry, BannerEntry, BannerEntry, BannerEntry] }> = {
     zh: {
-      title: "✦ [pi-lingual v0.4 更新速览] 提示词优化引擎与四态架构已就绪 (发消息后自动收起)",
-      items: [
-        "┌ [⚡english重写] 升级为「提示词规范化重写」：理顺杂乱口语，支持切中/英输出与叠加规范",
-        "├ [✦select多选]  新增「多风格候选填入」：一次生成 极简/规范/深度 3 个候选挑一个发送",
-        "├ [🤖高自由度]   直接对 AI 说“定制提示词模式/伴学槽位”，自由定制 N 个风格与规则",
-        "└ [🛡️off零负担]  切至 off 模式主动从系统提示词剥离自身技能，实现 0 Token 上下文净空",
+      title: "· [pi-lingual v0.5.0 更新说明] (发送任意消息后自动收起)",
+      entries: [
+        {
+          main: "┌ [english 模式升级] 从单纯翻译升级为「提示词规范化重写」：先将杂乱口语提炼为结构化指令再发给 AI",
+          detail: "│                    (通过 /lingual english 开启；默认输出英文，可设 promptLang: \"native\" 保持母语或叠加 promptRule 规范)",
+        },
+        {
+          main: "├ [新增 select 模式] 支持「多风格候选选择」：一次生成 极简高效 / 结构规范 / 深度严谨 3 个候选，弹窗挑一个发送",
+          detail: "│                    (通过 /lingual select 开启；按回车选 [1]~[3] 替换发送，选 [0] 或按 Esc 则保持原话直发)",
+        },
+        {
+          main: "├ [双模式自由定制]   伴学与提示词重写支持独立定制：直接用自然语言让当前 AI 修改槽位数量、输出语言或候选风格",
+          detail: "│                    (内置 lingual-tuner 技能索引；直接对 AI 说“把提示词重写设为母语并加上最小改动要求”即可自动写入 lingual.json)",
+        },
+        {
+          main: "└ [off 模式零上下文] 彻底关闭时不留隐性负担：除停止输入拦截外，每次请求前主动从系统提示词中移除自身技能说明",
+          detail: "                     (通过 /lingual off 开启；由 before_agent_start 钩子剥离 lingual-tuner 块，实现 0 Token 占用)",
+        },
       ],
     },
     tw: {
-      title: "✦ [pi-lingual v0.4 更新速覽] 提示詞優化引擎與四態架構已就緒 (發消息後自動收起)",
-      items: [
-        "┌ [⚡english重寫] 升級為「提示詞規範化重寫」：理順雜亂口語，支持切中/英輸出與疊加規範",
-        "├ [✦select多選]  新增「多風格候選填入」：一次生成 極簡/規範/深度 3 個候選挑一個發送",
-        "├ [🤖高自由度]   直接對 AI 說「定制提示詞模式/伴學槽位」，自由定制 N 個風格與規則",
-        "└ [🛡️off零負擔]  切至 off 模式主動從系統提示詞剝離自身技能，實現 0 Token 上下文淨空",
+      title: "· [pi-lingual v0.5.0 更新說明] (發送任意訊息後自動收起)",
+      entries: [
+        {
+          main: "┌ [english 模式升級] 從單純翻譯升級為「提示詞規範化重寫」：先將雜亂口語提煉為結構化指令再發給 AI",
+          detail: "│                    (透過 /lingual english 開啟；預設輸出英文，可設 promptLang: \"native\" 保持母語或疊加 promptRule 規範)",
+        },
+        {
+          main: "├ [新增 select 模式] 支援「多風格候選選擇」：一次生成 極簡高效 / 結構規範 / 深度嚴謹 3 個候選，彈窗挑一個發送",
+          detail: "│                    (透過 /lingual select 開啟；按 Enter 選 [1]~[3] 替換發送，選 [0] 或按 Esc 則保持原話直發)",
+        },
+        {
+          main: "├ [雙模式自由定制]   伴學與提示詞重寫支援獨立定制：直接用自然語言讓當前 AI 修改槽位數量、輸出語言或候選風格",
+          detail: "│                    (內建 lingual-tuner 技能索引；直接對 AI 說「把提示詞重寫設為母語並加上最小改動要求」即可自動寫入 lingual.json)",
+        },
+        {
+          main: "└ [off 模式零上下文] 徹底關閉時不留隱性負擔：除停止輸入攔截外，每次請求前主動從系統提示詞中移除自身技能說明",
+          detail: "                     (透過 /lingual off 開啟；由 before_agent_start 鉤子剝離 lingual-tuner 區塊，實現 0 Token 佔用)",
+        },
       ],
     },
     ja: {
-      title: "✦ [pi-lingual v0.4 新機能] プロンプト最適化＆4モード構成 (入力送信で自動的に閉じます)",
-      items: [
-        "┌ [⚡english最適化] 曖昧な入力を構造化プロンプトへ直接書き換え（英語/母語出力・規約追加対応）",
-        "├ [✦select候補選択] 新モード追加：簡潔・構造化・厳密の3候補を生成し、選んで送信可能に",
-        "├ [🤖自由度向上]   Agentに自然言語で伝えるだけで伴走スロットや候補スタイルを自在に調整",
-        "└ [🛡️off完全ゼロ]  off時はシステムプロンプトからスキル定義も自動除去しコンテキスト負担ゼロ",
+      title: "· [pi-lingual v0.5.0 更新内容] (任意のメッセージを送信すると自動的に閉じます)",
+      entries: [
+        {
+          main: "┌ [english モード刷新] 単なる翻訳から「プロンプト構造化・最適化」へ進化：曖昧な口語を整理して AI へ送信",
+          detail: "│                      (/lingual english で有効化；既定は英語出力、promptLang: \"native\" で母語出力や promptRule 規約追加に対応)",
+        },
+        {
+          main: "├ [select モード追加]  「複数スタイル候補選択」に対応：簡潔・構造化・厳密の 3 候補を生成し、選んで送信",
+          detail: "│                      (/lingual select で有効化；[1]~[3] で置換送信、[0] または Esc キーで原文のまま送信)",
+        },
+        {
+          main: "├ [2モード自在調整]    語学伴走とプロンプト最適化を個別に設定可能：現在の AI に自然言語で伝えるだけで即座に反映",
+          detail: "│                      (lingual-tuner スキル索引を内蔵；「プロンプト最適化を母語出力にして最小変更原則を追加して」と伝えるだけで lingual.json を自動更新)",
+        },
+        {
+          main: "└ [off モード負荷ゼロ] 停止時は入力フック解除に加え、システムプロンプトから自身のスキル定義も自動的に除去",
+          detail: "                       (/lingual off で有効化；before_agent_start フックで lingual-tuner ブロックを除去し 0 Token を実現)",
+        },
       ],
     },
     ko: {
-      title: "✦ [pi-lingual v0.4 업데이트] 프롬프트 최적화 엔진 & 4모드 아키텍처 (입력 시 자동 닫힘)",
-      items: [
-        "┌ [⚡english재작성] 복잡한 구어체 입력을 체계적인 프롬프트로 즉시 최적화 (영어/모국어 및 규칙 추가)",
-        "├ [✦select후보선택] 신규 모드: 간결/구조화/심층 3가지 스타일 후보 중 하나를 골라 전송",
-        "├ [🤖자유도향상]   에이전트에게 자연어로 말해 학습 슬롯과 프롬프트 스타일을 자유롭게 커스텀",
-        "└ [🛡️off부담제로]  off 모드 시 시스템 프롬프트에서 스킬 블록까지 제거하여 0 토큰 달성",
-      ],
-    },
-    es: {
-      title: "✦ [Novedades en pi-lingual v0.4] Optimizador de Prompts y 4 Modos (se oculta al enviar)",
-      items: [
-        "┌ [⚡english] Reescritura directa de prompts: estructura ideas confusas (EN/Nativo + reglas)",
-        "├ [✦select]  Nuevo selector N-opciones: genera candidatos Conciso / Estructurado / Profundo",
-        "├ [🤖Libertad] Pide a tu Agente en lenguaje natural personalizar ranuras o estilos de prompt",
-        "└ [🛡️off 0-Tok] El modo `off` elimina activamente su contexto del sistema (0 bytes de sobrecarga)",
-      ],
-    },
-    fr: {
-      title: "✦ [Nouveautés pi-lingual v0.4] Optimiseur de Prompts & 4 Modes (masqué dès l'envoi)",
-      items: [
-        "┌ [⚡english] Réécriture directe : structure vos idées brouillonnes (EN/Langue natale + règles)",
-        "├ [✦select]  Nouveau sélecteur à N choix : génère 3 candidats (Concis / Structuré / Approfondi)",
-        "├ [🤖Liberté] Demandez à votre Agent en langage naturel de personnaliser vos styles et emplacements",
-        "└ [🛡️off 0-Tok] Le mode `off` retire activement son contexte système (0 octet de charge LLM)",
-      ],
-    },
-    de: {
-      title: "✦ [Neu in pi-lingual v0.4] Prompt-Optimierer & 4-Modus-Architektur (blendet bei Eingabe aus)",
-      items: [
-        "┌ [⚡english] Direkte Prompt-Optimierung: strukturiert unklare Eingaben (EN/Muttersprache + Regeln)",
-        "├ [✦select]  Neuer N-Auswahl-Modus: generiert 3 Kandidaten (Prägnant / Strukturiert / Tiefgründig)",
-        "├ [🤖Freiheit] Passen Sie Lern-Slots und Prompt-Stile einfach per natürlicher Sprache beim Agenten an",
-        "└ [🛡️off 0-Tok] Der `off`-Modus entfernt aktiv seinen Skill-Kontext für 0 Byte System-Prompt-Last",
-      ],
-    },
-    ru: {
-      title: "✦ [Что нового в pi-lingual v0.4] Оптимизатор промптов и 4 режима (скроется при вводе)",
-      items: [
-        "┌ [⚡english] Прямая оптимизация промптов: структурирует черновой ввод (EN/Родной язык + правила)",
-        "├ [✦select]  Новый режим выбора из N вариантов: Краткий / Структурный / Глубокий промпт",
-        "├ [🤖Свобода] Настраивайте слоты и стили промптов обычным текстом через вашего Агента",
-        "└ [🛡️off 0-Tok] Режим `off` полностью удаляет контекст навыка из системного промпта (0 токенов)",
+      title: "· [pi-lingual v0.5.0 업데이트 안내] (메시지 입력 시 자동으로 닫힙니다)",
+      entries: [
+        {
+          main: "┌ [english 모드 업그레이드] 단순 번역에서 '프롬프트 구조화 재작성'으로 진화: 구어체 입력을 체계적인 지시문으로 최적화",
+          detail: "│                           (/lingual english 로 활성화; 기본 영어 출력, promptLang: \"native\" 모국어 유지 및 promptRule 규칙 추가 지원)",
+        },
+        {
+          main: "├ [select 모드 추가]        '다중 스타일 후보 선택' 지원: 간결/구조화/심층 3가지 후보를 생성하여 선택 전송",
+          detail: "│                           (/lingual select 로 활성화; [1]~[3] 선택 시 변환 전송, [0] 또는 Esc 입력 시 원문 그대로 전송)",
+        },
+        {
+          main: "├ [듀얼 모드 자유 커스텀]   학습 슬롯과 프롬프트 최적화를 자연어로 설정: 현재 AI에게 말하면 설정 파일 즉시 반영",
+          detail: "│                           (lingual-tuner 스킬 색인 내장; AI에게 \"프롬프트 재작성을 모국어로 설정하고 최소 변경 원칙을 추가해줘\"라고 말하면 lingual.json 자동 수정)",
+        },
+        {
+          main: "└ [off 모드 제로 컨텍스트]  종료 시 입력 후크 해제뿐만 아니라 시스템 프롬프트에서 자체 스킬 설명까지 능동적으로 제거",
+          detail: "                            (/lingual off 로 활성화; before_agent_start 후크가 lingual-tuner 블록을 분리하여 0 Token 달성)",
+        },
       ],
     },
     en: {
-      title: "✦ [What's New in pi-lingual v0.4] Prompt Optimizer & 4-Mode Architecture (auto-hides on input)",
-      items: [
-        "┌ [⚡english] Upgraded to Direct Prompt Rewrite: structures messy input (EN/Native + custom rules)",
-        "├ [✦select]  New N-Choice Prompt Picker: generates Concise / Structured / Deep candidates to pick",
-        "├ [🤖Freedom] Tell your Agent in plain language to customize companion slots or N prompt styles",
-        "└ [🛡️off 0-Tok] Switching to `off` actively strips skill context for 0.00-byte LLM overhead",
+      title: "· [pi-lingual v0.5.0 Release Notes] (auto-closes on your next message)",
+      entries: [
+        {
+          main: "┌ [english Mode Upgraded] Evolved from literal translation into Direct Prompt Rewrite: structures messy input before sending",
+          detail: "│                         (Enable via /lingual english; defaults to English, or set promptLang: \"native\" and stack custom promptRule constraints)",
+        },
+        {
+          main: "├ [New select Mode]       Added N-Choice Prompt Picker: generates Concise / Structured / Deep Rigor candidates to choose from",
+          detail: "│                         (Enable via /lingual select; pick [1]~[3] to send optimized prompt, or [0] / Esc to send original text)",
+        },
+        {
+          main: "├ [Dual-Engine Freedom]   Customize Companion Mode or Prompt Optimizer independently by talking to your current Agent",
+          detail: "│                         (Indexed in lingual-tuner skill; tell your Agent \"Set prompt rewrite to my native language and enforce minimal diff\" to update lingual.json)",
+        },
+        {
+          main: "└ [Zero-Context off Mode] Turning off leaves zero hidden burden: stops input hooks and strips its own skill block from system prompt",
+          detail: "                          (Enable via /lingual off; before_agent_start hook removes the lingual-tuner block for 0-token overhead)",
+        },
       ],
     },
   };
 
   const c = copyByLang[norm] || copyByLang.en;
-  return [
-    truncateVisual(`  ${fg("accent", c.title)}`, maxCols),
-    truncateVisual(`  ${fg("muted", c.items[0])}`, maxCols),
-    truncateVisual(`  ${fg("muted", c.items[1])}`, maxCols),
-    truncateVisual(`  ${fg("muted", c.items[2])}`, maxCols),
-    truncateVisual(`  ${fg("muted", c.items[3])}`, maxCols),
-  ];
+  const lines: string[] = [truncateVisual(`  ${fg("accent", c.title)}`, maxCols)];
+  for (const entry of c.entries) {
+    lines.push(truncateVisual(`  ${fg("muted", entry.main)}`, maxCols));
+    lines.push(truncateVisual(`  ${fg("dim", entry.detail)}`, maxCols));
+  }
+  return lines;
 }
