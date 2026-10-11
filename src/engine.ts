@@ -32,9 +32,15 @@ export {
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
-import type { LingualConfig, LingualResult, TranslationPayload } from "./types.js";
+import type { LingualConfig, LingualResult, PromptCandidate, PromptSlotConfig, TranslationPayload } from "./types.js";
 import { resolveLabelsForLang, resolveSlotsForPreset } from "./presets.js";
-import { buildSystemPrompt } from "./prompts.js";
+import {
+  buildSystemPrompt,
+  buildDirectRewriteSystemPrompt,
+  buildPromptCandidatesSystemPrompt,
+  getDefaultPromptSlots,
+  resolvePromptTargetLangName,
+} from "./prompts.js";
 import { shouldShieldBypass } from "./shield.js";
 import { LingualLruCache, globalLingualCache } from "./cache.js";
 
@@ -127,6 +133,11 @@ export function loadUserLingualConfig(): Partial<LingualConfig> {
     const slots = Array.isArray(target.slots)
       ? target.slots.filter((s: any) => s && typeof s === "object" && typeof s.id === "string" && typeof s.label === "string")
       : undefined;
+    const promptLang = typeof target.promptLang === "string" ? target.promptLang : undefined;
+    const promptRule = typeof target.promptRule === "string" ? target.promptRule : undefined;
+    const promptSlots = Array.isArray(target.promptSlots)
+      ? target.promptSlots.filter((s: any) => s && typeof s === "object" && typeof s.id === "string" && typeof s.label === "string")
+      : undefined;
     const reasoning = typeof target.reasoning === "string" ? target.reasoning : undefined;
     const timeoutMs = typeof target.timeoutMs === "number" && Number.isFinite(target.timeoutMs)
       ? Math.min(60_000, Math.max(1000, target.timeoutMs))
@@ -143,6 +154,9 @@ export function loadUserLingualConfig(): Partial<LingualConfig> {
       ...(compact !== undefined ? { compact: Boolean(compact) } : {}),
       ...(slotPreset ? { slotPreset } : {}),
       ...(slots ? { slots } : {}),
+      ...(promptLang ? { promptLang } : {}),
+      ...(promptRule ? { promptRule } : {}),
+      ...(promptSlots ? { promptSlots } : {}),
       ...(sourceLang ? { sourceLang } : {}),
       ...(targetLang ? { targetLang } : {}),
       ...(reasoning ? { reasoning } : {}),
@@ -181,7 +195,13 @@ export const DEFAULT_CONFIG: LingualConfig = {
  * 5. 水平自适应重点词汇提取，单行紧凑流排列
  */
 export const LINGUAL_SYSTEM_PROMPT = buildSystemPrompt("zh", "en");
-export { buildSystemPrompt };
+export {
+  buildSystemPrompt,
+  buildDirectRewriteSystemPrompt,
+  buildPromptCandidatesSystemPrompt,
+  getDefaultPromptSlots,
+  resolvePromptTargetLangName,
+};
 
 /**
  * Check if the text contains non-English natural language scripts (CJK, accented Latin, Cyrillic, etc.)
@@ -202,7 +222,7 @@ export const MAX_TRANSLATION_LINES = 30;
  * - Centrally delegates to shouldShieldBypass (Single Source of Truth) to exclude code statements, SQL, and 40+ CLI commands;
  * - [Safety Gate]: Rejects oversized payloads (> 1500 chars), monolithic multi-line code (> 8 lines), markdown headings, and code fences.
  */
-export function shouldTriggerTranslation(text: string, sourceLang = "zh"): boolean {
+export function shouldTriggerTranslation(text: string, sourceLang = "zh", allowSameLangPromptOpt = false): boolean {
   const trimmed = text.trim();
   if (!trimmed) return false;
 
@@ -222,6 +242,14 @@ export function shouldTriggerTranslation(text: string, sourceLang = "zh"): boole
   // 2. Code & Shell Shield: 0ms bypass for pure commands, code fences, and data structures
   if (shouldShieldBypass(trimmed)) {
     return false;
+  }
+
+  // 2b. In Mode 2 (Direct Rewrite) or Mode 3 (N-Choice Select), allow any natural language sentence
+  //     (even if source and output languages are the same!)
+  if (allowSameLangPromptOpt) {
+    if (isNonEnglish(trimmed)) return true;
+    const words = trimmed.split(/\s+/);
+    return words.length >= 2 && /[a-zA-Z]{2,}/.test(trimmed);
   }
 
   // 3. Non-Latin scripts (Chinese, Japanese, Korean, Russian, Arabic) must contain native script characters
@@ -520,4 +548,216 @@ export function formatNativeReplyGuardHint(sourceLang = "zh"): string {
     return "\n\n(Please reply and explain in German.)";
   }
   return "\n\n(Please reply in the user's native language.)";
+}
+
+function extractCleanJsonField(raw: string, fieldName: string): string {
+  try {
+    let cleaned = raw.replace(/<(?:think|thought)>[\s\S]*?<\/(?:think|thought)>/gi, "").trim();
+    const fence = cleaned.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (fence) cleaned = fence[1].trim();
+    const first = cleaned.indexOf("{");
+    const last = cleaned.lastIndexOf("}");
+    if (first !== -1 && last > first) {
+      const jsonStr = cleaned.slice(first, last + 1).replace(/,\s*([}\]])/g, "$1");
+      const obj = JSON.parse(jsonStr);
+      if (obj && typeof obj === "object") {
+        const val = obj[fieldName] ?? obj.prompt ?? obj.written ?? obj.spoken;
+        if (typeof val === "string" && val.trim()) return val.trim();
+      }
+    }
+    return cleaned.replace(/^["']|["']$/g, "").trim();
+  } catch {
+    return raw.replace(/<(?:think|thought)>[\s\S]*?<\/(?:think|thought)>/gi, "").trim();
+  }
+}
+
+/**
+ * Mode 2 (Direct Prompt Rewrite):
+ * Runs the user's raw input through a lightweight model injected with the Direct Rewrite System Prompt
+ * (structuring + standardizing + high efficiency + output language + custom rule), returning the new prompt directly
+ * without generating vocabulary or spoken learning cards.
+ */
+export async function rewritePromptDirect(
+  text: string,
+  userConfig: Partial<LingualConfig> = {}
+): Promise<string | null> {
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+
+  const diskConfig = loadUserLingualConfig();
+  const cfg = { ...DEFAULT_CONFIG, ...diskConfig, ...userConfig };
+
+  if (!shouldTriggerTranslation(trimmed, cfg.sourceLang, true)) {
+    return null;
+  }
+
+  const sysPrompt = buildDirectRewriteSystemPrompt({
+    sourceLang: cfg.sourceLang,
+    targetLang: cfg.targetLang,
+    promptLang: cfg.promptLang,
+    promptRule: cfg.promptRule,
+  });
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), cfg.timeoutMs);
+  if (cfg.signal) {
+    if (cfg.signal.aborted) {
+      clearTimeout(timer);
+      return null;
+    }
+    cfg.signal.addEventListener("abort", () => controller.abort(), { once: true });
+  }
+
+  try {
+    let raw: string | null = null;
+    if (typeof cfg.complete === "function") {
+      raw = await cfg.complete(trimmed, sysPrompt, controller.signal);
+    } else if (cfg.endpoint) {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (cfg.apiKey) headers["Authorization"] = `Bearer ${cfg.apiKey}`;
+      const response = await fetch(cfg.endpoint, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          model: cfg.model || "gemini-3.8-flash",
+          messages: [
+            { role: "system", content: sysPrompt },
+            { role: "user", content: trimmed },
+          ],
+          temperature: cfg.temperature,
+        }),
+        signal: controller.signal,
+      });
+      if (response.ok) {
+        const json = (await response.json()) as any;
+        raw = json?.choices?.[0]?.message?.content ?? null;
+      }
+    }
+
+    if (typeof raw !== "string" || !raw.trim()) return null;
+    const rewritten = extractCleanJsonField(raw, "prompt");
+    return rewritten || null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Mode 3 (N-Choice Interactive Prompt Selector):
+ * Generates N distinct optimized prompt candidates according to `promptSlots` (defaulting to Concise, Spec, Deep)
+ * so the user can pick the best one via interactive selector.
+ */
+export async function generatePromptCandidates(
+  text: string,
+  userConfig: Partial<LingualConfig> = {}
+): Promise<PromptCandidate[] | null> {
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+
+  const diskConfig = loadUserLingualConfig();
+  const cfg = { ...DEFAULT_CONFIG, ...diskConfig, ...userConfig };
+
+  if (!shouldTriggerTranslation(trimmed, cfg.sourceLang, true)) {
+    return null;
+  }
+
+  const activeSlots = (Array.isArray(cfg.promptSlots) && cfg.promptSlots.length > 0
+    ? cfg.promptSlots
+    : getDefaultPromptSlots(cfg.sourceLang)
+  ).filter((s) => s.enabled !== false);
+
+  const slots = activeSlots.length > 0 ? activeSlots : getDefaultPromptSlots(cfg.sourceLang);
+  const sysPrompt = buildPromptCandidatesSystemPrompt({
+    sourceLang: cfg.sourceLang,
+    targetLang: cfg.targetLang,
+    promptLang: cfg.promptLang,
+    promptRule: cfg.promptRule,
+    promptSlots: slots,
+  });
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), cfg.timeoutMs);
+  if (cfg.signal) {
+    if (cfg.signal.aborted) {
+      clearTimeout(timer);
+      return null;
+    }
+    cfg.signal.addEventListener("abort", () => controller.abort(), { once: true });
+  }
+
+  try {
+    let raw: string | null = null;
+    if (typeof cfg.complete === "function") {
+      raw = await cfg.complete(trimmed, sysPrompt, controller.signal);
+    } else if (cfg.endpoint) {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (cfg.apiKey) headers["Authorization"] = `Bearer ${cfg.apiKey}`;
+      const response = await fetch(cfg.endpoint, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          model: cfg.model || "gemini-3.8-flash",
+          messages: [
+            { role: "system", content: sysPrompt },
+            { role: "user", content: trimmed },
+          ],
+          temperature: cfg.temperature,
+        }),
+        signal: controller.signal,
+      });
+      if (response.ok) {
+        const json = (await response.json()) as any;
+        raw = json?.choices?.[0]?.message?.content ?? null;
+      }
+    }
+
+    if (typeof raw !== "string" || !raw.trim()) return null;
+
+    let cleaned = raw.replace(/<(?:think|thought)>[\s\S]*?<\/(?:think|thought)>/gi, "").trim();
+    const fence = cleaned.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (fence) cleaned = fence[1].trim();
+    const first = cleaned.indexOf("{");
+    const last = cleaned.lastIndexOf("}");
+    if (first === -1 || last <= first) return null;
+
+    const jsonStr = cleaned.slice(first, last + 1).replace(/,\s*([}\]])/g, "$1");
+    const obj = JSON.parse(jsonStr);
+    if (!obj || typeof obj !== "object" || Array.isArray(obj)) return null;
+
+    const candidates: PromptCandidate[] = [];
+    for (const slot of slots) {
+      const val = obj[slot.id];
+      if (typeof val === "string" && val.trim()) {
+        candidates.push({
+          id: slot.id,
+          label: slot.label,
+          content: val.trim(),
+        });
+      }
+    }
+
+    return candidates.length > 0 ? candidates : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Mode 4 (`off` Mode Active 0-Token Context Shield):
+ * Physically strips `<skill>...<name>lingual-tuner</name>...</skill>` from `systemPrompt` when `mode === "off"`
+ * (unless the user explicitly mentions `lingual` or `伴学` to re-configure it), guaranteeing 0.00 bytes of LLM context overhead.
+ */
+export function stripLingualContextWhenOff(systemPrompt: string, lastUserText = ""): string {
+  if (!systemPrompt) return systemPrompt;
+  if (/(?:lingual|伴学|槽位)/i.test(lastUserText)) {
+    return systemPrompt;
+  }
+  return systemPrompt.replace(
+    /\s*<skill>\s*<name>lingual-tuner<\/name>[\s\S]*?<\/skill>/gi,
+    ""
+  );
 }

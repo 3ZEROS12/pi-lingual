@@ -81,9 +81,20 @@ interface LingualI18nLabels {
 }
 type LinguaI18nLabels = LingualI18nLabels;
 
-type LingualMode = "original" | "english" | "off";
+type LingualMode = "original" | "english" | "select" | "off";
 type LinguaMode = LingualMode;
 type SlotRole = "source" | "translation" | "vocab" | "custom";
+interface PromptSlotConfig {
+    id: string;
+    label: string;
+    instruction: string;
+    enabled: boolean;
+}
+interface PromptCandidate {
+    id: string;
+    label: string;
+    content: string;
+}
 interface SlotConfig {
     id: string;
     label: string;
@@ -141,6 +152,9 @@ interface LingualConfig {
     compact?: boolean;
     slotPreset?: string;
     slots?: SlotConfig[];
+    promptLang?: string;
+    promptRule?: string;
+    promptSlots?: PromptSlotConfig[];
     sourceLang?: string;
     targetLang?: string;
     replyInSourceLang?: boolean;
@@ -182,6 +196,7 @@ interface TranslationPayload {
     }>;
 }
 
+declare function getDefaultPromptSlots(sourceLang?: string): PromptSlotConfig[];
 declare function getDefaultSlots(sourceLang?: string): SlotConfig[];
 declare const LEGACY_SLOT_PRESETS: Record<string, {
     slot1: SlotDefinition;
@@ -192,6 +207,32 @@ declare const LEGACY_SLOT_PRESETS: Record<string, {
  * 支持长输入总结 (isLongInput)、上下文注入 (context) 和风格侧重 (tone: "general" | "social" | "tech")。
  */
 declare function buildSystemPrompt(sourceLang?: string, targetLang?: string, isLongInput?: boolean, context?: string, tone?: "general" | "social" | "tech", customSlots?: SlotConfig[] | CustomSlotsConfig): string;
+declare function resolvePromptTargetLangName(sourceLang?: string, targetLang?: string, promptLang?: string): {
+    code: string;
+    name: string;
+};
+/**
+ * Mode 2 (Direct Rewrite): Build a focused Prompt Optimizer system prompt.
+ * Does NOT generate companion vocabulary cards — 100% dedicated to structuring, standardizing,
+ * and optimizing the user's messy prompt for maximum coding efficiency.
+ */
+declare function buildDirectRewriteSystemPrompt(options: {
+    sourceLang?: string;
+    targetLang?: string;
+    promptLang?: string;
+    promptRule?: string;
+}): string;
+/**
+ * Mode 3 (N-Choice Interactive Selector): Build a multi-style Prompt Optimizer system prompt
+ * generating N candidate prompts according to `promptSlots` (defaulting to Concise, Structured, Deep).
+ */
+declare function buildPromptCandidatesSystemPrompt(options: {
+    sourceLang?: string;
+    targetLang?: string;
+    promptLang?: string;
+    promptRule?: string;
+    promptSlots?: PromptSlotConfig[];
+}): string;
 
 /**
  * In-Memory LRU Cache for Lingual Translations (会话级 0 依赖极速缓存)
@@ -348,4 +389,4 @@ interface SanitizedPromptResult {
  */
 declare function sanitizePromptForTranslation(raw: string): SanitizedPromptResult;
 
-export { getDefaultSlots as A, globalLinguaCache as B, type CacheStats as C, globalLingualCache as D, moveSlotInList as E, parseLlmResponse as F, removeSlotFromList as G, resolveLabelsForLang as H, resolveSlotsForPreset as I, sanitizePromptForTranslation as J, shouldShieldBypass as K, type LingualResult as L, toggleSlotInList as M, translateCore as N, updateSlotInList as O, type SlotConfig as S, type TranslationPayload as T, type LingualI18nLabels as a, type LingualConfig as b, type CustomSlotsConfig as c, LANGUAGE_PRESETS as d, LEGACY_SLOT_PRESETS as e, type LinguaConfig as f, type LinguaI18nLabels as g, LinguaLruCache as h, type LinguaMode as i, type LinguaResult as j, type LingualCoreOptions as k, LingualLruCache as l, type LingualMode as m, type LingualRequest as n, type LingualResponse as o, SLOT_PRESETS as p, type SanitizedPromptResult as q, type SlotDefinition as r, type SlotPresetDefinition as s, type SlotResult as t, type SlotRole as u, addSlotToList as v, buildSystemPrompt as w, createCustomSlot as x, formatModelSelectionMessage as y, formatStatusReport as z };
+export { createCustomSlot as A, formatModelSelectionMessage as B, type CacheStats as C, formatStatusReport as D, getDefaultPromptSlots as E, getDefaultSlots as F, globalLinguaCache as G, globalLingualCache as H, moveSlotInList as I, parseLlmResponse as J, removeSlotFromList as K, type LingualResult as L, resolveLabelsForLang as M, resolvePromptTargetLangName as N, resolveSlotsForPreset as O, type PromptCandidate as P, sanitizePromptForTranslation as Q, shouldShieldBypass as R, type SlotConfig as S, type TranslationPayload as T, toggleSlotInList as U, translateCore as V, updateSlotInList as W, type LingualI18nLabels as a, type LingualConfig as b, type CustomSlotsConfig as c, LANGUAGE_PRESETS as d, LEGACY_SLOT_PRESETS as e, type LinguaConfig as f, type LinguaI18nLabels as g, LinguaLruCache as h, type LinguaMode as i, type LinguaResult as j, type LingualCoreOptions as k, LingualLruCache as l, type LingualMode as m, type LingualRequest as n, type LingualResponse as o, type PromptSlotConfig as p, SLOT_PRESETS as q, type SanitizedPromptResult as r, type SlotDefinition as s, type SlotPresetDefinition as t, type SlotResult as u, type SlotRole as v, addSlotToList as w, buildDirectRewriteSystemPrompt as x, buildPromptCandidatesSystemPrompt as y, buildSystemPrompt as z };

@@ -3,6 +3,8 @@ export type {
   LingualResponse,
   LingualMode,
   LinguaMode,
+  PromptSlotConfig,
+  PromptCandidate,
   LingualConfig,
   LinguaConfig,
   LingualResult,

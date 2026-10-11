@@ -517,6 +517,75 @@ import path from "path";
 import os from "os";
 
 // src/core/prompts.ts
+function getDefaultPromptSlots(sourceLang = "zh") {
+  const norm = (sourceLang || "zh").toLowerCase().split("-")[0];
+  const isZh = norm === "zh" || norm === "tw";
+  const isJa = norm === "ja";
+  if (isZh) {
+    return [
+      {
+        id: "concise",
+        label: "\u6781\u7B80\u9AD8\u6548",
+        instruction: "\u9AD8\u6548\u7387\u3001\u96F6\u5E9F\u8BDD\u7684\u76F4\u63A5\u884C\u52A8\u6307\u4EE4\uFF1A\u5265\u79BB\u53E3\u8BED\u5BD2\u6684\uFF0C\u76F4\u5954\u76EE\u6807\u52A8\u4F5C\u4E0E\u6700\u5C0F\u5DE5\u4F5C\u6539\u52A8\u9762\uFF08Smallest Working Diff\uFF09\u3002",
+        enabled: true
+      },
+      {
+        id: "spec",
+        label: "\u7ED3\u6784\u89C4\u8303",
+        instruction: "\u7ED3\u6784\u5316\u5DE5\u7A0B\u9700\u6C42\u89C4\u8303\uFF1A\u5C06\u6742\u4E71\u8DF3\u8DC3\u7684\u53E3\u8BED\u63D0\u70BC\u4E3A\u6E05\u6670\u7684\u300C\u6838\u5FC3\u76EE\u6807 + \u7EA6\u675F\u8FB9\u754C + \u9884\u671F\u4EA7\u51FA\u300D\uFF0C\u4E25\u7981\u51ED\u7A7A\u634F\u9020\u672A\u8981\u6C42\u7684\u7279\u6027\u3002",
+        enabled: true
+      },
+      {
+        id: "deep",
+        label: "\u6DF1\u5EA6\u4E25\u8C28",
+        instruction: "\u6839\u56E0\u6EAF\u6E90\u4E0E\u67B6\u6784\u4E25\u8C28\u89C4\u8303\uFF1A\u8981\u6C42\u5168\u94FE\u8DEF\u6392\u67E5\u5171\u4EAB\u6839\u56E0\uFF08\u62D2\u7EDD\u8868\u9762\u6253\u8865\u4E01\uFF09\uFF0C\u517C\u987E\u8FB9\u754C\u6761\u4EF6\u9A8C\u8BC1\u4E0E\u96F6\u56DE\u5F52\u3002",
+        enabled: true
+      }
+    ];
+  }
+  if (isJa) {
+    return [
+      {
+        id: "concise",
+        label: "\u7C21\u6F54\u30FB\u9AD8\u52B9\u7387",
+        instruction: "\u7121\u99C4\u3092\u7701\u3044\u305F\u9AD8\u52B9\u7387\u306A\u6307\u793A\uFF1A\u6838\u5FC3\u306E\u30A2\u30AF\u30B7\u30E7\u30F3\u3068\u6700\u5C0F\u9650\u306E\u5909\u66F4\u5DEE\u5206\uFF08Smallest Working Diff\uFF09\u3092\u76F4\u63A5\u6307\u793A\u3002",
+        enabled: true
+      },
+      {
+        id: "spec",
+        label: "\u69CB\u9020\u5316\u4ED5\u69D8",
+        instruction: "\u69CB\u9020\u5316\u3055\u308C\u305F\u6280\u8853\u4ED5\u69D8\uFF1A\u66D6\u6627\u306A\u8868\u73FE\u3092\u300C\u76EE\u7684\u30FB\u5236\u7D04\u6761\u4EF6\u30FB\u671F\u5F85\u3055\u308C\u308B\u7D50\u679C\u300D\u306B\u6574\u7406\u3057\u3001\u660E\u78BA\u5316\u3002",
+        enabled: true
+      },
+      {
+        id: "deep",
+        label: "\u6839\u672C\u539F\u56E0\u30FB\u53B3\u5BC6",
+        instruction: "\u6839\u672C\u539F\u56E0\u306E\u7279\u5B9A\u3068\u53B3\u5BC6\u306A\u691C\u8A3C\uFF1A\u8868\u9762\u7684\u306A\u5BFE\u51E6\u3067\u306F\u306A\u304F\u30A8\u30F3\u30C9\u30C4\u30FC\u30A8\u30F3\u30C9\u306E\u539F\u56E0\u8FFD\u8DE1\u3068\u5883\u754C\u5024\u691C\u8A3C\u3092\u8981\u6C42\u3002",
+        enabled: true
+      }
+    ];
+  }
+  return [
+    {
+      id: "concise",
+      label: "Concise",
+      instruction: "High-efficiency, zero-fluff imperative instruction targeting the exact action and smallest working diff.",
+      enabled: true
+    },
+    {
+      id: "spec",
+      label: "Structured",
+      instruction: "Structured engineering specification: distill messy thoughts into clear Objective, Constraints, and Deliverable without inventing unrequested features.",
+      enabled: true
+    },
+    {
+      id: "deep",
+      label: "Deep Rigor",
+      instruction: "Root-cause & architectural rigor: trace end-to-end execution flow, fix shared root causes rather than symptom patches, and verify edge cases.",
+      enabled: true
+    }
+  ];
+}
 function getDefaultSlots(sourceLang = "en") {
   const norm = (sourceLang || "en").toLowerCase().split("-")[0];
   const labels = {
@@ -1084,6 +1153,90 @@ ${anchorText}
 
 ${jsonFormatHint}
 Output valid JSON ONLY. Never output markdown code fences, backticks, quotes, or explanations.`;
+}
+var PROMPT_TARGET_LANGUAGE_NAMES = {
+  en: "English",
+  zh: "Chinese (Simplified)",
+  tw: "Chinese (Traditional)",
+  ja: "Japanese",
+  ko: "Korean",
+  es: "Spanish",
+  fr: "French",
+  de: "German",
+  ru: "Russian",
+  pt: "Portuguese",
+  it: "Italian"
+};
+function resolvePromptTargetLangName(sourceLang = "zh", targetLang = "en", promptLang) {
+  const normSource = (sourceLang || "zh").toLowerCase().split("-")[0];
+  const normTarget = (targetLang || "en").toLowerCase().split("-")[0];
+  const raw = (promptLang || "").trim().toLowerCase();
+  const code = !raw || raw === "default" || raw === "auto" ? normTarget : raw === "native" || raw === "source" || raw === "\u6BCD\u8BED" ? normSource : raw.split("-")[0];
+  return {
+    code,
+    name: PROMPT_TARGET_LANGUAGE_NAMES[code] || "English"
+  };
+}
+function buildDirectRewriteSystemPrompt(options) {
+  const { name: outLangName } = resolvePromptTargetLangName(
+    options.sourceLang,
+    options.targetLang,
+    options.promptLang
+  );
+  const customRuleBlock = options.promptRule && options.promptRule.trim() ? `
+
+[USER CUSTOM SPECIFICATION & STACKED RULES - MANDATORY]:
+Weave and enforce the following user-specified requirements directly into the rewritten prompt:
+"""
+${options.promptRule.trim()}
+"""` : "";
+  return `You are an elite AI Coding Prompt Architect.
+The user is typing a raw, potentially messy, colloquial, or fragmented instruction for an AI coding agent.
+Your sole task is to rewrite, structure, standardize, and optimize their input into a high-efficiency, unambiguous engineering prompt in **${outLangName}**:
+1. **Structure & Clarify**: Distill rambling or colloquial thoughts into a logical, well-structured instruction without losing any concrete detail or question.
+2. **Standardize & Sharpen**: Use precise software engineering terminology in **${outLangName}** and eliminate conversational filler.
+3. **High-Efficiency Alignment**: Keep the prompt concise, direct, and actionable \u2014 never invent unrequested features or bloat scope.
+4. **Code & Symbol Shield**: Preserve all inline code (\`foo()\`), file paths (@file, path/to/file), CLI flags, and identifiers 100% verbatim.${customRuleBlock}
+
+Strict JSON format:
+{
+  "prompt": "..."
+}
+Output valid JSON ONLY. Never output markdown code fences or explanations.`;
+}
+function buildPromptCandidatesSystemPrompt(options) {
+  const normSource = (options.sourceLang || "zh").toLowerCase().split("-")[0];
+  const { name: outLangName } = resolvePromptTargetLangName(
+    options.sourceLang,
+    options.targetLang,
+    options.promptLang
+  );
+  const slots = (Array.isArray(options.promptSlots) && options.promptSlots.length > 0 ? options.promptSlots : getDefaultPromptSlots(normSource)).filter((s) => s.enabled !== false);
+  const activeSlots = slots.length > 0 ? slots : getDefaultPromptSlots(normSource);
+  const taskLines = activeSlots.map(
+    (s, idx) => `${idx + 1}. "${s.id}" (${s.label}): ${s.instruction} (MUST be written in **${outLangName}**)`
+  );
+  const jsonProps = activeSlots.map((s) => `  "${s.id}": "..."`);
+  const customRuleBlock = options.promptRule && options.promptRule.trim() ? `
+
+[USER CUSTOM SPECIFICATION & STACKED RULES - MANDATORY]:
+Ensure every generated candidate incorporates the following user-specified requirements:
+"""
+${options.promptRule.trim()}
+"""` : "";
+  return `You are an elite AI Coding Prompt Architect.
+The user is typing a raw, potentially messy or colloquial instruction for an AI coding agent.
+Generate ${activeSlots.length} distinct, optimized prompt candidates in **${outLangName}** corresponding to the following styles so the user can choose the best one to send:
+${taskLines.join("\n")}
+
+[CODE & SYMBOL SHIELD - STRICT RULE]:
+All inline code (\`foo()\`), file paths (@file, path/to/file), CLI flags, and technical identifiers MUST be preserved 100% verbatim in every candidate.${customRuleBlock}
+
+Strict JSON format:
+{
+${jsonProps.join(",\n")}
+}
+Output valid JSON ONLY. Never output markdown code fences or explanations.`;
 }
 
 // src/presets.ts
@@ -2334,6 +2487,9 @@ function loadUserLingualConfig() {
     const compact = target.compact;
     const slotPreset = target.slotPreset;
     const slots = Array.isArray(target.slots) ? target.slots.filter((s) => s && typeof s === "object" && typeof s.id === "string" && typeof s.label === "string") : void 0;
+    const promptLang = typeof target.promptLang === "string" ? target.promptLang : void 0;
+    const promptRule = typeof target.promptRule === "string" ? target.promptRule : void 0;
+    const promptSlots = Array.isArray(target.promptSlots) ? target.promptSlots.filter((s) => s && typeof s === "object" && typeof s.id === "string" && typeof s.label === "string") : void 0;
     const reasoning = typeof target.reasoning === "string" ? target.reasoning : void 0;
     const timeoutMs = typeof target.timeoutMs === "number" && Number.isFinite(target.timeoutMs) ? Math.min(6e4, Math.max(1e3, target.timeoutMs)) : void 0;
     const replyInSourceLang = target.replyInSourceLang !== void 0 ? Boolean(target.replyInSourceLang) : void 0;
@@ -2347,6 +2503,9 @@ function loadUserLingualConfig() {
       ...compact !== void 0 ? { compact: Boolean(compact) } : {},
       ...slotPreset ? { slotPreset } : {},
       ...slots ? { slots } : {},
+      ...promptLang ? { promptLang } : {},
+      ...promptRule ? { promptRule } : {},
+      ...promptSlots ? { promptSlots } : {},
       ...sourceLang ? { sourceLang } : {},
       ...targetLang ? { targetLang } : {},
       ...reasoning ? { reasoning } : {},
@@ -2379,7 +2538,7 @@ function isNonEnglish(text) {
 }
 var MAX_TRANSLATION_CHARS = 2500;
 var MAX_TRANSLATION_LINES = 30;
-function shouldTriggerTranslation(text, sourceLang = "zh") {
+function shouldTriggerTranslation(text, sourceLang = "zh", allowSameLangPromptOpt = false) {
   const trimmed = text.trim();
   if (!trimmed) return false;
   if (trimmed.length > MAX_TRANSLATION_CHARS) {
@@ -2394,6 +2553,11 @@ function shouldTriggerTranslation(text, sourceLang = "zh") {
   }
   if (shouldShieldBypass(trimmed)) {
     return false;
+  }
+  if (allowSameLangPromptOpt) {
+    if (isNonEnglish(trimmed)) return true;
+    const words2 = trimmed.split(/\s+/);
+    return words2.length >= 2 && /[a-zA-Z]{2,}/.test(trimmed);
   }
   const normSource = (sourceLang || "zh").toLowerCase().split("-")[0];
   const nonLatinLangs = /* @__PURE__ */ new Set(["zh", "tw", "ja", "ko", "ru", "ar"]);
@@ -2558,6 +2722,172 @@ function formatNativeReplyGuardHint(sourceLang = "zh") {
     return "\n\n(Please reply and explain in German.)";
   }
   return "\n\n(Please reply in the user's native language.)";
+}
+function extractCleanJsonField(raw, fieldName) {
+  try {
+    let cleaned = raw.replace(/<(?:think|thought)>[\s\S]*?<\/(?:think|thought)>/gi, "").trim();
+    const fence = cleaned.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (fence) cleaned = fence[1].trim();
+    const first = cleaned.indexOf("{");
+    const last = cleaned.lastIndexOf("}");
+    if (first !== -1 && last > first) {
+      const jsonStr = cleaned.slice(first, last + 1).replace(/,\s*([}\]])/g, "$1");
+      const obj = JSON.parse(jsonStr);
+      if (obj && typeof obj === "object") {
+        const val = obj[fieldName] ?? obj.prompt ?? obj.written ?? obj.spoken;
+        if (typeof val === "string" && val.trim()) return val.trim();
+      }
+    }
+    return cleaned.replace(/^["']|["']$/g, "").trim();
+  } catch {
+    return raw.replace(/<(?:think|thought)>[\s\S]*?<\/(?:think|thought)>/gi, "").trim();
+  }
+}
+async function rewritePromptDirect(text, userConfig = {}) {
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+  const diskConfig = loadUserLingualConfig();
+  const cfg = { ...DEFAULT_CONFIG, ...diskConfig, ...userConfig };
+  if (!shouldTriggerTranslation(trimmed, cfg.sourceLang, true)) {
+    return null;
+  }
+  const sysPrompt = buildDirectRewriteSystemPrompt({
+    sourceLang: cfg.sourceLang,
+    targetLang: cfg.targetLang,
+    promptLang: cfg.promptLang,
+    promptRule: cfg.promptRule
+  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), cfg.timeoutMs);
+  if (cfg.signal) {
+    if (cfg.signal.aborted) {
+      clearTimeout(timer);
+      return null;
+    }
+    cfg.signal.addEventListener("abort", () => controller.abort(), { once: true });
+  }
+  try {
+    let raw = null;
+    if (typeof cfg.complete === "function") {
+      raw = await cfg.complete(trimmed, sysPrompt, controller.signal);
+    } else if (cfg.endpoint) {
+      const headers = { "Content-Type": "application/json" };
+      if (cfg.apiKey) headers["Authorization"] = `Bearer ${cfg.apiKey}`;
+      const response = await fetch(cfg.endpoint, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          model: cfg.model || "gemini-3.8-flash",
+          messages: [
+            { role: "system", content: sysPrompt },
+            { role: "user", content: trimmed }
+          ],
+          temperature: cfg.temperature
+        }),
+        signal: controller.signal
+      });
+      if (response.ok) {
+        const json = await response.json();
+        raw = json?.choices?.[0]?.message?.content ?? null;
+      }
+    }
+    if (typeof raw !== "string" || !raw.trim()) return null;
+    const rewritten = extractCleanJsonField(raw, "prompt");
+    return rewritten || null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+async function generatePromptCandidates(text, userConfig = {}) {
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+  const diskConfig = loadUserLingualConfig();
+  const cfg = { ...DEFAULT_CONFIG, ...diskConfig, ...userConfig };
+  if (!shouldTriggerTranslation(trimmed, cfg.sourceLang, true)) {
+    return null;
+  }
+  const activeSlots = (Array.isArray(cfg.promptSlots) && cfg.promptSlots.length > 0 ? cfg.promptSlots : getDefaultPromptSlots(cfg.sourceLang)).filter((s) => s.enabled !== false);
+  const slots = activeSlots.length > 0 ? activeSlots : getDefaultPromptSlots(cfg.sourceLang);
+  const sysPrompt = buildPromptCandidatesSystemPrompt({
+    sourceLang: cfg.sourceLang,
+    targetLang: cfg.targetLang,
+    promptLang: cfg.promptLang,
+    promptRule: cfg.promptRule,
+    promptSlots: slots
+  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), cfg.timeoutMs);
+  if (cfg.signal) {
+    if (cfg.signal.aborted) {
+      clearTimeout(timer);
+      return null;
+    }
+    cfg.signal.addEventListener("abort", () => controller.abort(), { once: true });
+  }
+  try {
+    let raw = null;
+    if (typeof cfg.complete === "function") {
+      raw = await cfg.complete(trimmed, sysPrompt, controller.signal);
+    } else if (cfg.endpoint) {
+      const headers = { "Content-Type": "application/json" };
+      if (cfg.apiKey) headers["Authorization"] = `Bearer ${cfg.apiKey}`;
+      const response = await fetch(cfg.endpoint, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          model: cfg.model || "gemini-3.8-flash",
+          messages: [
+            { role: "system", content: sysPrompt },
+            { role: "user", content: trimmed }
+          ],
+          temperature: cfg.temperature
+        }),
+        signal: controller.signal
+      });
+      if (response.ok) {
+        const json = await response.json();
+        raw = json?.choices?.[0]?.message?.content ?? null;
+      }
+    }
+    if (typeof raw !== "string" || !raw.trim()) return null;
+    let cleaned = raw.replace(/<(?:think|thought)>[\s\S]*?<\/(?:think|thought)>/gi, "").trim();
+    const fence = cleaned.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (fence) cleaned = fence[1].trim();
+    const first = cleaned.indexOf("{");
+    const last = cleaned.lastIndexOf("}");
+    if (first === -1 || last <= first) return null;
+    const jsonStr = cleaned.slice(first, last + 1).replace(/,\s*([}\]])/g, "$1");
+    const obj = JSON.parse(jsonStr);
+    if (!obj || typeof obj !== "object" || Array.isArray(obj)) return null;
+    const candidates = [];
+    for (const slot of slots) {
+      const val = obj[slot.id];
+      if (typeof val === "string" && val.trim()) {
+        candidates.push({
+          id: slot.id,
+          label: slot.label,
+          content: val.trim()
+        });
+      }
+    }
+    return candidates.length > 0 ? candidates : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+function stripLingualContextWhenOff(systemPrompt, lastUserText = "") {
+  if (!systemPrompt) return systemPrompt;
+  if (/(?:lingual|伴学|槽位)/i.test(lastUserText)) {
+    return systemPrompt;
+  }
+  return systemPrompt.replace(
+    /\s*<skill>\s*<name>lingual-tuner<\/name>[\s\S]*?<\/skill>/gi,
+    ""
+  );
 }
 
 // src/fsm.ts
@@ -2868,6 +3198,7 @@ var initialSourceLang = initialDiskConfig.sourceLang || "zh";
 var initialTargetLang = initialDiskConfig.targetLang || (initialSourceLang === "en" ? "ja" : "en");
 var initialSlotPreset = initialDiskConfig.slotPreset;
 var initialSlots = Array.isArray(initialDiskConfig.slots) && initialDiskConfig.slots.length > 0 ? initialDiskConfig.slots : initialSlotPreset ? resolveSlotsForPreset(initialSlotPreset, initialSourceLang) : getDefaultSlots(initialSourceLang);
+var initialPromptSlots = Array.isArray(initialDiskConfig.promptSlots) && initialDiskConfig.promptSlots.length > 0 ? initialDiskConfig.promptSlots : getDefaultPromptSlots(initialSourceLang);
 var initialLabels = resolveLabelsForLang(initialSourceLang, initialDiskConfig.labels, initialTargetLang);
 var state = {
   mode: initialDiskConfig.mode || "original",
@@ -2877,6 +3208,9 @@ var state = {
   selectedModel: initialDiskConfig.selectedModel || "auto",
   slotPreset: initialSlotPreset || "",
   slots: initialSlots,
+  promptLang: initialDiskConfig.promptLang || "",
+  promptRule: initialDiskConfig.promptRule || "",
+  promptSlots: initialPromptSlots,
   labels: initialLabels
 };
 function saveUserLingualConfig(patch) {
@@ -2897,7 +3231,7 @@ function saveUserLingualConfig(patch) {
       }
     }
     for (const [k, v] of Object.entries(patch)) {
-      if (v === void 0 || v === "auto" || v === "original" || k === "compact" && v === false) {
+      if (v === void 0 || v === "" || v === "auto" || v === "original" || k === "compact" && v === false) {
         delete existing[k];
       } else {
         existing[k] = v;
@@ -2958,9 +3292,19 @@ function updateFooter(ctx) {
     }
     switch (state.mode) {
       case "original":
-      case "english":
         ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", pair));
         break;
+      case "english": {
+        const outLang = state.promptLang || state.targetLang;
+        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", `${pair} \xB7 \u26A1${outLang}`));
+        break;
+      }
+      case "select": {
+        const outLang = state.promptLang || state.targetLang;
+        const count = (state.promptSlots || []).filter((s) => s.enabled !== false).length || 3;
+        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", `${pair} \xB7 \u2726${count}-${outLang}`));
+        break;
+      }
       case "off":
         ctx.ui.setStatus("lingual", ctx.ui.theme.fg("muted", `${pair}: off`));
         break;
@@ -3033,6 +3377,7 @@ function renderActiveCard(ctx) {
 function extension_default(pi) {
   let polishTimer;
   let resizeTimer;
+  let lastRawInputText = "";
   const onResize = () => {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
@@ -3068,6 +3413,14 @@ function extension_default(pi) {
     }
     updateFooter(ctx);
   });
+  pi.on("before_agent_start", async (event) => {
+    if (state.mode !== "off") return;
+    if (!event?.systemPrompt || typeof event.systemPrompt !== "string") return;
+    const cleaned = stripLingualContextWhenOff(event.systemPrompt, lastRawInputText);
+    if (cleaned !== event.systemPrompt) {
+      return { systemPrompt: cleaned };
+    }
+  });
   pi.on("session_shutdown", async () => {
     clearPendingTimers();
     session.abortActive();
@@ -3083,8 +3436,10 @@ function extension_default(pi) {
     session.abortActive();
     const trimmed = args?.trim().toLowerCase();
     let nextMode;
-    if (trimmed === "english" || trimmed === "en" || trimmed === "eng" || trimmed === "2") {
+    if (trimmed === "english" || trimmed === "en" || trimmed === "eng" || trimmed === "refine" || trimmed === "rewrite" || trimmed === "2") {
       nextMode = "english";
+    } else if (trimmed === "select" || trimmed === "choices" || trimmed === "choice" || trimmed === "pick" || trimmed === "3") {
+      nextMode = "select";
     } else if (trimmed === "original" || trimmed === "orig" || trimmed === "1") {
       nextMode = "original";
     } else if (trimmed === "off" || trimmed === "0" || trimmed === "disable" || trimmed === "stop") {
@@ -3095,20 +3450,40 @@ function extension_default(pi) {
     state.mode = nextMode;
     saveUserLingualConfig({ mode: nextMode });
     updateFooter(ctx);
+    const isZh = state.sourceLang === "zh" || state.sourceLang === "tw";
+    const outLang = state.promptLang || state.targetLang;
     if (nextMode === "english") {
       try {
-        ctx.ui.notify(state.labels.notifyEnglish || `[${state.labels.hudTitle}] Switched to [English] mode: Input to AI will be converted to technical English`, "info");
+        ctx.ui.notify(
+          state.labels.notifyEnglish || `[${state.labels.hudTitle}] Switched to [English / Direct Rewrite] mode (Output: ${outLang})`,
+          "info"
+        );
+      } catch {
+      }
+    } else if (nextMode === "select") {
+      const slotLabels = (state.promptSlots || getDefaultPromptSlots(state.sourceLang)).filter((s) => s.enabled !== false).map((s) => s.label).join(" / ");
+      try {
+        ctx.ui.notify(
+          isZh ? `[${state.labels.hudTitle}] \u5DF2\u5207\u6362\u81F3 [\u591A\u98CE\u683C\u5019\u9009\u586B\u5165 (select)] \u6A21\u5F0F (${slotLabels} \u2794 \u8F93\u51FA\u8BED\u8A00: ${outLang})` : `[${state.labels.hudTitle}] Switched to [N-Choice Prompt Selector (select)] mode (${slotLabels} \u2794 Output: ${outLang})`,
+          "info"
+        );
       } catch {
       }
     } else if (nextMode === "off") {
       safeClearWidget(ctx);
       try {
-        ctx.ui.notify(state.labels.notifyOff || `[${state.labels.hudTitle}] Companion turned off`, "info");
+        ctx.ui.notify(
+          state.labels.notifyOff || `[${state.labels.hudTitle}] Companion turned off (Active 0-Token Context Shield engaged)`,
+          "info"
+        );
       } catch {
       }
     } else {
       try {
-        ctx.ui.notify(state.labels.notifyOriginal || `[${state.labels.hudTitle}] Switched to [Original] mode: Input kept in native language, translations shown above`, "info");
+        ctx.ui.notify(
+          state.labels.notifyOriginal || `[${state.labels.hudTitle}] Switched to [Original] mode: Input kept in native language, translations shown above`,
+          "info"
+        );
       } catch {
       }
     }
@@ -3369,6 +3744,8 @@ ${lbl.slotsCliTitle}
   const showStatusHandler = async (_args, ctx) => {
     const followDesc = state.labels.modelFollowSession || "follow session";
     const activeModel = state.selectedModel === "auto" ? ctx.model ? `auto (${followDesc}: ${ctx.model.provider}/${ctx.model.id})` : "auto" : state.selectedModel || "auto";
+    const promptSlotNames = (state.promptSlots || getDefaultPromptSlots(state.sourceLang)).filter((s) => s.enabled !== false).map((s) => s.label).join(" / ");
+    const outLang = state.promptLang || state.targetLang;
     const statusMsg = formatStatusReport(state.labels, {
       mode: state.mode,
       sourceLang: state.sourceLang,
@@ -3377,7 +3754,8 @@ ${lbl.slotsCliTitle}
       layout: state.compact ? "capsule" : "tree",
       cacheStats: globalLingualCache.getStats()
     }) + `
-\u2022 Slots Preset: [${state.slotPreset || "developer"}] (${(state.slots || []).filter((s) => s.enabled).map((s) => s.label).join(", ")})`;
+\u2022 Companion Slots (original): [${state.slotPreset || "developer"}] (${(state.slots || []).filter((s) => s.enabled).map((s) => s.label).join(", ")})
+\u2022 Prompt Optimizer (english/select): Output=[${outLang}] \xB7 Styles=[${promptSlotNames}]${state.promptRule ? ` \xB7 Rule="${state.promptRule}"` : ""}`;
     ctx.ui.notify(statusMsg, "info");
   };
   const showLastHandler = async (_args, ctx) => {
@@ -3413,71 +3791,42 @@ ${lbl.slotsCliTitle}
     const isDe = state.sourceLang === "de";
     let guide = "";
     if (isZh) {
-      guide = `\u{1F916} lingual-tuner \u69FD\u4F4D\u8C03\u4F18\u4E0E\u4F34\u5B66\u5B9A\u5236\u6307\u5357:
+      guide = `\u{1F916} lingual-tuner \u53CC\u5F15\u64CE\u5B9A\u5236\u6307\u5357 (\u4F34\u5B66\u6A21\u5F0F vs \u63D0\u793A\u8BCD\u4F18\u5316\u6A21\u5F0F):
 
-pi-lingual \u5185\u7F6E lingual-tuner \u6280\u80FD\u3002\u60A8\u5B8C\u5168\u65E0\u9700\u8BB0\u5FC6\u6216\u624B\u6572\u590D\u6742\u7684 /slots \u547D\u4EE4\uFF0C\u76F4\u63A5\u5411\u5F53\u524D Agent \u63CF\u8FF0\u504F\u597D\uFF1A
-  \u2022 \u9690\u53BB\u539F\u6587: "\u4F34\u5B66\u5361\u7247\u4E0D\u8981\u663E\u793A\u4E2D\u6587\u539F\u6587\uFF0C\u53EA\u8981\u7EAF\u8BD1\u6587"
-  \u2022 \u793E\u5A92\u98CE\u683C: "\u5E2E\u6211\u914D\u7F6E\u63A8\u7279\u63A8\u6587\u548C\u6DF1\u5EA6\u5206\u6790\u4E24\u4E2A\u69FD\u4F4D\uFF0C\u4E0D\u8981\u539F\u6587"
-  \u2022 \u6781\u7B80\u53CC\u6A21: "\u628A\u4F34\u5B66\u6539\u6210\u5355\u69FD\u4F4D\u7EAF\u8BD1\u6587"
-  \u2022 \u6062\u590D\u5F00\u7BB1: "\u6062\u590D\u9ED8\u8BA4\u4F34\u5B66\u69FD\u4F4D"
+pi-lingual \u5185\u7F6E lingual-tuner \u6280\u80FD\u3002\u65E0\u9700\u624B\u6572\u590D\u6742\u547D\u4EE4\uFF0C\u76F4\u63A5\u8DDF\u5F53\u524D Agent \u8BF4\u51FA\u60A8\u7684\u504F\u597D\uFF1A
+1. \u5B9A\u5236\u3010\u4F34\u5B66\u6A21\u5F0F (original \xB7 \u8BED\u611F\u8BCD\u5361 slots)\u3011:
+   \u2022 "\u4F34\u5B66\u5361\u7247\u4E0D\u8981\u663E\u793A\u4E2D\u6587\u539F\u6587\uFF0C\u53EA\u8981\u7EAF\u8BD1\u6587"
+   \u2022 "\u5E2E\u6211\u914D\u7F6E\u63A8\u7279\u63A8\u6587\u548C\u6DF1\u5EA6\u5206\u6790\u4E24\u4E2A\u4F34\u5B66\u69FD\u4F4D"
+2. \u5B9A\u5236\u3010\u63D0\u793A\u8BCD\u4F18\u5316\u6A21\u5F0F (english \u76F4\u51FA\u91CD\u5199 / select \u591A\u98CE\u683C\u5019\u9009\u586B\u5165)\u3011:
+   \u2022 "\u628A\u6211\u7684\u63D0\u793A\u8BCD\u91CD\u5199\u6A21\u5F0F\u8BBE\u4E3A\u4E2D\u6587\u8F93\u51FA\uFF0C\u5E76\u53E0\u52A0\u4E0A\u6700\u5C0F\u6539\u52A8\u539F\u5219"
+   \u2022 "\u5F00\u542F\u591A\u98CE\u683C\u5019\u9009\u6A21\u5F0F (select)\uFF0C\u7ED9\u6211\u751F\u6210\u6781\u7B80\u9AD8\u6548\u3001\u7ED3\u6784\u5316\u89C4\u8303\u3001TDD\u6D4B\u8BD5\u9A71\u52A8 3 \u4E2A\u5019\u9009\u63D0\u793A\u8BCD\u8BA9\u6211\u9009"
 
-Agent \u4F1A\u81EA\u52A8\u901A\u8FC7 lingual-tuner \u6280\u80FD\u76F4\u63A5\u88C5\u914D\u5E76\u66F4\u65B0 ~/.pi/agent/lingual.json\uFF0C\u5355\u56DE\u5408\u5373\u523B\u751F\u6548\uFF01
-\u82E5\u9700\u5207\u6362\u6BCD\u8BED\uFF0C\u8BF7\u76F4\u63A5\u8FD0\u884C /lang <zh|ja|en|es|fr|de>\u3002`;
+Agent \u4F1A\u76F4\u63A5\u66F4\u65B0 ~/.pi/agent/lingual.json\uFF0C\u5355\u56DE\u5408\u5373\u523B\u751F\u6548\uFF01
+\u6A21\u5F0F\u5207\u6362\uFF1A/lingual <original|english|select|off> \xB7 \u8BED\u8A00\u5207\u6362\uFF1A/lang <zh|ja|en|es|fr|de>\u3002`;
     } else if (isJa) {
-      guide = `\u{1F916} lingual-tuner \u30B9\u30ED\u30C3\u30C8\u8ABF\u6574\u30FB\u30AB\u30B9\u30BF\u30DE\u30A4\u30BA\u6848\u5185:
+      guide = `\u{1F916} lingual-tuner \u30AB\u30B9\u30BF\u30DE\u30A4\u30BA\u6848\u5185 (\u4F34\u8D70\u30E2\u30FC\u30C9 vs \u30D7\u30ED\u30F3\u30D7\u30C8\u6700\u9069\u5316\u30E2\u30FC\u30C9):
 
-pi-lingual \u306F lingual-tuner \u30B9\u30AD\u30EB\u3092\u5185\u8535\u3057\u3066\u3044\u307E\u3059\u3002\u8907\u96D1\u306A\u30B3\u30DE\u30F3\u30C9\u3092\u899A\u3048\u308B\u5FC5\u8981\u306F\u3042\u308A\u307E\u305B\u3093\u3002Agent \u306B\u76F4\u63A5\u3054\u8981\u671B\u3092\u304A\u4F1D\u3048\u304F\u3060\u3055\u3044\uFF1A
-  \u2022 \u539F\u6587\u975E\u8868\u793A: \u300C\u4F34\u8D70\u30AB\u30FC\u30C9\u306B\u539F\u6587\u3092\u8868\u793A\u305B\u305A\u3001\u8A33\u6587\u306E\u307F\u8868\u793A\u3057\u3066\u300D
-  \u2022 SNS\u5411\u3051: \u300C\u30C4\u30A4\u30FC\u30C8\u3068\u6280\u8853\u7684\u6D1E\u5BDF\u306E2\u30B9\u30ED\u30C3\u30C8\u306B\u30AB\u30B9\u30BF\u30DE\u30A4\u30BA\u3057\u3066\u3001\u539F\u6587\u306F\u4E0D\u8981\u300D
-  \u2022 \u30DF\u30CB\u30DE\u30EB: \u300C1\u884C\u306E\u7D14\u7C8B\u306A\u8A33\u6587\u306E\u307F\u306B\u5909\u66F4\u3057\u3066\u300D
-  \u2022 \u30EA\u30BB\u30C3\u30C8: \u300C\u30C7\u30D5\u30A9\u30EB\u30C8\u306E\u30B9\u30ED\u30C3\u30C8\u69CB\u6210\u306B\u623B\u3057\u3066\u300D
+pi-lingual \u306F lingual-tuner \u30B9\u30AD\u30EB\u3092\u5185\u8535\u3057\u3066\u3044\u307E\u3059\u3002Agent \u306B\u76F4\u63A5\u3054\u8981\u671B\u3092\u304A\u4F1D\u3048\u304F\u3060\u3055\u3044\uFF1A
+1. \u3010\u4F34\u8D70\u30E2\u30FC\u30C9 (original \xB7 \u8A9E\u5B66\u30B9\u30ED\u30C3\u30C8 slots)\u3011:
+   \u2022 \u300C\u4F34\u8D70\u30AB\u30FC\u30C9\u306B\u539F\u6587\u3092\u8868\u793A\u305B\u305A\u3001\u8A33\u6587\u306E\u307F\u8868\u793A\u3057\u3066\u300D
+2. \u3010\u30D7\u30ED\u30F3\u30D7\u30C8\u6700\u9069\u5316\u30E2\u30FC\u30C9 (english \u76F4\u63A5\u66F8\u304D\u63DB\u3048 / select \u8907\u6570\u5019\u88DC\u9078\u629E)\u3011:
+   \u2022 \u300C\u30D7\u30ED\u30F3\u30D7\u30C8\u6700\u9069\u5316\u3092\u65E5\u672C\u8A9E\u51FA\u529B\u306B\u8A2D\u5B9A\u3057\u3001\u6700\u5C0F\u5909\u66F4\u539F\u5247\u3092\u8FFD\u52A0\u3057\u3066\u300D
+   \u2022 \u300C\u8907\u6570\u5019\u88DC\u30E2\u30FC\u30C9 (select) \u306B\u3057\u3066\u3001\u7C21\u6F54\u30FB\u69CB\u9020\u5316\u30FB\u6839\u672C\u539F\u56E0\u306E3\u3064\u306E\u5019\u88DC\u304B\u3089\u9078\u3079\u308B\u3088\u3046\u306B\u3057\u3066\u300D
 
-Agent \u304C lingual-tuner \u30B9\u30AD\u30EB\u7D4C\u7531\u3067 ~/.pi/agent/lingual.json \u3092\u76F4\u63A5\u66F4\u65B0\u3057\u30011\u30BF\u30FC\u30F3\u3067\u53CD\u6620\u3055\u308C\u307E\u3059\uFF01
-\u6BCD\u8A9E\u306E\u5207\u308A\u66FF\u3048\u306F /lang <zh|ja|en|es|fr|de> \u3092\u3054\u5229\u7528\u304F\u3060\u3055\u3044\u3002`;
-    } else if (isEs) {
-      guide = `\u{1F916} Gu\xEDa de personalizaci\xF3n con lingual-tuner:
-
-pi-lingual incluye la habilidad lingual-tuner. No necesita memorizar comandos complejos; simplemente hable con su Agente:
-  \u2022 Ocultar original: "No muestres el texto original, solo las traducciones"
-  \u2022 Tono social: "Configura ranuras para tuit y an\xE1lisis t\xE9cnico, sin texto original"
-  \u2022 Minimalista: "Cambia a traducci\xF3n limpia de una sola ranura"
-  \u2022 Restablecer: "Restablece las ranuras predeterminadas"
-
-Su Agente actualizar\xE1 ~/.pi/agent/lingual.json autom\xE1ticamente en un solo turno.
-Para cambiar de idioma: /lang <zh|ja|en|es|fr|de>.`;
-    } else if (isFr) {
-      guide = `\u{1F916} Guide de personnalisation lingual-tuner :
-
-pi-lingual int\xE8gre la comp\xE9tence lingual-tuner. Inutile de taper des commandes complexes, parlez simplement \xE0 votre Agent :
-  \u2022 Masquer l'original : "Ne montre pas le texte original, uniquement la traduction"
-  \u2022 R\xE9seaux sociaux : "Configure les emplacements pour tweet et analyse, sans texte original"
-  \u2022 \xC9pur\xE9 : "Passe \xE0 une traduction unique \xE9pur\xE9e"
-  \u2022 R\xE9initialiser : "R\xE9initialise les emplacements par d\xE9faut"
-
-Votre Agent mettra \xE0 jour ~/.pi/agent/lingual.json automatiquement en un seul tour.
-Pour changer de langue : /lang <zh|ja|en|es|fr|de>.`;
-    } else if (isDe) {
-      guide = `\u{1F916} Anleitung zur Anpassung mit lingual-tuner:
-
-pi-lingual enth\xE4lt den integrierten lingual-tuner Skill. Sie m\xFCssen keine Befehle tippen; sprechen Sie einfach mit Ihrem Agenten:
-  \u2022 Original ausblenden: "Originaltext ausblenden, nur \xDCbersetzungen anzeigen"
-  \u2022 Social-Media: "Slots f\xFCr Tweet und technische Einsicht einrichten, kein Originaltext"
-  \u2022 Minimalistisch: "Auf reine einzeilige \xDCbersetzung umstellen"
-  \u2022 Zur\xFCcksetzen: "Slots auf Standard zur\xFCcksetzen"
-
-Ihr Agent aktualisiert ~/.pi/agent/lingual.json automatisch in einer einzigen Runde.
-Sprache wechseln: /lang <zh|ja|en|es|fr|de>.`;
+Agent \u304C ~/.pi/agent/lingual.json \u3092\u76F4\u63A5\u66F4\u65B0\u3057\u3001\u5373\u5EA7\u306B\u53CD\u6620\u3055\u308C\u307E\u3059\uFF01`;
     } else {
-      guide = `\u{1F916} lingual-tuner Companion Customization Guide:
+      guide = `\u{1F916} lingual-tuner Dual-Engine Customization Guide (Companion vs Prompt Optimizer):
 
-pi-lingual includes a built-in lingual-tuner skill. No need to memorize complex CLI flags; just describe your preferences to your Agent:
-  \u2022 Suppress original: "Hide original text on companion cards, show translations only"
-  \u2022 Social tone: "Configure companion with Twitter Hook and Technical Insight slots, no source text"
-  \u2022 Minimalist: "Switch to 1-line translation only"
-  \u2022 Reset: "Reset companion slots to default"
+pi-lingual includes a built-in lingual-tuner skill. Just describe your preferences to your Agent:
+1. Customize [Companion Mode (original \xB7 language learning slots)]:
+   \u2022 "Hide original text on companion cards, show translations only"
+   \u2022 "Configure companion with Twitter Hook and Technical Insight slots"
+2. Customize [Prompt Optimizer Mode (english direct rewrite / select N-choice picker)]:
+   \u2022 "Configure prompt rewrite mode to output in my native language and enforce smallest working diff"
+   \u2022 "Switch to select mode with 3 custom prompt styles: Concise, Structured Spec, and TDD"
 
 Your Agent will update ~/.pi/agent/lingual.json directly in a single turn!
-To switch native language: /lang <zh|ja|en|es|fr|de>.`;
+Switch modes: /lingual <original|english|select|off> \xB7 Switch language: /lang <zh|ja|en|es|fr|de>.`;
     }
     ctx.ui.notify(guide, "info");
   };
@@ -3519,7 +3868,7 @@ To switch native language: /lang <zh|ja|en|es|fr|de>.`;
       await showAgentGuideHandler(subArgs, ctx);
       return;
     }
-    if (sub === "mode" || sub === "original" || sub === "english" || sub === "off" || sub === "orig" || sub === "disable" || sub === "stop") {
+    if (sub === "mode" || sub === "original" || sub === "english" || sub === "refine" || sub === "rewrite" || sub === "select" || sub === "choices" || sub === "pick" || sub === "off" || sub === "orig" || sub === "disable" || sub === "stop") {
       await setModeHandler(sub === "mode" ? subArgs : trimmed, ctx);
       return;
     }
@@ -3658,11 +4007,21 @@ To switch native language: /lang <zh|ja|en|es|fr|de>.`;
     };
   };
   pi.on("input", async (event, ctx) => {
+    lastRawInputText = event?.text || "";
     if (state.mode === "off") return { action: "continue" };
     if (event.source === "extension") return { action: "continue" };
     const latestDisk = loadUserLingualConfig();
     if (latestDisk.slots && Array.isArray(latestDisk.slots)) {
       state.slots = latestDisk.slots;
+    }
+    if (latestDisk.promptLang !== void 0) {
+      state.promptLang = latestDisk.promptLang;
+    }
+    if (latestDisk.promptRule !== void 0) {
+      state.promptRule = latestDisk.promptRule;
+    }
+    if (latestDisk.promptSlots && Array.isArray(latestDisk.promptSlots)) {
+      state.promptSlots = latestDisk.promptSlots;
     }
     const raw = event.text.trim();
     if (!raw) return { action: "continue" };
@@ -3676,7 +4035,8 @@ To switch native language: /lang <zh|ja|en|es|fr|de>.`;
     }
     const sanitized = sanitizePromptForTranslation(raw);
     const promptToTranslate = sanitized.distilledText;
-    if (!sanitized.hasNaturalLanguage || !shouldTriggerTranslation(promptToTranslate, state.sourceLang)) {
+    const isPromptOptMode = state.mode === "english" || state.mode === "select";
+    if (!sanitized.hasNaturalLanguage || !shouldTriggerTranslation(promptToTranslate, state.sourceLang, isPromptOptMode)) {
       clearPendingTimers();
       session.abortActive();
       session.clearPagination();
@@ -3746,60 +4106,150 @@ To switch native language: /lang <zh|ja|en|es|fr|de>.`;
       }, 80);
       return { action: "continue" };
     }
+    if (state.mode === "select") {
+      if (hasActiveUI(ctx)) {
+        try {
+          ctx.ui.setWidget(
+            "lingual_hud",
+            [ctx.ui.theme.fg("muted", "  \u22EF \u2726 [lingual] generating prompt candidates...")],
+            { placement: "aboveEditor" }
+          );
+          ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", "\u2726 [lingual] generating candidates..."));
+        } catch {
+        }
+      }
+      try {
+        const candidates = await generatePromptCandidates(promptToTranslate, {
+          sourceLang: state.sourceLang,
+          targetLang: state.targetLang,
+          promptLang: state.promptLang || void 0,
+          promptRule: state.promptRule || void 0,
+          promptSlots: state.promptSlots,
+          complete: completer,
+          signal
+        });
+        if (!session.isLatest(generation) || !candidates || candidates.length === 0) {
+          if (hasActiveUI(ctx)) safeClearWidget(ctx);
+          return { action: "continue" };
+        }
+        const maxCols = getEffectiveMaxCols();
+        if (hasActiveUI(ctx)) {
+          const previewLines = [
+            truncateVisual(
+              `  ${ctx.ui.theme.fg("muted", `\xB7 [${state.labels.sourceLabel || "\u539F\u6587"}]`)} ${promptToTranslate}`,
+              maxCols
+            )
+          ];
+          candidates.forEach((c, idx) => {
+            const branch = idx === 0 ? "\u250C" : idx === candidates.length - 1 ? "\u2514" : "\u251C";
+            previewLines.push(
+              truncateVisual(
+                `  ${ctx.ui.theme.fg("accent", `${branch} [${idx + 1}:${c.label}]`)} ${c.content}`,
+                maxCols
+              )
+            );
+          });
+          try {
+            ctx.ui.setWidget("lingual_hud", previewLines, { placement: "aboveEditor" });
+          } catch {
+          }
+        }
+        let chosenText = candidates[0].content;
+        if (hasActiveUI(ctx) && typeof ctx.ui.select === "function") {
+          const isZh = state.sourceLang === "zh" || state.sourceLang === "tw";
+          const optionLabels = [
+            ...candidates.map((c, idx) => `[${idx + 1}] ${c.label}: ${truncateVisual(c.content, 68)}`),
+            isZh ? `[0] \u4FDD\u6301\u539F\u8BDD\u76F4\u53D1: ${truncateVisual(promptToTranslate, 60)}` : `[0] Send original: ${truncateVisual(promptToTranslate, 60)}`
+          ];
+          const picked = await ctx.ui.select(
+            isZh ? "\u2726 \u9009\u62E9\u8981\u53D1\u9001\u7ED9 AI \u7684\u4F18\u5316\u63D0\u793A\u8BCD\uFF1A" : "\u2726 Select optimized prompt to send:",
+            optionLabels
+          );
+          if (picked && picked.startsWith("[0]")) {
+            return { action: "continue" };
+          }
+          if (picked) {
+            const idxMatch = picked.match(/^\[(\d+)\]/);
+            if (idxMatch) {
+              const idx = parseInt(idxMatch[1], 10) - 1;
+              if (candidates[idx]) {
+                chosenText = candidates[idx].content;
+              }
+            }
+          }
+        }
+        const finalText = sanitized.rawPayload ? `${chosenText}
+
+${sanitized.rawPayload}` : chosenText;
+        return {
+          action: "transform",
+          text: finalText,
+          images: event.images
+        };
+      } catch {
+        if (hasActiveUI(ctx)) safeClearWidget(ctx);
+        return { action: "continue" };
+      } finally {
+        if (session.isLatest(generation) && hasActiveUI(ctx)) {
+          updateFooter(ctx);
+        }
+      }
+    }
     if (hasActiveUI(ctx)) {
       try {
         ctx.ui.setWidget(
           "lingual_hud",
-          [ctx.ui.theme.fg("muted", "  \u22EF \u21C4 [lingual] polishing...")],
+          [ctx.ui.theme.fg("muted", "  \u22EF \u26A1 [lingual] optimizing prompt...")],
           { placement: "aboveEditor" }
         );
-        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", "\u21C4 [lingual] polishing..."));
+        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", "\u26A1 [lingual] optimizing..."));
       } catch {
       }
     }
     try {
-      const result = await translatePrompt(promptToTranslate, {
+      const rewritten = await rewritePromptDirect(promptToTranslate, {
         sourceLang: state.sourceLang,
         targetLang: state.targetLang,
-        labels: state.labels,
-        slots: state.slots,
-        slotPreset: state.slotPreset,
+        promptLang: state.promptLang || void 0,
+        promptRule: state.promptRule || void 0,
         complete: completer,
         signal
       });
       if (!session.isLatest(generation)) {
         return { action: "continue" };
       }
-      if (!result) {
+      if (!rewritten) {
         if (hasActiveUI(ctx)) {
           try {
             ctx.ui.setWidget("lingual_hud", void 0);
-            const timeoutTemplate = state.labels.notifyTimeout || "[{pair}] English translation timed out or not ready; original prompt passed";
+            const timeoutTemplate = state.labels.notifyTimeout || "[{pair}] Prompt rewrite timed out or not ready; original prompt passed";
             ctx.ui.notify(timeoutTemplate.replace("{pair}", state.labels.hudTitle), "warning");
           } catch {
           }
         }
         return { action: "continue" };
       }
-      session.setPageResult(0, result, generation);
       if (hasActiveUI(ctx)) {
-        renderHudWidget(
-          ctx,
-          result.sourceText,
-          result.spoken,
-          result.written,
-          result.vocab,
-          result.spokenMeaning,
-          result.writtenMeaning,
-          void 0,
-          result.slotOutputs,
-          result.slots
-        );
+        try {
+          const maxCols = getEffectiveMaxCols();
+          const outLang = state.promptLang || state.targetLang;
+          const previewLines = [
+            truncateVisual(
+              `  ${ctx.ui.theme.fg("muted", `\xB7 [${state.labels.sourceLabel || "\u539F\u6587"}]`)} ${promptToTranslate}`,
+              maxCols
+            ),
+            truncateVisual(
+              `  ${ctx.ui.theme.fg("accent", `\u2514 [\u26A1${outLang.toUpperCase()}]`)} ${rewritten}`,
+              maxCols
+            )
+          ];
+          ctx.ui.setWidget("lingual_hud", previewLines, { placement: "aboveEditor" });
+        } catch {
+        }
       }
-      const combinedEnglish = result.written && result.written.trim() ? result.written : result.spoken;
-      let finalText = sanitized.rawPayload ? `${combinedEnglish}
+      let finalText = sanitized.rawPayload ? `${rewritten}
 
-${sanitized.rawPayload}` : combinedEnglish;
+${sanitized.rawPayload}` : rewritten;
       const diskConfig = loadUserLingualConfig();
       if (shouldInjectNativeReplyGuard(event.text, state.sourceLang, diskConfig.replyInSourceLang)) {
         finalText += formatNativeReplyGuardHint(state.sourceLang);
@@ -3813,7 +4263,7 @@ ${sanitized.rawPayload}` : combinedEnglish;
       if (hasActiveUI(ctx)) {
         try {
           ctx.ui.setWidget("lingual_hud", void 0);
-          const errTemplate = state.labels.notifyError || "[{pair}] English translation request error; original prompt passed";
+          const errTemplate = state.labels.notifyError || "[{pair}] Prompt rewrite error; original prompt passed";
           ctx.ui.notify(errTemplate.replace("{pair}", state.labels.hudTitle), "warning");
         } catch {
         }

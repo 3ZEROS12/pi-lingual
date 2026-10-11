@@ -2,6 +2,14 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import extensionFactory from "../dist/extension.js";
 import { formatStatusReport, resolveLabelsForLang } from "../src/presets.js";
+import {
+  buildDirectRewriteSystemPrompt,
+  buildPromptCandidatesSystemPrompt,
+  getDefaultPromptSlots,
+  generatePromptCandidates,
+  rewritePromptDirect,
+  stripLingualContextWhenOff,
+} from "../src/engine.js";
 import { LingualLruCache } from "../src/cache.js";
 
 test("extension command matrix - registers standardized lingual command suite", () => {
@@ -293,3 +301,122 @@ test("extension paging - non-translating inputs fully clear pagination pool to p
     assert.equal(activeWidget, undefined, "Ghost companion card must NOT resurrect after dismissal");
   }
 });
+
+test("v0.4.1 Mode 2 Direct Rewrite & Mode 3 N-Choice Prompt Selector", async () => {
+  // 1. Default 3 prompt optimization slots (concise, spec, deep)
+  const defaultPromptSlots = getDefaultPromptSlots("zh");
+  assert.equal(defaultPromptSlots.length, 3);
+  assert.deepEqual(defaultPromptSlots.map((s) => s.id), ["concise", "spec", "deep"]);
+
+  // 2. Mode 2 Direct Rewrite System Prompt & execution (with custom promptLang and promptRule)
+  const directSys = buildDirectRewriteSystemPrompt({
+    sourceLang: "zh",
+    targetLang: "en",
+    promptLang: "zh",
+    promptRule: "遵循最小工作 Diff 原则，严禁无关重构",
+  });
+  assert.ok(directSys.includes("Chinese (Simplified)"));
+  assert.ok(directSys.includes("遵循最小工作 Diff 原则，严禁无关重构"));
+
+  const rewritten = await rewritePromptDirect("那个登录刷新老掉线，帮我看看是不是cookie问题", {
+    sourceLang: "zh",
+    targetLang: "en",
+    promptLang: "zh",
+    promptRule: "最小改动",
+    complete: async () =>
+      JSON.stringify({
+        prompt: "排查并修复页面刷新后登录态丢失问题：检查 Cookie 属性与过期策略，保持最小工作改动面。",
+      }),
+  });
+  assert.equal(rewritten, "排查并修复页面刷新后登录态丢失问题：检查 Cookie 属性与过期策略，保持最小工作改动面。");
+
+  // 3. Mode 3 N-Choice Candidate Generator (supports default 3 styles or custom N styles)
+  const candSys = buildPromptCandidatesSystemPrompt({
+    sourceLang: "zh",
+    targetLang: "en",
+    promptLang: "en",
+    promptRule: "Follow RFC 2119",
+  });
+  assert.ok(candSys.includes('"concise"'));
+  assert.ok(candSys.includes('"spec"'));
+  assert.ok(candSys.includes('"deep"'));
+  assert.ok(candSys.includes("Follow RFC 2119"));
+
+  const candidates = await generatePromptCandidates("优化登录鉴权逻辑", {
+    sourceLang: "zh",
+    targetLang: "en",
+    complete: async () =>
+      JSON.stringify({
+        concise: "Refactor auth login flow with minimal diff.",
+        spec: "Objective: Optimize auth login flow. Constraints: Preserve session compatibility.",
+        deep: "Trace end-to-end auth flow, resolve root session bottlenecks, and verify boundary cases.",
+      }),
+  });
+  assert.ok(candidates);
+  assert.equal(candidates!.length, 3);
+  assert.equal(candidates![1].id, "spec");
+  assert.ok(candidates![1].content.includes("Objective:"));
+});
+
+test("v0.4.1 Mode 4 Active 0-Token Context Shield in off mode & /lingual select routing", async () => {
+  const samplePromptWithSkill = [
+    "<available_skills>",
+    "  <skill>",
+    "    <name>other-skill</name>",
+    "    <description>Other skill</description>",
+    "  </skill>",
+    "  <skill>",
+    "    <name>lingual-tuner</name>",
+    "    <description>Zero-friction companion slot tuner</description>",
+    "    <location>/path/to/SKILL.md</location>",
+    "  </skill>",
+    "</available_skills>",
+  ].join("\n");
+
+  // When in off mode on normal coding input, lingual-tuner skill is physically stripped (0 tokens)
+  const stripped = stripLingualContextWhenOff(samplePromptWithSkill, "fix the login bug in src/auth.ts");
+  assert.ok(!stripped.includes("lingual-tuner"), "Must strip lingual-tuner skill block in off mode");
+  assert.ok(stripped.includes("other-skill"), "Must preserve other skills untouched");
+
+  // When user explicitly mentions lingual or 伴学, keep skill available so they can reconfigure
+  const preserved = stripLingualContextWhenOff(samplePromptWithSkill, "帮我配置伴学槽位");
+  assert.ok(preserved.includes("lingual-tuner"));
+
+  // Verify /lingual select mode switch and before_agent_start hook in extension
+  const registeredCommands: Record<string, any> = {};
+  let beforeAgentStartHandler: any = null;
+  const mockPi: any = {
+    on(event: string, handler: any) {
+      if (event === "before_agent_start") beforeAgentStartHandler = handler;
+    },
+    registerCommand(name: string, def: any) {
+      registeredCommands[name] = def;
+    },
+    registerShortcut() {},
+  };
+
+  extensionFactory(mockPi);
+
+  const notifications: string[] = [];
+  const mockCtx: any = {
+    ui: {
+      notify(msg: string) {
+        notifications.push(msg);
+      },
+      setStatus() {},
+      setWidget() {},
+    },
+  };
+
+  await registeredCommands["lingual"].handler("select", mockCtx);
+  assert.ok(notifications[notifications.length - 1].includes("select"));
+
+  await registeredCommands["lingual"].handler("off", mockCtx);
+  assert.ok(beforeAgentStartHandler, "Must register before_agent_start hook for 0-token off shield");
+  const hookRes = await beforeAgentStartHandler({ systemPrompt: samplePromptWithSkill }, mockCtx);
+  assert.ok(hookRes && !hookRes.systemPrompt.includes("lingual-tuner"));
+
+  // Teardown back to original
+  await registeredCommands["lingual"].handler("original", mockCtx);
+});
+

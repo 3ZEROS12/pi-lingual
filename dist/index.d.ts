@@ -1,5 +1,5 @@
-import { L as LingualResult, a as LingualI18nLabels, S as SlotConfig, b as LingualConfig } from './index-KTu0f0gK.js';
-export { C as CacheStats, c as CustomSlotsConfig, d as LANGUAGE_PRESETS, e as LEGACY_SLOT_PRESETS, f as LinguaConfig, g as LinguaI18nLabels, h as LinguaLruCache, i as LinguaMode, j as LinguaResult, k as LingualCoreOptions, l as LingualLruCache, m as LingualMode, n as LingualRequest, o as LingualResponse, p as SLOT_PRESETS, q as SanitizedPromptResult, r as SlotDefinition, s as SlotPresetDefinition, t as SlotResult, u as SlotRole, T as TranslationPayload, v as addSlotToList, w as buildSystemPrompt, x as createCustomSlot, y as formatModelSelectionMessage, z as formatStatusReport, A as getDefaultSlots, B as globalLinguaCache, D as globalLingualCache, E as moveSlotInList, F as parseLlmResponse, G as removeSlotFromList, H as resolveLabelsForLang, I as resolveSlotsForPreset, J as sanitizePromptForTranslation, K as shouldShieldBypass, M as toggleSlotInList, N as translateCore, O as updateSlotInList } from './index-KTu0f0gK.js';
+import { L as LingualResult, a as LingualI18nLabels, S as SlotConfig, b as LingualConfig, P as PromptCandidate } from './index-C4N3x3DG.js';
+export { C as CacheStats, c as CustomSlotsConfig, d as LANGUAGE_PRESETS, e as LEGACY_SLOT_PRESETS, f as LinguaConfig, g as LinguaI18nLabels, h as LinguaLruCache, i as LinguaMode, j as LinguaResult, k as LingualCoreOptions, l as LingualLruCache, m as LingualMode, n as LingualRequest, o as LingualResponse, p as PromptSlotConfig, q as SLOT_PRESETS, r as SanitizedPromptResult, s as SlotDefinition, t as SlotPresetDefinition, u as SlotResult, v as SlotRole, T as TranslationPayload, w as addSlotToList, x as buildDirectRewriteSystemPrompt, y as buildPromptCandidatesSystemPrompt, z as buildSystemPrompt, A as createCustomSlot, B as formatModelSelectionMessage, D as formatStatusReport, E as getDefaultPromptSlots, F as getDefaultSlots, G as globalLinguaCache, H as globalLingualCache, I as moveSlotInList, J as parseLlmResponse, K as removeSlotFromList, M as resolveLabelsForLang, N as resolvePromptTargetLangName, O as resolveSlotsForPreset, Q as sanitizePromptForTranslation, R as shouldShieldBypass, U as toggleSlotInList, V as translateCore, W as updateSlotInList } from './index-C4N3x3DG.js';
 
 /**
  * Splits text into atomic natural sentence chunks when long.
@@ -238,7 +238,7 @@ declare const MAX_TRANSLATION_LINES = 30;
  * - Centrally delegates to shouldShieldBypass (Single Source of Truth) to exclude code statements, SQL, and 40+ CLI commands;
  * - [Safety Gate]: Rejects oversized payloads (> 1500 chars), monolithic multi-line code (> 8 lines), markdown headings, and code fences.
  */
-declare function shouldTriggerTranslation(text: string, sourceLang?: string): boolean;
+declare function shouldTriggerTranslation(text: string, sourceLang?: string, allowSameLangPromptOpt?: boolean): boolean;
 
 /**
  * Strip annotations and recover purely clean text to prevent LLM prompt pollution
@@ -272,5 +272,24 @@ declare const loadUserConfig: typeof loadUserLingualConfig;
  */
 declare function shouldInjectNativeReplyGuard(originalText: string, _sourceLang?: string, enabled?: boolean): boolean;
 declare function formatNativeReplyGuardHint(sourceLang?: string): string;
+/**
+ * Mode 2 (Direct Prompt Rewrite):
+ * Runs the user's raw input through a lightweight model injected with the Direct Rewrite System Prompt
+ * (structuring + standardizing + high efficiency + output language + custom rule), returning the new prompt directly
+ * without generating vocabulary or spoken learning cards.
+ */
+declare function rewritePromptDirect(text: string, userConfig?: Partial<LingualConfig>): Promise<string | null>;
+/**
+ * Mode 3 (N-Choice Interactive Prompt Selector):
+ * Generates N distinct optimized prompt candidates according to `promptSlots` (defaulting to Concise, Spec, Deep)
+ * so the user can pick the best one via interactive selector.
+ */
+declare function generatePromptCandidates(text: string, userConfig?: Partial<LingualConfig>): Promise<PromptCandidate[] | null>;
+/**
+ * Mode 4 (`off` Mode Active 0-Token Context Shield):
+ * Physically strips `<skill>...<name>lingual-tuner</name>...</skill>` from `systemPrompt` when `mode === "off"`
+ * (unless the user explicitly mentions `lingual` or `伴学` to re-configure it), guaranteeing 0.00 bytes of LLM context overhead.
+ */
+declare function stripLingualContextWhenOff(systemPrompt: string, lastUserText?: string): string;
 
-export { CANNOT_START_LINE_CHARS, DEFAULT_CONFIG, LINGUAL_SYSTEM_PROMPT, LINGUA_SYSTEM_PROMPT, LingualConfig, LingualI18nLabels, LingualResult, LingualSessionController, MAX_TRANSLATION_CHARS, MAX_TRANSLATION_LINES, type PaginationSnapshot, type SessionRequestToken, SlotConfig, extractVocabPhrases, formatCapsuleLine, formatNativeReplyGuardHint, formatSubRail, formatTerminalAnnotation, formatTreeBranch, formatVocabItemsAtomic, getEffectiveMaxCols, getVisualWidth, invalidateUserConfigCache, isDynamicLongInput, isNonEnglish, loadUserConfig, loadUserLingualConfig, renderCardLayout, shouldInjectNativeReplyGuard, shouldTriggerTranslation, splitSemanticChunks, spotlightPhrases, stripLinguaAnnotation, stripLingualAnnotation, translatePrompt, truncateVisual, wrapVisualText };
+export { CANNOT_START_LINE_CHARS, DEFAULT_CONFIG, LINGUAL_SYSTEM_PROMPT, LINGUA_SYSTEM_PROMPT, LingualConfig, LingualI18nLabels, LingualResult, LingualSessionController, MAX_TRANSLATION_CHARS, MAX_TRANSLATION_LINES, type PaginationSnapshot, PromptCandidate, type SessionRequestToken, SlotConfig, extractVocabPhrases, formatCapsuleLine, formatNativeReplyGuardHint, formatSubRail, formatTerminalAnnotation, formatTreeBranch, formatVocabItemsAtomic, generatePromptCandidates, getEffectiveMaxCols, getVisualWidth, invalidateUserConfigCache, isDynamicLongInput, isNonEnglish, loadUserConfig, loadUserLingualConfig, renderCardLayout, rewritePromptDirect, shouldInjectNativeReplyGuard, shouldTriggerTranslation, splitSemanticChunks, spotlightPhrases, stripLinguaAnnotation, stripLingualAnnotation, stripLingualContextWhenOff, translatePrompt, truncateVisual, wrapVisualText };

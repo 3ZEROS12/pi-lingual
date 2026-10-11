@@ -1,4 +1,77 @@
-import type { SlotDefinition, CustomSlotsConfig, SlotConfig, SlotRole } from "./types.js";
+import type { SlotDefinition, CustomSlotsConfig, SlotConfig, SlotRole, PromptSlotConfig } from "./types.js";
+
+export function getDefaultPromptSlots(sourceLang = "zh"): PromptSlotConfig[] {
+  const norm = (sourceLang || "zh").toLowerCase().split("-")[0];
+  const isZh = norm === "zh" || norm === "tw";
+  const isJa = norm === "ja";
+
+  if (isZh) {
+    return [
+      {
+        id: "concise",
+        label: "极简高效",
+        instruction: "高效率、零废话的直接行动指令：剥离口语寒暄，直奔目标动作与最小工作改动面（Smallest Working Diff）。",
+        enabled: true,
+      },
+      {
+        id: "spec",
+        label: "结构规范",
+        instruction: "结构化工程需求规范：将杂乱跳跃的口语提炼为清晰的「核心目标 + 约束边界 + 预期产出」，严禁凭空捏造未要求的特性。",
+        enabled: true,
+      },
+      {
+        id: "deep",
+        label: "深度严谨",
+        instruction: "根因溯源与架构严谨规范：要求全链路排查共享根因（拒绝表面打补丁），兼顾边界条件验证与零回归。",
+        enabled: true,
+      },
+    ];
+  }
+
+  if (isJa) {
+    return [
+      {
+        id: "concise",
+        label: "簡潔・高効率",
+        instruction: "無駄を省いた高効率な指示：核心のアクションと最小限の変更差分（Smallest Working Diff）を直接指示。",
+        enabled: true,
+      },
+      {
+        id: "spec",
+        label: "構造化仕様",
+        instruction: "構造化された技術仕様：曖昧な表現を「目的・制約条件・期待される結果」に整理し、明確化。",
+        enabled: true,
+      },
+      {
+        id: "deep",
+        label: "根本原因・厳密",
+        instruction: "根本原因の特定と厳密な検証：表面的な対処ではなくエンドツーエンドの原因追跡と境界値検証を要求。",
+        enabled: true,
+      },
+    ];
+  }
+
+  return [
+    {
+      id: "concise",
+      label: "Concise",
+      instruction: "High-efficiency, zero-fluff imperative instruction targeting the exact action and smallest working diff.",
+      enabled: true,
+    },
+    {
+      id: "spec",
+      label: "Structured",
+      instruction: "Structured engineering specification: distill messy thoughts into clear Objective, Constraints, and Deliverable without inventing unrequested features.",
+      enabled: true,
+    },
+    {
+      id: "deep",
+      label: "Deep Rigor",
+      instruction: "Root-cause & architectural rigor: trace end-to-end execution flow, fix shared root causes rather than symptom patches, and verify edge cases.",
+      enabled: true,
+    },
+  ];
+}
 
 export function getDefaultSlots(sourceLang = "en"): SlotConfig[] {
   const norm = (sourceLang || "en").toLowerCase().split("-")[0];
@@ -614,4 +687,133 @@ ${anchorText}
 
 ${jsonFormatHint}
 Output valid JSON ONLY. Never output markdown code fences, backticks, quotes, or explanations.`;
+}
+
+const PROMPT_TARGET_LANGUAGE_NAMES: Record<string, string> = {
+  en: "English",
+  zh: "Chinese (Simplified)",
+  tw: "Chinese (Traditional)",
+  ja: "Japanese",
+  ko: "Korean",
+  es: "Spanish",
+  fr: "French",
+  de: "German",
+  ru: "Russian",
+  pt: "Portuguese",
+  it: "Italian",
+};
+
+export function resolvePromptTargetLangName(
+  sourceLang = "zh",
+  targetLang = "en",
+  promptLang?: string
+): { code: string; name: string } {
+  const normSource = (sourceLang || "zh").toLowerCase().split("-")[0];
+  const normTarget = (targetLang || "en").toLowerCase().split("-")[0];
+  const raw = (promptLang || "").trim().toLowerCase();
+
+  const code =
+    !raw || raw === "default" || raw === "auto"
+      ? normTarget
+      : raw === "native" || raw === "source" || raw === "母语"
+        ? normSource
+        : raw.split("-")[0];
+
+  return {
+    code,
+    name: PROMPT_TARGET_LANGUAGE_NAMES[code] || "English",
+  };
+}
+
+/**
+ * Mode 2 (Direct Rewrite): Build a focused Prompt Optimizer system prompt.
+ * Does NOT generate companion vocabulary cards — 100% dedicated to structuring, standardizing,
+ * and optimizing the user's messy prompt for maximum coding efficiency.
+ */
+export function buildDirectRewriteSystemPrompt(options: {
+  sourceLang?: string;
+  targetLang?: string;
+  promptLang?: string;
+  promptRule?: string;
+}): string {
+  const { name: outLangName } = resolvePromptTargetLangName(
+    options.sourceLang,
+    options.targetLang,
+    options.promptLang
+  );
+
+  const customRuleBlock = options.promptRule && options.promptRule.trim()
+    ? `\n\n[USER CUSTOM SPECIFICATION & STACKED RULES - MANDATORY]:
+Weave and enforce the following user-specified requirements directly into the rewritten prompt:
+"""
+${options.promptRule.trim()}
+"""`
+    : "";
+
+  return `You are an elite AI Coding Prompt Architect.
+The user is typing a raw, potentially messy, colloquial, or fragmented instruction for an AI coding agent.
+Your sole task is to rewrite, structure, standardize, and optimize their input into a high-efficiency, unambiguous engineering prompt in **${outLangName}**:
+1. **Structure & Clarify**: Distill rambling or colloquial thoughts into a logical, well-structured instruction without losing any concrete detail or question.
+2. **Standardize & Sharpen**: Use precise software engineering terminology in **${outLangName}** and eliminate conversational filler.
+3. **High-Efficiency Alignment**: Keep the prompt concise, direct, and actionable — never invent unrequested features or bloat scope.
+4. **Code & Symbol Shield**: Preserve all inline code (\`foo()\`), file paths (@file, path/to/file), CLI flags, and identifiers 100% verbatim.${customRuleBlock}
+
+Strict JSON format:
+{
+  "prompt": "..."
+}
+Output valid JSON ONLY. Never output markdown code fences or explanations.`;
+}
+
+/**
+ * Mode 3 (N-Choice Interactive Selector): Build a multi-style Prompt Optimizer system prompt
+ * generating N candidate prompts according to `promptSlots` (defaulting to Concise, Structured, Deep).
+ */
+export function buildPromptCandidatesSystemPrompt(options: {
+  sourceLang?: string;
+  targetLang?: string;
+  promptLang?: string;
+  promptRule?: string;
+  promptSlots?: PromptSlotConfig[];
+}): string {
+  const normSource = (options.sourceLang || "zh").toLowerCase().split("-")[0];
+  const { name: outLangName } = resolvePromptTargetLangName(
+    options.sourceLang,
+    options.targetLang,
+    options.promptLang
+  );
+
+  const slots = (Array.isArray(options.promptSlots) && options.promptSlots.length > 0
+    ? options.promptSlots
+    : getDefaultPromptSlots(normSource)
+  ).filter((s) => s.enabled !== false);
+
+  const activeSlots = slots.length > 0 ? slots : getDefaultPromptSlots(normSource);
+
+  const taskLines = activeSlots.map(
+    (s, idx) => `${idx + 1}. "${s.id}" (${s.label}): ${s.instruction} (MUST be written in **${outLangName}**)`
+  );
+  const jsonProps = activeSlots.map((s) => `  "${s.id}": "..."`);
+
+  const customRuleBlock = options.promptRule && options.promptRule.trim()
+    ? `\n\n[USER CUSTOM SPECIFICATION & STACKED RULES - MANDATORY]:
+Ensure every generated candidate incorporates the following user-specified requirements:
+"""
+${options.promptRule.trim()}
+"""`
+    : "";
+
+  return `You are an elite AI Coding Prompt Architect.
+The user is typing a raw, potentially messy or colloquial instruction for an AI coding agent.
+Generate ${activeSlots.length} distinct, optimized prompt candidates in **${outLangName}** corresponding to the following styles so the user can choose the best one to send:
+${taskLines.join("\n")}
+
+[CODE & SYMBOL SHIELD - STRICT RULE]:
+All inline code (\`foo()\`), file paths (@file, path/to/file), CLI flags, and technical identifiers MUST be preserved 100% verbatim in every candidate.${customRuleBlock}
+
+Strict JSON format:
+{
+${jsonProps.join(",\n")}
+}
+Output valid JSON ONLY. Never output markdown code fences or explanations.`;
 }

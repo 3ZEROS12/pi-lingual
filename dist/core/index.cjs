@@ -36,10 +36,13 @@ __export(core_exports, {
   LingualLruCache: () => LingualLruCache,
   SLOT_PRESETS: () => SLOT_PRESETS,
   addSlotToList: () => addSlotToList,
+  buildDirectRewriteSystemPrompt: () => buildDirectRewriteSystemPrompt,
+  buildPromptCandidatesSystemPrompt: () => buildPromptCandidatesSystemPrompt,
   buildSystemPrompt: () => buildSystemPrompt,
   createCustomSlot: () => createCustomSlot,
   formatModelSelectionMessage: () => formatModelSelectionMessage,
   formatStatusReport: () => formatStatusReport,
+  getDefaultPromptSlots: () => getDefaultPromptSlots,
   getDefaultSlots: () => getDefaultSlots,
   globalLinguaCache: () => globalLinguaCache,
   globalLingualCache: () => globalLingualCache,
@@ -47,6 +50,7 @@ __export(core_exports, {
   parseLlmResponse: () => parseLlmResponse,
   removeSlotFromList: () => removeSlotFromList,
   resolveLabelsForLang: () => resolveLabelsForLang,
+  resolvePromptTargetLangName: () => resolvePromptTargetLangName,
   resolveSlotsForPreset: () => resolveSlotsForPreset,
   sanitizePromptForTranslation: () => sanitizePromptForTranslation,
   shouldShieldBypass: () => shouldShieldBypass,
@@ -57,6 +61,75 @@ __export(core_exports, {
 module.exports = __toCommonJS(core_exports);
 
 // src/core/prompts.ts
+function getDefaultPromptSlots(sourceLang = "zh") {
+  const norm = (sourceLang || "zh").toLowerCase().split("-")[0];
+  const isZh = norm === "zh" || norm === "tw";
+  const isJa = norm === "ja";
+  if (isZh) {
+    return [
+      {
+        id: "concise",
+        label: "\u6781\u7B80\u9AD8\u6548",
+        instruction: "\u9AD8\u6548\u7387\u3001\u96F6\u5E9F\u8BDD\u7684\u76F4\u63A5\u884C\u52A8\u6307\u4EE4\uFF1A\u5265\u79BB\u53E3\u8BED\u5BD2\u6684\uFF0C\u76F4\u5954\u76EE\u6807\u52A8\u4F5C\u4E0E\u6700\u5C0F\u5DE5\u4F5C\u6539\u52A8\u9762\uFF08Smallest Working Diff\uFF09\u3002",
+        enabled: true
+      },
+      {
+        id: "spec",
+        label: "\u7ED3\u6784\u89C4\u8303",
+        instruction: "\u7ED3\u6784\u5316\u5DE5\u7A0B\u9700\u6C42\u89C4\u8303\uFF1A\u5C06\u6742\u4E71\u8DF3\u8DC3\u7684\u53E3\u8BED\u63D0\u70BC\u4E3A\u6E05\u6670\u7684\u300C\u6838\u5FC3\u76EE\u6807 + \u7EA6\u675F\u8FB9\u754C + \u9884\u671F\u4EA7\u51FA\u300D\uFF0C\u4E25\u7981\u51ED\u7A7A\u634F\u9020\u672A\u8981\u6C42\u7684\u7279\u6027\u3002",
+        enabled: true
+      },
+      {
+        id: "deep",
+        label: "\u6DF1\u5EA6\u4E25\u8C28",
+        instruction: "\u6839\u56E0\u6EAF\u6E90\u4E0E\u67B6\u6784\u4E25\u8C28\u89C4\u8303\uFF1A\u8981\u6C42\u5168\u94FE\u8DEF\u6392\u67E5\u5171\u4EAB\u6839\u56E0\uFF08\u62D2\u7EDD\u8868\u9762\u6253\u8865\u4E01\uFF09\uFF0C\u517C\u987E\u8FB9\u754C\u6761\u4EF6\u9A8C\u8BC1\u4E0E\u96F6\u56DE\u5F52\u3002",
+        enabled: true
+      }
+    ];
+  }
+  if (isJa) {
+    return [
+      {
+        id: "concise",
+        label: "\u7C21\u6F54\u30FB\u9AD8\u52B9\u7387",
+        instruction: "\u7121\u99C4\u3092\u7701\u3044\u305F\u9AD8\u52B9\u7387\u306A\u6307\u793A\uFF1A\u6838\u5FC3\u306E\u30A2\u30AF\u30B7\u30E7\u30F3\u3068\u6700\u5C0F\u9650\u306E\u5909\u66F4\u5DEE\u5206\uFF08Smallest Working Diff\uFF09\u3092\u76F4\u63A5\u6307\u793A\u3002",
+        enabled: true
+      },
+      {
+        id: "spec",
+        label: "\u69CB\u9020\u5316\u4ED5\u69D8",
+        instruction: "\u69CB\u9020\u5316\u3055\u308C\u305F\u6280\u8853\u4ED5\u69D8\uFF1A\u66D6\u6627\u306A\u8868\u73FE\u3092\u300C\u76EE\u7684\u30FB\u5236\u7D04\u6761\u4EF6\u30FB\u671F\u5F85\u3055\u308C\u308B\u7D50\u679C\u300D\u306B\u6574\u7406\u3057\u3001\u660E\u78BA\u5316\u3002",
+        enabled: true
+      },
+      {
+        id: "deep",
+        label: "\u6839\u672C\u539F\u56E0\u30FB\u53B3\u5BC6",
+        instruction: "\u6839\u672C\u539F\u56E0\u306E\u7279\u5B9A\u3068\u53B3\u5BC6\u306A\u691C\u8A3C\uFF1A\u8868\u9762\u7684\u306A\u5BFE\u51E6\u3067\u306F\u306A\u304F\u30A8\u30F3\u30C9\u30C4\u30FC\u30A8\u30F3\u30C9\u306E\u539F\u56E0\u8FFD\u8DE1\u3068\u5883\u754C\u5024\u691C\u8A3C\u3092\u8981\u6C42\u3002",
+        enabled: true
+      }
+    ];
+  }
+  return [
+    {
+      id: "concise",
+      label: "Concise",
+      instruction: "High-efficiency, zero-fluff imperative instruction targeting the exact action and smallest working diff.",
+      enabled: true
+    },
+    {
+      id: "spec",
+      label: "Structured",
+      instruction: "Structured engineering specification: distill messy thoughts into clear Objective, Constraints, and Deliverable without inventing unrequested features.",
+      enabled: true
+    },
+    {
+      id: "deep",
+      label: "Deep Rigor",
+      instruction: "Root-cause & architectural rigor: trace end-to-end execution flow, fix shared root causes rather than symptom patches, and verify edge cases.",
+      enabled: true
+    }
+  ];
+}
 function getDefaultSlots(sourceLang = "en") {
   const norm = (sourceLang || "en").toLowerCase().split("-")[0];
   const labels = {
@@ -624,6 +697,90 @@ ${anchorText}
 
 ${jsonFormatHint}
 Output valid JSON ONLY. Never output markdown code fences, backticks, quotes, or explanations.`;
+}
+var PROMPT_TARGET_LANGUAGE_NAMES = {
+  en: "English",
+  zh: "Chinese (Simplified)",
+  tw: "Chinese (Traditional)",
+  ja: "Japanese",
+  ko: "Korean",
+  es: "Spanish",
+  fr: "French",
+  de: "German",
+  ru: "Russian",
+  pt: "Portuguese",
+  it: "Italian"
+};
+function resolvePromptTargetLangName(sourceLang = "zh", targetLang = "en", promptLang) {
+  const normSource = (sourceLang || "zh").toLowerCase().split("-")[0];
+  const normTarget = (targetLang || "en").toLowerCase().split("-")[0];
+  const raw = (promptLang || "").trim().toLowerCase();
+  const code = !raw || raw === "default" || raw === "auto" ? normTarget : raw === "native" || raw === "source" || raw === "\u6BCD\u8BED" ? normSource : raw.split("-")[0];
+  return {
+    code,
+    name: PROMPT_TARGET_LANGUAGE_NAMES[code] || "English"
+  };
+}
+function buildDirectRewriteSystemPrompt(options) {
+  const { name: outLangName } = resolvePromptTargetLangName(
+    options.sourceLang,
+    options.targetLang,
+    options.promptLang
+  );
+  const customRuleBlock = options.promptRule && options.promptRule.trim() ? `
+
+[USER CUSTOM SPECIFICATION & STACKED RULES - MANDATORY]:
+Weave and enforce the following user-specified requirements directly into the rewritten prompt:
+"""
+${options.promptRule.trim()}
+"""` : "";
+  return `You are an elite AI Coding Prompt Architect.
+The user is typing a raw, potentially messy, colloquial, or fragmented instruction for an AI coding agent.
+Your sole task is to rewrite, structure, standardize, and optimize their input into a high-efficiency, unambiguous engineering prompt in **${outLangName}**:
+1. **Structure & Clarify**: Distill rambling or colloquial thoughts into a logical, well-structured instruction without losing any concrete detail or question.
+2. **Standardize & Sharpen**: Use precise software engineering terminology in **${outLangName}** and eliminate conversational filler.
+3. **High-Efficiency Alignment**: Keep the prompt concise, direct, and actionable \u2014 never invent unrequested features or bloat scope.
+4. **Code & Symbol Shield**: Preserve all inline code (\`foo()\`), file paths (@file, path/to/file), CLI flags, and identifiers 100% verbatim.${customRuleBlock}
+
+Strict JSON format:
+{
+  "prompt": "..."
+}
+Output valid JSON ONLY. Never output markdown code fences or explanations.`;
+}
+function buildPromptCandidatesSystemPrompt(options) {
+  const normSource = (options.sourceLang || "zh").toLowerCase().split("-")[0];
+  const { name: outLangName } = resolvePromptTargetLangName(
+    options.sourceLang,
+    options.targetLang,
+    options.promptLang
+  );
+  const slots = (Array.isArray(options.promptSlots) && options.promptSlots.length > 0 ? options.promptSlots : getDefaultPromptSlots(normSource)).filter((s) => s.enabled !== false);
+  const activeSlots = slots.length > 0 ? slots : getDefaultPromptSlots(normSource);
+  const taskLines = activeSlots.map(
+    (s, idx) => `${idx + 1}. "${s.id}" (${s.label}): ${s.instruction} (MUST be written in **${outLangName}**)`
+  );
+  const jsonProps = activeSlots.map((s) => `  "${s.id}": "..."`);
+  const customRuleBlock = options.promptRule && options.promptRule.trim() ? `
+
+[USER CUSTOM SPECIFICATION & STACKED RULES - MANDATORY]:
+Ensure every generated candidate incorporates the following user-specified requirements:
+"""
+${options.promptRule.trim()}
+"""` : "";
+  return `You are an elite AI Coding Prompt Architect.
+The user is typing a raw, potentially messy or colloquial instruction for an AI coding agent.
+Generate ${activeSlots.length} distinct, optimized prompt candidates in **${outLangName}** corresponding to the following styles so the user can choose the best one to send:
+${taskLines.join("\n")}
+
+[CODE & SYMBOL SHIELD - STRICT RULE]:
+All inline code (\`foo()\`), file paths (@file, path/to/file), CLI flags, and technical identifiers MUST be preserved 100% verbatim in every candidate.${customRuleBlock}
+
+Strict JSON format:
+{
+${jsonProps.join(",\n")}
+}
+Output valid JSON ONLY. Never output markdown code fences or explanations.`;
 }
 
 // src/shield.ts
@@ -2115,10 +2272,13 @@ function sanitizePromptForTranslation(raw) {
   LingualLruCache,
   SLOT_PRESETS,
   addSlotToList,
+  buildDirectRewriteSystemPrompt,
+  buildPromptCandidatesSystemPrompt,
   buildSystemPrompt,
   createCustomSlot,
   formatModelSelectionMessage,
   formatStatusReport,
+  getDefaultPromptSlots,
   getDefaultSlots,
   globalLinguaCache,
   globalLingualCache,
@@ -2126,6 +2286,7 @@ function sanitizePromptForTranslation(raw) {
   parseLlmResponse,
   removeSlotFromList,
   resolveLabelsForLang,
+  resolvePromptTargetLangName,
   resolveSlotsForPreset,
   sanitizePromptForTranslation,
   shouldShieldBypass,

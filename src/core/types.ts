@@ -1,9 +1,22 @@
 import type { LingualI18nLabels } from "../types.js";
 
-export type LingualMode = "original" | "english" | "off";
+export type LingualMode = "original" | "english" | "select" | "off";
 export type LinguaMode = LingualMode;
 
 export type SlotRole = "source" | "translation" | "vocab" | "custom";
+
+export interface PromptSlotConfig {
+  id: string;               // Unique style identifier, e.g. "concise", "spec", "deep"
+  label: string;            // Display label, e.g. "极简高效", "结构规范", "深度严谨"
+  instruction: string;      // Specific prompt optimization/structuring instruction
+  enabled: boolean;
+}
+
+export interface PromptCandidate {
+  id: string;
+  label: string;
+  content: string;
+}
 
 export interface SlotConfig {
   id: string;               // Unique slot identifier, e.g. "source", "spoken", "written", "twitter", "grammar"
@@ -63,8 +76,11 @@ export interface LingualConfig {
   selectedModel?: string;   // e.g. "auto" (default) | "gemini-3.8-flash" | "claude-sonnet-5-5"
   mode?: LingualMode;
   compact?: boolean;        // e.g. false (default) | true (1-line capsule)
-  slotPreset?: string;     // e.g. "developer" | "social" | "japanese" | "academic" | "compact2"
-  slots?: SlotConfig[];     // Dynamic multi-slot list
+  slotPreset?: string;      // e.g. "developer" | "social" | "japanese" | "academic" | "compact2"
+  slots?: SlotConfig[];     // Dynamic multi-slot list for Mode 1 (Companion)
+  promptLang?: string;      // Output language for Mode 2/3 prompt optimization: "en" (default) | "zh" | "native" | etc.
+  promptRule?: string;      // Optional custom engineering rule stacked onto Mode 2/3 prompt optimization
+  promptSlots?: PromptSlotConfig[]; // Customizable N prompt style slots for Mode 3 (N-Choice Select)
   sourceLang?: string;      // e.g. "zh" (default) | "en" | "ja"
   targetLang?: string;      // e.g. "en" (default) | "ja" | "zh"
   replyInSourceLang?: boolean; // Optional guard: whether to hint AI to reply in native language when in english mode

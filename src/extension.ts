@@ -7,10 +7,22 @@ import type {
   InputEvent,
   InputEventResult,
 } from "@earendil-works/pi-coding-agent";
-import type { LingualMode, LingualI18nLabels, LingualResult, SlotConfig, SlotResult } from "./types.js";
+import type {
+  LingualMode,
+  LingualI18nLabels,
+  LingualResult,
+  PromptCandidate,
+  PromptSlotConfig,
+  SlotConfig,
+  SlotResult,
+} from "./types.js";
 import { getEffectiveMaxCols } from "./layout.js";
 import {
   translatePrompt,
+  rewritePromptDirect,
+  generatePromptCandidates,
+  stripLingualContextWhenOff,
+  getDefaultPromptSlots,
   shouldTriggerTranslation,
   loadUserLingualConfig,
   invalidateUserConfigCache,
@@ -53,6 +65,9 @@ interface ExtensionState {
   selectedModel: string;
   slotPreset: string;
   slots: SlotConfig[];
+  promptLang: string;
+  promptRule: string;
+  promptSlots: PromptSlotConfig[];
   labels: LingualI18nLabels;
 }
 
@@ -73,6 +88,9 @@ const initialSlotPreset = initialDiskConfig.slotPreset;
 const initialSlots = Array.isArray(initialDiskConfig.slots) && initialDiskConfig.slots.length > 0
   ? initialDiskConfig.slots
   : (initialSlotPreset ? resolveSlotsForPreset(initialSlotPreset, initialSourceLang) : getDefaultSlots(initialSourceLang));
+const initialPromptSlots = Array.isArray(initialDiskConfig.promptSlots) && initialDiskConfig.promptSlots.length > 0
+  ? initialDiskConfig.promptSlots
+  : getDefaultPromptSlots(initialSourceLang);
 const initialLabels = resolveLabelsForLang(initialSourceLang, initialDiskConfig.labels, initialTargetLang);
 
 const state: ExtensionState = {
@@ -83,6 +101,9 @@ const state: ExtensionState = {
   selectedModel: initialDiskConfig.selectedModel || "auto",
   slotPreset: initialSlotPreset || "",
   slots: initialSlots,
+  promptLang: initialDiskConfig.promptLang || "",
+  promptRule: initialDiskConfig.promptRule || "",
+  promptSlots: initialPromptSlots,
   labels: initialLabels,
 };
 
@@ -108,7 +129,7 @@ function saveUserLingualConfig(patch: Record<string, any>) {
     }
 
     for (const [k, v] of Object.entries(patch)) {
-      if (v === undefined || v === "auto" || v === "original" || (k === "compact" && v === false)) {
+      if (v === undefined || v === "" || v === "auto" || v === "original" || (k === "compact" && v === false)) {
         delete existing[k]; // 恢复默认值时物理移除键，零残留回滚 (RFC 2119 Invariant 1)
       } else {
         existing[k] = v;
@@ -177,9 +198,19 @@ function updateFooter(ctx: ExtensionContext | null | undefined) {
 
     switch (state.mode) {
       case "original":
-      case "english":
         ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", pair));
         break;
+      case "english": {
+        const outLang = state.promptLang || state.targetLang;
+        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", `${pair} · ⚡${outLang}`));
+        break;
+      }
+      case "select": {
+        const outLang = state.promptLang || state.targetLang;
+        const count = (state.promptSlots || []).filter((s) => s.enabled !== false).length || 3;
+        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", `${pair} · ✦${count}-${outLang}`));
+        break;
+      }
       case "off":
         ctx.ui.setStatus("lingual", ctx.ui.theme.fg("muted", `${pair}: off`));
         break;
@@ -279,6 +310,7 @@ function renderActiveCard(ctx: ExtensionContext) {
 export default function (pi: ExtensionAPI) {
   let polishTimer: NodeJS.Timeout | undefined;
   let resizeTimer: NodeJS.Timeout | undefined;
+  let lastRawInputText = "";
 
   const onResize = () => {
     clearTimeout(resizeTimer);
@@ -319,6 +351,17 @@ export default function (pi: ExtensionAPI) {
     updateFooter(ctx);
   });
 
+  // 【主动 0-Token 上下文护盾 (Active 0-Token Context Shield in `off` Mode)】：
+  // 当用户处于 `off` 关闭模式时，主动从 System Prompt 中剥离 lingual-tuner 技能块（除非用户主动提及 lingual/伴学 要重新配置），实现真正的 0 字节上下文占用！
+  pi.on("before_agent_start" as any, async (event: any) => {
+    if (state.mode !== "off") return;
+    if (!event?.systemPrompt || typeof event.systemPrompt !== "string") return;
+    const cleaned = stripLingualContextWhenOff(event.systemPrompt, lastRawInputText);
+    if (cleaned !== event.systemPrompt) {
+      return { systemPrompt: cleaned };
+    }
+  });
+
   pi.on("session_shutdown", async () => {
     clearPendingTimers();
     session.abortActive();
@@ -336,14 +379,29 @@ export default function (pi: ExtensionAPI) {
     const trimmed = args?.trim().toLowerCase();
     let nextMode: LingualMode;
 
-    if (trimmed === "english" || trimmed === "en" || trimmed === "eng" || trimmed === "2") {
+    if (
+      trimmed === "english" ||
+      trimmed === "en" ||
+      trimmed === "eng" ||
+      trimmed === "refine" ||
+      trimmed === "rewrite" ||
+      trimmed === "2"
+    ) {
       nextMode = "english";
+    } else if (
+      trimmed === "select" ||
+      trimmed === "choices" ||
+      trimmed === "choice" ||
+      trimmed === "pick" ||
+      trimmed === "3"
+    ) {
+      nextMode = "select";
     } else if (trimmed === "original" || trimmed === "orig" || trimmed === "1") {
       nextMode = "original";
     } else if (trimmed === "off" || trimmed === "0" || trimmed === "disable" || trimmed === "stop") {
       nextMode = "off";
     } else {
-      // 缺省或无参数时，平滑三态循环轮转
+      // 缺省或无参数时，平滑模式循环轮转 (original ➔ english ➔ off ➔ original；显式 /lingual select 进入多选模式)
       nextMode = state.mode === "original" ? "english" : state.mode === "english" ? "off" : "original";
     }
 
@@ -352,18 +410,46 @@ export default function (pi: ExtensionAPI) {
     saveUserLingualConfig({ mode: nextMode });
     updateFooter(ctx);
 
+    const isZh = state.sourceLang === "zh" || state.sourceLang === "tw";
+    const outLang = state.promptLang || state.targetLang;
+
     if (nextMode === "english") {
       try {
-        ctx.ui.notify(state.labels.notifyEnglish || `[${state.labels.hudTitle}] Switched to [English] mode: Input to AI will be converted to technical English`, "info");
+        ctx.ui.notify(
+          state.labels.notifyEnglish ||
+            `[${state.labels.hudTitle}] Switched to [English / Direct Rewrite] mode (Output: ${outLang})`,
+          "info"
+        );
+      } catch {}
+    } else if (nextMode === "select") {
+      const slotLabels = (state.promptSlots || getDefaultPromptSlots(state.sourceLang))
+        .filter((s) => s.enabled !== false)
+        .map((s) => s.label)
+        .join(" / ");
+      try {
+        ctx.ui.notify(
+          isZh
+            ? `[${state.labels.hudTitle}] 已切换至 [多风格候选填入 (select)] 模式 (${slotLabels} ➔ 输出语言: ${outLang})`
+            : `[${state.labels.hudTitle}] Switched to [N-Choice Prompt Selector (select)] mode (${slotLabels} ➔ Output: ${outLang})`,
+          "info"
+        );
       } catch {}
     } else if (nextMode === "off") {
       safeClearWidget(ctx);
       try {
-        ctx.ui.notify(state.labels.notifyOff || `[${state.labels.hudTitle}] Companion turned off`, "info");
+        ctx.ui.notify(
+          state.labels.notifyOff ||
+            `[${state.labels.hudTitle}] Companion turned off (Active 0-Token Context Shield engaged)`,
+          "info"
+        );
       } catch {}
     } else {
       try {
-        ctx.ui.notify(state.labels.notifyOriginal || `[${state.labels.hudTitle}] Switched to [Original] mode: Input kept in native language, translations shown above`, "info");
+        ctx.ui.notify(
+          state.labels.notifyOriginal ||
+            `[${state.labels.hudTitle}] Switched to [Original] mode: Input kept in native language, translations shown above`,
+          "info"
+        );
       } catch {}
     }
   };
@@ -672,6 +758,12 @@ export default function (pi: ExtensionAPI) {
       ? (ctx.model ? `auto (${followDesc}: ${ctx.model.provider}/${ctx.model.id})` : "auto")
       : (state.selectedModel || "auto");
 
+    const promptSlotNames = (state.promptSlots || getDefaultPromptSlots(state.sourceLang))
+      .filter((s) => s.enabled !== false)
+      .map((s) => s.label)
+      .join(" / ");
+    const outLang = state.promptLang || state.targetLang;
+
     const statusMsg = formatStatusReport(state.labels, {
       mode: state.mode,
       sourceLang: state.sourceLang,
@@ -679,7 +771,9 @@ export default function (pi: ExtensionAPI) {
       activeModel,
       layout: state.compact ? "capsule" : "tree",
       cacheStats: globalLingualCache.getStats(),
-    }) + `\n• Slots Preset: [${state.slotPreset || "developer"}] (${(state.slots || []).filter(s => s.enabled).map(s => s.label).join(", ")})`;
+    }) +
+      `\n• Companion Slots (original): [${state.slotPreset || "developer"}] (${(state.slots || []).filter(s => s.enabled).map(s => s.label).join(", ")})` +
+      `\n• Prompt Optimizer (english/select): Output=[${outLang}] · Styles=[${promptSlotNames}]${state.promptRule ? ` · Rule="${state.promptRule}"` : ""}`;
 
     ctx.ui.notify(statusMsg, "info");
   };
@@ -721,64 +815,38 @@ export default function (pi: ExtensionAPI) {
     let guide = "";
     if (isZh) {
       guide =
-        `🤖 lingual-tuner 槽位调优与伴学定制指南:\n\n` +
-        `pi-lingual 内置 lingual-tuner 技能。您完全无需记忆或手敲复杂的 /slots 命令，直接向当前 Agent 描述偏好：\n` +
-        `  • 隐去原文: "伴学卡片不要显示中文原文，只要纯译文"\n` +
-        `  • 社媒风格: "帮我配置推特推文和深度分析两个槽位，不要原文"\n` +
-        `  • 极简双模: "把伴学改成单槽位纯译文"\n` +
-        `  • 恢复开箱: "恢复默认伴学槽位"\n\n` +
-        `Agent 会自动通过 lingual-tuner 技能直接装配并更新 ~/.pi/agent/lingual.json，单回合即刻生效！\n` +
-        `若需切换母语，请直接运行 /lang <zh|ja|en|es|fr|de>。`;
+        `🤖 lingual-tuner 双引擎定制指南 (伴学模式 vs 提示词优化模式):\n\n` +
+        `pi-lingual 内置 lingual-tuner 技能。无需手敲复杂命令，直接跟当前 Agent 说出您的偏好：\n` +
+        `1. 定制【伴学模式 (original · 语感词卡 slots)】:\n` +
+        `   • "伴学卡片不要显示中文原文，只要纯译文"\n` +
+        `   • "帮我配置推特推文和深度分析两个伴学槽位"\n` +
+        `2. 定制【提示词优化模式 (english 直出重写 / select 多风格候选填入)】:\n` +
+        `   • "把我的提示词重写模式设为中文输出，并叠加上最小改动原则"\n` +
+        `   • "开启多风格候选模式 (select)，给我生成极简高效、结构化规范、TDD测试驱动 3 个候选提示词让我选"\n\n` +
+        `Agent 会直接更新 ~/.pi/agent/lingual.json，单回合即刻生效！\n` +
+        `模式切换：/lingual <original|english|select|off> · 语言切换：/lang <zh|ja|en|es|fr|de>。`;
     } else if (isJa) {
       guide =
-        `🤖 lingual-tuner スロット調整・カスタマイズ案内:\n\n` +
-        `pi-lingual は lingual-tuner スキルを内蔵しています。複雑なコマンドを覚える必要はありません。Agent に直接ご要望をお伝えください：\n` +
-        `  • 原文非表示: 「伴走カードに原文を表示せず、訳文のみ表示して」\n` +
-        `  • SNS向け: 「ツイートと技術的洞察の2スロットにカスタマイズして、原文は不要」\n` +
-        `  • ミニマル: 「1行の純粋な訳文のみに変更して」\n` +
-        `  • リセット: 「デフォルトのスロット構成に戻して」\n\n` +
-        `Agent が lingual-tuner スキル経由で ~/.pi/agent/lingual.json を直接更新し、1ターンで反映されます！\n` +
-        `母語の切り替えは /lang <zh|ja|en|es|fr|de> をご利用ください。`;
-    } else if (isEs) {
-      guide =
-        `🤖 Guía de personalización con lingual-tuner:\n\n` +
-        `pi-lingual incluye la habilidad lingual-tuner. No necesita memorizar comandos complejos; simplemente hable con su Agente:\n` +
-        `  • Ocultar original: "No muestres el texto original, solo las traducciones"\n` +
-        `  • Tono social: "Configura ranuras para tuit y análisis técnico, sin texto original"\n` +
-        `  • Minimalista: "Cambia a traducción limpia de una sola ranura"\n` +
-        `  • Restablecer: "Restablece las ranuras predeterminadas"\n\n` +
-        `Su Agente actualizará ~/.pi/agent/lingual.json automáticamente en un solo turno.\n` +
-        `Para cambiar de idioma: /lang <zh|ja|en|es|fr|de>.`;
-    } else if (isFr) {
-      guide =
-        `🤖 Guide de personnalisation lingual-tuner :\n\n` +
-        `pi-lingual intègre la compétence lingual-tuner. Inutile de taper des commandes complexes, parlez simplement à votre Agent :\n` +
-        `  • Masquer l'original : "Ne montre pas le texte original, uniquement la traduction"\n` +
-        `  • Réseaux sociaux : "Configure les emplacements pour tweet et analyse, sans texte original"\n` +
-        `  • Épuré : "Passe à une traduction unique épurée"\n` +
-        `  • Réinitialiser : "Réinitialise les emplacements par défaut"\n\n` +
-        `Votre Agent mettra à jour ~/.pi/agent/lingual.json automatiquement en un seul tour.\n` +
-        `Pour changer de langue : /lang <zh|ja|en|es|fr|de>.`;
-    } else if (isDe) {
-      guide =
-        `🤖 Anleitung zur Anpassung mit lingual-tuner:\n\n` +
-        `pi-lingual enthält den integrierten lingual-tuner Skill. Sie müssen keine Befehle tippen; sprechen Sie einfach mit Ihrem Agenten:\n` +
-        `  • Original ausblenden: "Originaltext ausblenden, nur Übersetzungen anzeigen"\n` +
-        `  • Social-Media: "Slots für Tweet und technische Einsicht einrichten, kein Originaltext"\n` +
-        `  • Minimalistisch: "Auf reine einzeilige Übersetzung umstellen"\n` +
-        `  • Zurücksetzen: "Slots auf Standard zurücksetzen"\n\n` +
-        `Ihr Agent aktualisiert ~/.pi/agent/lingual.json automatisch in einer einzigen Runde.\n` +
-        `Sprache wechseln: /lang <zh|ja|en|es|fr|de>.`;
+        `🤖 lingual-tuner カスタマイズ案内 (伴走モード vs プロンプト最適化モード):\n\n` +
+        `pi-lingual は lingual-tuner スキルを内蔵しています。Agent に直接ご要望をお伝えください：\n` +
+        `1. 【伴走モード (original · 語学スロット slots)】:\n` +
+        `   • 「伴走カードに原文を表示せず、訳文のみ表示して」\n` +
+        `2. 【プロンプト最適化モード (english 直接書き換え / select 複数候補選択)】:\n` +
+        `   • 「プロンプト最適化を日本語出力に設定し、最小変更原則を追加して」\n` +
+        `   • 「複数候補モード (select) にして、簡潔・構造化・根本原因の3つの候補から選べるようにして」\n\n` +
+        `Agent が ~/.pi/agent/lingual.json を直接更新し、即座に反映されます！`;
     } else {
       guide =
-        `🤖 lingual-tuner Companion Customization Guide:\n\n` +
-        `pi-lingual includes a built-in lingual-tuner skill. No need to memorize complex CLI flags; just describe your preferences to your Agent:\n` +
-        `  • Suppress original: "Hide original text on companion cards, show translations only"\n` +
-        `  • Social tone: "Configure companion with Twitter Hook and Technical Insight slots, no source text"\n` +
-        `  • Minimalist: "Switch to 1-line translation only"\n` +
-        `  • Reset: "Reset companion slots to default"\n\n` +
+        `🤖 lingual-tuner Dual-Engine Customization Guide (Companion vs Prompt Optimizer):\n\n` +
+        `pi-lingual includes a built-in lingual-tuner skill. Just describe your preferences to your Agent:\n` +
+        `1. Customize [Companion Mode (original · language learning slots)]:\n` +
+        `   • "Hide original text on companion cards, show translations only"\n` +
+        `   • "Configure companion with Twitter Hook and Technical Insight slots"\n` +
+        `2. Customize [Prompt Optimizer Mode (english direct rewrite / select N-choice picker)]:\n` +
+        `   • "Configure prompt rewrite mode to output in my native language and enforce smallest working diff"\n` +
+        `   • "Switch to select mode with 3 custom prompt styles: Concise, Structured Spec, and TDD"\n\n` +
         `Your Agent will update ~/.pi/agent/lingual.json directly in a single turn!\n` +
-        `To switch native language: /lang <zh|ja|en|es|fr|de>.`;
+        `Switch modes: /lingual <original|english|select|off> · Switch language: /lang <zh|ja|en|es|fr|de>.`;
     }
 
     ctx.ui.notify(guide, "info");
@@ -840,11 +908,16 @@ export default function (pi: ExtensionAPI) {
       return;
     }
 
-    // 7. 模式切换优先: 显式模式关键词 (/lingual original, /lingual english, /lingual off, /lingual mode ...)
+    // 7. 模式切换优先: 显式模式关键词 (/lingual original, /lingual english, /lingual select, /lingual off, /lingual mode ...)
     if (
       sub === "mode" ||
       sub === "original" ||
       sub === "english" ||
+      sub === "refine" ||
+      sub === "rewrite" ||
+      sub === "select" ||
+      sub === "choices" ||
+      sub === "pick" ||
       sub === "off" ||
       sub === "orig" ||
       sub === "disable" ||
@@ -1036,6 +1109,7 @@ export default function (pi: ExtensionAPI) {
 
   // 核心拦截层：绝不把双模标注硬塞入用户的消息历史与 Prompt！
   pi.on("input", async (event: InputEvent, ctx: ExtensionContext): Promise<InputEventResult> => {
+    lastRawInputText = event?.text || "";
     if (state.mode === "off") return { action: "continue" };
     if (event.source === "extension") return { action: "continue" };
 
@@ -1043,6 +1117,15 @@ export default function (pi: ExtensionAPI) {
     const latestDisk = loadUserLingualConfig();
     if (latestDisk.slots && Array.isArray(latestDisk.slots)) {
       state.slots = latestDisk.slots;
+    }
+    if (latestDisk.promptLang !== undefined) {
+      state.promptLang = latestDisk.promptLang;
+    }
+    if (latestDisk.promptRule !== undefined) {
+      state.promptRule = latestDisk.promptRule;
+    }
+    if (latestDisk.promptSlots && Array.isArray(latestDisk.promptSlots)) {
+      state.promptSlots = latestDisk.promptSlots;
     }
 
     const raw = event.text.trim();
@@ -1061,12 +1144,13 @@ export default function (pi: ExtensionAPI) {
     // 智能审查与意图萃取：剥离剪贴板图片、折叠多行堆栈追踪与代码块为 [...]，提炼真实自然语言核心
     const sanitized = sanitizePromptForTranslation(raw);
     const promptToTranslate = sanitized.distilledText;
+    const isPromptOptMode = state.mode === "english" || state.mode === "select";
 
     // 判定 1：若整段输入经过审查后，发现毫无自然语言意图 (纯堆栈/纯代码/纯命令)
     // 判定 2：或命中底层代码与 CLI 盾牌及字符长度防护 (由 shouldTriggerTranslation 统一管控)
     if (
       !sanitized.hasNaturalLanguage ||
-      !shouldTriggerTranslation(promptToTranslate, state.sourceLang)
+      !shouldTriggerTranslation(promptToTranslate, state.sourceLang, isPromptOptMode)
     ) {
       // 【关键体验防线 1 · 绝无僵尸残留与幽灵复活】：当前输入不触发翻译时，立刻中止在途请求、物理销毁旧卡片，并彻底清空分页池！
       clearPendingTimers();
@@ -1086,17 +1170,18 @@ export default function (pi: ExtensionAPI) {
     // 【单卡高密度意图凝练流】：短句常规直译，长句由模型自动注入 Condensation 提炼为精悍单卡，彻底消除多切片轮询复杂性
     session.initPagination(1);
 
-    // 【原文模式】(original · 默认)：彻底非阻塞 (0ms 立即放行原始输入)，后台异步微任务渲染卡片视窗
+    // =========================================================================
+    // 模式 1：【伴学模式】(original · 默认)
+    // 彻底非阻塞 (0ms 立即放行原始输入)，后台异步渲染语感伴学卡片 (slots)
+    // =========================================================================
     if (state.mode === "original") {
       if (hasActiveUI(ctx)) {
         try {
-          // 立即物理销毁上一轮的旧卡片，清爽等待新卡片，绝不悬挂陈旧内容导致卡死错觉
           ctx.ui.setWidget("lingual_hud", undefined);
           ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", "⇄ [lingual] polishing..."));
         } catch {}
       }
 
-      // 微任务时序错峰 (80ms)：避开与 Pi 主会话首包握手争抢连接池，消除网关排队拥堵
       clearTimeout(polishTimer);
       polishTimer = setTimeout(() => {
         polishTimer = undefined;
@@ -1136,9 +1221,7 @@ export default function (pi: ExtensionAPI) {
               }
             }
           })
-          .catch(() => {
-            // Gracefully ignore translation errors in background original mode
-          })
+          .catch(() => {})
           .finally(() => {
             if (session.isLatest(generation)) {
               const activeCtx = hasActiveUI(ctx) ? ctx : hasActiveUI(lastContext) ? lastContext : null;
@@ -1152,25 +1235,125 @@ export default function (pi: ExtensionAPI) {
       return { action: "continue" };
     }
 
-    // 【英文模式】(english)：同步等待获取纯技术英文以替换发送给 AI 的 Prompt
+    // =========================================================================
+    // 模式 3：【多风格候选填入模式】(select · N-Choice Interactive Selector)
+    // 生成 N 个预设风格的优化提示词候选（默认：极简高效 / 结构规范 / 深度严谨），供用户选择一个填入
+    // =========================================================================
+    if (state.mode === "select") {
+      if (hasActiveUI(ctx)) {
+        try {
+          ctx.ui.setWidget(
+            "lingual_hud",
+            [ctx.ui.theme.fg("muted", "  ⋯ ✦ [lingual] generating prompt candidates...")],
+            { placement: "aboveEditor" }
+          );
+          ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", "✦ [lingual] generating candidates..."));
+        } catch {}
+      }
+
+      try {
+        const candidates = await generatePromptCandidates(promptToTranslate, {
+          sourceLang: state.sourceLang,
+          targetLang: state.targetLang,
+          promptLang: state.promptLang || undefined,
+          promptRule: state.promptRule || undefined,
+          promptSlots: state.promptSlots,
+          complete: completer,
+          signal,
+        });
+
+        if (!session.isLatest(generation) || !candidates || candidates.length === 0) {
+          if (hasActiveUI(ctx)) safeClearWidget(ctx);
+          return { action: "continue" };
+        }
+
+        const maxCols = getEffectiveMaxCols();
+        if (hasActiveUI(ctx)) {
+          const previewLines: string[] = [
+            truncateVisual(
+              `  ${ctx.ui.theme.fg("muted", `· [${state.labels.sourceLabel || "原文"}]`)} ${promptToTranslate}`,
+              maxCols
+            ),
+          ];
+          candidates.forEach((c, idx) => {
+            const branch = idx === 0 ? "┌" : idx === candidates.length - 1 ? "└" : "├";
+            previewLines.push(
+              truncateVisual(
+                `  ${ctx.ui.theme.fg("accent", `${branch} [${idx + 1}:${c.label}]`)} ${c.content}`,
+                maxCols
+              )
+            );
+          });
+          try {
+            ctx.ui.setWidget("lingual_hud", previewLines, { placement: "aboveEditor" });
+          } catch {}
+        }
+
+        let chosenText = candidates[0].content;
+        if (hasActiveUI(ctx) && typeof (ctx.ui as any).select === "function") {
+          const isZh = state.sourceLang === "zh" || state.sourceLang === "tw";
+          const optionLabels = [
+            ...candidates.map((c, idx) => `[${idx + 1}] ${c.label}: ${truncateVisual(c.content, 68)}`),
+            isZh ? `[0] 保持原话直发: ${truncateVisual(promptToTranslate, 60)}` : `[0] Send original: ${truncateVisual(promptToTranslate, 60)}`,
+          ];
+          const picked = await (ctx.ui as any).select(
+            isZh ? "✦ 选择要发送给 AI 的优化提示词：" : "✦ Select optimized prompt to send:",
+            optionLabels
+          );
+          if (picked && picked.startsWith("[0]")) {
+            return { action: "continue" };
+          }
+          if (picked) {
+            const idxMatch = picked.match(/^\[(\d+)\]/);
+            if (idxMatch) {
+              const idx = parseInt(idxMatch[1], 10) - 1;
+              if (candidates[idx]) {
+                chosenText = candidates[idx].content;
+              }
+            }
+          }
+        }
+
+        const finalText = sanitized.rawPayload
+          ? `${chosenText}\n\n${sanitized.rawPayload}`
+          : chosenText;
+
+        return {
+          action: "transform",
+          text: finalText,
+          images: event.images,
+        };
+      } catch {
+        if (hasActiveUI(ctx)) safeClearWidget(ctx);
+        return { action: "continue" };
+      } finally {
+        if (session.isLatest(generation) && hasActiveUI(ctx)) {
+          updateFooter(ctx);
+        }
+      }
+    }
+
+    // =========================================================================
+    // 模式 2：【直出重写模式】(english · Direct Prompt Rewrite)
+    // 不生成背单词伴学卡，100% 专注将杂乱输入直接重写为结构化、规范化、高效率提示词（默认英文，可切母语与叠加要求）
+    // =========================================================================
     if (hasActiveUI(ctx)) {
       try {
         ctx.ui.setWidget(
           "lingual_hud",
-          [ctx.ui.theme.fg("muted", "  ⋯ ⇄ [lingual] polishing...")],
+          [ctx.ui.theme.fg("muted", "  ⋯ ⚡ [lingual] optimizing prompt...")],
           { placement: "aboveEditor" }
         );
-        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", "⇄ [lingual] polishing..."));
+        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", "⚡ [lingual] optimizing..."));
       } catch {}
     }
 
     try {
-      const result = await translatePrompt(promptToTranslate, {
+      const rewritten = await rewritePromptDirect(promptToTranslate, {
         sourceLang: state.sourceLang,
         targetLang: state.targetLang,
-        labels: state.labels,
-        slots: state.slots,
-        slotPreset: state.slotPreset,
+        promptLang: state.promptLang || undefined,
+        promptRule: state.promptRule || undefined,
         complete: completer,
         signal,
       });
@@ -1179,45 +1362,40 @@ export default function (pi: ExtensionAPI) {
         return { action: "continue" };
       }
 
-      if (!result) {
+      if (!rewritten) {
         if (hasActiveUI(ctx)) {
           try {
             ctx.ui.setWidget("lingual_hud", undefined);
-            const timeoutTemplate = state.labels.notifyTimeout || "[{pair}] English translation timed out or not ready; original prompt passed";
+            const timeoutTemplate = state.labels.notifyTimeout || "[{pair}] Prompt rewrite timed out or not ready; original prompt passed";
             ctx.ui.notify(timeoutTemplate.replace("{pair}", state.labels.hudTitle), "warning");
           } catch {}
         }
         return { action: "continue" };
       }
 
-      session.setPageResult(0, result, generation);
+      // 纯粹展示「原话 vs 重写后的新提示词」，不生成口语/词汇伴学卡片！
       if (hasActiveUI(ctx)) {
-        renderHudWidget(
-          ctx,
-          result.sourceText,
-          result.spoken,
-          result.written,
-          result.vocab,
-          result.spokenMeaning,
-          result.writtenMeaning,
-          undefined,
-          result.slotOutputs,
-          result.slots
-        );
+        try {
+          const maxCols = getEffectiveMaxCols();
+          const outLang = state.promptLang || state.targetLang;
+          const previewLines = [
+            truncateVisual(
+              `  ${ctx.ui.theme.fg("muted", `· [${state.labels.sourceLabel || "原文"}]`)} ${promptToTranslate}`,
+              maxCols
+            ),
+            truncateVisual(
+              `  ${ctx.ui.theme.fg("accent", `└ [⚡${outLang.toUpperCase()}]`)} ${rewritten}`,
+              maxCols
+            ),
+          ];
+          ctx.ui.setWidget("lingual_hud", previewLines, { placement: "aboveEditor" });
+        } catch {}
       }
 
-      const combinedEnglish = result.written && result.written.trim() ? result.written : result.spoken;
-
-      // 【核心体验跃升 · 混合意图嫁接 (Hybrid Intent Grafting)】:
-      // 若原始输入包含大段被折叠的堆栈追踪或代码块，将纯英文专业指令与原始真实堆栈缝合，
-      // 既驱动大模型展开顶级全英文代码推理，又绝不丢失排查必需的代码与堆栈物理上下文！
       let finalText = sanitized.rawPayload
-        ? `${combinedEnglish}\n\n${sanitized.rawPayload}`
-        : combinedEnglish;
+        ? `${rewritten}\n\n${sanitized.rawPayload}`
+        : rewritten;
 
-      // 【可选母语回复守护】(Opt-in Native Reply Guard):
-      // 仅当用户在 lingual.json 中显式开启 replyInSourceLang: true 时，
-      // 且输入为母语提问而非英文写作意图时，温和附带母语回复指引，防止大模型语言劫持
       const diskConfig = loadUserLingualConfig();
       if (shouldInjectNativeReplyGuard(event.text, state.sourceLang, diskConfig.replyInSourceLang)) {
         finalText += formatNativeReplyGuardHint(state.sourceLang);
@@ -1232,7 +1410,7 @@ export default function (pi: ExtensionAPI) {
       if (hasActiveUI(ctx)) {
         try {
           ctx.ui.setWidget("lingual_hud", undefined);
-          const errTemplate = state.labels.notifyError || "[{pair}] English translation request error; original prompt passed";
+          const errTemplate = state.labels.notifyError || "[{pair}] Prompt rewrite error; original prompt passed";
           ctx.ui.notify(errTemplate.replace("{pair}", state.labels.hudTitle), "warning");
         } catch {}
       }
