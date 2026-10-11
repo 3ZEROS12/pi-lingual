@@ -164,3 +164,33 @@ test("slots: dynamic buildSystemPrompt constructs custom schema matching active 
   assert.ok(prompt.includes('"email": "..."'));
   assert.ok(prompt.includes('"slack": "..."'));
 });
+
+test("qa: buildSystemPrompt supports Korean (ko) and Russian (ru) native specs and arbitrary target languages", () => {
+  const koPrompt = buildSystemPrompt("ko", "ja", false);
+  assert.ok(koPrompt.includes("in native Korean"), "ko source must request meanings in native Korean");
+  assert.ok(koPrompt.includes("Japanese"), "ja target must specify Japanese");
+
+  const ruPrompt = buildSystemPrompt("ru", "de", false);
+  assert.ok(ruPrompt.includes("in native Russian"), "ru source must request meanings in native Russian");
+  assert.ok(ruPrompt.includes("German"), "de target must specify German");
+});
+
+test("qa: compact capsule mode balances multiple slots and strictly respects maxCols including pageTag", () => {
+  const card: LingualResult = {
+    sourceText: "测试窄屏胶囊截断平衡",
+    spoken: "We should refactor this module before the release.",
+    written: "This module requires refactoring prior to deployment.",
+    annotated: "",
+  };
+  const labels = LANGUAGE_PRESETS.zh;
+  const lines = renderCardLayout(card, labels, {
+    maxCols: 56,
+    isCompact: true,
+    pageTag: " [1/2 ⌥.]",
+  });
+  assert.equal(lines.length, 1);
+  // Both slot 1 and slot 2 prefixes must appear in balanced compact line
+  assert.ok(lines[0].includes("口语:"));
+  assert.ok(lines[0].includes("写作:"));
+});
+

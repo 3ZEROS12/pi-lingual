@@ -7,7 +7,8 @@ import type {
   InputEvent,
   InputEventResult,
 } from "@earendil-works/pi-coding-agent";
-import type { LingualMode, LingualI18nLabels, LingualResult, SlotConfig } from "./types.js";
+import type { LingualMode, LingualI18nLabels, LingualResult, SlotConfig, SlotResult } from "./types.js";
+import { getEffectiveMaxCols } from "./layout.js";
 import {
   translatePrompt,
   shouldTriggerTranslation,
@@ -201,12 +202,14 @@ function renderHudWidget(
   vocab?: string,
   spokenMeaning?: string,
   writtenMeaning?: string,
-  pagination?: { pageIndex: number; totalPages: number }
+  pagination?: { pageIndex: number; totalPages: number },
+  slotOutputs?: Record<string, { content: string; meaning?: string }>,
+  slots?: SlotResult[]
 ) {
   if (!hasActiveUI(ctx)) return;
   try {
     const isCompact = state.compact || (process.stdout?.rows ? process.stdout.rows < 22 : false);
-    const maxCols = Math.max(30, (process.stdout?.columns || 80) - 8);
+    const maxCols = getEffectiveMaxCols();
     const pageTag = pagination && pagination.totalPages > 1
       ? ctx.ui.theme.fg("muted", ` [${pagination.pageIndex + 1}/${pagination.totalPages} ⌥.]`)
       : "";
@@ -220,6 +223,8 @@ function renderHudWidget(
         writtenMeaning,
         sourceText,
         annotated: "",
+        slotOutputs,
+        slots,
       },
       state.labels,
       {
@@ -262,7 +267,9 @@ function renderActiveCard(ctx: ExtensionContext) {
       {
         pageIndex: snapshot.pageIndex,
         totalPages: snapshot.readyCount,
-      }
+      },
+      res.slotOutputs,
+      res.slots
     );
   } catch {
     // Gracefully ignore stale context during session replacement or teardown
@@ -303,7 +310,11 @@ export default function (pi: ExtensionAPI) {
   pi.on("session_start", async (_event, ctx) => {
     clearPendingTimers();
     session.abortActive();
+    session.reset();
     lastContext = ctx;
+    if (hasActiveUI(ctx)) {
+      safeClearWidget(ctx);
+    }
     // 0 侵扰冷启动：静默点亮状态栏指示，绝不弹窗打断敲代码心流
     updateFooter(ctx);
   });
@@ -386,10 +397,12 @@ export default function (pi: ExtensionAPI) {
     const s = input.trim().toLowerCase().replace(/[-_].*$/, "");
     if (s === "zh" || s === "cn" || s === "chinese" || s === "中文") return "zh";
     if (s === "ja" || s === "jp" || s === "japanese" || s === "日本語" || s === "日文" || s === "日语") return "ja";
+    if (s === "ko" || s === "kr" || s === "korean" || s === "한국어" || s === "韩语" || s === "韩文") return "ko";
     if (s === "en" || s === "eng" || s === "english" || s === "英语" || s === "英文") return "en";
     if (s === "es" || s === "spanish" || s === "español" || s === "西语" || s === "西班牙语") return "es";
     if (s === "fr" || s === "french" || s === "français" || s === "法语" || s === "法文") return "fr";
     if (s === "de" || s === "german" || s === "deutsch" || s === "德语" || s === "德文") return "de";
+    if (s === "ru" || s === "russian" || s === "русский" || s === "俄语" || s === "俄文") return "ru";
     return s;
   }
 
@@ -427,7 +440,17 @@ export default function (pi: ExtensionAPI) {
     state.sourceLang = newSource;
     state.targetLang = newTarget;
     state.labels = resolveLabelsForLang(newSource, undefined, newTarget);
-    saveUserLingualConfig({ sourceLang: newSource, targetLang: newTarget });
+    if (state.slotPreset) {
+      state.slots = resolveSlotsForPreset(state.slotPreset, newSource);
+    } else {
+      const freshDefaults = getDefaultSlots(newSource);
+      const freshMap = new Map(freshDefaults.map((s) => [s.id, s]));
+      state.slots = (state.slots || freshDefaults).map((s) => {
+        const match = freshMap.get(s.id);
+        return match ? { ...match, enabled: s.enabled, showMeaning: s.showMeaning } : s;
+      });
+    }
+    saveUserLingualConfig({ sourceLang: newSource, targetLang: newTarget, slots: state.slots });
     session.reset();
     globalLingualCache.clear();
     updateFooter(ctx);
@@ -457,7 +480,10 @@ export default function (pi: ExtensionAPI) {
         last.written,
         last.vocab,
         last.spokenMeaning,
-        last.writtenMeaning
+        last.writtenMeaning,
+        undefined,
+        last.slotOutputs,
+        last.slots
       );
     }
   };
@@ -474,7 +500,10 @@ export default function (pi: ExtensionAPI) {
         last.written,
         last.vocab,
         last.spokenMeaning,
-        last.writtenMeaning
+        last.writtenMeaning,
+        undefined,
+        last.slotOutputs,
+        last.slots
       );
     }
   };
@@ -673,7 +702,10 @@ export default function (pi: ExtensionAPI) {
       last.written,
       last.vocab,
       last.spokenMeaning,
-      last.writtenMeaning
+      last.writtenMeaning,
+      undefined,
+      last.slotOutputs,
+      last.slots
     );
     ctx.ui.notify(state.labels.notifyHistoryRestored || `[${state.labels.hudTitle}] Restored previous companion card`, "info");
   };
@@ -1007,11 +1039,22 @@ export default function (pi: ExtensionAPI) {
     if (state.mode === "off") return { action: "continue" };
     if (event.source === "extension") return { action: "continue" };
 
+    // Sync external lingual.json updates (e.g. written by lingual-tuner skill)
+    const latestDisk = loadUserLingualConfig();
+    if (latestDisk.slots && Array.isArray(latestDisk.slots)) {
+      state.slots = latestDisk.slots;
+    }
+
     const raw = event.text.trim();
     if (!raw) return { action: "continue" };
 
-    // Skip commands and shell escapes
+    // Skip commands and shell escapes (abort any in-flight translation from previous turn)
     if (raw.startsWith("/") || raw.startsWith("!")) {
+      clearPendingTimers();
+      session.abortActive();
+      if (hasActiveUI(ctx)) {
+        updateFooter(ctx);
+      }
       return { action: "continue" };
     }
 
@@ -1025,11 +1068,14 @@ export default function (pi: ExtensionAPI) {
       !sanitized.hasNaturalLanguage ||
       !shouldTriggerTranslation(promptToTranslate, state.sourceLang)
     ) {
-      // 【关键体验防线 1 · 绝无僵尸残留与幽灵复活】：当前输入不触发翻译时，立刻物理销毁旧卡片，并彻底清空分页池！
+      // 【关键体验防线 1 · 绝无僵尸残留与幽灵复活】：当前输入不触发翻译时，立刻中止在途请求、物理销毁旧卡片，并彻底清空分页池！
+      clearPendingTimers();
+      session.abortActive();
+      session.clearPagination();
       if (hasActiveUI(ctx)) {
         safeClearWidget(ctx);
+        updateFooter(ctx);
       }
-      session.clearPagination();
       return { action: "continue" };
     }
 
@@ -1082,7 +1128,10 @@ export default function (pi: ExtensionAPI) {
                   result.written,
                   result.vocab,
                   result.spokenMeaning,
-                  result.writtenMeaning
+                  result.writtenMeaning,
+                  undefined,
+                  result.slotOutputs,
+                  result.slots
                 );
               }
             }
@@ -1150,7 +1199,10 @@ export default function (pi: ExtensionAPI) {
           result.written,
           result.vocab,
           result.spokenMeaning,
-          result.writtenMeaning
+          result.writtenMeaning,
+          undefined,
+          result.slotOutputs,
+          result.slots
         );
       }
 

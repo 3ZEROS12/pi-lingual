@@ -7,7 +7,7 @@ export function getDefaultSlots(sourceLang = "en"): SlotConfig[] {
     zh: { source: "原文", spoken: "口语", written: "写作", vocab: "重点" },
     tw: { source: "原文", spoken: "口語", written: "書面", vocab: "重點" },
     ja: { source: "原文", spoken: "口語", written: "文面", vocab: "単語" },
-    ko: { source: "원문", spoken: "구어", written: "문어", vocab: "핵心" },
+    ko: { source: "원문", spoken: "구어", written: "문어", vocab: "핵심" },
     ru: { source: "Оригинал", spoken: "Разговорный", written: "Письменный", vocab: "Лексика" },
     pt: { source: "Original", spoken: "Falado", written: "Escrito", vocab: "Vocab" },
     es: { source: "Original", spoken: "Hablado", written: "Escrito", vocab: "Vocab" },
@@ -36,6 +36,16 @@ export function getDefaultSlots(sourceLang = "en"): SlotConfig[] {
       spoken: "親しい同僚やチームとの自然な口語表現（朝会、Slackハドル、ペアプログラミング、カジュアルチャット）。自然な短縮形やイディオム。",
       written: "明確で洗練された現代的技術文書表現（PR概要、RFC、Issue、技術設計書）。能動的で簡潔・論理的なプロフェッショナル文章。",
       vocab: "重要な連語、句動詞、技術表現を自律的に抽出し、母語話者レベルの語彙運用を支援。",
+    },
+    ko: {
+      spoken: "일상적인 팀 협업 및 구어체 표현 (데일리 스탠드업, Slack, 페어 프로그래밍). 자연스러운 축약형과 구동사.",
+      written: "명확하고 정교한 현대 기술 문서 표현 (PR 설명, RFC, 이슈, 아키텍처 문서). 간결하고 전문적인 문장.",
+      vocab: "핵심 연어, 구동사 및 고급 기술 관용구를 추출하여 원어민 수준의 어감 습득 지원.",
+    },
+    ru: {
+      spoken: "Естественная разговорная речь для командной работы (стендапы, Slack, код-ревью). Живые идиомы и сокращения.",
+      written: "Четкий современный технический письменный стиль (описания PR, RFC, документация). Профессионально и лаконично.",
+      vocab: "Ключевые словосочетания, фразовые глаголы и технические идиомы с переводом.",
     },
     en: {
       spoken: "Natural, fluent spoken flow (daily standup, Slack, pair programming, agile collaboration). Authentic Silicon Valley flow, natural contractions, native phrasal verbs, idioms.",
@@ -361,6 +371,70 @@ const LANGUAGE_SPECS: Record<string, LanguageSpec> = {
       },
     ],
   },
+  ko: {
+    name: "Korean",
+    nativeName: "한국어",
+    meaningInstruction: "in native Korean",
+    vocabInstruction: "in Korean in parentheses separated by \" · \" (e.g. \"term1 (한국어 뜻) · term2 (...) · ...\")",
+    anchors: [
+      {
+        input: "좋아요, 시작합시다",
+        spoken: "Totally on board with that — let's dive right in.",
+        spoken_meaning: "완전 찬성이에요, 바로 시작해 보죠",
+        written: "Acknowledged. Let's proceed with the implementation.",
+        written_meaning: "확인했습니다. 구현을 진행하겠습니다",
+        vocab: "on board with (찬성하다/동의하다) · dive in (바로 착수하다)",
+      },
+      {
+        input: "계속 진행해줘",
+        spoken: "Let's keep going.",
+        spoken_meaning: "계속 진행하죠",
+        written: "Proceed with the next steps.",
+        written_meaning: "다음 단계를 진행해 주십시오",
+        vocab: "keep going (계속 가다) · proceed with (~을 진행하다)",
+      },
+      {
+        input: "이 방식은 너무 복잡한 것 같아요, 표준 라이브러리를 쓰는 게 낫겠어요",
+        spoken: "This feels a bit over-engineered; we'd be much better off just sticking with the standard library.",
+        spoken_meaning: "조금 과하게 설계된 느낌이에요. 그냥 표준 라이브러리를 쓰는 게 훨씬 낫겠어요",
+        written: "The proposed approach introduces unnecessary complexity. Leveraging native standard library implementations is preferred.",
+        written_meaning: "제안된 방식은 불필요한 복잡성을 초래하므로 표준 라이브러리 활용을 권장합니다",
+        vocab: "over-engineered (과도하게 설계된) · be better off (~하는 편이 더 낫다) · stick with (~을 고수하다) · leverage (활용하다)",
+      },
+    ],
+  },
+  ru: {
+    name: "Russian",
+    nativeName: "Русский",
+    meaningInstruction: "in native Russian",
+    vocabInstruction: "in Russian in parentheses separated by \" · \" (e.g. \"term1 (русское значение) · term2 (...) · ...\")",
+    anchors: [
+      {
+        input: "Согласен, давай начинать",
+        spoken: "Totally on board with that — let's dive right in.",
+        spoken_meaning: "Полностью поддерживаю — давай сразу приступим",
+        written: "Acknowledged. Let's proceed with the implementation.",
+        written_meaning: "Принято. Переходим к реализации",
+        vocab: "on board with (быть согласным) · dive in (сразу приступить к делу)",
+      },
+      {
+        input: "Продолжай",
+        spoken: "Let's keep going.",
+        spoken_meaning: "Давай продолжать",
+        written: "Proceed with the next steps.",
+        written_meaning: "Переходите к следующим шагам",
+        vocab: "keep going (продолжать) · proceed with (приступить к)",
+      },
+      {
+        input: "Это решение кажется слишком сложным, лучше использовать стандартную библиотеку",
+        spoken: "This feels a bit over-engineered; we'd be much better off just sticking with the standard library.",
+        spoken_meaning: "Выглядит переусложненным; нам гораздо проще держаться стандартной библиотеки",
+        written: "The proposed approach introduces unnecessary complexity. Leveraging native standard library implementations is preferred.",
+        written_meaning: "Предложенный подход вносит излишнюю сложность. Предпочтительно использовать стандартную библиотеку",
+        vocab: "over-engineered (переусложненный) · be better off (быть в выигрыше) · stick with (придерживаться) · leverage (использовать)",
+      },
+    ],
+  },
 };
 
 /**
@@ -376,8 +450,26 @@ export function buildSystemPrompt(
   customSlots?: SlotConfig[] | CustomSlotsConfig
 ): string {
   const normSource = (sourceLang || "zh").toLowerCase().split("-")[0];
+  const normTarget = (targetLang || "en").toLowerCase().split("-")[0];
   const spec = LANGUAGE_SPECS[normSource] || LANGUAGE_SPECS.zh;
-  const targetName = targetLang === "ja" ? "Japanese" : targetLang === "zh" ? "Chinese" : "English";
+  const TARGET_LANGUAGE_NAMES: Record<string, string> = {
+    en: "English",
+    zh: "Chinese (Simplified)",
+    tw: "Chinese (Traditional)",
+    ja: "Japanese",
+    ko: "Korean",
+    es: "Spanish",
+    fr: "French",
+    de: "German",
+    ru: "Russian",
+    pt: "Portuguese",
+    it: "Italian",
+    vi: "Vietnamese",
+    tr: "Turkish",
+    ar: "Arabic",
+    ms: "Malay",
+  };
+  const targetName = TARGET_LANGUAGE_NAMES[normTarget] || "English";
 
   // Dynamic Multi-Slot Assembly
   if (Array.isArray(customSlots)) {

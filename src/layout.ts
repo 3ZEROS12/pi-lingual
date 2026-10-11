@@ -528,7 +528,7 @@ export function renderCardLayout(
       }
     }
     // 后向兼容字段
-    if (slot.id === "spoken" || (slot.role === "translation" && !card.slotOutputs)) {
+    if (slot.id === "spoken" || ((slot.role === "translation" || slot.role === "custom") && !card.slotOutputs)) {
       if (slot.id === "written") {
         return { content: card.written || "", meaning: card.writtenMeaning };
       }
@@ -568,16 +568,21 @@ export function renderCardLayout(
 
   // 1. 若显式请求胶囊模式，或列宽极端窄小 (< 35 列无法排版树状分支)，降级为单行胶囊流
   if (isCompact || maxCols < 35) {
+    const tagWidth = getVisualWidth(pageTag);
+    const availCols = Math.max(20, maxCols - tagWidth);
     if (contentBranches.length === 0) {
-      return [truncateVisual(`⇄ [${labels.hudTitle}] ${card.sourceText}`, maxCols) + pageTag];
+      return [truncateVisual(`⇄ [${labels.hudTitle}] ${card.sourceText}`, availCols) + pageTag];
     }
+    const prefix = `⇄ [${labels.hudTitle}] `;
+    const prefixW = getVisualWidth(prefix);
+    const sepW = (contentBranches.length - 1) * 3;
+    const perBranchBudget = Math.max(12, Math.floor((availCols - prefixW - sepW) / contentBranches.length));
     const parts = contentBranches.map((b) => {
       const shortLabel = b.label.slice(0, 4);
-      return `${shortLabel}: ${b.content}`;
+      return truncateVisual(`${shortLabel}: ${b.content}`, perBranchBudget);
     });
-    const prefix = `⇄ [${labels.hudTitle}] `;
     const fullText = prefix + parts.join(" · ");
-    return [truncateVisual(fullText, maxCols) + pageTag];
+    return [truncateVisual(fullText, availCols) + pageTag];
   }
 
   // 2. 检查是否有 source 原文槽位（支持用户完全删除/关闭原文行）

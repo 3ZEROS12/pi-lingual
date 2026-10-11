@@ -1008,7 +1008,7 @@ export function resolveLabelsForLang(
   // 动态将预设中的死板语言对标签替换为真实的动态当前流向 pairTitle
   for (const [key, val] of Object.entries(merged)) {
     if (typeof val === "string") {
-      merged[key] = val.replace(/\[(?:zh|ja|en|es|fr|de)\s*⇄\s*(?:zh|ja|en|es|fr|de)\]/g, `[${pairTitle}]`);
+      merged[key] = val.replace(/\[[a-z]{2}\s*⇄\s*[a-z]{2}\]/gi, `[${pairTitle}]`);
     }
   }
 

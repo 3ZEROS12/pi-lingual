@@ -215,7 +215,7 @@ declare class LingualLruCache<T> {
     /**
      * 生成标准化缓存键（结合源语言与目标语言）
      */
-    static buildKey(text: string, sourceLang?: string, targetLang?: string): string;
+    static buildKey(text: string, sourceLang?: string, targetLang?: string, slotSignature?: string): string;
     get(key: string): T | undefined;
     set(key: string, val: T): void;
     has(key: string): boolean;

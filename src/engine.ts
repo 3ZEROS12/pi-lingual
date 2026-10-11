@@ -125,7 +125,7 @@ export function loadUserLingualConfig(): Partial<LingualConfig> {
     const reasoning = typeof target.reasoning === "string" ? target.reasoning : undefined;
     const timeoutMs = typeof target.timeoutMs === "number" ? target.timeoutMs : undefined;
     const replyInSourceLang = target.replyInSourceLang !== undefined ? Boolean(target.replyInSourceLang) : undefined;
-    const labels = resolveLabelsForLang(sourceLang || "zh", target.labels);
+    const labels = resolveLabelsForLang(sourceLang || "zh", target.labels, targetLang);
 
     cachedUserConfig = {
       ...(endpoint ? { endpoint } : {}),
@@ -217,19 +217,24 @@ export function shouldTriggerTranslation(text: string, sourceLang = "zh"): boole
     return false;
   }
 
-  // 3. If source language is non-English (default Chinese/Japanese etc.)
-  if (sourceLang !== "en") {
+  // 3. Non-Latin scripts (Chinese, Japanese, Korean, Russian, Arabic) must contain native script characters
+  const normSource = (sourceLang || "zh").toLowerCase().split("-")[0];
+  const nonLatinLangs = new Set(["zh", "tw", "ja", "ko", "ru", "ar"]);
+  if (nonLatinLangs.has(normSource)) {
     return isNonEnglish(trimmed);
   }
 
-  // 4. If source language is English (e.g. English native learning Japanese):
-  // Pure single words or symbols without spaces are treated as identifiers/commands
+  // 4. Latin-script languages (en, es, fr, de, pt, it, vi, tr, ms):
+  // Trigger if accented/non-ASCII chars exist OR if it's a multi-word alphabetic sentence
+  if (isNonEnglish(trimmed)) {
+    return true;
+  }
   const words = trimmed.split(/\s+/);
   if (words.length < 2) {
     return false;
   }
 
-  // Must contain standard English alphabet words
+  // Must contain standard alphabet words
   return /[a-zA-Z]{2,}/.test(trimmed);
 }
 
@@ -309,7 +314,9 @@ export function isDynamicLongInput(text: string, sourceLang = "zh"): boolean {
   const trimmed = text.trim();
   if (!trimmed) return false;
 
-  const isCjk = sourceLang === "zh" || sourceLang === "ja" || isNonEnglish(trimmed);
+  const normSource = (sourceLang || "zh").toLowerCase().split("-")[0];
+  const hasCjk = /[\u4e00-\u9fa5\u3040-\u30ff\uac00-\ud7af]/.test(trimmed);
+  const isCjk = normSource === "zh" || normSource === "tw" || normSource === "ja" || normSource === "ko" || hasCjk;
   if (isCjk) {
     if (trimmed.length >= 45) return true;
     const sentenceCount = (trimmed.match(/[。！？；\n]/g) || []).length;
@@ -347,7 +354,11 @@ export async function translatePrompt(
   }
 
   // In-Memory LRU Cache: 0ms hit for high-frequency phrases (e.g. "继续", "认同", "开始吧")
-  const cacheKey = LingualLruCache.buildKey(trimmed, cfg.sourceLang, cfg.targetLang);
+  const effectiveSlots = cfg.slots || (cfg.slotPreset ? resolveSlotsForPreset(cfg.slotPreset, cfg.sourceLang) : undefined);
+  const slotSig = Array.isArray(effectiveSlots)
+    ? effectiveSlots.filter((s) => s.enabled !== false).map((s) => s.id).join(",")
+    : undefined;
+  const cacheKey = LingualLruCache.buildKey(trimmed, cfg.sourceLang, cfg.targetLang, slotSig);
   const cached = globalLingualCache.get(cacheKey);
   if (cached) {
     return cached;
@@ -367,7 +378,6 @@ export async function translatePrompt(
   try {
     let content: string | null = null;
     const isLongInput = isDynamicLongInput(trimmed, cfg.sourceLang);
-    const effectiveSlots = cfg.slots || (cfg.slotPreset ? resolveSlotsForPreset(cfg.slotPreset, cfg.sourceLang) : undefined);
     const sysPrompt = buildSystemPrompt(cfg.sourceLang, cfg.targetLang, isLongInput, undefined, "general", effectiveSlots);
 
     // 1. If custom complete callback is provided (e.g. Pi native ModelRegistry / ctx.model):
@@ -414,13 +424,13 @@ export async function translatePrompt(
     const payload = parseLlmResponse(content);
     if (!payload || !payload.spoken) return null;
 
-    const labels = resolveLabelsForLang(cfg.sourceLang || "zh", cfg.labels);
+    const labels = resolveLabelsForLang(cfg.sourceLang || "zh", cfg.labels, cfg.targetLang);
     const slot1Label = labels.slot1Label || labels.spokenLabel || "Spoken";
     const slot2Label = labels.slot2Label || labels.writtenLabel || "Written";
     const vocabLabel = labels.vocabLabel || "Vocab";
     const sourceLabel = labels.sourceLabel || "Source";
 
-    const effectiveSourceText = (trimmed.length > 80 && isLongInput && payload.summary && payload.summary.trim())
+    const effectiveSourceText = (isLongInput && payload.summary && payload.summary.trim())
       ? payload.summary.trim()
       : trimmed;
 

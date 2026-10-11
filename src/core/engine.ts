@@ -14,7 +14,7 @@ function tryParseJson(str: string): any {
       const repaired = str
         .replace(/,\s*([}\]])/g, "$1")
         .replace(
-          /("(?:spoken|spoken_meaning|written|written_meaning|vocab|casual|academic|slot1|slot2)"\s*:\s*")([\s\S]*?)("(?=\s*,\s*"|\s*\}))/g,
+          /("[a-zA-Z0-9_-]+"\s*:\s*")([\s\S]*?)("(?=\s*,\s*"|\s*\}))/g,
           (_m, prefix, content, suffix) => prefix + content.replace(/(?<!\\)"/g, '\\"') + suffix
         );
       return JSON.parse(repaired);
@@ -67,11 +67,15 @@ export function parseLlmResponse(raw: string): TranslationPayload | null {
       }
     }
 
-    const effectiveSpoken = spoken || Object.values(slotOutputs)[0]?.content || "";
+    const nonVocabOutputs = Object.entries(slotOutputs)
+      .filter(([k]) => k !== "vocab")
+      .map(([, val]) => val);
+    const effectiveSpoken = spoken || nonVocabOutputs[0]?.content || "";
+    const effectiveSpokenMeaning = spokenMeaning || nonVocabOutputs[0]?.meaning || "";
     if (effectiveSpoken) {
       return {
         spoken: effectiveSpoken,
-        spokenMeaning: spokenMeaning || undefined,
+        spokenMeaning: effectiveSpokenMeaning || undefined,
         written: written || undefined,
         writtenMeaning: writtenMeaning || undefined,
         vocab: vocab || undefined,
@@ -124,7 +128,10 @@ export async function translateCore(
 
   // 2. In-memory LRU Cache check
   const cache = options?.cache || globalLingualCache;
-  const cacheKey = LingualLruCache.buildKey(text, sourceLang, targetLang);
+  const slotSig = Array.isArray(req.slots)
+    ? req.slots.filter((s) => s.enabled !== false).map((s) => s.id).join(",")
+    : undefined;
+  const cacheKey = LingualLruCache.buildKey(text, sourceLang, targetLang, slotSig);
   const cached = cache.get(cacheKey);
   if (cached) {
     return {

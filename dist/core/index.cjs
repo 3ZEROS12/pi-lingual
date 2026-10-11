@@ -64,7 +64,7 @@ function getDefaultSlots(sourceLang = "en") {
     zh: { source: "\u539F\u6587", spoken: "\u53E3\u8BED", written: "\u5199\u4F5C", vocab: "\u91CD\u70B9" },
     tw: { source: "\u539F\u6587", spoken: "\u53E3\u8A9E", written: "\u66F8\u9762", vocab: "\u91CD\u9EDE" },
     ja: { source: "\u539F\u6587", spoken: "\u53E3\u8A9E", written: "\u6587\u9762", vocab: "\u5358\u8A9E" },
-    ko: { source: "\uC6D0\uBB38", spoken: "\uAD6C\uC5B4", written: "\uBB38\uC5B4", vocab: "\uD575\u5FC3" },
+    ko: { source: "\uC6D0\uBB38", spoken: "\uAD6C\uC5B4", written: "\uBB38\uC5B4", vocab: "\uD575\uC2EC" },
     ru: { source: "\u041E\u0440\u0438\u0433\u0438\u043D\u0430\u043B", spoken: "\u0420\u0430\u0437\u0433\u043E\u0432\u043E\u0440\u043D\u044B\u0439", written: "\u041F\u0438\u0441\u044C\u043C\u0435\u043D\u043D\u044B\u0439", vocab: "\u041B\u0435\u043A\u0441\u0438\u043A\u0430" },
     pt: { source: "Original", spoken: "Falado", written: "Escrito", vocab: "Vocab" },
     es: { source: "Original", spoken: "Hablado", written: "Escrito", vocab: "Vocab" },
@@ -92,6 +92,16 @@ function getDefaultSlots(sourceLang = "en") {
       spoken: "\u89AA\u3057\u3044\u540C\u50DA\u3084\u30C1\u30FC\u30E0\u3068\u306E\u81EA\u7136\u306A\u53E3\u8A9E\u8868\u73FE\uFF08\u671D\u4F1A\u3001Slack\u30CF\u30C9\u30EB\u3001\u30DA\u30A2\u30D7\u30ED\u30B0\u30E9\u30DF\u30F3\u30B0\u3001\u30AB\u30B8\u30E5\u30A2\u30EB\u30C1\u30E3\u30C3\u30C8\uFF09\u3002\u81EA\u7136\u306A\u77ED\u7E2E\u5F62\u3084\u30A4\u30C7\u30A3\u30AA\u30E0\u3002",
       written: "\u660E\u78BA\u3067\u6D17\u7DF4\u3055\u308C\u305F\u73FE\u4EE3\u7684\u6280\u8853\u6587\u66F8\u8868\u73FE\uFF08PR\u6982\u8981\u3001RFC\u3001Issue\u3001\u6280\u8853\u8A2D\u8A08\u66F8\uFF09\u3002\u80FD\u52D5\u7684\u3067\u7C21\u6F54\u30FB\u8AD6\u7406\u7684\u306A\u30D7\u30ED\u30D5\u30A7\u30C3\u30B7\u30E7\u30CA\u30EB\u6587\u7AE0\u3002",
       vocab: "\u91CD\u8981\u306A\u9023\u8A9E\u3001\u53E5\u52D5\u8A5E\u3001\u6280\u8853\u8868\u73FE\u3092\u81EA\u5F8B\u7684\u306B\u62BD\u51FA\u3057\u3001\u6BCD\u8A9E\u8A71\u8005\u30EC\u30D9\u30EB\u306E\u8A9E\u5F59\u904B\u7528\u3092\u652F\u63F4\u3002"
+    },
+    ko: {
+      spoken: "\uC77C\uC0C1\uC801\uC778 \uD300 \uD611\uC5C5 \uBC0F \uAD6C\uC5B4\uCCB4 \uD45C\uD604 (\uB370\uC77C\uB9AC \uC2A4\uD0E0\uB4DC\uC5C5, Slack, \uD398\uC5B4 \uD504\uB85C\uADF8\uB798\uBC0D). \uC790\uC5F0\uC2A4\uB7EC\uC6B4 \uCD95\uC57D\uD615\uACFC \uAD6C\uB3D9\uC0AC.",
+      written: "\uBA85\uD655\uD558\uACE0 \uC815\uAD50\uD55C \uD604\uB300 \uAE30\uC220 \uBB38\uC11C \uD45C\uD604 (PR \uC124\uBA85, RFC, \uC774\uC288, \uC544\uD0A4\uD14D\uCC98 \uBB38\uC11C). \uAC04\uACB0\uD558\uACE0 \uC804\uBB38\uC801\uC778 \uBB38\uC7A5.",
+      vocab: "\uD575\uC2EC \uC5F0\uC5B4, \uAD6C\uB3D9\uC0AC \uBC0F \uACE0\uAE09 \uAE30\uC220 \uAD00\uC6A9\uAD6C\uB97C \uCD94\uCD9C\uD558\uC5EC \uC6D0\uC5B4\uBBFC \uC218\uC900\uC758 \uC5B4\uAC10 \uC2B5\uB4DD \uC9C0\uC6D0."
+    },
+    ru: {
+      spoken: "\u0415\u0441\u0442\u0435\u0441\u0442\u0432\u0435\u043D\u043D\u0430\u044F \u0440\u0430\u0437\u0433\u043E\u0432\u043E\u0440\u043D\u0430\u044F \u0440\u0435\u0447\u044C \u0434\u043B\u044F \u043A\u043E\u043C\u0430\u043D\u0434\u043D\u043E\u0439 \u0440\u0430\u0431\u043E\u0442\u044B (\u0441\u0442\u0435\u043D\u0434\u0430\u043F\u044B, Slack, \u043A\u043E\u0434-\u0440\u0435\u0432\u044C\u044E). \u0416\u0438\u0432\u044B\u0435 \u0438\u0434\u0438\u043E\u043C\u044B \u0438 \u0441\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u0438\u044F.",
+      written: "\u0427\u0435\u0442\u043A\u0438\u0439 \u0441\u043E\u0432\u0440\u0435\u043C\u0435\u043D\u043D\u044B\u0439 \u0442\u0435\u0445\u043D\u0438\u0447\u0435\u0441\u043A\u0438\u0439 \u043F\u0438\u0441\u044C\u043C\u0435\u043D\u043D\u044B\u0439 \u0441\u0442\u0438\u043B\u044C (\u043E\u043F\u0438\u0441\u0430\u043D\u0438\u044F PR, RFC, \u0434\u043E\u043A\u0443\u043C\u0435\u043D\u0442\u0430\u0446\u0438\u044F). \u041F\u0440\u043E\u0444\u0435\u0441\u0441\u0438\u043E\u043D\u0430\u043B\u044C\u043D\u043E \u0438 \u043B\u0430\u043A\u043E\u043D\u0438\u0447\u043D\u043E.",
+      vocab: "\u041A\u043B\u044E\u0447\u0435\u0432\u044B\u0435 \u0441\u043B\u043E\u0432\u043E\u0441\u043E\u0447\u0435\u0442\u0430\u043D\u0438\u044F, \u0444\u0440\u0430\u0437\u043E\u0432\u044B\u0435 \u0433\u043B\u0430\u0433\u043E\u043B\u044B \u0438 \u0442\u0435\u0445\u043D\u0438\u0447\u0435\u0441\u043A\u0438\u0435 \u0438\u0434\u0438\u043E\u043C\u044B \u0441 \u043F\u0435\u0440\u0435\u0432\u043E\u0434\u043E\u043C."
     },
     en: {
       spoken: "Natural, fluent spoken flow (daily standup, Slack, pair programming, agile collaboration). Authentic Silicon Valley flow, natural contractions, native phrasal verbs, idioms.",
@@ -398,12 +408,94 @@ var LANGUAGE_SPECS = {
         vocab: "over-engineered (\xFCberdimensioniert) \xB7 be better off (besser dran sein mit) \xB7 stick with (bleiben bei) \xB7 leverage (nutzen/einsetzen)"
       }
     ]
+  },
+  ko: {
+    name: "Korean",
+    nativeName: "\uD55C\uAD6D\uC5B4",
+    meaningInstruction: "in native Korean",
+    vocabInstruction: 'in Korean in parentheses separated by " \xB7 " (e.g. "term1 (\uD55C\uAD6D\uC5B4 \uB73B) \xB7 term2 (...) \xB7 ...")',
+    anchors: [
+      {
+        input: "\uC88B\uC544\uC694, \uC2DC\uC791\uD569\uC2DC\uB2E4",
+        spoken: "Totally on board with that \u2014 let's dive right in.",
+        spoken_meaning: "\uC644\uC804 \uCC2C\uC131\uC774\uC5D0\uC694, \uBC14\uB85C \uC2DC\uC791\uD574 \uBCF4\uC8E0",
+        written: "Acknowledged. Let's proceed with the implementation.",
+        written_meaning: "\uD655\uC778\uD588\uC2B5\uB2C8\uB2E4. \uAD6C\uD604\uC744 \uC9C4\uD589\uD558\uACA0\uC2B5\uB2C8\uB2E4",
+        vocab: "on board with (\uCC2C\uC131\uD558\uB2E4/\uB3D9\uC758\uD558\uB2E4) \xB7 dive in (\uBC14\uB85C \uCC29\uC218\uD558\uB2E4)"
+      },
+      {
+        input: "\uACC4\uC18D \uC9C4\uD589\uD574\uC918",
+        spoken: "Let's keep going.",
+        spoken_meaning: "\uACC4\uC18D \uC9C4\uD589\uD558\uC8E0",
+        written: "Proceed with the next steps.",
+        written_meaning: "\uB2E4\uC74C \uB2E8\uACC4\uB97C \uC9C4\uD589\uD574 \uC8FC\uC2ED\uC2DC\uC624",
+        vocab: "keep going (\uACC4\uC18D \uAC00\uB2E4) \xB7 proceed with (~\uC744 \uC9C4\uD589\uD558\uB2E4)"
+      },
+      {
+        input: "\uC774 \uBC29\uC2DD\uC740 \uB108\uBB34 \uBCF5\uC7A1\uD55C \uAC83 \uAC19\uC544\uC694, \uD45C\uC900 \uB77C\uC774\uBE0C\uB7EC\uB9AC\uB97C \uC4F0\uB294 \uAC8C \uB0AB\uACA0\uC5B4\uC694",
+        spoken: "This feels a bit over-engineered; we'd be much better off just sticking with the standard library.",
+        spoken_meaning: "\uC870\uAE08 \uACFC\uD558\uAC8C \uC124\uACC4\uB41C \uB290\uB08C\uC774\uC5D0\uC694. \uADF8\uB0E5 \uD45C\uC900 \uB77C\uC774\uBE0C\uB7EC\uB9AC\uB97C \uC4F0\uB294 \uAC8C \uD6E8\uC52C \uB0AB\uACA0\uC5B4\uC694",
+        written: "The proposed approach introduces unnecessary complexity. Leveraging native standard library implementations is preferred.",
+        written_meaning: "\uC81C\uC548\uB41C \uBC29\uC2DD\uC740 \uBD88\uD544\uC694\uD55C \uBCF5\uC7A1\uC131\uC744 \uCD08\uB798\uD558\uBBC0\uB85C \uD45C\uC900 \uB77C\uC774\uBE0C\uB7EC\uB9AC \uD65C\uC6A9\uC744 \uAD8C\uC7A5\uD569\uB2C8\uB2E4",
+        vocab: "over-engineered (\uACFC\uB3C4\uD558\uAC8C \uC124\uACC4\uB41C) \xB7 be better off (~\uD558\uB294 \uD3B8\uC774 \uB354 \uB0AB\uB2E4) \xB7 stick with (~\uC744 \uACE0\uC218\uD558\uB2E4) \xB7 leverage (\uD65C\uC6A9\uD558\uB2E4)"
+      }
+    ]
+  },
+  ru: {
+    name: "Russian",
+    nativeName: "\u0420\u0443\u0441\u0441\u043A\u0438\u0439",
+    meaningInstruction: "in native Russian",
+    vocabInstruction: 'in Russian in parentheses separated by " \xB7 " (e.g. "term1 (\u0440\u0443\u0441\u0441\u043A\u043E\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435) \xB7 term2 (...) \xB7 ...")',
+    anchors: [
+      {
+        input: "\u0421\u043E\u0433\u043B\u0430\u0441\u0435\u043D, \u0434\u0430\u0432\u0430\u0439 \u043D\u0430\u0447\u0438\u043D\u0430\u0442\u044C",
+        spoken: "Totally on board with that \u2014 let's dive right in.",
+        spoken_meaning: "\u041F\u043E\u043B\u043D\u043E\u0441\u0442\u044C\u044E \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u044E \u2014 \u0434\u0430\u0432\u0430\u0439 \u0441\u0440\u0430\u0437\u0443 \u043F\u0440\u0438\u0441\u0442\u0443\u043F\u0438\u043C",
+        written: "Acknowledged. Let's proceed with the implementation.",
+        written_meaning: "\u041F\u0440\u0438\u043D\u044F\u0442\u043E. \u041F\u0435\u0440\u0435\u0445\u043E\u0434\u0438\u043C \u043A \u0440\u0435\u0430\u043B\u0438\u0437\u0430\u0446\u0438\u0438",
+        vocab: "on board with (\u0431\u044B\u0442\u044C \u0441\u043E\u0433\u043B\u0430\u0441\u043D\u044B\u043C) \xB7 dive in (\u0441\u0440\u0430\u0437\u0443 \u043F\u0440\u0438\u0441\u0442\u0443\u043F\u0438\u0442\u044C \u043A \u0434\u0435\u043B\u0443)"
+      },
+      {
+        input: "\u041F\u0440\u043E\u0434\u043E\u043B\u0436\u0430\u0439",
+        spoken: "Let's keep going.",
+        spoken_meaning: "\u0414\u0430\u0432\u0430\u0439 \u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0430\u0442\u044C",
+        written: "Proceed with the next steps.",
+        written_meaning: "\u041F\u0435\u0440\u0435\u0445\u043E\u0434\u0438\u0442\u0435 \u043A \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u043C \u0448\u0430\u0433\u0430\u043C",
+        vocab: "keep going (\u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0430\u0442\u044C) \xB7 proceed with (\u043F\u0440\u0438\u0441\u0442\u0443\u043F\u0438\u0442\u044C \u043A)"
+      },
+      {
+        input: "\u042D\u0442\u043E \u0440\u0435\u0448\u0435\u043D\u0438\u0435 \u043A\u0430\u0436\u0435\u0442\u0441\u044F \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0441\u043B\u043E\u0436\u043D\u044B\u043C, \u043B\u0443\u0447\u0448\u0435 \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u044C \u0441\u0442\u0430\u043D\u0434\u0430\u0440\u0442\u043D\u0443\u044E \u0431\u0438\u0431\u043B\u0438\u043E\u0442\u0435\u043A\u0443",
+        spoken: "This feels a bit over-engineered; we'd be much better off just sticking with the standard library.",
+        spoken_meaning: "\u0412\u044B\u0433\u043B\u044F\u0434\u0438\u0442 \u043F\u0435\u0440\u0435\u0443\u0441\u043B\u043E\u0436\u043D\u0435\u043D\u043D\u044B\u043C; \u043D\u0430\u043C \u0433\u043E\u0440\u0430\u0437\u0434\u043E \u043F\u0440\u043E\u0449\u0435 \u0434\u0435\u0440\u0436\u0430\u0442\u044C\u0441\u044F \u0441\u0442\u0430\u043D\u0434\u0430\u0440\u0442\u043D\u043E\u0439 \u0431\u0438\u0431\u043B\u0438\u043E\u0442\u0435\u043A\u0438",
+        written: "The proposed approach introduces unnecessary complexity. Leveraging native standard library implementations is preferred.",
+        written_meaning: "\u041F\u0440\u0435\u0434\u043B\u043E\u0436\u0435\u043D\u043D\u044B\u0439 \u043F\u043E\u0434\u0445\u043E\u0434 \u0432\u043D\u043E\u0441\u0438\u0442 \u0438\u0437\u043B\u0438\u0448\u043D\u044E\u044E \u0441\u043B\u043E\u0436\u043D\u043E\u0441\u0442\u044C. \u041F\u0440\u0435\u0434\u043F\u043E\u0447\u0442\u0438\u0442\u0435\u043B\u044C\u043D\u043E \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u044C \u0441\u0442\u0430\u043D\u0434\u0430\u0440\u0442\u043D\u0443\u044E \u0431\u0438\u0431\u043B\u0438\u043E\u0442\u0435\u043A\u0443",
+        vocab: "over-engineered (\u043F\u0435\u0440\u0435\u0443\u0441\u043B\u043E\u0436\u043D\u0435\u043D\u043D\u044B\u0439) \xB7 be better off (\u0431\u044B\u0442\u044C \u0432 \u0432\u044B\u0438\u0433\u0440\u044B\u0448\u0435) \xB7 stick with (\u043F\u0440\u0438\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0442\u044C\u0441\u044F) \xB7 leverage (\u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u044C)"
+      }
+    ]
   }
 };
 function buildSystemPrompt(sourceLang = "zh", targetLang = "en", isLongInput = false, context, tone = "general", customSlots) {
   const normSource = (sourceLang || "zh").toLowerCase().split("-")[0];
+  const normTarget = (targetLang || "en").toLowerCase().split("-")[0];
   const spec = LANGUAGE_SPECS[normSource] || LANGUAGE_SPECS.zh;
-  const targetName = targetLang === "ja" ? "Japanese" : targetLang === "zh" ? "Chinese" : "English";
+  const TARGET_LANGUAGE_NAMES = {
+    en: "English",
+    zh: "Chinese (Simplified)",
+    tw: "Chinese (Traditional)",
+    ja: "Japanese",
+    ko: "Korean",
+    es: "Spanish",
+    fr: "French",
+    de: "German",
+    ru: "Russian",
+    pt: "Portuguese",
+    it: "Italian",
+    vi: "Vietnamese",
+    tr: "Turkish",
+    ar: "Arabic",
+    ms: "Malay"
+  };
+  const targetName = TARGET_LANGUAGE_NAMES[normTarget] || "English";
   if (Array.isArray(customSlots)) {
     const enabledSlots = customSlots.filter((s) => s.enabled && s.role !== "source");
     let taskLines = [];
@@ -654,8 +746,9 @@ var LingualLruCache = class {
   /**
    * 生成标准化缓存键（结合源语言与目标语言）
    */
-  static buildKey(text, sourceLang = "zh", targetLang = "en") {
-    return `${sourceLang}\u2794${targetLang}:${text.trim()}`;
+  static buildKey(text, sourceLang = "zh", targetLang = "en", slotSignature) {
+    const sig = slotSignature ? `[${slotSignature}]` : "";
+    return `${sourceLang}\u2794${targetLang}${sig}:${text.trim()}`;
   }
   get(key) {
     if (!this.cache.has(key)) {
@@ -716,7 +809,7 @@ function tryParseJson(str) {
   } catch {
     try {
       const repaired = str.replace(/,\s*([}\]])/g, "$1").replace(
-        /("(?:spoken|spoken_meaning|written|written_meaning|vocab|casual|academic|slot1|slot2)"\s*:\s*")([\s\S]*?)("(?=\s*,\s*"|\s*\}))/g,
+        /("[a-zA-Z0-9_-]+"\s*:\s*")([\s\S]*?)("(?=\s*,\s*"|\s*\}))/g,
         (_m, prefix, content, suffix) => prefix + content.replace(/(?<!\\)"/g, '\\"') + suffix
       );
       return JSON.parse(repaired);
@@ -756,11 +849,13 @@ function parseLlmResponse(raw) {
         };
       }
     }
-    const effectiveSpoken = spoken || Object.values(slotOutputs)[0]?.content || "";
+    const nonVocabOutputs = Object.entries(slotOutputs).filter(([k]) => k !== "vocab").map(([, val]) => val);
+    const effectiveSpoken = spoken || nonVocabOutputs[0]?.content || "";
+    const effectiveSpokenMeaning = spokenMeaning || nonVocabOutputs[0]?.meaning || "";
     if (effectiveSpoken) {
       return {
         spoken: effectiveSpoken,
-        spokenMeaning: spokenMeaning || void 0,
+        spokenMeaning: effectiveSpokenMeaning || void 0,
         written: written || void 0,
         writtenMeaning: writtenMeaning || void 0,
         vocab: vocab || void 0,
@@ -794,7 +889,8 @@ async function translateCore(req, options) {
     };
   }
   const cache = options?.cache || globalLingualCache;
-  const cacheKey = LingualLruCache.buildKey(text, sourceLang, targetLang);
+  const slotSig = Array.isArray(req.slots) ? req.slots.filter((s) => s.enabled !== false).map((s) => s.id).join(",") : void 0;
+  const cacheKey = LingualLruCache.buildKey(text, sourceLang, targetLang, slotSig);
   const cached = cache.get(cacheKey);
   if (cached) {
     return {
@@ -1785,7 +1881,7 @@ function resolveLabelsForLang(lang, overrides, targetLang) {
   };
   for (const [key, val] of Object.entries(merged)) {
     if (typeof val === "string") {
-      merged[key] = val.replace(/\[(?:zh|ja|en|es|fr|de)\s*⇄\s*(?:zh|ja|en|es|fr|de)\]/g, `[${pairTitle}]`);
+      merged[key] = val.replace(/\[[a-z]{2}\s*⇄\s*[a-z]{2}\]/gi, `[${pairTitle}]`);
     }
   }
   return merged;
