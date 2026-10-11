@@ -151,12 +151,12 @@
 🧪 Fleet Physical Pre-Flight: Passed: 1 | Failed: 0
 ```
 
-## 🕒 Last Session Snapshot (2026/10/12 01:52:31)
-- **Session ID**: `01a12c16-da72-76ca-bbab-4e49cdb80431`
-- **User Intent**: You are Subagent Auditor #1 (Upgrade Lifecycle Verifier). Inspect D:/Workspace/projects/pi-lingual/.tmp/task.mjs and src
+## 🕒 Last Session Snapshot (2026/10/12 07:44:17)
+- **Session ID**: `01a12d5a-21c8-73c5-82cf-c437e5c3ac95`
+- **User Intent**: You are the Pre-Publish Upgrade & Zero-Burden Auditor Subagent. Run 'node D:/Workspace/projects/pi-lingual/.tmp/task.mjs
 - **Last Assistant State**:
-> - **Command**: `node D:/Workspace/projects/pi-lingual/.tmp/task.mjs`
-> - **Exit Status**: `0 (Success)`
-> - **Simulation Coverage**: Clean npm package pull & extraction of `pi-lingual@0.3.16`, configuration persistence across 10 distinct user upgrade scenarios (explicit language switching, OS fallback, clean upgrades), and verification of `v0.5.2` session lifecycle.
-> ---
-> | Lang Code | (1) 1st `session_start` Banner | Exact Lines | 0.5.x Apology Included | (2) Input Dismissal | Persisted `last
+> Physical sandbox execution of `.tmp/task.mjs` (upgrading npm `@0.5.2` ➔ local `v0.5.3`) completed with all checks passing:
+> | Checkpoint | Target Requirement | Physical Result | Status |
+> | :--- | :--- | :--- | :--- |
+> | **1. Registered Commands** | Only 4 core commands: `lang`, `last`, `lingual`, `slots` | `["lang", "last", "lingual", "slots"]` across all personas (0 stale subcommands) | **PASS** |
+> | **2. Active Personas (P1–P8)** | 8-line native banner, 0 truncated lines, dismiss on input

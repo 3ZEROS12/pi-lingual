@@ -16,6 +16,7 @@ export interface PromptCandidate {
   id: string;
   label: string;
   content: string;
+  vocab?: string;
 }
 
 export interface SlotConfig {
@@ -79,8 +80,9 @@ export interface LingualConfig {
   slotPreset?: string;      // e.g. "developer" | "social" | "japanese" | "academic" | "compact2"
   slots?: SlotConfig[];     // Dynamic multi-slot list for Mode 1 (Companion)
   promptLang?: string;      // Output language for Mode 2/3 prompt optimization: "en" (default) | "zh" | "native" | etc.
-  promptRule?: string;      // Optional custom engineering rule stacked onto Mode 2/3 prompt optimization
+  promptRule?: string | string[]; // Optional custom condition(s) stacked onto Mode 2/3 prompt optimization
   promptSlots?: PromptSlotConfig[]; // Customizable N prompt style slots for Mode 3 (N-Choice Select)
+  learnInRewrite?: boolean; // Optional hybrid toggle: also extract a 1-line [Vocab/重点] takeaway when in Mode 2/3 rewrite
   lastSeenVersion?: string; // Tracks the last major feature release banner shown above editor
   sourceLang?: string;      // e.g. "zh" (default) | "en" | "ja"
   targetLang?: string;      // e.g. "en" (default) | "ja" | "zh"

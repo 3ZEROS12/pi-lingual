@@ -132,8 +132,8 @@ test("extension stale ctx & resize listener hygiene - survives stale ctx getter 
 
   // 2. Mode switch to off & back to original with stale ctx must not throw
   await assert.doesNotReject(async () => {
-    await registeredCommands["lingual-mode"].handler("off", staleCtx);
-    await registeredCommands["lingual-mode"].handler("original", staleCtx);
+    await registeredCommands["lingual"].handler("off", staleCtx);
+    await registeredCommands["lingual"].handler("original", staleCtx);
   });
 });
 

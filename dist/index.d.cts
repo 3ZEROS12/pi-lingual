@@ -1,5 +1,5 @@
-import { L as LingualResult, a as LingualI18nLabels, S as SlotConfig, b as LingualConfig, P as PromptCandidate } from './index-Luzp7QuM.cjs';
-export { C as CacheStats, c as CustomSlotsConfig, d as LANGUAGE_PRESETS, e as LEGACY_SLOT_PRESETS, f as LinguaConfig, g as LinguaI18nLabels, h as LinguaLruCache, i as LinguaMode, j as LinguaResult, k as LingualCoreOptions, l as LingualLruCache, m as LingualMode, n as LingualRequest, o as LingualResponse, p as PromptSlotConfig, q as SLOT_PRESETS, r as SanitizedPromptResult, s as SlotDefinition, t as SlotPresetDefinition, u as SlotResult, v as SlotRole, T as TranslationPayload, w as addSlotToList, x as buildDirectRewriteSystemPrompt, y as buildPromptCandidatesSystemPrompt, z as buildSystemPrompt, A as createCustomSlot, B as formatModelSelectionMessage, D as formatStatusReport, E as getDefaultPromptSlots, F as getDefaultSlots, G as globalLinguaCache, H as globalLingualCache, I as moveSlotInList, J as parseLlmResponse, K as removeSlotFromList, M as resolveLabelsForLang, N as resolvePromptTargetLangName, O as resolveSlotsForPreset, Q as sanitizePromptForTranslation, R as shouldShieldBypass, U as toggleSlotInList, V as translateCore, W as updateSlotInList } from './index-Luzp7QuM.cjs';
+import { L as LingualResult, a as LingualI18nLabels, S as SlotConfig, b as LingualConfig, P as PromptCandidate } from './index-Bxvt_II7.cjs';
+export { C as CacheStats, c as CustomSlotsConfig, d as LANGUAGE_PRESETS, e as LEGACY_SLOT_PRESETS, f as LinguaConfig, g as LinguaI18nLabels, h as LinguaLruCache, i as LinguaMode, j as LinguaResult, k as LingualCoreOptions, l as LingualLruCache, m as LingualMode, n as LingualRequest, o as LingualResponse, p as PROMPT_RULE_PRESETS, q as PromptSlotConfig, r as SLOT_PRESETS, s as SanitizedPromptResult, t as SlotDefinition, u as SlotPresetDefinition, v as SlotResult, w as SlotRole, T as TranslationPayload, x as addSlotToList, y as buildDirectRewriteSystemPrompt, z as buildPromptCandidatesSystemPrompt, A as buildSystemPrompt, B as createCustomSlot, D as formatModelSelectionMessage, E as formatStatusReport, F as getDefaultPromptSlots, G as getDefaultSlots, H as globalLinguaCache, I as globalLingualCache, J as moveSlotInList, K as normalizePromptRules, M as parseLlmResponse, N as removeSlotFromList, O as resolveLabelsForLang, Q as resolvePromptRulePreset, R as resolvePromptTargetLangName, U as resolveSlotsForPreset, V as sanitizePromptForTranslation, W as shouldShieldBypass, X as toggleSlotInList, Y as translateCore, Z as updateSlotInList } from './index-Bxvt_II7.cjs';
 
 /**
  * Splits text into atomic natural sentence chunks when long.
@@ -278,6 +278,10 @@ declare function formatNativeReplyGuardHint(sourceLang?: string): string;
  * (structuring + standardizing + high efficiency + output language + custom rule), returning the new prompt directly
  * without generating vocabulary or spoken learning cards.
  */
+declare function rewritePromptDirectWithDetails(text: string, userConfig?: Partial<LingualConfig>): Promise<{
+    prompt: string;
+    vocab?: string;
+} | null>;
 declare function rewritePromptDirect(text: string, userConfig?: Partial<LingualConfig>): Promise<string | null>;
 /**
  * Mode 3 (N-Choice Interactive Prompt Selector):
@@ -286,12 +290,13 @@ declare function rewritePromptDirect(text: string, userConfig?: Partial<LingualC
  */
 declare function generatePromptCandidates(text: string, userConfig?: Partial<LingualConfig>): Promise<PromptCandidate[] | null>;
 /**
- * Mode 4 (`off` Mode Active 0-Token Context Shield):
- * Physically strips `<skill>...<name>lingual-tuner</name>...</skill>` from `systemPrompt` when `mode === "off"`
- * (unless the user explicitly mentions `lingual` or `伴学` to re-configure it), guaranteeing 0.00 bytes of LLM context overhead.
+ * On-Demand Tuner Skill Gate (`stripLingualContextWhenOff`):
+ * Physically strips `<skill>...<name>lingual-tuner</name>...</skill>` from `systemPrompt` on normal turns
+ * across ALL modes, keeping it ONLY when the user explicitly invokes `/lingual tuner` (`tunerArmed === true`)
+ * or explicitly asks to tune `pi-lingual`. Guarantees 0.00 bytes of LLM context overhead during normal coding.
  */
-declare function stripLingualContextWhenOff(systemPrompt: string, lastUserText?: string): string;
-declare const CURRENT_FEATURE_BANNER_VERSION = "0.5.2";
+declare function stripLingualContextWhenOff(systemPrompt: string, lastUserText?: string, tunerArmed?: boolean): string;
+declare const CURRENT_FEATURE_BANNER_VERSION = "0.5.3";
 /**
  * 4-Stage Multi-Probe Native Language Resolution for the In-Pi Release Banner:
  * 1. Explicit `sourceLang` persisted in `~/.pi/agent/lingual.json` (highest priority).
@@ -307,4 +312,4 @@ declare function resolveReleaseBannerLang(explicitSourceLang?: string, sessionEn
  */
 declare function formatReleaseBannerLines(sourceLang?: string, maxCols?: number, fg?: (color: string, text: string) => string): string[];
 
-export { CANNOT_START_LINE_CHARS, CURRENT_FEATURE_BANNER_VERSION, DEFAULT_CONFIG, LINGUAL_SYSTEM_PROMPT, LINGUA_SYSTEM_PROMPT, LingualConfig, LingualI18nLabels, LingualResult, LingualSessionController, MAX_TRANSLATION_CHARS, MAX_TRANSLATION_LINES, type PaginationSnapshot, PromptCandidate, type SessionRequestToken, SlotConfig, extractVocabPhrases, formatCapsuleLine, formatNativeReplyGuardHint, formatReleaseBannerLines, formatSubRail, formatTerminalAnnotation, formatTreeBranch, formatVocabItemsAtomic, generatePromptCandidates, getEffectiveMaxCols, getVisualWidth, invalidateUserConfigCache, isDynamicLongInput, isNonEnglish, loadUserConfig, loadUserLingualConfig, renderCardLayout, resolveReleaseBannerLang, rewritePromptDirect, shouldInjectNativeReplyGuard, shouldTriggerTranslation, splitSemanticChunks, spotlightPhrases, stripLinguaAnnotation, stripLingualAnnotation, stripLingualContextWhenOff, translatePrompt, truncateVisual, wrapVisualText };
+export { CANNOT_START_LINE_CHARS, CURRENT_FEATURE_BANNER_VERSION, DEFAULT_CONFIG, LINGUAL_SYSTEM_PROMPT, LINGUA_SYSTEM_PROMPT, LingualConfig, LingualI18nLabels, LingualResult, LingualSessionController, MAX_TRANSLATION_CHARS, MAX_TRANSLATION_LINES, type PaginationSnapshot, PromptCandidate, type SessionRequestToken, SlotConfig, extractVocabPhrases, formatCapsuleLine, formatNativeReplyGuardHint, formatReleaseBannerLines, formatSubRail, formatTerminalAnnotation, formatTreeBranch, formatVocabItemsAtomic, generatePromptCandidates, getEffectiveMaxCols, getVisualWidth, invalidateUserConfigCache, isDynamicLongInput, isNonEnglish, loadUserConfig, loadUserLingualConfig, renderCardLayout, resolveReleaseBannerLang, rewritePromptDirect, rewritePromptDirectWithDetails, shouldInjectNativeReplyGuard, shouldTriggerTranslation, splitSemanticChunks, spotlightPhrases, stripLinguaAnnotation, stripLingualAnnotation, stripLingualContextWhenOff, translatePrompt, truncateVisual, wrapVisualText };

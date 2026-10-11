@@ -9,11 +9,12 @@ import {
   getDefaultPromptSlots,
   generatePromptCandidates,
   rewritePromptDirect,
+  rewritePromptDirectWithDetails,
   stripLingualContextWhenOff,
 } from "../src/engine.js";
 import { LingualLruCache } from "../src/cache.js";
 
-test("extension command matrix - registers standardized lingual command suite", () => {
+test("extension command matrix - registers 4 core commands without menu clutter", () => {
   const registeredCommands: Record<string, any> = {};
 
   const mockPi: any = {
@@ -26,25 +27,17 @@ test("extension command matrix - registers standardized lingual command suite", 
 
   extensionFactory(mockPi);
 
-  // Standardized lingual suite
-  assert.ok(registeredCommands["lingual"], "Must register /lingual");
-  assert.ok(registeredCommands["lingual-mode"], "Must register /lingual-mode");
-  assert.ok(registeredCommands["lingual-lang"], "Must register /lingual-lang");
-  assert.ok(registeredCommands["lingual-compact"], "Must register /lingual-compact");
-  assert.ok(registeredCommands["lingual-model"], "Must register /lingual-model");
-  assert.ok(registeredCommands["lingual-status"], "Must register /lingual-status");
-  assert.ok(registeredCommands["lingual-last"], "Must register /lingual-last");
-  assert.ok(registeredCommands["lingual-agent"], "Must register /lingual-agent");
-
-  // Standalone intuitive developer commands
-  assert.ok(registeredCommands["lang"], "Must register standalone /lang");
-  assert.ok(registeredCommands["slots"], "Must register standalone /slots");
+  // Only 4 core commands registered in Pi's / menu
+  assert.deepEqual(
+    Object.keys(registeredCommands).sort(),
+    ["lang", "last", "lingual", "slots"],
+    "Must register strictly the 4 core commands (/lingual, /lang, /slots, /last)"
+  );
   assert.equal(registeredCommands["compact"], undefined, "Must NOT occupy Pi core /compact command");
-  assert.ok(registeredCommands["status"], "Must register standalone /status");
-  assert.ok(registeredCommands["last"], "Must register standalone /last");
+  assert.equal(registeredCommands["status"], undefined, "Must NOT hijack generic /status command");
 });
 
-test("extension /lingual - supports explicit mode arguments and cycle fallback", async () => {
+test("extension /lingual - supports explicit mode arguments, 1/2/3/0 jumps, and cycle fallback", async () => {
   const registeredCommands: Record<string, any> = {};
   const mockPi: any = {
     on() {},
@@ -57,37 +50,66 @@ test("extension /lingual - supports explicit mode arguments and cycle fallback",
   extensionFactory(mockPi);
 
   const notifications: string[] = [];
+  let lastStatusVal: any = "initial";
   const mockCtx: any = {
+    hasUI: true,
     ui: {
       notify(msg: string) {
         notifications.push(msg);
       },
-      setStatus() {},
+      setStatus(_key: string, val: any) {
+        lastStatusVal = val;
+      },
       setWidget() {},
+      theme: { fg: (_c: string, t: string) => t },
     },
   };
 
-  // 1. Explicitly switch to English mode
-  await registeredCommands["lingual"].handler("english", mockCtx);
-  assert.ok(notifications[notifications.length - 1].includes("英文") || notifications[notifications.length - 1].includes("English"));
+  // 1. Explicitly switch to Mode 2 (Direct Rewrite / english)
+  await registeredCommands["lingual"].handler("2", mockCtx);
+  assert.ok(
+    notifications[notifications.length - 1].includes("英文") ||
+      notifications[notifications.length - 1].includes("English") ||
+      notifications[notifications.length - 1].includes("直出")
+  );
+  assert.ok(typeof lastStatusVal === "string" && lastStatusVal.includes("⚡"));
 
-  // 2. Explicitly switch to Off mode
-  await registeredCommands["lingual-mode"].handler("off", mockCtx);
-  assert.ok(notifications[notifications.length - 1].includes("关闭") || notifications[notifications.length - 1].includes("disabled") || notifications[notifications.length - 1].includes("off"));
+  // 2. Explicitly switch to Mode 0 (Off) — status bar badge MUST become undefined (0 visual pixels)
+  await registeredCommands["lingual"].handler("0", mockCtx);
+  assert.ok(
+    notifications[notifications.length - 1].includes("关闭") ||
+      notifications[notifications.length - 1].includes("disabled") ||
+      notifications[notifications.length - 1].includes("off")
+  );
+  assert.equal(lastStatusVal, undefined, "Off mode must hide status bar badge completely (undefined)");
 
-  // 3. Explicitly switch to Original mode
-  await registeredCommands["lingual"].handler("original", mockCtx);
-  assert.ok(notifications[notifications.length - 1].includes("原文") || notifications[notifications.length - 1].includes("Original"));
+  // 3. Explicitly switch to Mode 1 (Original + Learn)
+  await registeredCommands["lingual"].handler("1", mockCtx);
+  assert.ok(
+    notifications[notifications.length - 1].includes("原文") ||
+      notifications[notifications.length - 1].includes("Original")
+  );
+  assert.ok(typeof lastStatusVal === "string" && lastStatusVal.length > 0);
 
-  // 4. Cycle without arguments: original -> english
+  // 4. Cycle without arguments: original (1) -> english (2) -> select (3) -> off (0) -> original (1)
   await registeredCommands["lingual"].handler("", mockCtx);
-  assert.ok(notifications[notifications.length - 1].includes("英文") || notifications[notifications.length - 1].includes("English"));
+  assert.ok(
+    notifications[notifications.length - 1].includes("英文") ||
+      notifications[notifications.length - 1].includes("English") ||
+      notifications[notifications.length - 1].includes("直出")
+  );
+
+  await registeredCommands["lingual"].handler("", mockCtx);
+  assert.ok(notifications[notifications.length - 1].includes("select"));
+
+  await registeredCommands["lingual"].handler("", mockCtx);
+  assert.equal(lastStatusVal, undefined, "Cycling into off mode must clear status bar badge");
 
   // Teardown: back to original
-  await registeredCommands["lingual"].handler("original", mockCtx);
+  await registeredCommands["lingual"].handler("1", mockCtx);
 });
 
-test("extension /lingual-compact - toggles capsule and tree layout with notification", async () => {
+test("extension /lingual compact - toggles capsule and tree layout with notification", async () => {
   const registeredCommands: Record<string, any> = {};
   const mockPi: any = {
     on() {},
@@ -109,8 +131,8 @@ test("extension /lingual-compact - toggles capsule and tree layout with notifica
     },
   };
 
-  // Toggle on
-  await registeredCommands["lingual-compact"].handler("", mockCtx);
+  // Toggle on via /lingual compact
+  await registeredCommands["lingual"].handler("compact", mockCtx);
   assert.ok(notifications.length > 0);
   assert.ok(
     notifications[notifications.length - 1].includes("胶囊") ||
@@ -119,7 +141,7 @@ test("extension /lingual-compact - toggles capsule and tree layout with notifica
   );
 
   // Toggle off
-  await registeredCommands["lingual-compact"].handler("", mockCtx);
+  await registeredCommands["lingual"].handler("compact", mockCtx);
   assert.ok(notifications.length > 1);
   assert.ok(
     notifications[notifications.length - 1].includes("树状") ||
@@ -166,8 +188,8 @@ test("standalone /lang and language normalization - switches languages and handl
   await registeredCommands["lang"].handler("zh ja", mockCtx);
   assert.ok(notifications[notifications.length - 1].includes("zh ⇄ ja"));
 
-  // 5. Standalone /lingual-compact command
-  await registeredCommands["lingual-compact"].handler("", mockCtx);
+  // 5. Subcommand /lingual compact
+  await registeredCommands["lingual"].handler("compact", mockCtx);
   assert.ok(
     notifications[notifications.length - 1].includes("胶囊") ||
     notifications[notifications.length - 1].includes("Capsule") ||
@@ -177,7 +199,7 @@ test("standalone /lang and language normalization - switches languages and handl
 
   // Teardown: Restore to zh ➔ en and tree layout
   await registeredCommands["lang"].handler("zh", mockCtx);
-  await registeredCommands["lingual-compact"].handler("", mockCtx);
+  await registeredCommands["lingual"].handler("compact", mockCtx);
 });
 
 test("master command dispatcher - routes subcommands in /lingual smoothly", async () => {
@@ -309,15 +331,16 @@ test("v0.4.1 Mode 2 Direct Rewrite & Mode 3 N-Choice Prompt Selector", async () 
   assert.equal(defaultPromptSlots.length, 3);
   assert.deepEqual(defaultPromptSlots.map((s) => s.id), ["concise", "spec", "deep"]);
 
-  // 2. Mode 2 Direct Rewrite System Prompt & execution (with custom promptLang and promptRule)
+  // 2. Mode 2 Direct Rewrite System Prompt & execution (with custom promptLang and multiple stacked promptRules)
   const directSys = buildDirectRewriteSystemPrompt({
     sourceLang: "zh",
     targetLang: "en",
     promptLang: "zh",
-    promptRule: "遵循最小工作 Diff 原则，严禁无关重构",
+    promptRule: ["遵循最小工作 Diff 原则，严禁无关重构", "修改前先定位根因"],
   });
   assert.ok(directSys.includes("Chinese (Simplified)"));
-  assert.ok(directSys.includes("遵循最小工作 Diff 原则，严禁无关重构"));
+  assert.ok(directSys.includes("(1) 遵循最小工作 Diff 原则，严禁无关重构"));
+  assert.ok(directSys.includes("(2) 修改前先定位根因"));
 
   const rewritten = await rewritePromptDirect("那个登录刷新老掉线，帮我看看是不是cookie问题", {
     sourceLang: "zh",
@@ -366,6 +389,32 @@ test("v0.4.1 Mode 2 Direct Rewrite & Mode 3 N-Choice Prompt Selector", async () 
     complete: async () => `{"prompt": "Fix the "login" session bug in src/auth.ts"}`,
   });
   assert.equal(rewrittenUnescaped, 'Fix the "login" session bug in src/auth.ts');
+
+  // 5. Hybrid learnInRewrite mode extracts both optimized prompt and 1-line vocab takeaway (#anc-2)
+  const hybridSys = buildDirectRewriteSystemPrompt({
+    sourceLang: "zh",
+    targetLang: "en",
+    promptLang: "en",
+    promptRule: ["minimal", "root-cause"],
+    learnInRewrite: true,
+  });
+  assert.ok(hybridSys.includes("Smallest Working Diff"), "Must expand 'minimal' preset rule");
+  assert.ok(hybridSys.includes("shared root cause"), "Must expand 'root-cause' preset rule");
+  assert.ok(hybridSys.includes('"vocab"'), "Must request vocab field when learnInRewrite is true");
+
+  const hybridRes = await rewritePromptDirectWithDetails("登录刷新老掉线，帮我查查根因", {
+    sourceLang: "zh",
+    targetLang: "en",
+    learnInRewrite: true,
+    complete: async () =>
+      JSON.stringify({
+        prompt: "Trace the root cause of session loss on page refresh.",
+        vocab: "session loss (会话丢失) · root cause (根本原因)",
+      }),
+  });
+  assert.ok(hybridRes);
+  assert.equal(hybridRes!.prompt, "Trace the root cause of session loss on page refresh.");
+  assert.equal(hybridRes!.vocab, "session loss (会话丢失) · root cause (根本原因)");
 });
 
 test("v0.4.1 Mode 4 Active 0-Token Context Shield in off mode & /lingual select routing", async () => {
@@ -383,14 +432,16 @@ test("v0.4.1 Mode 4 Active 0-Token Context Shield in off mode & /lingual select 
     "</available_skills>",
   ].join("\n");
 
-  // When in off mode on normal coding input, lingual-tuner skill is physically stripped (0 tokens)
-  const stripped = stripLingualContextWhenOff(samplePromptWithSkill, "fix the login bug in src/auth.ts");
-  assert.ok(!stripped.includes("lingual-tuner"), "Must strip lingual-tuner skill block in off mode");
+  // On normal coding input, lingual-tuner skill is physically stripped across ALL modes (0 tokens)
+  const stripped = stripLingualContextWhenOff(samplePromptWithSkill, "fix the login bug in src/auth.ts", false);
+  assert.ok(!stripped.includes("lingual-tuner"), "Must strip lingual-tuner skill block during normal coding");
   assert.ok(stripped.includes("other-skill"), "Must preserve other skills untouched");
 
-  // When user explicitly mentions lingual or 伴学, keep skill available so they can reconfigure
-  const preserved = stripLingualContextWhenOff(samplePromptWithSkill, "帮我配置伴学槽位");
-  assert.ok(preserved.includes("lingual-tuner"));
+  // Only when user explicitly arms tuner (/lingual tuner) or requests 定制伴学 is the skill retained
+  const preservedByFlag = stripLingualContextWhenOff(samplePromptWithSkill, "把改写设为母语", true);
+  assert.ok(preservedByFlag.includes("lingual-tuner"), "Must retain lingual-tuner when tunerArmed is true");
+  const preservedByKeyword = stripLingualContextWhenOff(samplePromptWithSkill, "帮我定制伴学槽位", false);
+  assert.ok(preservedByKeyword.includes("lingual-tuner"));
 
   // Verify /lingual select mode switch and before_agent_start hook in extension
   const registeredCommands: Record<string, any> = {};
@@ -421,27 +472,40 @@ test("v0.4.1 Mode 4 Active 0-Token Context Shield in off mode & /lingual select 
   await registeredCommands["lingual"].handler("select", mockCtx);
   assert.ok(notifications[notifications.length - 1].includes("select"));
 
+  // Verify /lingual rule and /lingual target subcommands
+  await registeredCommands["lingual"].handler("target native", mockCtx);
+  assert.ok(notifications[notifications.length - 1].includes("native"));
+  await registeredCommands["lingual"].handler("rule 保持最小改动", mockCtx);
+  assert.ok(notifications[notifications.length - 1].includes("保持最小改动"));
+  await registeredCommands["lingual"].handler("rule 先定位根因", mockCtx);
+  assert.ok(notifications[notifications.length - 1].includes("2"));
+  await registeredCommands["lingual"].handler("rule clear", mockCtx);
+  await registeredCommands["lingual"].handler("target reset", mockCtx);
+
   await registeredCommands["lingual"].handler("off", mockCtx);
+  assert.equal((globalThis as any).__piLingualResizeListener, undefined, "Must detach resize listener in off mode");
   assert.ok(beforeAgentStartHandler, "Must register before_agent_start hook for 0-token off shield");
   const hookRes = await beforeAgentStartHandler({ systemPrompt: samplePromptWithSkill }, mockCtx);
   assert.ok(hookRes && !hookRes.systemPrompt.includes("lingual-tuner"));
 
   // Teardown back to original
   await registeredCommands["lingual"].handler("original", mockCtx);
+  assert.ok((globalThis as any).__piLingualResizeListener, "Must re-attach resize listener when leaving off mode");
 
   // Verify localized What's New release banner above editor (all 9 languages, 8 lines, zero emojis, apology included)
   const zhBanner = formatReleaseBannerLines("zh", 80);
   assert.equal(zhBanner.length, 8);
   assert.ok(zhBanner.some((l) => l.includes("抱歉连发了几个 0.5 小版本")));
-  assert.ok(zhBanner.some((l) => l.includes("english 重写模式")));
-  assert.ok(zhBanner.some((l) => l.includes("select 候选模式")));
-  assert.ok(zhBanner.some((l) => l.includes("off 模式彻底净空") && l.includes("0 Token")));
+  assert.ok(zhBanner.some((l) => l.includes("1 原文+伴学")));
+  assert.ok(zhBanner.some((l) => l.includes("2 直出改写")));
+  assert.ok(zhBanner.some((l) => l.includes("3 候选挑一")));
+  assert.ok(zhBanner.some((l) => l.includes("0 彻底无负担") && l.includes("0Token")));
   assert.ok(zhBanner.every((l) => !l.endsWith("...")), "No line should be truncated on an 80-col terminal");
 
   const enBanner = formatReleaseBannerLines("en", 80);
   assert.equal(enBanner.length, 8);
-  assert.ok(enBanner.some((l) => l.includes("Sorry for the rapid 0.5.x patches")));
-  assert.ok(enBanner.some((l) => l.includes("english Mode")));
+  assert.ok(enBanner.some((l) => l.includes("Sorry for the 0.5.x patches")));
+  assert.ok(enBanner.some((l) => l.includes("1 Orig+Learn")));
   assert.ok(enBanner.every((l) => !l.endsWith("...")), "No English line should be truncated on an 80-col terminal");
 
   for (const lang of ["tw", "ja", "ko", "es", "fr", "de", "ru"]) {

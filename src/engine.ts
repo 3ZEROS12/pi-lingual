@@ -39,6 +39,9 @@ import {
   buildDirectRewriteSystemPrompt,
   buildPromptCandidatesSystemPrompt,
   getDefaultPromptSlots,
+  normalizePromptRules,
+  PROMPT_RULE_PRESETS,
+  resolvePromptRulePreset,
   resolvePromptTargetLangName,
 } from "./prompts.js";
 import { shouldShieldBypass } from "./shield.js";
@@ -134,10 +137,16 @@ export function loadUserLingualConfig(): Partial<LingualConfig> {
       ? target.slots.filter((s: any) => s && typeof s === "object" && typeof s.id === "string" && typeof s.label === "string")
       : undefined;
     const promptLang = typeof target.promptLang === "string" ? target.promptLang : undefined;
-    const promptRule = typeof target.promptRule === "string" ? target.promptRule : undefined;
+    const promptRule =
+      typeof target.promptRule === "string"
+        ? target.promptRule
+        : Array.isArray(target.promptRule)
+          ? target.promptRule.map((r: any) => String(r || "").trim()).filter(Boolean)
+          : undefined;
     const promptSlots = Array.isArray(target.promptSlots)
       ? target.promptSlots.filter((s: any) => s && typeof s === "object" && typeof s.id === "string" && typeof s.label === "string")
       : undefined;
+    const learnInRewrite = target.learnInRewrite !== undefined ? Boolean(target.learnInRewrite) : undefined;
     const lastSeenVersion = typeof target.lastSeenVersion === "string" ? target.lastSeenVersion : undefined;
     const reasoning = typeof target.reasoning === "string" ? target.reasoning : undefined;
     const timeoutMs = typeof target.timeoutMs === "number" && Number.isFinite(target.timeoutMs)
@@ -158,6 +167,7 @@ export function loadUserLingualConfig(): Partial<LingualConfig> {
       ...(promptLang ? { promptLang } : {}),
       ...(promptRule ? { promptRule } : {}),
       ...(promptSlots ? { promptSlots } : {}),
+      ...(learnInRewrite !== undefined ? { learnInRewrite } : {}),
       ...(lastSeenVersion ? { lastSeenVersion } : {}),
       ...(sourceLang ? { sourceLang } : {}),
       ...(targetLang ? { targetLang } : {}),
@@ -202,6 +212,9 @@ export {
   buildDirectRewriteSystemPrompt,
   buildPromptCandidatesSystemPrompt,
   getDefaultPromptSlots,
+  normalizePromptRules,
+  PROMPT_RULE_PRESETS,
+  resolvePromptRulePreset,
   resolvePromptTargetLangName,
 };
 
@@ -607,10 +620,10 @@ function extractCleanJsonField(raw: string, fieldName: string): string {
  * (structuring + standardizing + high efficiency + output language + custom rule), returning the new prompt directly
  * without generating vocabulary or spoken learning cards.
  */
-export async function rewritePromptDirect(
+export async function rewritePromptDirectWithDetails(
   text: string,
   userConfig: Partial<LingualConfig> = {}
-): Promise<string | null> {
+): Promise<{ prompt: string; vocab?: string } | null> {
   const trimmed = text.trim();
   if (!trimmed) return null;
 
@@ -626,6 +639,7 @@ export async function rewritePromptDirect(
     targetLang: cfg.targetLang,
     promptLang: cfg.promptLang,
     promptRule: cfg.promptRule,
+    learnInRewrite: Boolean(cfg.learnInRewrite),
   });
 
   const controller = new AbortController();
@@ -665,13 +679,26 @@ export async function rewritePromptDirect(
     }
 
     if (typeof raw !== "string" || !raw.trim()) return null;
-    const rewritten = extractCleanJsonField(raw, "prompt");
-    return rewritten || null;
+    const obj = repairAndParseJsonObject(raw);
+    const rewritten = (obj && typeof obj.prompt === "string" && obj.prompt.trim())
+      ? obj.prompt.trim()
+      : extractCleanJsonField(raw, "prompt");
+    if (!rewritten) return null;
+    const vocab = obj && typeof obj.vocab === "string" && obj.vocab.trim() ? obj.vocab.trim() : undefined;
+    return { prompt: rewritten, ...(vocab ? { vocab } : {}) };
   } catch {
     return null;
   } finally {
     clearTimeout(timer);
   }
+}
+
+export async function rewritePromptDirect(
+  text: string,
+  userConfig: Partial<LingualConfig> = {}
+): Promise<string | null> {
+  const res = await rewritePromptDirectWithDetails(text, userConfig);
+  return res ? res.prompt : null;
 }
 
 /**
@@ -705,6 +732,7 @@ export async function generatePromptCandidates(
     promptLang: cfg.promptLang,
     promptRule: cfg.promptRule,
     promptSlots: slots,
+    learnInRewrite: Boolean(cfg.learnInRewrite),
   });
 
   const controller = new AbortController();
@@ -748,6 +776,7 @@ export async function generatePromptCandidates(
     const obj = repairAndParseJsonObject(raw);
     if (!obj) return null;
 
+    const extractedVocab = typeof obj.vocab === "string" && obj.vocab.trim() ? obj.vocab.trim() : undefined;
     const candidates: PromptCandidate[] = [];
     for (const slot of slots) {
       const val = obj[slot.id];
@@ -756,6 +785,7 @@ export async function generatePromptCandidates(
           id: slot.id,
           label: slot.label,
           content: val.trim(),
+          ...(extractedVocab ? { vocab: extractedVocab } : {}),
         });
       }
     }
@@ -769,13 +799,18 @@ export async function generatePromptCandidates(
 }
 
 /**
- * Mode 4 (`off` Mode Active 0-Token Context Shield):
- * Physically strips `<skill>...<name>lingual-tuner</name>...</skill>` from `systemPrompt` when `mode === "off"`
- * (unless the user explicitly mentions `lingual` or `伴学` to re-configure it), guaranteeing 0.00 bytes of LLM context overhead.
+ * On-Demand Tuner Skill Gate (`stripLingualContextWhenOff`):
+ * Physically strips `<skill>...<name>lingual-tuner</name>...</skill>` from `systemPrompt` on normal turns
+ * across ALL modes, keeping it ONLY when the user explicitly invokes `/lingual tuner` (`tunerArmed === true`)
+ * or explicitly asks to tune `pi-lingual`. Guarantees 0.00 bytes of LLM context overhead during normal coding.
  */
-export function stripLingualContextWhenOff(systemPrompt: string, lastUserText = ""): string {
+export function stripLingualContextWhenOff(
+  systemPrompt: string,
+  lastUserText = "",
+  tunerArmed = false
+): string {
   if (!systemPrompt) return systemPrompt;
-  if (/(?:lingual|伴学|槽位)/i.test(lastUserText)) {
+  if (tunerArmed || /(?:lingual-tuner|\/lingual\s+(?:tuner|tune|agent)|定制伴学|配置伴学)/i.test(lastUserText)) {
     return systemPrompt;
   }
   return systemPrompt.replace(
@@ -784,7 +819,7 @@ export function stripLingualContextWhenOff(systemPrompt: string, lastUserText = 
   );
 }
 
-export const CURRENT_FEATURE_BANNER_VERSION = "0.5.2";
+export const CURRENT_FEATURE_BANNER_VERSION = "0.5.3";
 
 /**
  * 4-Stage Multi-Probe Native Language Resolution for the In-Pi Release Banner:
@@ -870,111 +905,111 @@ export function formatReleaseBannerLines(
 
   const copyByLang: Record<string, BannerSpec> = {
     zh: {
-      title: "· [pi-lingual v0.5.2 更新说明] 不同心境下的权重平衡 (发消息自动收起)",
-      apology: "│ 抱歉连发了几个 0.5 小版本：刚用多语言沙箱实测修好了母语识别与窄屏截断",
+      title: "· [pi-lingual v0.5.3 更新说明] 清晰四态与零负担关闭 (发消息自动收起)",
+      apology: "│ 抱歉连发了几个 0.5 小版本：这次理清了模式命名，并把 off 做到彻底无感",
       rows: [
-        "┌ [english 重写模式] 思路乱时，先把零散口语理顺为清晰工程指令再发给 AI",
-        "│   (敲 /lingual english 切换；可设 promptLang:\"native\" 保母语或叠规范)",
-        "├ [select 候选模式]  一次给出 极简高效 / 结构规范 / 深度严谨 3 种写法供挑选",
-        "│   (敲 /lingual select 切换；回车选 [1]~[3] 发送，选 [0] 或 Esc 保原话)",
-        "├ [自然语言顺手定制] 直接对 AI 说“把提示词重写设为母语并加最小改动”即可生效",
-        "└ [off 模式彻底净空] /lingual off 停用拦截并由钩子剥离技能块 (0 Token 负担)",
+        "┌ [1 原文+伴学]   原话 0ms 直发 + 上方浮现双语伴学卡 (/lingual 1 或循环)",
+        "│ [2 直出改写]   按目标文字 + 多个设定条件直接改写发送 (/lingual 2 切换)",
+        "├ [3 候选挑一]   按多组设定条件生成 N 个候选弹窗挑一发送 (/lingual 3 切换)",
+        "│   (敲 /lingual 循环 1➔2➔3➔0；/lingual learn-on 可在改写时顺带提取重点词)",
+        "├ [按需唤醒定制] 平时 0 技能块注入；敲 /lingual tuner <需求> 按需唤醒配置",
+        "└ [0 彻底无负担] /lingual off 隐藏底栏、停监听、剥离技能块 (0像素 0Token)",
       ],
     },
     tw: {
-      title: "· [pi-lingual v0.5.2 更新說明] 不同心境下的權重平衡 (發訊息自動收起)",
-      apology: "│ 抱歉連發了幾個 0.5 小版本：剛用多語言沙箱實測修好了母語識別與窄屏截斷",
+      title: "· [pi-lingual v0.5.3 更新說明] 清晰四態與零負擔關閉 (發訊息自動收起)",
+      apology: "│ 抱歉連發了幾個 0.5 小版本：這次理清了模式命名，並把 off 做到徹底無感",
       rows: [
-        "┌ [english 重寫模式] 思路亂時，先把零散口語理順為清晰工程指令再發給 AI",
-        "│   (敲 /lingual english 切換；可設 promptLang:\"native\" 保母語或疊規範)",
-        "├ [select 候選模式]  一次給出 極簡高效 / 結構規範 / 深度嚴謹 3 種寫法供挑選",
-        "│   (敲 /lingual select 切換；按 Enter 選 [1]~[3] 發送，[0] 或 Esc 保原話)",
-        "├ [自然語言順手定制] 直接對 AI 說「把提示詞重寫設為母語並加最小改動」即可生效",
-        "└ [off 模式徹底淨空] /lingual off 停用攔截並由鉤子剝離技能塊 (0 Token 負擔)",
+        "┌ [1 原文+伴學]   原話 0ms 直發 + 上方浮現雙語伴學卡 (/lingual 1 或循環)",
+        "│ [2 直出改寫]   按目標文字 + 多個設定條件直接改寫發送 (/lingual 2 切換)",
+        "├ [3 候選挑一]   按多組設定條件生成 N 個候選彈窗挑一發送 (/lingual 3 切換)",
+        "│   (敲 /lingual 循環 1➔2➔3➔0；/lingual learn-on 可在改寫時順帶提取重點詞)",
+        "├ [按需喚醒定制] 平時 0 技能塊注入；敲 /lingual tuner <需求> 按需喚醒配置",
+        "└ [0 徹底無負擔] /lingual off 隱藏底欄、停監聽、剝離技能塊 (0像素 0Token)",
       ],
     },
     ja: {
-      title: "· [pi-lingual v0.5.2 更新案内] 4モード構成 (送信で閉じる)",
-      apology: "│ 0.5系の連続更新をお詫びします：各言語の通知判定と表示切れを修正",
+      title: "· [pi-lingual v0.5.3 更新案内] 4状態整理と完全ゼロ負荷 (送信で閉じる)",
+      apology: "│ 0.5系の連続更新をお詫びします：モード名を整理し off を完全無負荷化",
       rows: [
-        "┌ [english 刷新] 考えが纏まらない時、口語を明快な技術指示へ整理送信",
-        "│   (/lingual english 切替 · promptLang:\"native\" 母語維持や規約追加)",
-        "├ [select 追加]  簡潔・構造化・厳密の 3 候補を並べて選んで送信",
-        "│   (/lingual select 切替 · [1]~[3] 送信、[0] / Esc で原文のまま)",
-        "├ [自然言語調整] AI に「プロンプト最適化を母語にして最小変更追加」で反映",
-        "└ [off 負荷ゼロ] /lingual off でフック停止＋スキル定義も除去 (0 Tok)",
+        "┌ [1 原文+学習]  原文0ms送信＋上部に学習カード表示 (/lingual 1 または順送)",
+        "│ [2 直出改稿]  目標言語＋複数条件で直接書き換えて送信 (/lingual 2 切替)",
+        "├ [3 候補選択]  複数条件で N 個の候補を生成し選んで送信 (/lingual 3 切替)",
+        "│   (/lingual で 1➔2➔3➔0 循環 · /lingual learn-on で改稿時も重要語抽出)",
+        "├ [オンデマンド] 通常時スキル注入ゼロ · /lingual tuner <要望> で設定起動",
+        "└ [0 完全ゼロ化] /lingual off で下部バー非表示・監視停止・0 Token 負荷",
       ],
     },
     ko: {
-      title: "· [pi-lingual v0.5.2 업데이트] 4가지 모드 (입력 시 닫힘)",
-      apology: "│ 0.5 버전의 잦은 업데이트를 사과드립니다: 다국어 감지 및 줄 잘림 수정",
+      title: "· [pi-lingual v0.5.3 업데이트] 4단계 정리 및 완전 무부담 (입력 시 닫힘)",
+      apology: "│ 0.5 버전의 잦은 업데이트를 사과드립니다: 모드 정리 및 off 완전 무부담화",
       rows: [
-        "┌ [english 개편] 생각이 복잡할 때 구어체를 명확한 지시문으로 다듬어 전송",
-        "│   (/lingual english 전환 · promptLang:\"native\" 모국어 및 규칙 추가)",
-        "├ [select 추가]  간결/구조화/심층 3가지 후보를 보고 원하는 표현을 선택",
-        "│   (/lingual select 전환 · [1]~[3] 전송, [0] / Esc 원문 그대로 전송)",
-        "├ [자연어 설정]  AI에게 \"프롬프트 재작성을 모국어로 설정해줘\"로 반영",
-        "└ [off 제로부담] /lingual off 시 입력 후크 해제 및 스킬 제거 (0 Tok)",
+        "┌ [1 원문+학습]  원문 0ms 전송 + 상단 학습 카드 표시 (/lingual 1 또는 순환)",
+        "│ [2 직출개작]   목표 언어 + 복수 조건으로 즉시 다듬어 전송 (/lingual 2)",
+        "├ [3 후보선택]   다중 조건으로 N개 후보 생성 후 골라서 전송 (/lingual 3)",
+        "│   (/lingual 입력 시 1➔2➔3➔0 순환 · /lingual learn-on 으로 어휘 병행)",
+        "├ [맞춤 설정]    평소 스킬 주입 0 · /lingual tuner <요청> 시에만 설정 기동",
+        "└ [0 완전무부담] /lingual off 시 하단바 숨김·감시 해제·스킬 제거 (0 Tok)",
       ],
     },
     es: {
-      title: "· [Novedades pi-lingual v0.5.2] 4 modos para tu flujo (se cierra al enviar)",
-      apology: "│ Disculpas por los parches 0.5.x: corregimos el idioma nativo del aviso",
+      title: "· [pi-lingual v0.5.3] 4 estados y modo off sin carga (cierra al enviar)",
+      apology: "│ Disculpas por los parches 0.5.x: aclaramos modos y off es 100% limpio",
       rows: [
-        "┌ [Modo english] Reescribe ideas confusas en instrucciones claras al enviar",
-        "│   (Usa /lingual english; admite promptLang:\"native\" y reglas promptRule)",
-        "├ [Modo select]  Genera 3 candidatos (Conciso / Estructurado / Profundo)",
-        "│   (Usa /lingual select; elige [1]~[3] o pulsa [0] / Esc para el original)",
-        "├ [Ajuste libre] Pide al Agente: \"Pon reescritura en mi idioma + diff mínimo\"",
-        "└ [Modo off 0-Tok] /lingual off detiene hooks y quita el skill (0 tokens)",
+        "┌ [1 Orig+Aprender] Envía 0ms + tarjeta arriba (/lingual 1 o en ciclo)",
+        "│ [2 Reescritura]   Idioma meta + condiciones ➔ envío 1a1 (/lingual 2)",
+        "├ [3 Elegir N]      Idioma meta + N estilos ➔ menú elegir (/lingual 3)",
+        "│   (Cicla 1➔2➔3➔0 con /lingual; /lingual learn-on extrae vocabulario)",
+        "├ [Tuner a demanda] 0 tokens en prompt normal; usa /lingual tuner <req>",
+        "└ [0 Off Cero-Carga] /lingual off oculta barra, quita hooks y 0 tokens",
       ],
     },
     fr: {
-      title: "· [Nouveautés pi-lingual v0.5.2] 4 modes à votre rythme (fermé à l'envoi)",
-      apology: "│ Désolé pour les patchs 0.5.x rapides : détection de langue corrigée ici",
+      title: "· [pi-lingual v0.5.3] 4 états clairs et off zéro charge (fermé à l'envoi)",
+      apology: "│ Désolé pour les patchs 0.5.x : modes clarifiés et off 100% invisible",
       rows: [
-        "┌ [Mode english] Structure vos idées brouillonnes en instructions claires",
-        "│   (Via /lingual english ; option promptLang:\"native\" et règles promptRule)",
-        "├ [Mode select]  Génère 3 candidats (Concis / Structuré / Approfondi)",
-        "│   (Via /lingual select ; [1]~[3] pour envoyer, [0] ou Esc pour l'original)",
-        "├ [Réglage libre] Dites à l'Agent : \"Mets la réécriture dans ma langue\"",
-        "└ [Mode off 0-Tok] /lingual off coupe les hooks et retire le skill (0 token)",
+        "┌ [1 Orig+Étude]    Envoi 0ms + carte d'étude (/lingual 1 ou en cycle)",
+        "│ [2 Réécriture]    Langue cible + conditions ➔ envoi 1à1 (/lingual 2)",
+        "├ [3 Choix N]       Langue cible + N styles ➔ menu choix (/lingual 3)",
+        "│   (Cyclez 1➔2➔3➔0 via /lingual ; /lingual learn-on extrait le vocab)",
+        "├ [Tuner à demande] 0 token normal ; tapez /lingual tuner <besoin>",
+        "└ [0 Off Invisible] /lingual off masque barre, coupe hooks et 0 token",
       ],
     },
     de: {
-      title: "· [pi-lingual v0.5.2 Update] 4 Modi für Ihren Workflow (schließt bei Eingabe)",
-      apology: "│ Entschuldigung für die 0.5.x Patches: Spracherkennung im Banner behoben",
+      title: "· [pi-lingual v0.5.3] 4 klare Modi & Null-Last in Off (schließt bei Senden)",
+      apology: "│ Entschuldigung für die 0.5.x Patches: Modi klar & off 100% unsichtbar",
       rows: [
-        "┌ [english-Modus] Strukturiert unklare Gedanken vor dem Senden in Prompts",
-        "│   (Per /lingual english; unterstützt promptLang:\"native\" & promptRule)",
-        "├ [select-Modus]  Erzeugt 3 Vorschläge (Prägnant / Strukturiert / Tief)",
-        "│   (Per /lingual select; [1]~[3] senden, [0] oder Esc behält Originaltext)",
-        "├ [Freie Anpassung] Sagen Sie dem Agenten: \"Rewrite auf Muttersprache setzen\"",
-        "└ [off-Modus 0-Tok] /lingual off stoppt Hooks & entfernt Skill-Block (0 Tok)",
+        "┌ [1 Orig+Lernen]   0ms Senden + Lernkarte oben (/lingual 1 oder Zyklus)",
+        "│ [2 Direkt-Rewrite] Zielsprache + Bedingungen ➔ direkt (/lingual 2)",
+        "├ [3 N-Auswahl]     Zielsprache + N Stile ➔ Auswahlmenü (/lingual 3)",
+        "│   (/lingual wechselt 1➔2➔3➔0; /lingual learn-on zeigt Vokabel-Zeile)",
+        "├ [On-Demand Tuner] 0 Skill-Tokens im Alltag; /lingual tuner <Wunsch>",
+        "└ [0 Off Null-Last] /lingual off blendet Leiste aus, 0 Hooks & 0 Tok",
       ],
     },
     ru: {
-      title: "· [Обновление pi-lingual v0.5.2] 4 режима работы (закроется при вводе)",
-      apology: "│ Извините за серию патчей 0.5.x: исправлено определение родного языка",
+      title: "· [pi-lingual v0.5.3] 4 четких режима и ноль нагрузки в off",
+      apology: "│ Извините за патчи 0.5.x: уточнили режимы и сделали off невидимым",
       rows: [
-        "┌ [Режим english] Превращает черновой ввод в четкую инструкцию для ИИ",
-        "│   (Через /lingual english; поддержка promptLang:\"native\" и promptRule)",
-        "├ [Режим select]  Генерирует 3 варианта (Краткий / Структурный / Глубокий)",
-        "│   (Через /lingual select; [1]~[3] отправить, [0] или Esc — оригинал)",
-        "├ [Гибкая настройка] Скажите Агенту: \"Поставь перезапись на родной язык\"",
-        "└ [Режим off 0-Tok] /lingual off отключает хуки и удаляет skill (0 токенов)",
+        "┌ [1 Ориг+Учеба]    Отправка 0мс + карточка сверху (/lingual 1 / цикл)",
+        "│ [2 Прямой рерайт] Язык цели + условия ➔ отправка 1к1 (/lingual 2)",
+        "├ [3 Выбор из N]    Язык цели + N стилей ➔ меню выбора (/lingual 3)",
+        "│   (/lingual листает 1➔2➔3➔0; /lingual learn-on добавляет словарь)",
+        "├ [Tuner по запросу] 0 токенов обычно; вызывайте /lingual tuner <запрос>",
+        "└ [0 Off Без следа] /lingual off скрывает строку, 0 хуков и 0 токенов",
       ],
     },
     en: {
-      title: "· [pi-lingual v0.5.2 Release Notes] 4 modes for your flow (closes on input)",
-      apology: "│ Sorry for the rapid 0.5.x patches — fixed native language banner & width",
+      title: "· [pi-lingual v0.5.3] Clear 4-State Flow & Zero-Load Off (closes on send)",
+      apology: "│ Sorry for the 0.5.x patches — clarified mode names & off is 100% clean",
       rows: [
-        "┌ [english Mode] Structures messy phrasing into a clear engineering prompt",
-        "│   (Via /lingual english; supports promptLang:\"native\" & custom promptRule)",
-        "├ [select Mode]  Generates Concise / Structured / Deep candidates to pick",
-        "│   (Via /lingual select; pick [1]~[3] to send, or [0] / Esc for original)",
-        "├ [Easy Tuning]  Tell your Agent \"Set prompt rewrite to native + minimal diff\"",
-        "└ [off 0-Token]  /lingual off stops hooks & strips skill block (0-token load)",
+        "┌ [1 Orig+Learn]    0ms raw send + learning card above (/lingual 1 / cycle)",
+        "│ [2 Direct Rewrite] Target lang + conditions ➔ 1-to-1 send (/lingual 2)",
+        "├ [3 Pick of N]     Target lang + N style slots ➔ popup picker (/lingual 3)",
+        "│   (Cycle 1➔2➔3➔0 via /lingual; /lingual learn-on adds 1-line vocab row)",
+        "├ [On-Demand Tuner] 0 skill tokens by default; run /lingual tuner <request>",
+        "└ [0 Zero-Load Off] /lingual off hides status bar, detaches hooks & 0 tok",
       ],
     },
   };

@@ -20,12 +20,16 @@ import { getEffectiveMaxCols } from "./layout.js";
 import {
   translatePrompt,
   rewritePromptDirect,
+  rewritePromptDirectWithDetails,
   generatePromptCandidates,
   stripLingualContextWhenOff,
   formatReleaseBannerLines,
   resolveReleaseBannerLang,
   CURRENT_FEATURE_BANNER_VERSION,
   getDefaultPromptSlots,
+  normalizePromptRules,
+  PROMPT_RULE_PRESETS,
+  resolvePromptRulePreset,
   shouldTriggerTranslation,
   loadUserLingualConfig,
   invalidateUserConfigCache,
@@ -69,8 +73,9 @@ interface ExtensionState {
   slotPreset: string;
   slots: SlotConfig[];
   promptLang: string;
-  promptRule: string;
+  promptRule: string | string[];
   promptSlots: PromptSlotConfig[];
+  learnInRewrite: boolean;
   labels: LingualI18nLabels;
 }
 
@@ -107,6 +112,7 @@ const state: ExtensionState = {
   promptLang: initialDiskConfig.promptLang || "",
   promptRule: initialDiskConfig.promptRule || "",
   promptSlots: initialPromptSlots,
+  learnInRewrite: Boolean(initialDiskConfig.learnInRewrite),
   labels: initialLabels,
 };
 
@@ -132,7 +138,16 @@ function saveUserLingualConfig(patch: Record<string, any>) {
     }
 
     for (const [k, v] of Object.entries(patch)) {
-      if (v === undefined || v === "" || v === "auto" || v === "original" || (k === "compact" && v === false)) {
+      const isEmptyArray = Array.isArray(v) && v.length === 0;
+      if (
+        v === undefined ||
+        v === "" ||
+        isEmptyArray ||
+        v === "auto" ||
+        v === "original" ||
+        (k === "compact" && v === false) ||
+        (k === "learnInRewrite" && v === false)
+      ) {
         delete existing[k]; // 恢复默认值时物理移除键，零残留回滚 (RFC 2119 Invariant 1)
       } else {
         existing[k] = v;
@@ -199,23 +214,27 @@ function updateFooter(ctx: ExtensionContext | null | undefined) {
       pair += ` · ${state.slotPreset}`;
     }
 
+    const ruleCount = normalizePromptRules(state.promptRule).length;
+    const ruleBadge = ruleCount > 0 ? `+${ruleCount}` : "";
+
     switch (state.mode) {
       case "original":
         ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", pair));
         break;
       case "english": {
         const outLang = state.promptLang || state.targetLang;
-        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", `${pair} · ⚡${outLang}`));
+        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", `${pair} · ⚡${outLang}${ruleBadge}`));
         break;
       }
       case "select": {
         const outLang = state.promptLang || state.targetLang;
         const count = (state.promptSlots || []).filter((s) => s.enabled !== false).length || 3;
-        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", `${pair} · ✦${count}-${outLang}`));
+        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", `${pair} · ✦${count}-${outLang}${ruleBadge}`));
         break;
       }
       case "off":
-        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("muted", `${pair}: off`));
+        // 彻底隐身：处于 off 关闭状态时，完全移除底栏徽标 (0 像素视觉占用)
+        ctx.ui.setStatus("lingual", undefined as any);
         break;
     }
   } catch {
@@ -315,6 +334,7 @@ export default function (pi: ExtensionAPI) {
   let resizeTimer: NodeJS.Timeout | undefined;
   let lastRawInputText = "";
   let showingReleaseBanner = false;
+  let tunerArmed = false;
 
   const renderReleaseBanner = (ctx: ExtensionContext, explicitLang?: string) => {
     if (!hasActiveUI(ctx)) return;
@@ -332,6 +352,7 @@ export default function (pi: ExtensionAPI) {
   };
 
   const onResize = () => {
+    if (state.mode === "off") return;
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
       const active = session.getActiveResult() || session.getLastResult();
@@ -340,12 +361,20 @@ export default function (pi: ExtensionAPI) {
       }
     }, 120);
   };
-  const prevResize = (globalThis as any).__piLingualResizeListener;
-  if (prevResize && process.stdout && typeof (process.stdout as any).off === "function") {
-    (process.stdout as any).off("resize", prevResize);
-  }
-  (globalThis as any).__piLingualResizeListener = onResize;
-  process.stdout?.on("resize", onResize);
+
+  const syncResizeListener = () => {
+    const prevResize = (globalThis as any).__piLingualResizeListener;
+    if (prevResize && process.stdout && typeof (process.stdout as any).off === "function") {
+      (process.stdout as any).off("resize", prevResize);
+    }
+    if (state.mode === "off") {
+      (globalThis as any).__piLingualResizeListener = undefined;
+      return;
+    }
+    (globalThis as any).__piLingualResizeListener = onResize;
+    process.stdout?.on("resize", onResize);
+  };
+  syncResizeListener();
 
   const clearPendingTimers = () => {
     if (polishTimer) {
@@ -364,16 +393,25 @@ export default function (pi: ExtensionAPI) {
     session.reset();
     lastContext = ctx;
     showingReleaseBanner = false;
+    const diskCfg = loadUserLingualConfig();
+    if (diskCfg.mode) {
+      state.mode = diskCfg.mode;
+    }
+    syncResizeListener();
     if (hasActiveUI(ctx)) {
       safeClearWidget(ctx);
-      // 重大功能升级速览卡片：当用户首次升级到 v0.4 四态架构时，在输入框上方按用户母语展示一次更新速览，发消息后自动收起
-      const diskCfg = loadUserLingualConfig();
-      if (!isTestEnvironment() && event?.reason !== "resume" && diskCfg.lastSeenVersion !== CURRENT_FEATURE_BANNER_VERSION) {
+      // 重大功能升级速览卡片：仅在未处于 off 隐身模式且首次升级时展示一次，发消息后自动收起
+      if (
+        state.mode !== "off" &&
+        !isTestEnvironment() &&
+        event?.reason !== "resume" &&
+        diskCfg.lastSeenVersion !== CURRENT_FEATURE_BANNER_VERSION
+      ) {
         renderReleaseBanner(ctx, diskCfg.sourceLang);
         saveUserLingualConfig({ lastSeenVersion: CURRENT_FEATURE_BANNER_VERSION });
       }
     }
-    // 0 侵扰冷启动：静默点亮状态栏指示，绝不弹窗打断敲代码心流
+    // 0 侵扰冷启动：若处于 off 则底栏彻底为空 (undefined)
     updateFooter(ctx);
   });
 
@@ -386,12 +424,14 @@ export default function (pi: ExtensionAPI) {
     }
   });
 
-  // 【主动 0-Token 上下文护盾 (Active 0-Token Context Shield in `off` Mode)】：
-  // 当用户处于 `off` 关闭模式时，主动从 System Prompt 中剥离 lingual-tuner 技能块（除非用户主动提及 lingual/伴学 要重新配置），实现真正的 0 字节上下文占用！
+  // 【按需激活 Tuner 零上下文护盾 (On-Demand Tuner Skill Gate)】：
+  // 默认在所有模式 (1/2/3/0) 下自动从 System Prompt 中剥离 lingual-tuner 技能块（0 字节开销）；
+  // 仅当用户显式敲下 `/lingual tuner` (tunerArmed === true) 或主动提及定制伴学时才按需放行该技能。
   pi.on("before_agent_start" as any, async (event: any) => {
-    if (state.mode !== "off") return;
+    const armedForTurn = tunerArmed;
+    tunerArmed = false;
     if (!event?.systemPrompt || typeof event.systemPrompt !== "string") return;
-    const cleaned = stripLingualContextWhenOff(event.systemPrompt, lastRawInputText);
+    const cleaned = stripLingualContextWhenOff(event.systemPrompt, lastRawInputText, armedForTurn);
     if (cleaned !== event.systemPrompt) {
       return { systemPrompt: cleaned };
     }
@@ -420,6 +460,7 @@ export default function (pi: ExtensionAPI) {
       trimmed === "eng" ||
       trimmed === "refine" ||
       trimmed === "rewrite" ||
+      trimmed === "direct" ||
       trimmed === "2"
     ) {
       nextMode = "english";
@@ -431,12 +472,18 @@ export default function (pi: ExtensionAPI) {
       trimmed === "3"
     ) {
       nextMode = "select";
-    } else if (trimmed === "original" || trimmed === "orig" || trimmed === "1") {
+    } else if (
+      trimmed === "original" ||
+      trimmed === "orig" ||
+      trimmed === "learn" ||
+      trimmed === "companion" ||
+      trimmed === "1"
+    ) {
       nextMode = "original";
     } else if (trimmed === "off" || trimmed === "0" || trimmed === "disable" || trimmed === "stop") {
       nextMode = "off";
     } else {
-      // 缺省或无参数时，平滑四态模式循环轮转 (original ➔ english ➔ select ➔ off ➔ original)
+      // 缺省或无参数时，平滑四态模式循环轮转 (1.原文+伴学 ➔ 2.直出改写 ➔ 3.候选挑一 ➔ 0.彻底关闭)
       nextMode =
         state.mode === "original"
           ? "english"
@@ -448,18 +495,30 @@ export default function (pi: ExtensionAPI) {
     }
 
     state.mode = nextMode;
-    // 【核心根治 1 · 状态持久化落盘】：每次切换模式立即物理持久化到 settings.json，彻底杜绝重载时回退到 original！
+    // 【核心根治 1 · 状态持久化落盘】：每次切换模式立即物理持久化到 lingual.json，彻底杜绝重载时回退！
     saveUserLingualConfig({ mode: nextMode });
+    syncResizeListener();
+    if (nextMode === "off") {
+      clearPendingTimers();
+      session.reset();
+      globalLingualCache.clear();
+      safeClearWidget(ctx);
+    }
     updateFooter(ctx);
 
     const isZh = state.sourceLang === "zh" || state.sourceLang === "tw";
     const outLang = state.promptLang || state.targetLang;
+    const rules = normalizePromptRules(state.promptRule);
+    const ruleSummary = rules.length > 0 ? ` + ${rules.length}项设定条件` : "";
+    const ruleSummaryEn = rules.length > 0 ? ` + ${rules.length} rule(s)` : "";
 
     if (nextMode === "english") {
       try {
         ctx.ui.notify(
           state.labels.notifyEnglish ||
-            `[${state.labels.hudTitle}] Switched to [English / Direct Rewrite] mode (Output: ${outLang})`,
+            (isZh
+              ? `[${state.labels.hudTitle}] [2/3 直出改写] 目标文字: ${outLang}${ruleSummary} ➔ 直接改写发送 (敲 /lingual 1|2|3|0 可直达)`
+              : `[${state.labels.hudTitle}] [2/3 Direct Rewrite] Target: ${outLang}${ruleSummaryEn} ➔ 1-to-1 send (/lingual 1|2|3|0)`),
           "info"
         );
       } catch {}
@@ -471,17 +530,18 @@ export default function (pi: ExtensionAPI) {
       try {
         ctx.ui.notify(
           isZh
-            ? `[${state.labels.hudTitle}] 已切换至 [多风格候选填入 (select)] 模式 (${slotLabels} ➔ 输出语言: ${outLang})`
-            : `[${state.labels.hudTitle}] Switched to [N-Choice Prompt Selector (select)] mode (${slotLabels} ➔ Output: ${outLang})`,
+            ? `[${state.labels.hudTitle}] [3/3 候选挑一 (select)] 目标文字: ${outLang}${ruleSummary} · 候选(${slotLabels}) (敲 /lingual 1|2|3|0 可直达)`
+            : `[${state.labels.hudTitle}] [3/3 Pick of N (select)] Target: ${outLang}${ruleSummaryEn} · Slots(${slotLabels}) (/lingual 1|2|3|0)`,
           "info"
         );
       } catch {}
     } else if (nextMode === "off") {
-      safeClearWidget(ctx);
       try {
         ctx.ui.notify(
           state.labels.notifyOff ||
-            `[${state.labels.hudTitle}] Companion turned off (Active 0-Token Context Shield engaged)`,
+            (isZh
+              ? `[${state.labels.hudTitle}] [0 已彻底关闭] 底栏隐藏 · 监听已卸 · 0 Token 零负担 (敲 /lingual 重新开启)`
+              : `[${state.labels.hudTitle}] [0 Off] Status hidden · listeners detached · 0-token footprint`),
           "info"
         );
       } catch {}
@@ -489,7 +549,9 @@ export default function (pi: ExtensionAPI) {
       try {
         ctx.ui.notify(
           state.labels.notifyOriginal ||
-            `[${state.labels.hudTitle}] Switched to [Original] mode: Input kept in native language, translations shown above`,
+            (isZh
+              ? `[${state.labels.hudTitle}] [1/3 原文+伴学] 原话 0ms 直发 + 上方浮现伴学卡 (敲 /lingual 1|2|3|0 可直达)`
+              : `[${state.labels.hudTitle}] [1/3 Orig+Learn] 0ms raw send + learning card above (/lingual 1|2|3|0)`),
           "info"
         );
       } catch {}
@@ -951,9 +1013,43 @@ export default function (pi: ExtensionAPI) {
       return;
     }
 
-    // 6. 子命令路由: 伴学定制指南 (/lingual agent 或 /lingual help)
-    if (sub === "agent" || sub === "help" || sub === "?") {
+    // 6. 子命令路由: 按需唤醒 Tuner 定制技能 (/lingual tuner [需求] 或 /lingual agent)
+    if (sub === "tuner" || sub === "tune" || sub === "agent" || sub === "help" || sub === "?") {
+      tunerArmed = true;
+      const isZh = state.sourceLang === "zh" || state.sourceLang === "tw";
+      if (subArgs && typeof (pi as any).sendUserMessage === "function") {
+        (pi as any).sendUserMessage(
+          isZh
+            ? `[lingual-tuner] 请读取 lingual-tuner 技能并按以下需求直接修改 ~/.pi/agent/lingual.json：${subArgs}`
+            : `[lingual-tuner] Please load the lingual-tuner skill and update ~/.pi/agent/lingual.json for: ${subArgs}`
+        );
+        return;
+      }
       await showAgentGuideHandler(subArgs, ctx);
+      return;
+    }
+
+    // 6.05 子命令路由: 改写模式下顺带提取重点词汇伴学开关 (/lingual learn-on | learn-off)
+    if (sub === "learn-on" || sub === "learn-off" || sub === "learn-in-rewrite") {
+      const isZh = state.sourceLang === "zh" || state.sourceLang === "tw";
+      const nextVal =
+        sub === "learn-on"
+          ? true
+          : sub === "learn-off"
+            ? false
+            : subArgs.trim() === "on" || subArgs.trim() === "true"
+              ? true
+              : subArgs.trim() === "off" || subArgs.trim() === "false"
+                ? false
+                : !state.learnInRewrite;
+      state.learnInRewrite = nextVal;
+      saveUserLingualConfig({ learnInRewrite: nextVal });
+      ctx.ui.notify(
+        isZh
+          ? `[改写兼顾伴学] 已${nextVal ? "开启 (在状态 2/3 改写卡片底部同步展示一行重点词)" : "关闭 (状态 2/3 仅展示纯粹改写提示词)"}`
+          : `[Learn in Rewrite] ${nextVal ? "Enabled (shows 1-line vocab takeaway in Mode 2/3)" : "Disabled (pure prompt rewrite)"}`,
+        "info"
+      );
       return;
     }
 
@@ -964,15 +1060,119 @@ export default function (pi: ExtensionAPI) {
       return;
     }
 
-    // 7. 模式切换优先: 显式模式关键词 (/lingual original, /lingual english, /lingual select, /lingual off, /lingual mode ...)
+    // 6.2 子命令路由: 设定改写目标语言 (/lingual target <en|native|zh|ja...>)
+    if (sub === "target" || sub === "outlang" || sub === "promptlang") {
+      const val = subArgs.trim().toLowerCase();
+      const isZh = state.sourceLang === "zh" || state.sourceLang === "tw";
+      if (!val) {
+        const cur = state.promptLang || `${state.targetLang} (default)`;
+        ctx.ui.notify(
+          isZh
+            ? `[改写目标语言] 当前: ${cur} · 用法: /lingual target <en|native|zh|ja>`
+            : `[Rewrite Target Lang] Current: ${cur} · Usage: /lingual target <en|native|zh|ja>`,
+          "info"
+        );
+        return;
+      }
+      state.promptLang = val === "default" || val === "reset" ? "" : val;
+      saveUserLingualConfig({ promptLang: state.promptLang });
+      updateFooter(ctx);
+      ctx.ui.notify(
+        isZh
+          ? `[改写目标语言] 已设为: ${state.promptLang || state.targetLang}`
+          : `[Rewrite Target Lang] Set to: ${state.promptLang || state.targetLang}`,
+        "info"
+      );
+      return;
+    }
+
+    // 6.3 子命令路由: 管理改写设定条件 (/lingual rule [add|rm|clear|<条件>])
+    if (sub === "rule" || sub === "rules" || sub === "cond") {
+      const isZh = state.sourceLang === "zh" || state.sourceLang === "tw";
+      const currentRules = normalizePromptRules(state.promptRule);
+      const argTrim = subArgs.trim();
+
+      if (!argTrim || argTrim === "list") {
+        if (currentRules.length === 0) {
+          ctx.ui.notify(
+            isZh
+              ? `[改写设定条件] 当前无附加条件 · 添加: /lingual rule <条件内容>`
+              : `[Rewrite Conditions] None set · Add: /lingual rule <condition>`,
+            "info"
+          );
+        } else {
+          const listStr = currentRules.map((r, i) => `  [${i + 1}] ${r}`).join("\n");
+          ctx.ui.notify(
+            isZh
+              ? `[改写设定条件 (${currentRules.length}项)]\n${listStr}\n(用 /lingual rule add <条件> 追加，/lingual rule clear 清空)`
+              : `[Rewrite Conditions (${currentRules.length})]\n${listStr}\n(Use /lingual rule add <cond> or /lingual rule clear)`,
+            "info"
+          );
+        }
+        return;
+      }
+
+      if (argTrim === "clear" || argTrim === "reset" || argTrim === "off") {
+        state.promptRule = [];
+        saveUserLingualConfig({ promptRule: [] });
+        updateFooter(ctx);
+        ctx.ui.notify(
+          isZh ? `[改写设定条件] 已清空全部附加设定条件` : `[Rewrite Conditions] Cleared all conditions`,
+          "info"
+        );
+        return;
+      }
+
+      if (argTrim.startsWith("rm ") || argTrim.startsWith("del ")) {
+        const target = argTrim.replace(/^(?:rm|del)\s+/i, "").trim();
+        const idx = parseInt(target, 10) - 1;
+        const nextRules = !Number.isNaN(idx) && idx >= 0 && idx < currentRules.length
+          ? currentRules.filter((_, i) => i !== idx)
+          : currentRules.filter((r) => !r.includes(target));
+        state.promptRule = nextRules;
+        saveUserLingualConfig({ promptRule: nextRules });
+        updateFooter(ctx);
+        ctx.ui.notify(
+          isZh
+            ? `[改写设定条件] 已移除，当前剩余 ${nextRules.length} 项条件`
+            : `[Rewrite Conditions] Removed; ${nextRules.length} condition(s) active`,
+          "info"
+        );
+        return;
+      }
+
+      const rawRule = argTrim.replace(/^add\s+/i, "").trim();
+      const toAdd = resolvePromptRulePreset(rawRule);
+      const nextRules = currentRules.includes(toAdd) ? currentRules : [...currentRules, toAdd];
+      state.promptRule = nextRules;
+      saveUserLingualConfig({ promptRule: nextRules });
+      updateFooter(ctx);
+      ctx.ui.notify(
+        isZh
+          ? `[改写设定条件] 已叠加第 ${nextRules.length} 项条件: "${toAdd}"`
+          : `[Rewrite Conditions] Added condition #${nextRules.length}: "${toAdd}"`,
+        "info"
+      );
+      return;
+    }
+
+    // 7. 模式切换优先: 显式模式关键词或数字直达 (/lingual 1|2|3|0|learn|rewrite|select|off)
     if (
       sub === "mode" ||
+      sub === "1" ||
+      sub === "2" ||
+      sub === "3" ||
+      sub === "0" ||
+      sub === "learn" ||
+      sub === "companion" ||
       sub === "original" ||
       sub === "english" ||
       sub === "refine" ||
       sub === "rewrite" ||
+      sub === "direct" ||
       sub === "select" ||
       sub === "choices" ||
+      sub === "choice" ||
       sub === "pick" ||
       sub === "off" ||
       sub === "orig" ||
@@ -993,85 +1193,35 @@ export default function (pi: ExtensionAPI) {
     await setModeHandler(trimmed, ctx);
   };
 
-  // 主命令总线 (支持所有子命令与平滑三态模式轮转)
+  // 精简命令矩阵：仅在 Pi 的 / 菜单注册 4 个核心命令 (/lingual, /lang, /slots, /last)，零菜单刷屏负担
   pi.registerCommand("lingual", {
-    description: state.labels.cmdDescMode || "Switch or manage companion: /lingual [lang|slots|compact|model|status|last|original|english|off]",
+    description:
+      state.labels.cmdDescMode ||
+      "Cycle mode (1:Learn ➔ 2:Rewrite ➔ 3:Select ➔ 0:Off) or manage: /lingual [1|2|3|0|lang|slots|rule|target|compact|model|status|last]",
     handler: masterCommandHandler,
   });
 
-  // 独立模式切换命令
-  pi.registerCommand("lingual-mode", {
-    description: state.labels.cmdDescMode || "Set companion mode: /lingual-mode <original|english|off>",
-    handler: setModeHandler,
-  });
-
-  // 独立槽位架构配置命令 (/slots, /lingual-slots)
-  pi.registerCommand("slots", {
-    description: state.labels.cmdDescSlots || "Inspect, add, remove, or customize dynamic slots: /slots [add|rm|toggle|reset]",
-    handler: switchSlotsHandler,
-  });
-
-  pi.registerCommand("lingual-slots", {
-    description: state.labels.cmdDescSlots || "Dynamic slots management (alias): /lingual-slots [add|rm|toggle|reset]",
-    handler: switchSlotsHandler,
-  });
-
-  // 独立语言切换命令 (首选直觉命令 /lang 及全称别名)
   pi.registerCommand("lang", {
-    description: state.labels.cmdDescLang || "Switch companion language: /lang <zh|ja|en|es|fr|de> [target]",
+    description: state.labels.cmdDescLang || "Switch companion language: /lang <zh|ja|ko|en|es|fr|de|ru> [target]",
     handler: switchLangHandler,
   });
 
-  pi.registerCommand("lingual-lang", {
-    description: state.labels.cmdDescLang || "Switch companion language (alias): /lingual-lang <zh|ja|en|es|fr|de>",
-    handler: switchLangHandler,
+  pi.registerCommand("slots", {
+    description: state.labels.cmdDescSlots || "Inspect or customize companion & prompt slots: /slots [add|rm|toggle|reset]",
+    handler: switchSlotsHandler,
   });
 
-  // 独立胶囊紧凑布局命令 (仅保留全称 /lingual-compact，绝不占用 Pi 内置的 /compact 会话上下文压缩命令)
-  pi.registerCommand("lingual-compact", {
-    description: state.labels.cmdDescCompact || "Toggle single-line capsule mode: /lingual-compact",
-    handler: toggleCompactHandler,
-  });
-
-  // 独立伴学模型配置命令
-  pi.registerCommand("lingual-model", {
-    description: state.labels.cmdDescModel || "Inspect or switch companion model: /lingual-model [model-id|auto]",
-    handler: setModelHandler,
-  });
-
-  // 独立状态报告命令 (/status, /lingual-status)
-  pi.registerCommand("status", {
-    description: state.labels.cmdDescStatus || "Display companion status report: /status",
-    handler: showStatusHandler,
-  });
-
-  pi.registerCommand("lingual-status", {
-    description: state.labels.cmdDescStatus || "Display companion status report (alias): /lingual-status",
-    handler: showStatusHandler,
-  });
-
-  // 独立历史回显命令 (支持直觉命令 /last 及全名)
   pi.registerCommand("last", {
     description: state.labels.cmdDescLast || "Replay previous companion card: /last",
     handler: showLastHandler,
   });
 
-  pi.registerCommand("lingual-last", {
-    description: state.labels.cmdDescLast || "Replay previous companion card (alias): /lingual-last",
-    handler: showLastHandler,
-  });
-
-  // 伴学定制指南
-  pi.registerCommand("lingual-agent", {
-    description: state.labels.cmdDescAgent || "View companion customization and language guide: /lingual-agent",
-    handler: showAgentGuideHandler,
-  });
-
   if (typeof pi.registerShortcut === "function") {
-    // 快捷键支持：使用 Alt+. 与 Alt+,（对应 US 键盘 > 与 < 左右方向，零系统冲突）
+    // 快捷键支持：使用 Alt+. 与 Alt+,（处于 off 时直接静默返回）
     pi.registerShortcut("alt+.", {
       description: state.labels.shortcutNextPage || "Switch to next companion segment",
       handler: async (ctx) => {
+        if (state.mode === "off") return;
         if (session.nextPage()) {
           renderActiveCard(ctx);
         }
@@ -1081,6 +1231,7 @@ export default function (pi: ExtensionAPI) {
     pi.registerShortcut("alt+,", {
       description: state.labels.shortcutPrevPage || "Switch to previous companion segment",
       handler: async (ctx) => {
+        if (state.mode === "off") return;
         if (session.prevPage()) {
           renderActiveCard(ctx);
         }
@@ -1188,6 +1339,9 @@ export default function (pi: ExtensionAPI) {
     }
     if (latestDisk.promptSlots && Array.isArray(latestDisk.promptSlots)) {
       state.promptSlots = latestDisk.promptSlots;
+    }
+    if (latestDisk.learnInRewrite !== undefined) {
+      state.learnInRewrite = Boolean(latestDisk.learnInRewrite);
     }
 
     const raw = event.text.trim();
@@ -1320,6 +1474,7 @@ export default function (pi: ExtensionAPI) {
           promptLang: state.promptLang || undefined,
           promptRule: state.promptRule || undefined,
           promptSlots: state.promptSlots,
+          learnInRewrite: state.learnInRewrite,
           complete: completer,
           signal,
         });
@@ -1331,6 +1486,7 @@ export default function (pi: ExtensionAPI) {
 
         const maxCols = getEffectiveMaxCols();
         const singleLineSource = promptToTranslate.replace(/\s*\r?\n\s*/g, " ↵ ");
+        const candidateVocab = state.learnInRewrite ? candidates[0]?.vocab : undefined;
         const candidateSlotResults: SlotResult[] = [
           { id: "source", label: state.labels.sourceLabel || "原文", role: "source", content: singleLineSource },
           ...candidates.map((c, idx) => ({
@@ -1339,6 +1495,9 @@ export default function (pi: ExtensionAPI) {
             role: "translation" as const,
             content: c.content.replace(/\s*\r?\n\s*/g, " ↵ "),
           })),
+          ...(candidateVocab
+            ? [{ id: "vocab", label: state.labels.vocabLabel || "重点", role: "vocab" as const, content: candidateVocab }]
+            : []),
         ];
         session.setPageResult(
           0,
@@ -1346,6 +1505,7 @@ export default function (pi: ExtensionAPI) {
             sourceText: singleLineSource,
             spoken: candidates[0].content.replace(/\s*\r?\n\s*/g, " ↵ "),
             written: candidates[1]?.content.replace(/\s*\r?\n\s*/g, " ↵ ") || "",
+            vocab: candidateVocab,
             annotated: "",
             slots: candidateSlotResults,
           },
@@ -1359,8 +1519,10 @@ export default function (pi: ExtensionAPI) {
               maxCols
             ),
           ];
-          candidates.slice(0, 6).forEach((c, idx, arr) => {
-            const branch = idx === 0 ? "┌" : idx === arr.length - 1 ? "└" : "├";
+          const sliced = candidates.slice(0, 6);
+          sliced.forEach((c, idx, arr) => {
+            const isLastRow = idx === arr.length - 1 && !candidateVocab;
+            const branch = idx === 0 ? "┌" : isLastRow ? "└" : "├";
             const oneLineContent = c.content.replace(/\s*\r?\n\s*/g, " ↵ ");
             previewLines.push(
               truncateVisual(
@@ -1369,6 +1531,14 @@ export default function (pi: ExtensionAPI) {
               )
             );
           });
+          if (candidateVocab) {
+            previewLines.push(
+              truncateVisual(
+                `  ${ctx.ui.theme.fg("dim", `└ [${state.labels.vocabLabel || "重点"}]`)} ${candidateVocab}`,
+                maxCols
+              )
+            );
+          }
           try {
             ctx.ui.setWidget("lingual_hud", previewLines, { placement: "aboveEditor" });
           } catch {}
@@ -1453,11 +1623,12 @@ export default function (pi: ExtensionAPI) {
     }
 
     try {
-      const rewritten = await rewritePromptDirect(promptToTranslate, {
+      const rewriteDetail = await rewritePromptDirectWithDetails(promptToTranslate, {
         sourceLang: state.sourceLang,
         targetLang: state.targetLang,
         promptLang: state.promptLang || undefined,
         promptRule: state.promptRule || undefined,
+        learnInRewrite: state.learnInRewrite,
         complete: completer,
         signal,
       });
@@ -1466,7 +1637,7 @@ export default function (pi: ExtensionAPI) {
         return { action: "continue" };
       }
 
-      if (!rewritten) {
+      if (!rewriteDetail || !rewriteDetail.prompt) {
         if (hasActiveUI(ctx)) {
           try {
             ctx.ui.setWidget("lingual_hud", undefined);
@@ -1477,7 +1648,10 @@ export default function (pi: ExtensionAPI) {
         return { action: "continue" };
       }
 
-      // 纯粹展示「原话 vs 重写后的新提示词」，并同步至 session 以支撑窗口缩放重绘与 /last 回看
+      const rewritten = rewriteDetail.prompt;
+      const rewriteVocab = state.learnInRewrite ? rewriteDetail.vocab : undefined;
+
+      // 展示「原话 vs 重写后的新提示词」（若开启 learnInRewrite 则顺带展示一行重点词），并同步至 session
       const outLang = (state.promptLang || state.targetLang || "en").toLowerCase().split("-")[0];
       const singleLineSource = promptToTranslate.replace(/\s*\r?\n\s*/g, " ↵ ");
       const singleLineRewritten = rewritten.replace(/\s*\r?\n\s*/g, " ↵ ");
@@ -1487,10 +1661,14 @@ export default function (pi: ExtensionAPI) {
           sourceText: singleLineSource,
           spoken: singleLineRewritten,
           written: "",
+          vocab: rewriteVocab,
           annotated: "",
           slots: [
             { id: "source", label: state.labels.sourceLabel || "原文", role: "source", content: singleLineSource },
             { id: "rewritten", label: `⚡${outLang.toUpperCase()}`, role: "translation", content: singleLineRewritten },
+            ...(rewriteVocab
+              ? [{ id: "vocab", label: state.labels.vocabLabel || "重点", role: "vocab" as const, content: rewriteVocab }]
+              : []),
           ],
         },
         generation
@@ -1499,16 +1677,25 @@ export default function (pi: ExtensionAPI) {
       if (hasActiveUI(ctx)) {
         try {
           const maxCols = getEffectiveMaxCols();
+          const rewriteBranch = rewriteVocab ? "┌" : "└";
           const previewLines = [
             truncateVisual(
               `  ${ctx.ui.theme.fg("muted", `· [${state.labels.sourceLabel || "原文"}]`)} ${singleLineSource}`,
               maxCols
             ),
             truncateVisual(
-              `  ${ctx.ui.theme.fg("accent", `└ [⚡${outLang.toUpperCase()}]`)} ${singleLineRewritten}`,
+              `  ${ctx.ui.theme.fg("accent", `${rewriteBranch} [⚡${outLang.toUpperCase()}]`)} ${singleLineRewritten}`,
               maxCols
             ),
           ];
+          if (rewriteVocab) {
+            previewLines.push(
+              truncateVisual(
+                `  ${ctx.ui.theme.fg("dim", `└ [${state.labels.vocabLabel || "重点"}]`)} ${rewriteVocab}`,
+                maxCols
+              )
+            );
+          }
           ctx.ui.setWidget("lingual_hud", previewLines, { placement: "aboveEditor" });
         } catch {}
       }

@@ -725,43 +725,76 @@ export function resolvePromptTargetLangName(
   };
 }
 
+export const PROMPT_RULE_PRESETS: Record<string, string> = {
+  minimal: "Follow the Smallest Working Diff principle; never refactor or touch unrelated code.",
+  "root-cause": "Trace the end-to-end execution flow to fix the shared root cause rather than applying surface symptom patches.",
+  tdd: "Verify boundary edge cases and run physical tests before declaring completion.",
+  "explain-zh": "Keep code and identifiers exact, and provide all explanations and analysis in Chinese.",
+};
+
+export function resolvePromptRulePreset(input: string): string {
+  const key = input.trim().toLowerCase();
+  return PROMPT_RULE_PRESETS[key] || input.trim();
+}
+
+export function normalizePromptRules(rule?: string | string[]): string[] {
+  if (!rule) return [];
+  if (Array.isArray(rule)) {
+    return rule.map((r) => resolvePromptRulePreset(String(r || ""))).filter(Boolean);
+  }
+  const s = resolvePromptRulePreset(String(rule));
+  return s ? [s] : [];
+}
+
 /**
  * Mode 2 (Direct Rewrite): Build a focused Prompt Optimizer system prompt.
- * Does NOT generate companion vocabulary cards — 100% dedicated to structuring, standardizing,
- * and optimizing the user's messy prompt for maximum coding efficiency.
+ * Equipped with Golden Few-Shot Anchors, Zero-AI-Slop Imperative Guard, and optional 1-line Vocab extraction (`learnInRewrite`).
  */
 export function buildDirectRewriteSystemPrompt(options: {
   sourceLang?: string;
   targetLang?: string;
   promptLang?: string;
-  promptRule?: string;
+  promptRule?: string | string[];
+  learnInRewrite?: boolean;
 }): string {
+  const normSource = (options.sourceLang || "zh").toLowerCase().split("-")[0];
   const { name: outLangName } = resolvePromptTargetLangName(
     options.sourceLang,
     options.targetLang,
     options.promptLang
   );
+  const spec = LANGUAGE_SPECS[normSource] || LANGUAGE_SPECS.zh;
 
-  const customRuleBlock = options.promptRule && options.promptRule.trim()
-    ? `\n\n[USER CUSTOM SPECIFICATION & STACKED RULES - MANDATORY]:
-Weave and enforce the following user-specified requirements directly into the rewritten prompt:
-"""
-${options.promptRule.trim()}
-"""`
+  const rules = normalizePromptRules(options.promptRule);
+  const customRuleBlock = rules.length > 0
+    ? `\n\n[USER CUSTOM SPECIFICATION & STACKED CONDITIONS - MANDATORY]:
+Weave and enforce the following user-specified condition(s) directly into the rewritten prompt:
+${rules.map((r, i) => `(${i + 1}) ${r}`).join("\n")}`
     : "";
+
+  const learnBlock = options.learnInRewrite
+    ? `\n5. **Companion Takeaway ("vocab")**: Also extract 2–3 high-value authentic English technical expressions or collocations relevant to this prompt as a single inline string \`term (meaning) · term2 (meaning)\` ${spec.vocabInstruction}.`
+    : "";
+
+  const jsonSchema = options.learnInRewrite
+    ? `{\n  "prompt": "...",\n  "vocab": "term1 (...) · term2 (...)"\n}`
+    : `{\n  "prompt": "..."\n}`;
 
   return `You are an elite AI Coding Prompt Architect.
 The user is typing a raw, potentially messy, colloquial, or fragmented instruction for an AI coding agent.
-Your sole task is to rewrite, structure, standardize, and optimize their input into a high-efficiency, unambiguous engineering prompt in **${outLangName}**:
-1. **Structure & Clarify**: Distill rambling or colloquial thoughts into a logical, well-structured instruction without losing any concrete detail or question.
-2. **Standardize & Sharpen**: Use precise software engineering terminology in **${outLangName}** and eliminate conversational filler.
-3. **High-Efficiency Alignment**: Keep the prompt concise, direct, and actionable — never invent unrequested features or bloat scope.
-4. **Code & Symbol Shield**: Preserve all inline code (\`foo()\`), file paths (@file, path/to/file), CLI flags, and identifiers 100% verbatim.${customRuleBlock}
+Rewrite, structure, standardize, and optimize their input into a high-efficiency, unambiguous engineering prompt in **${outLangName}**:
+1. **Direct Imperative Opening (Zero AI Slop)**: Start immediately with a clear action verb (e.g., "Fix", "Trace", "Refactor", "排查", "修复"). NEVER use robotic preambles like "As an expert software engineer, please comprehensively..." or "I would like you to...".
+2. **100% Intent Fidelity (Zero Hallucination)**: Clarify logic and sharpen terminology in **${outLangName}**, but NEVER invent unmentioned file names, libraries, or speculative requirements.
+3. **Proportional Density**: Keep short requests crisp (1–2 sentences); structure multi-constraint requests into clean clauses.
+4. **Code & Symbol Shield**: Preserve all inline code (\`foo()\`), file paths (@file, path/to/file), CLI flags, and identifiers 100% verbatim.${learnBlock}${customRuleBlock}
+
+[GOLDEN FEW-SHOT ANCHORS (Target: ${outLangName})]:
+- Input: "那个登录刷新一下就掉线，帮我看看是不是 src/auth.ts 里 cookie 过期时间写错了，别乱改别的地方"
+  Output in English: "Inspect \`src/auth.ts\` to diagnose and fix session loss on page refresh, specifically checking cookie expiration settings while keeping the diff minimal and leaving unrelated code untouched."
+  Output in Chinese (Simplified): "排查并修复 \`src/auth.ts\` 中页面刷新后登录态丢失的问题：重点检查 Cookie 过期时间配置，保持最小改动面，严禁修改无关代码。"
 
 Strict JSON format:
-{
-  "prompt": "..."
-}
+${jsonSchema}
 Output valid JSON ONLY. Never output markdown code fences or explanations.`;
 }
 
@@ -773,8 +806,9 @@ export function buildPromptCandidatesSystemPrompt(options: {
   sourceLang?: string;
   targetLang?: string;
   promptLang?: string;
-  promptRule?: string;
+  promptRule?: string | string[];
   promptSlots?: PromptSlotConfig[];
+  learnInRewrite?: boolean;
 }): string {
   const normSource = (options.sourceLang || "zh").toLowerCase().split("-")[0];
   const { name: outLangName } = resolvePromptTargetLangName(
@@ -782,6 +816,7 @@ export function buildPromptCandidatesSystemPrompt(options: {
     options.targetLang,
     options.promptLang
   );
+  const spec = LANGUAGE_SPECS[normSource] || LANGUAGE_SPECS.zh;
 
   const slots = (Array.isArray(options.promptSlots) && options.promptSlots.length > 0
     ? options.promptSlots
@@ -794,22 +829,29 @@ export function buildPromptCandidatesSystemPrompt(options: {
     (s, idx) => `${idx + 1}. "${s.id}" (${s.label}): ${s.instruction} (MUST be written in **${outLangName}**)`
   );
   const jsonProps = activeSlots.map((s) => `  "${s.id}": "..."`);
+  if (options.learnInRewrite) {
+    taskLines.push(
+      `${activeSlots.length + 1}. "vocab": Extract 2–3 high-value authentic English technical expressions or collocations relevant to this prompt as a single inline string \`term (meaning) · term2 (meaning)\` ${spec.vocabInstruction}.`
+    );
+    jsonProps.push(`  "vocab": "term1 (...) · term2 (...)"`);
+  }
 
-  const customRuleBlock = options.promptRule && options.promptRule.trim()
-    ? `\n\n[USER CUSTOM SPECIFICATION & STACKED RULES - MANDATORY]:
-Ensure every generated candidate incorporates the following user-specified requirements:
-"""
-${options.promptRule.trim()}
-"""`
+  const rules = normalizePromptRules(options.promptRule);
+  const customRuleBlock = rules.length > 0
+    ? `\n\n[USER CUSTOM SPECIFICATION & STACKED CONDITIONS - MANDATORY]:
+Ensure every generated candidate incorporates the following user-specified condition(s):
+${rules.map((r, i) => `(${i + 1}) ${r}`).join("\n")}`
     : "";
 
   return `You are an elite AI Coding Prompt Architect.
 The user is typing a raw, potentially messy or colloquial instruction for an AI coding agent.
-Generate ${activeSlots.length} distinct, optimized prompt candidates in **${outLangName}** corresponding to the following styles so the user can choose the best one to send:
+Generate ${activeSlots.length} distinct, orthogonal prompt candidates in **${outLangName}** so the user can choose the best one to send:
 ${taskLines.join("\n")}
 
-[CODE & SYMBOL SHIELD - STRICT RULE]:
-All inline code (\`foo()\`), file paths (@file, path/to/file), CLI flags, and technical identifiers MUST be preserved 100% verbatim in every candidate.${customRuleBlock}
+[STRICT QUALITY GUARDRAILS]:
+- **Direct Imperative Opening**: Start every candidate directly with an action verb; NEVER output filler preambles ("Please kindly...", "As an AI...").
+- **100% Intent Fidelity**: Never hallucinate unmentioned files or speculative features.
+- **Code & Symbol Shield**: Preserve all inline code (\`foo()\`), file paths (@file, path/to/file), CLI flags, and technical identifiers 100% verbatim in every candidate.${customRuleBlock}
 
 Strict JSON format:
 {
