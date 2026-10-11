@@ -890,8 +890,8 @@ ${jsonProps.join(",\n")}
 
 [LONG INPUT CONDENSATION DIRECTIVE]:
 The user's input text has multiple clauses or sentences.
-1. You MUST preserve and translate EVERY clause and question from start to finish \u2014 NEVER drop the second half or final question of the user's message!
-2. Keep the phrasing tight and high-density (under 20 words) so the complete meaning of all sentences fits cleanly on 1-2 lines without mid-sentence truncation.` : "";
+CRITICAL: You MUST preserve and translate EVERY clause and question from start to finish \u2014 NEVER drop the second half or final question of the user's message!
+Keep the phrasing tight and high-density (under 20 words) so the complete meaning of all sentences fits cleanly on 1-2 lines without mid-sentence truncation.` : "";
     const contextDirective2 = context && context.trim() ? `
 
 [CONVERSATION & THREAD CONTEXT]:
@@ -932,8 +932,8 @@ Output: ${JSON.stringify({
 
 [LONG INPUT CONDENSATION DIRECTIVE]:
 The user's input text has multiple clauses or sentences.
-1. You MUST preserve and translate EVERY clause and question from start to finish (both in "summary" and in "spoken"/"written") \u2014 NEVER omit the second half or final question of the user's message!
-2. Express all points tightly and concisely (under 22 words each) so the complete meaning fits cleanly within 2 lines without truncation.` : "";
+CRITICAL: You MUST preserve and translate EVERY clause and question from start to finish (both in "summary" and in "spoken"/"written") \u2014 NEVER omit the second half or final question of the user's message!
+Express all points tightly and concisely (under 22 words each) so the complete meaning fits cleanly within 2 lines without truncation.` : "";
   const contextDirective = context && context.trim() ? `
 
 [CONVERSATION & THREAD CONTEXT]:
@@ -2616,96 +2616,135 @@ function saveUserLingualConfig(patch) {
 }
 var session = new LingualSessionController();
 var lastContext = null;
+function hasActiveUI(ctx) {
+  if (!ctx) return false;
+  try {
+    return Boolean(ctx.hasUI && ctx.ui);
+  } catch {
+    return false;
+  }
+}
 function updateFooter(ctx) {
-  if (!ctx.hasUI) return;
-  let pair = `${state.sourceLang} \u21C4 ${state.targetLang}`;
-  const enabledSlots = (state.slots || []).filter((s) => s.enabled);
-  const hasSource = enabledSlots.some((s) => s.role === "source");
-  const nonSourceCount = enabledSlots.filter((s) => s.role !== "source").length;
-  if (!hasSource) {
-    pair += ` \xB7 no-src`;
-  }
-  if (nonSourceCount !== 2) {
-    pair += ` \xB7 ${enabledSlots.length}s`;
-  } else if (state.slotPreset) {
-    pair += ` \xB7 ${state.slotPreset}`;
-  }
-  switch (state.mode) {
-    case "original":
-    case "english":
-      ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", pair));
-      break;
-    case "off":
-      ctx.ui.setStatus("lingual", ctx.ui.theme.fg("muted", `${pair}: off`));
-      break;
+  if (!hasActiveUI(ctx)) return;
+  try {
+    let pair = `${state.sourceLang} \u21C4 ${state.targetLang}`;
+    const enabledSlots = (state.slots || []).filter((s) => s.enabled);
+    const hasSource = enabledSlots.some((s) => s.role === "source");
+    const nonSourceCount = enabledSlots.filter((s) => s.role !== "source").length;
+    if (!hasSource) {
+      pair += ` \xB7 no-src`;
+    }
+    if (nonSourceCount !== 2) {
+      pair += ` \xB7 ${enabledSlots.length}s`;
+    } else if (state.slotPreset) {
+      pair += ` \xB7 ${state.slotPreset}`;
+    }
+    switch (state.mode) {
+      case "original":
+      case "english":
+        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", pair));
+        break;
+      case "off":
+        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("muted", `${pair}: off`));
+        break;
+    }
+  } catch {
   }
 }
 function renderHudWidget(ctx, sourceText, spoken, written, vocab, spokenMeaning, writtenMeaning, pagination) {
-  if (!ctx.hasUI) return;
-  const isCompact = state.compact || (process.stdout?.rows ? process.stdout.rows < 22 : false);
-  const maxCols = Math.max(30, (process.stdout?.columns || 80) - 8);
-  const pageTag = pagination && pagination.totalPages > 1 ? ctx.ui.theme.fg("muted", ` [${pagination.pageIndex + 1}/${pagination.totalPages} \u2325.]`) : "";
-  const lines = renderCardLayout(
-    {
-      spoken,
-      written: written || "",
-      vocab,
-      spokenMeaning,
-      writtenMeaning,
-      sourceText,
-      annotated: ""
-    },
-    state.labels,
-    {
-      maxCols,
-      maxLines: 9,
-      isCompact,
-      slots: state.slots,
-      pageTag,
-      themeDecorators: {
-        muted: (s) => ctx.ui.theme.fg("muted", s),
-        accent: (s) => ctx.ui.theme.fg("accent", s),
-        dim: (s) => ctx.ui.theme.fg("dim", s)
+  if (!hasActiveUI(ctx)) return;
+  try {
+    const isCompact = state.compact || (process.stdout?.rows ? process.stdout.rows < 22 : false);
+    const maxCols = Math.max(30, (process.stdout?.columns || 80) - 8);
+    const pageTag = pagination && pagination.totalPages > 1 ? ctx.ui.theme.fg("muted", ` [${pagination.pageIndex + 1}/${pagination.totalPages} \u2325.]`) : "";
+    const lines = renderCardLayout(
+      {
+        spoken,
+        written: written || "",
+        vocab,
+        spokenMeaning,
+        writtenMeaning,
+        sourceText,
+        annotated: ""
+      },
+      state.labels,
+      {
+        maxCols,
+        maxLines: 9,
+        isCompact,
+        slots: state.slots,
+        pageTag,
+        themeDecorators: {
+          muted: (s) => ctx.ui.theme.fg("muted", s),
+          accent: (s) => ctx.ui.theme.fg("accent", s),
+          dim: (s) => ctx.ui.theme.fg("dim", s)
+        }
       }
-    }
-  );
-  ctx.ui.setWidget("lingual_hud", lines, { placement: "aboveEditor" });
+    );
+    ctx.ui.setWidget("lingual_hud", lines, { placement: "aboveEditor" });
+  } catch {
+  }
 }
 function renderActiveCard(ctx) {
-  const readyList = session.getReadyPages();
-  if (readyList.length === 0) return;
-  const snapshot = session.getPaginationSnapshot();
-  const res = session.getActiveResult();
-  if (!res) return;
-  renderHudWidget(
-    ctx,
-    res.sourceText,
-    res.spoken,
-    res.written,
-    res.vocab,
-    res.spokenMeaning,
-    res.writtenMeaning,
-    {
-      pageIndex: snapshot.pageIndex,
-      totalPages: snapshot.readyCount
-    }
-  );
+  if (!hasActiveUI(ctx)) return;
+  try {
+    const readyList = session.getReadyPages();
+    if (readyList.length === 0) return;
+    const snapshot = session.getPaginationSnapshot();
+    const res = session.getActiveResult();
+    if (!res) return;
+    renderHudWidget(
+      ctx,
+      res.sourceText,
+      res.spoken,
+      res.written,
+      res.vocab,
+      res.spokenMeaning,
+      res.writtenMeaning,
+      {
+        pageIndex: snapshot.pageIndex,
+        totalPages: snapshot.readyCount
+      }
+    );
+  } catch {
+  }
 }
 function extension_default(pi) {
+  let polishTimer;
   let resizeTimer;
   const onResize = () => {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
       const active = session.getActiveResult() || session.getLastResult();
-      if (active && lastContext && lastContext.hasUI) {
+      if (active && hasActiveUI(lastContext)) {
         renderActiveCard(lastContext);
       }
     }, 120);
   };
   process.stdout?.on("resize", onResize);
+  const clearPendingTimers = () => {
+    if (polishTimer) {
+      clearTimeout(polishTimer);
+      polishTimer = void 0;
+    }
+    if (resizeTimer) {
+      clearTimeout(resizeTimer);
+      resizeTimer = void 0;
+    }
+  };
   pi.on("session_start", async (_event, ctx) => {
+    clearPendingTimers();
+    session.abortActive();
     lastContext = ctx;
     updateFooter(ctx);
+  });
+  pi.on("session_shutdown", async () => {
+    clearPendingTimers();
+    session.abortActive();
+    lastContext = null;
+    if (process.stdout && typeof process.stdout.off === "function") {
+      process.stdout.off("resize", onResize);
+    }
   });
   const setModeHandler = async (args, ctx) => {
     session.abortActive();
@@ -3273,12 +3312,17 @@ To switch native language: /lang <zh|ja|en|es|fr|de>.`;
     const completer = createModelCompleter(ctx);
     session.initPagination(1);
     if (state.mode === "original") {
-      if (ctx.hasUI) {
-        ctx.ui.setWidget("lingual_hud", void 0);
-        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", "\u21C4 [lingual] polishing..."));
+      if (hasActiveUI(ctx)) {
+        try {
+          ctx.ui.setWidget("lingual_hud", void 0);
+          ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", "\u21C4 [lingual] polishing..."));
+        } catch {
+        }
       }
-      setTimeout(() => {
-        if (!session.isLatest(generation) || state.mode !== "original") {
+      clearTimeout(polishTimer);
+      polishTimer = setTimeout(() => {
+        polishTimer = void 0;
+        if (!session.isLatest(generation) || state.mode !== "original" || signal.aborted) {
           return;
         }
         translatePrompt(promptToTranslate, {
@@ -3290,14 +3334,15 @@ To switch native language: /lang <zh|ja|en|es|fr|de>.`;
           complete: completer,
           signal
         }).then((result) => {
-          if (!session.isLatest(generation) || state.mode !== "original") {
+          if (!session.isLatest(generation) || state.mode !== "original" || signal.aborted) {
             return;
           }
           if (result) {
             session.setPageResult(0, result, generation);
-            if (ctx.hasUI) {
+            const activeCtx = hasActiveUI(ctx) ? ctx : hasActiveUI(lastContext) ? lastContext : null;
+            if (activeCtx) {
               renderHudWidget(
-                ctx,
+                activeCtx,
                 result.sourceText,
                 result.spoken,
                 result.written,
@@ -3307,21 +3352,28 @@ To switch native language: /lang <zh|ja|en|es|fr|de>.`;
               );
             }
           }
+        }).catch(() => {
         }).finally(() => {
           if (session.isLatest(generation)) {
-            updateFooter(ctx);
+            const activeCtx = hasActiveUI(ctx) ? ctx : hasActiveUI(lastContext) ? lastContext : null;
+            if (activeCtx) {
+              updateFooter(activeCtx);
+            }
           }
         });
       }, 80);
       return { action: "continue" };
     }
-    if (ctx.hasUI) {
-      ctx.ui.setWidget(
-        "lingual_hud",
-        [ctx.ui.theme.fg("muted", "  \u22EF \u21C4 [lingual] polishing...")],
-        { placement: "aboveEditor" }
-      );
-      ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", "\u21C4 [lingual] polishing..."));
+    if (hasActiveUI(ctx)) {
+      try {
+        ctx.ui.setWidget(
+          "lingual_hud",
+          [ctx.ui.theme.fg("muted", "  \u22EF \u21C4 [lingual] polishing...")],
+          { placement: "aboveEditor" }
+        );
+        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", "\u21C4 [lingual] polishing..."));
+      } catch {
+      }
     }
     try {
       const result = await translatePrompt(promptToTranslate, {
@@ -3337,15 +3389,18 @@ To switch native language: /lang <zh|ja|en|es|fr|de>.`;
         return { action: "continue" };
       }
       if (!result) {
-        if (ctx.hasUI) {
-          ctx.ui.setWidget("lingual_hud", void 0);
-          const timeoutTemplate = state.labels.notifyTimeout || "[{pair}] English translation timed out or not ready; original prompt passed";
-          ctx.ui.notify(timeoutTemplate.replace("{pair}", state.labels.hudTitle), "warning");
+        if (hasActiveUI(ctx)) {
+          try {
+            ctx.ui.setWidget("lingual_hud", void 0);
+            const timeoutTemplate = state.labels.notifyTimeout || "[{pair}] English translation timed out or not ready; original prompt passed";
+            ctx.ui.notify(timeoutTemplate.replace("{pair}", state.labels.hudTitle), "warning");
+          } catch {
+          }
         }
         return { action: "continue" };
       }
       session.setPageResult(0, result, generation);
-      if (ctx.hasUI) {
+      if (hasActiveUI(ctx)) {
         renderHudWidget(
           ctx,
           result.sourceText,
@@ -3370,15 +3425,21 @@ ${sanitized.rawPayload}` : combinedEnglish;
         images: event.images
       };
     } catch {
-      if (ctx.hasUI) {
-        ctx.ui.setWidget("lingual_hud", void 0);
-        const errTemplate = state.labels.notifyError || "[{pair}] English translation request error; original prompt passed";
-        ctx.ui.notify(errTemplate.replace("{pair}", state.labels.hudTitle), "warning");
+      if (hasActiveUI(ctx)) {
+        try {
+          ctx.ui.setWidget("lingual_hud", void 0);
+          const errTemplate = state.labels.notifyError || "[{pair}] English translation request error; original prompt passed";
+          ctx.ui.notify(errTemplate.replace("{pair}", state.labels.hudTitle), "warning");
+        } catch {
+        }
       }
       return { action: "continue" };
     } finally {
       if (session.isLatest(generation)) {
-        updateFooter(ctx);
+        const activeCtx = hasActiveUI(ctx) ? ctx : hasActiveUI(lastContext) ? lastContext : null;
+        if (activeCtx) {
+          updateFooter(activeCtx);
+        }
       }
     }
   });

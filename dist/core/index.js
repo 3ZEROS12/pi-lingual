@@ -372,8 +372,8 @@ ${jsonProps.join(",\n")}
 
 [LONG INPUT CONDENSATION DIRECTIVE]:
 The user's input text has multiple clauses or sentences.
-1. You MUST preserve and translate EVERY clause and question from start to finish \u2014 NEVER drop the second half or final question of the user's message!
-2. Keep the phrasing tight and high-density (under 20 words) so the complete meaning of all sentences fits cleanly on 1-2 lines without mid-sentence truncation.` : "";
+CRITICAL: You MUST preserve and translate EVERY clause and question from start to finish \u2014 NEVER drop the second half or final question of the user's message!
+Keep the phrasing tight and high-density (under 20 words) so the complete meaning of all sentences fits cleanly on 1-2 lines without mid-sentence truncation.` : "";
     const contextDirective2 = context && context.trim() ? `
 
 [CONVERSATION & THREAD CONTEXT]:
@@ -414,8 +414,8 @@ Output: ${JSON.stringify({
 
 [LONG INPUT CONDENSATION DIRECTIVE]:
 The user's input text has multiple clauses or sentences.
-1. You MUST preserve and translate EVERY clause and question from start to finish (both in "summary" and in "spoken"/"written") \u2014 NEVER omit the second half or final question of the user's message!
-2. Express all points tightly and concisely (under 22 words each) so the complete meaning fits cleanly within 2 lines without truncation.` : "";
+CRITICAL: You MUST preserve and translate EVERY clause and question from start to finish (both in "summary" and in "spoken"/"written") \u2014 NEVER omit the second half or final question of the user's message!
+Express all points tightly and concisely (under 22 words each) so the complete meaning fits cleanly within 2 lines without truncation.` : "";
   const contextDirective = context && context.trim() ? `
 
 [CONVERSATION & THREAD CONTEXT]:

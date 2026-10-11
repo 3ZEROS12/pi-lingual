@@ -136,31 +136,44 @@ function saveUserLingualConfig(patch: Record<string, any>) {
 const session = new LingualSessionController();
 let lastContext: ExtensionContext | null = null;
 
-function updateFooter(ctx: ExtensionContext) {
-  if (!ctx.hasUI) return;
-  // 标准化底栏标签为纯净极简的 A ⇄ B (例如 zh ⇄ en)
-  let pair = `${state.sourceLang} ⇄ ${state.targetLang}`;
-  const enabledSlots = (state.slots || []).filter((s) => s.enabled);
-  const hasSource = enabledSlots.some((s) => s.role === "source");
-  const nonSourceCount = enabledSlots.filter((s) => s.role !== "source").length;
-  
-  if (!hasSource) {
-    pair += ` · no-src`;
+function hasActiveUI(ctx: ExtensionContext | null | undefined): ctx is ExtensionContext {
+  if (!ctx) return false;
+  try {
+    return Boolean(ctx.hasUI && ctx.ui);
+  } catch {
+    return false;
   }
-  if (nonSourceCount !== 2) {
-    pair += ` · ${enabledSlots.length}s`;
-  } else if (state.slotPreset) {
-    pair += ` · ${state.slotPreset}`;
-  }
+}
 
-  switch (state.mode) {
-    case "original":
-    case "english":
-      ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", pair));
-      break;
-    case "off":
-      ctx.ui.setStatus("lingual", ctx.ui.theme.fg("muted", `${pair}: off`));
-      break;
+function updateFooter(ctx: ExtensionContext | null | undefined) {
+  if (!hasActiveUI(ctx)) return;
+  try {
+    // 标准化底栏标签为纯净极简的 A ⇄ B (例如 zh ⇄ en)
+    let pair = `${state.sourceLang} ⇄ ${state.targetLang}`;
+    const enabledSlots = (state.slots || []).filter((s) => s.enabled);
+    const hasSource = enabledSlots.some((s) => s.role === "source");
+    const nonSourceCount = enabledSlots.filter((s) => s.role !== "source").length;
+    
+    if (!hasSource) {
+      pair += ` · no-src`;
+    }
+    if (nonSourceCount !== 2) {
+      pair += ` · ${enabledSlots.length}s`;
+    } else if (state.slotPreset) {
+      pair += ` · ${state.slotPreset}`;
+    }
+
+    switch (state.mode) {
+      case "original":
+      case "english":
+        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", pair));
+        break;
+      case "off":
+        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("muted", `${pair}: off`));
+        break;
+    }
+  } catch {
+    // Gracefully ignore stale context during session replacement or teardown
   }
 }
 
@@ -179,81 +192,113 @@ function renderHudWidget(
   writtenMeaning?: string,
   pagination?: { pageIndex: number; totalPages: number }
 ) {
-  if (!ctx.hasUI) return;
+  if (!hasActiveUI(ctx)) return;
+  try {
+    const isCompact = state.compact || (process.stdout?.rows ? process.stdout.rows < 22 : false);
+    const maxCols = Math.max(30, (process.stdout?.columns || 80) - 8);
+    const pageTag = pagination && pagination.totalPages > 1
+      ? ctx.ui.theme.fg("muted", ` [${pagination.pageIndex + 1}/${pagination.totalPages} ⌥.]`)
+      : "";
 
-  const isCompact = state.compact || (process.stdout?.rows ? process.stdout.rows < 22 : false);
-  const maxCols = Math.max(30, (process.stdout?.columns || 80) - 8);
-  const pageTag = pagination && pagination.totalPages > 1
-    ? ctx.ui.theme.fg("muted", ` [${pagination.pageIndex + 1}/${pagination.totalPages} ⌥.]`)
-    : "";
-
-  const lines = renderCardLayout(
-    {
-      spoken,
-      written: written || "",
-      vocab,
-      spokenMeaning,
-      writtenMeaning,
-      sourceText,
-      annotated: "",
-    },
-    state.labels,
-    {
-      maxCols,
-      maxLines: 9,
-      isCompact,
-      slots: state.slots,
-      pageTag,
-      themeDecorators: {
-        muted: (s) => ctx.ui.theme.fg("muted", s),
-        accent: (s) => ctx.ui.theme.fg("accent", s),
-        dim: (s) => ctx.ui.theme.fg("dim", s),
+    const lines = renderCardLayout(
+      {
+        spoken,
+        written: written || "",
+        vocab,
+        spokenMeaning,
+        writtenMeaning,
+        sourceText,
+        annotated: "",
       },
-    }
-  );
+      state.labels,
+      {
+        maxCols,
+        maxLines: 9,
+        isCompact,
+        slots: state.slots,
+        pageTag,
+        themeDecorators: {
+          muted: (s) => ctx.ui.theme.fg("muted", s),
+          accent: (s) => ctx.ui.theme.fg("accent", s),
+          dim: (s) => ctx.ui.theme.fg("dim", s),
+        },
+      }
+    );
 
-  ctx.ui.setWidget("lingual_hud", lines, { placement: "aboveEditor" });
+    ctx.ui.setWidget("lingual_hud", lines, { placement: "aboveEditor" });
+  } catch {
+    // Gracefully ignore stale context during session replacement or teardown
+  }
 }
 
 function renderActiveCard(ctx: ExtensionContext) {
-  // 只统计实际已经被翻译就绪的有效卡片，彻底杜绝未就绪切片导致的虚假总页数与跳页
-  const readyList = session.getReadyPages();
-  if (readyList.length === 0) return;
-  const snapshot = session.getPaginationSnapshot();
-  const res = session.getActiveResult();
-  if (!res) return;
-  renderHudWidget(
-    ctx,
-    res.sourceText,
-    res.spoken,
-    res.written,
-    res.vocab,
-    res.spokenMeaning,
-    res.writtenMeaning,
-    {
-      pageIndex: snapshot.pageIndex,
-      totalPages: snapshot.readyCount,
-    }
-  );
+  if (!hasActiveUI(ctx)) return;
+  try {
+    // 只统计实际已经被翻译就绪的有效卡片，彻底杜绝未就绪切片导致的虚假总页数与跳页
+    const readyList = session.getReadyPages();
+    if (readyList.length === 0) return;
+    const snapshot = session.getPaginationSnapshot();
+    const res = session.getActiveResult();
+    if (!res) return;
+    renderHudWidget(
+      ctx,
+      res.sourceText,
+      res.spoken,
+      res.written,
+      res.vocab,
+      res.spokenMeaning,
+      res.writtenMeaning,
+      {
+        pageIndex: snapshot.pageIndex,
+        totalPages: snapshot.readyCount,
+      }
+    );
+  } catch {
+    // Gracefully ignore stale context during session replacement or teardown
+  }
 }
 
 export default function (pi: ExtensionAPI) {
+  let polishTimer: NodeJS.Timeout | undefined;
   let resizeTimer: NodeJS.Timeout | undefined;
+
   const onResize = () => {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
       const active = session.getActiveResult() || session.getLastResult();
-      if (active && lastContext && lastContext.hasUI) {
+      if (active && hasActiveUI(lastContext)) {
         renderActiveCard(lastContext);
       }
     }, 120);
   };
   process.stdout?.on("resize", onResize);
 
+  const clearPendingTimers = () => {
+    if (polishTimer) {
+      clearTimeout(polishTimer);
+      polishTimer = undefined;
+    }
+    if (resizeTimer) {
+      clearTimeout(resizeTimer);
+      resizeTimer = undefined;
+    }
+  };
+
   pi.on("session_start", async (_event, ctx) => {
+    clearPendingTimers();
+    session.abortActive();
     lastContext = ctx;
     // 0 侵扰冷启动：静默点亮状态栏指示，绝不弹窗打断敲代码心流
     updateFooter(ctx);
+  });
+
+  pi.on("session_shutdown", async () => {
+    clearPendingTimers();
+    session.abortActive();
+    lastContext = null;
+    if (process.stdout && typeof (process.stdout as any).off === "function") {
+      (process.stdout as any).off("resize", onResize);
+    }
   });
 
   const setModeHandler = async (args: string, ctx: ExtensionContext) => {
@@ -968,15 +1013,19 @@ export default function (pi: ExtensionAPI) {
 
     // 【原文模式】(original · 默认)：彻底非阻塞 (0ms 立即放行原始输入)，后台异步微任务渲染卡片视窗
     if (state.mode === "original") {
-      if (ctx.hasUI) {
-        // 立即物理销毁上一轮的旧卡片，清爽等待新卡片，绝不悬挂陈旧内容导致卡死错觉
-        ctx.ui.setWidget("lingual_hud", undefined);
-        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", "⇄ [lingual] polishing..."));
+      if (hasActiveUI(ctx)) {
+        try {
+          // 立即物理销毁上一轮的旧卡片，清爽等待新卡片，绝不悬挂陈旧内容导致卡死错觉
+          ctx.ui.setWidget("lingual_hud", undefined);
+          ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", "⇄ [lingual] polishing..."));
+        } catch {}
       }
 
       // 微任务时序错峰 (80ms)：避开与 Pi 主会话首包握手争抢连接池，消除网关排队拥堵
-      setTimeout(() => {
-        if (!session.isLatest(generation) || state.mode !== "original") {
+      clearTimeout(polishTimer);
+      polishTimer = setTimeout(() => {
+        polishTimer = undefined;
+        if (!session.isLatest(generation) || state.mode !== "original" || signal.aborted) {
           return;
         }
 
@@ -990,14 +1039,15 @@ export default function (pi: ExtensionAPI) {
           signal,
         })
           .then((result) => {
-            if (!session.isLatest(generation) || state.mode !== "original") {
+            if (!session.isLatest(generation) || state.mode !== "original" || signal.aborted) {
               return;
             }
             if (result) {
               session.setPageResult(0, result, generation);
-              if (ctx.hasUI) {
+              const activeCtx = hasActiveUI(ctx) ? ctx : hasActiveUI(lastContext) ? lastContext : null;
+              if (activeCtx) {
                 renderHudWidget(
-                  ctx,
+                  activeCtx,
                   result.sourceText,
                   result.spoken,
                   result.written,
@@ -1008,9 +1058,15 @@ export default function (pi: ExtensionAPI) {
               }
             }
           })
+          .catch(() => {
+            // Gracefully ignore translation errors in background original mode
+          })
           .finally(() => {
             if (session.isLatest(generation)) {
-              updateFooter(ctx);
+              const activeCtx = hasActiveUI(ctx) ? ctx : hasActiveUI(lastContext) ? lastContext : null;
+              if (activeCtx) {
+                updateFooter(activeCtx);
+              }
             }
           });
       }, 80);
@@ -1019,13 +1075,15 @@ export default function (pi: ExtensionAPI) {
     }
 
     // 【英文模式】(english)：同步等待获取纯技术英文以替换发送给 AI 的 Prompt
-    if (ctx.hasUI) {
-      ctx.ui.setWidget(
-        "lingual_hud",
-        [ctx.ui.theme.fg("muted", "  ⋯ ⇄ [lingual] polishing...")],
-        { placement: "aboveEditor" }
-      );
-      ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", "⇄ [lingual] polishing..."));
+    if (hasActiveUI(ctx)) {
+      try {
+        ctx.ui.setWidget(
+          "lingual_hud",
+          [ctx.ui.theme.fg("muted", "  ⋯ ⇄ [lingual] polishing...")],
+          { placement: "aboveEditor" }
+        );
+        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", "⇄ [lingual] polishing..."));
+      } catch {}
     }
 
     try {
@@ -1044,16 +1102,18 @@ export default function (pi: ExtensionAPI) {
       }
 
       if (!result) {
-        if (ctx.hasUI) {
-          ctx.ui.setWidget("lingual_hud", undefined);
-          const timeoutTemplate = state.labels.notifyTimeout || "[{pair}] English translation timed out or not ready; original prompt passed";
-          ctx.ui.notify(timeoutTemplate.replace("{pair}", state.labels.hudTitle), "warning");
+        if (hasActiveUI(ctx)) {
+          try {
+            ctx.ui.setWidget("lingual_hud", undefined);
+            const timeoutTemplate = state.labels.notifyTimeout || "[{pair}] English translation timed out or not ready; original prompt passed";
+            ctx.ui.notify(timeoutTemplate.replace("{pair}", state.labels.hudTitle), "warning");
+          } catch {}
         }
         return { action: "continue" };
       }
 
       session.setPageResult(0, result, generation);
-      if (ctx.hasUI) {
+      if (hasActiveUI(ctx)) {
         renderHudWidget(
           ctx,
           result.sourceText,
@@ -1088,15 +1148,20 @@ export default function (pi: ExtensionAPI) {
         images: event.images,
       };
     } catch {
-      if (ctx.hasUI) {
-        ctx.ui.setWidget("lingual_hud", undefined);
-        const errTemplate = state.labels.notifyError || "[{pair}] English translation request error; original prompt passed";
-        ctx.ui.notify(errTemplate.replace("{pair}", state.labels.hudTitle), "warning");
+      if (hasActiveUI(ctx)) {
+        try {
+          ctx.ui.setWidget("lingual_hud", undefined);
+          const errTemplate = state.labels.notifyError || "[{pair}] English translation request error; original prompt passed";
+          ctx.ui.notify(errTemplate.replace("{pair}", state.labels.hudTitle), "warning");
+        } catch {}
       }
       return { action: "continue" };
     } finally {
       if (session.isLatest(generation)) {
-        updateFooter(ctx);
+        const activeCtx = hasActiveUI(ctx) ? ctx : hasActiveUI(lastContext) ? lastContext : null;
+        if (activeCtx) {
+          updateFooter(activeCtx);
+        }
       }
     }
   });
