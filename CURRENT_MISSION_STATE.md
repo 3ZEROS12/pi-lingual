@@ -151,12 +151,12 @@
 🧪 Fleet Physical Pre-Flight: Passed: 1 | Failed: 0
 ```
 
-## 🕒 Last Session Snapshot (2026/10/11 16:08:36)
-- **Session ID**: `01a129f6-7c64-70d2-8d2f-97c1c9b73d82`
-- **User Intent**: 我应该怎么样直接pi -r到那里
+## 🕒 Last Session Snapshot (2026/10/12 00:45:09)
+- **Session ID**: `01a12bd8-26a3-7383-a7eb-764e2b237aa0`
+- **User Intent**: You are an independent Senior QA & UX Critic Subagent executing SOP 5 (5-Persona Adversarial Simulation) on D:/Workspace
 - **Last Assistant State**:
-> 你有 **3 种方式**可以直接回到那次对话（会话 ID 前缀：`01a129d7`）：
-> 退出当前会话后，在 `D:\Workspace\projects\pi-lingual` 下直接运行（支持 UUID 前缀匹配）：
-> pi --session 01a129d7
-> 直接在下面输入框输入：
-> /resume
+> **Target**: `pi-lingual` (v0.4.2 4-Mode Architecture: `original`, `english`, `select`, `off`)
+> **Audited Sources**: `src/core/types.ts`, `src/core/prompts.ts`, `src/engine.ts`, `src/extension.ts`, `skills/lingual-tuner/SKILL.md`
+> ---
+> *Workflow*: Invokes Pi in headless / pipe / non-interactive CLI environments (`--print`, scripts, or minimal terminal runtimes where `ctx.ui.select` is unavailable or undefined), using Mode 3 (`select`).
+> - **Simulated Flow**: User triggers an input in `select`

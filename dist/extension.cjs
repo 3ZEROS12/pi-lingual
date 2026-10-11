@@ -3479,7 +3479,7 @@ function extension_default(pi) {
     } else if (trimmed === "off" || trimmed === "0" || trimmed === "disable" || trimmed === "stop") {
       nextMode = "off";
     } else {
-      nextMode = state.mode === "original" ? "english" : state.mode === "english" ? "off" : "original";
+      nextMode = state.mode === "original" ? "english" : state.mode === "english" ? "select" : state.mode === "select" ? "off" : "original";
     }
     state.mode = nextMode;
     saveUserLingualConfig({ mode: nextMode });
@@ -4190,31 +4190,43 @@ Switch modes: /lingual <original|english|select|off> \xB7 Switch language: /lang
         }
         let chosenText = candidates[0].content;
         if (hasActiveUI(ctx) && typeof ctx.ui.select === "function") {
-          const isZh = state.sourceLang === "zh" || state.sourceLang === "tw";
+          const langCode = (state.sourceLang || "zh").toLowerCase().split("-")[0];
+          const selectPrompts = {
+            zh: { title: "\u2726 \u9009\u62E9\u8981\u53D1\u9001\u7ED9 AI \u7684\u4F18\u5316\u63D0\u793A\u8BCD\uFF1A", keepOrig: "\u4FDD\u6301\u539F\u8BDD\u76F4\u53D1" },
+            tw: { title: "\u2726 \u9078\u64C7\u8981\u767C\u9001\u7D66 AI \u7684\u512A\u5316\u63D0\u793A\u8A5E\uFF1A", keepOrig: "\u4FDD\u6301\u539F\u8A71\u76F4\u767C" },
+            ja: { title: "\u2726 AI \u306B\u9001\u4FE1\u3059\u308B\u6700\u9069\u5316\u30D7\u30ED\u30F3\u30D7\u30C8\u3092\u9078\u629E\uFF1A", keepOrig: "\u539F\u6587\u306E\u307E\u307E\u9001\u4FE1" },
+            ko: { title: "\u2726 AI\uC5D0\uAC8C \uBCF4\uB0BC \uCD5C\uC801\uD654\uB41C \uD504\uB86C\uD504\uD2B8 \uC120\uD0DD:", keepOrig: "\uC6D0\uBB38 \uADF8\uB300\uB85C \uC804\uC1A1" },
+            es: { title: "\u2726 Seleccione el prompt optimizado para enviar:", keepOrig: "Enviar original" },
+            fr: { title: "\u2726 S\xE9lectionnez le prompt optimis\xE9 \xE0 envoyer :", keepOrig: "Envoyer l'original" },
+            de: { title: "\u2726 Optimierten Prompt zum Senden ausw\xE4hlen:", keepOrig: "Original senden" },
+            ru: { title: "\u2726 \u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u043E\u043F\u0442\u0438\u043C\u0438\u0437\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u044B\u0439 \u043F\u0440\u043E\u043C\u043F\u0442 \u0434\u043B\u044F \u043E\u0442\u043F\u0440\u0430\u0432\u043A\u0438:", keepOrig: "\u041E\u0442\u043F\u0440\u0430\u0432\u0438\u0442\u044C \u043E\u0440\u0438\u0433\u0438\u043D\u0430\u043B" },
+            en: { title: "\u2726 Select optimized prompt to send:", keepOrig: "Send original" }
+          };
+          const sp = selectPrompts[langCode] || selectPrompts.en;
+          const optMaxCols = Math.max(20, maxCols - 18);
           const optionLabels = [
-            ...candidates.map((c, idx) => `[${idx + 1}] ${c.label}: ${truncateVisual(c.content, 68)}`),
-            isZh ? `[0] \u4FDD\u6301\u539F\u8BDD\u76F4\u53D1: ${truncateVisual(promptToTranslate, 60)}` : `[0] Send original: ${truncateVisual(promptToTranslate, 60)}`
+            ...candidates.map((c, idx) => `[${idx + 1}] ${c.label}: ${truncateVisual(c.content, optMaxCols)}`),
+            `[0] ${sp.keepOrig}: ${truncateVisual(promptToTranslate, optMaxCols)}`
           ];
-          const picked = await ctx.ui.select(
-            isZh ? "\u2726 \u9009\u62E9\u8981\u53D1\u9001\u7ED9 AI \u7684\u4F18\u5316\u63D0\u793A\u8BCD\uFF1A" : "\u2726 Select optimized prompt to send:",
-            optionLabels
-          );
-          if (picked && picked.startsWith("[0]")) {
+          const picked = await ctx.ui.select(sp.title, optionLabels);
+          if (!picked || picked.startsWith("[0]")) {
             return { action: "continue" };
           }
-          if (picked) {
-            const idxMatch = picked.match(/^\[(\d+)\]/);
-            if (idxMatch) {
-              const idx = parseInt(idxMatch[1], 10) - 1;
-              if (candidates[idx]) {
-                chosenText = candidates[idx].content;
-              }
+          const idxMatch = picked.match(/^\[(\d+)\]/);
+          if (idxMatch) {
+            const idx = parseInt(idxMatch[1], 10) - 1;
+            if (candidates[idx]) {
+              chosenText = candidates[idx].content;
             }
           }
         }
-        const finalText = sanitized.rawPayload ? `${chosenText}
+        let finalText = sanitized.rawPayload ? `${chosenText}
 
 ${sanitized.rawPayload}` : chosenText;
+        const diskConfig = loadUserLingualConfig();
+        if (shouldInjectNativeReplyGuard(event.text, state.sourceLang, diskConfig.replyInSourceLang)) {
+          finalText += formatNativeReplyGuardHint(state.sourceLang);
+        }
         return {
           action: "transform",
           text: finalText,

@@ -401,8 +401,15 @@ export default function (pi: ExtensionAPI) {
     } else if (trimmed === "off" || trimmed === "0" || trimmed === "disable" || trimmed === "stop") {
       nextMode = "off";
     } else {
-      // 缺省或无参数时，平滑模式循环轮转 (original ➔ english ➔ off ➔ original；显式 /lingual select 进入多选模式)
-      nextMode = state.mode === "original" ? "english" : state.mode === "english" ? "off" : "original";
+      // 缺省或无参数时，平滑四态模式循环轮转 (original ➔ english ➔ select ➔ off ➔ original)
+      nextMode =
+        state.mode === "original"
+          ? "english"
+          : state.mode === "english"
+            ? "select"
+            : state.mode === "select"
+              ? "off"
+              : "original";
     }
 
     state.mode = nextMode;
@@ -1291,32 +1298,47 @@ export default function (pi: ExtensionAPI) {
 
         let chosenText = candidates[0].content;
         if (hasActiveUI(ctx) && typeof (ctx.ui as any).select === "function") {
-          const isZh = state.sourceLang === "zh" || state.sourceLang === "tw";
+          const langCode = (state.sourceLang || "zh").toLowerCase().split("-")[0];
+          const selectPrompts: Record<string, { title: string; keepOrig: string }> = {
+            zh: { title: "✦ 选择要发送给 AI 的优化提示词：", keepOrig: "保持原话直发" },
+            tw: { title: "✦ 選擇要發送給 AI 的優化提示詞：", keepOrig: "保持原話直發" },
+            ja: { title: "✦ AI に送信する最適化プロンプトを選択：", keepOrig: "原文のまま送信" },
+            ko: { title: "✦ AI에게 보낼 최적화된 프롬프트 선택:", keepOrig: "원문 그대로 전송" },
+            es: { title: "✦ Seleccione el prompt optimizado para enviar:", keepOrig: "Enviar original" },
+            fr: { title: "✦ Sélectionnez le prompt optimisé à envoyer :", keepOrig: "Envoyer l'original" },
+            de: { title: "✦ Optimierten Prompt zum Senden auswählen:", keepOrig: "Original senden" },
+            ru: { title: "✦ Выберите оптимизированный промпт для отправки:", keepOrig: "Отправить оригинал" },
+            en: { title: "✦ Select optimized prompt to send:", keepOrig: "Send original" },
+          };
+          const sp = selectPrompts[langCode] || selectPrompts.en;
+          const optMaxCols = Math.max(20, maxCols - 18);
+
           const optionLabels = [
-            ...candidates.map((c, idx) => `[${idx + 1}] ${c.label}: ${truncateVisual(c.content, 68)}`),
-            isZh ? `[0] 保持原话直发: ${truncateVisual(promptToTranslate, 60)}` : `[0] Send original: ${truncateVisual(promptToTranslate, 60)}`,
+            ...candidates.map((c, idx) => `[${idx + 1}] ${c.label}: ${truncateVisual(c.content, optMaxCols)}`),
+            `[0] ${sp.keepOrig}: ${truncateVisual(promptToTranslate, optMaxCols)}`,
           ];
-          const picked = await (ctx.ui as any).select(
-            isZh ? "✦ 选择要发送给 AI 的优化提示词：" : "✦ Select optimized prompt to send:",
-            optionLabels
-          );
-          if (picked && picked.startsWith("[0]")) {
+          const picked = await (ctx.ui as any).select(sp.title, optionLabels);
+          // Pressing Esc (picked === undefined) or choosing [0] passes original prompt through without forcing Candidate #1
+          if (!picked || picked.startsWith("[0]")) {
             return { action: "continue" };
           }
-          if (picked) {
-            const idxMatch = picked.match(/^\[(\d+)\]/);
-            if (idxMatch) {
-              const idx = parseInt(idxMatch[1], 10) - 1;
-              if (candidates[idx]) {
-                chosenText = candidates[idx].content;
-              }
+          const idxMatch = picked.match(/^\[(\d+)\]/);
+          if (idxMatch) {
+            const idx = parseInt(idxMatch[1], 10) - 1;
+            if (candidates[idx]) {
+              chosenText = candidates[idx].content;
             }
           }
         }
 
-        const finalText = sanitized.rawPayload
+        let finalText = sanitized.rawPayload
           ? `${chosenText}\n\n${sanitized.rawPayload}`
           : chosenText;
+
+        const diskConfig = loadUserLingualConfig();
+        if (shouldInjectNativeReplyGuard(event.text, state.sourceLang, diskConfig.replyInSourceLang)) {
+          finalText += formatNativeReplyGuardHint(state.sourceLang);
+        }
 
         return {
           action: "transform",
