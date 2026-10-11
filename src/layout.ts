@@ -517,7 +517,7 @@ export function renderCardLayout(
     if (slot.role === "source") {
       return { content: card.sourceText || "" };
     }
-    if (card.slotOutputs && card.slotOutputs[slot.id]) {
+    if (card.slotOutputs && Object.hasOwn(card.slotOutputs, slot.id)) {
       const out = card.slotOutputs[slot.id];
       return { content: out.content || "", meaning: out.meaning };
     }

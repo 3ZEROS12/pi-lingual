@@ -85,7 +85,10 @@ export function loadUserLingualConfig(): Partial<LingualConfig> {
     try {
       const raw = fs.readFileSync(lingualFile, "utf8");
       const parsed = JSON.parse(raw);
-      target = parsed["pi-lingual"] || parsed;
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        const inner = parsed["pi-lingual"] || parsed;
+        target = inner && typeof inner === "object" && !Array.isArray(inner) ? inner : null;
+      }
     } catch {
       target = null;
     }
@@ -121,9 +124,13 @@ export function loadUserLingualConfig(): Partial<LingualConfig> {
     const targetLang = target.targetLang;
     const compact = target.compact;
     const slotPreset = target.slotPreset;
-    const slots = Array.isArray(target.slots) ? target.slots : undefined;
+    const slots = Array.isArray(target.slots)
+      ? target.slots.filter((s: any) => s && typeof s === "object" && typeof s.id === "string" && typeof s.label === "string")
+      : undefined;
     const reasoning = typeof target.reasoning === "string" ? target.reasoning : undefined;
-    const timeoutMs = typeof target.timeoutMs === "number" ? target.timeoutMs : undefined;
+    const timeoutMs = typeof target.timeoutMs === "number" && Number.isFinite(target.timeoutMs)
+      ? Math.min(60_000, Math.max(1000, target.timeoutMs))
+      : undefined;
     const replyInSourceLang = target.replyInSourceLang !== undefined ? Boolean(target.replyInSourceLang) : undefined;
     const labels = resolveLabelsForLang(sourceLang || "zh", target.labels, targetLang);
 

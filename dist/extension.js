@@ -272,7 +272,7 @@ function renderCardLayout(card, labels, options = {}) {
     if (slot.role === "source") {
       return { content: card.sourceText || "" };
     }
-    if (card.slotOutputs && card.slotOutputs[slot.id]) {
+    if (card.slotOutputs && Object.hasOwn(card.slotOutputs, slot.id)) {
       const out = card.slotOutputs[slot.id];
       return { content: out.content || "", meaning: out.meaning };
     }
@@ -2209,8 +2209,16 @@ function tryParseJson(str) {
     }
   }
 }
+var BLOCKED_JSON_KEYS = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
+function toCleanString(val) {
+  if (typeof val === "string") return val.trim();
+  if (typeof val === "number" || typeof val === "boolean") return String(val);
+  if (Array.isArray(val)) return val.map(toCleanString).filter(Boolean).join(" \xB7 ");
+  return "";
+}
 function parseLlmResponse(raw) {
   try {
+    if (!raw || typeof raw !== "string" || raw.length > 32768) return null;
     let cleaned = raw.replace(/<(?:think|thought)>[\s\S]*?<\/(?:think|thought)>/gi, "").trim();
     const fenceMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
     if (fenceMatch) {
@@ -2223,25 +2231,27 @@ function parseLlmResponse(raw) {
     }
     const jsonSubstr = cleaned.slice(firstBrace, lastBrace + 1);
     const parsed = tryParseJson(jsonSubstr);
-    if (!parsed) return null;
-    const spoken = (parsed.spoken || parsed.casual || parsed.slot1 || "").trim();
-    const spokenMeaning = (parsed.spoken_meaning || parsed.spokenMeaning || "").trim();
-    const written = (parsed.written || parsed.academic || parsed.slot2 || "").trim();
-    const writtenMeaning = (parsed.written_meaning || parsed.writtenMeaning || "").trim();
-    const vocab = typeof parsed.vocab === "string" ? parsed.vocab.trim() : "";
-    const summary = typeof (parsed.summary || parsed.core_intent || parsed.coreIntent) === "string" ? (parsed.summary || parsed.core_intent || parsed.coreIntent).trim() : "";
-    const slotOutputs = {};
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    const spoken = toCleanString(parsed.spoken ?? parsed.casual ?? parsed.slot1);
+    const spokenMeaning = toCleanString(parsed.spoken_meaning ?? parsed.spokenMeaning);
+    const written = toCleanString(parsed.written ?? parsed.academic ?? parsed.slot2);
+    const writtenMeaning = toCleanString(parsed.written_meaning ?? parsed.writtenMeaning);
+    const vocab = toCleanString(parsed.vocab);
+    const summary = toCleanString(parsed.summary ?? parsed.core_intent ?? parsed.coreIntent);
+    const slotOutputs = /* @__PURE__ */ Object.create(null);
     for (const [k, v] of Object.entries(parsed)) {
-      if (typeof v === "string" && v.trim() && !k.endsWith("_meaning") && k !== "summary") {
-        const meaningVal = typeof parsed[k + "_meaning"] === "string" ? parsed[k + "_meaning"].trim() : void 0;
+      if (BLOCKED_JSON_KEYS.has(k) || k.endsWith("_meaning") || k === "summary") continue;
+      const textVal = toCleanString(v);
+      if (textVal) {
+        const meaningVal = toCleanString(parsed[k + "_meaning"]);
         slotOutputs[k] = {
-          content: v.trim(),
+          content: textVal,
           meaning: meaningVal || void 0
         };
       }
     }
     const nonVocabOutputs = Object.entries(slotOutputs).filter(([k]) => k !== "vocab").map(([, val]) => val);
-    const effectiveSpoken = spoken || nonVocabOutputs[0]?.content || "";
+    const effectiveSpoken = spoken || nonVocabOutputs[0]?.content || vocab || "";
     const effectiveSpokenMeaning = spokenMeaning || nonVocabOutputs[0]?.meaning || "";
     if (effectiveSpoken) {
       return {
@@ -2287,7 +2297,10 @@ function loadUserLingualConfig() {
     try {
       const raw = fs.readFileSync(lingualFile, "utf8");
       const parsed = JSON.parse(raw);
-      target = parsed["pi-lingual"] || parsed;
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        const inner = parsed["pi-lingual"] || parsed;
+        target = inner && typeof inner === "object" && !Array.isArray(inner) ? inner : null;
+      }
     } catch {
       target = null;
     }
@@ -2320,9 +2333,9 @@ function loadUserLingualConfig() {
     const targetLang = target.targetLang;
     const compact = target.compact;
     const slotPreset = target.slotPreset;
-    const slots = Array.isArray(target.slots) ? target.slots : void 0;
+    const slots = Array.isArray(target.slots) ? target.slots.filter((s) => s && typeof s === "object" && typeof s.id === "string" && typeof s.label === "string") : void 0;
     const reasoning = typeof target.reasoning === "string" ? target.reasoning : void 0;
-    const timeoutMs = typeof target.timeoutMs === "number" ? target.timeoutMs : void 0;
+    const timeoutMs = typeof target.timeoutMs === "number" && Number.isFinite(target.timeoutMs) ? Math.min(6e4, Math.max(1e3, target.timeoutMs)) : void 0;
     const replyInSourceLang = target.replyInSourceLang !== void 0 ? Boolean(target.replyInSourceLang) : void 0;
     const labels = resolveLabelsForLang(sourceLang || "zh", target.labels, targetLang);
     cachedUserConfig = {

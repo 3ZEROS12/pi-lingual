@@ -24,12 +24,22 @@ function tryParseJson(str: string): any {
   }
 }
 
+const BLOCKED_JSON_KEYS = new Set(["__proto__", "constructor", "prototype"]);
+
+function toCleanString(val: unknown): string {
+  if (typeof val === "string") return val.trim();
+  if (typeof val === "number" || typeof val === "boolean") return String(val);
+  if (Array.isArray(val)) return val.map(toCleanString).filter(Boolean).join(" · ");
+  return "";
+}
+
 /**
  * Clean and parse LLM JSON responses safely
  * Robust against markdown fences, reasoning thoughts (<think>...</think>), and conversational chatter
  */
 export function parseLlmResponse(raw: string): TranslationPayload | null {
   try {
+    if (!raw || typeof raw !== "string" || raw.length > 32_768) return null;
     let cleaned = raw.replace(/<(?:think|thought)>[\s\S]*?<\/(?:think|thought)>/gi, "").trim();
     const fenceMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
     if (fenceMatch) {
@@ -44,24 +54,24 @@ export function parseLlmResponse(raw: string): TranslationPayload | null {
 
     const jsonSubstr = cleaned.slice(firstBrace, lastBrace + 1);
     const parsed = tryParseJson(jsonSubstr);
-    if (!parsed) return null;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
 
-    const spoken = (parsed.spoken || parsed.casual || parsed.slot1 || "").trim();
-    const spokenMeaning = (parsed.spoken_meaning || parsed.spokenMeaning || "").trim();
-    const written = (parsed.written || parsed.academic || parsed.slot2 || "").trim();
-    const writtenMeaning = (parsed.written_meaning || parsed.writtenMeaning || "").trim();
-    const vocab = typeof parsed.vocab === "string" ? parsed.vocab.trim() : "";
-    const summary = typeof (parsed.summary || parsed.core_intent || parsed.coreIntent) === "string"
-      ? (parsed.summary || parsed.core_intent || parsed.coreIntent).trim()
-      : "";
+    const spoken = toCleanString(parsed.spoken ?? parsed.casual ?? parsed.slot1);
+    const spokenMeaning = toCleanString(parsed.spoken_meaning ?? parsed.spokenMeaning);
+    const written = toCleanString(parsed.written ?? parsed.academic ?? parsed.slot2);
+    const writtenMeaning = toCleanString(parsed.written_meaning ?? parsed.writtenMeaning);
+    const vocab = toCleanString(parsed.vocab);
+    const summary = toCleanString(parsed.summary ?? parsed.core_intent ?? parsed.coreIntent);
 
     // 动态提取所有槽位的输出 (支持任意自定义槽位 ID，如 twitter, email, grammar 等)
-    const slotOutputs: Record<string, { content: string; meaning?: string }> = {};
+    const slotOutputs: Record<string, { content: string; meaning?: string }> = Object.create(null);
     for (const [k, v] of Object.entries(parsed)) {
-      if (typeof v === "string" && v.trim() && !k.endsWith("_meaning") && k !== "summary") {
-        const meaningVal = typeof parsed[k + "_meaning"] === "string" ? parsed[k + "_meaning"].trim() : undefined;
+      if (BLOCKED_JSON_KEYS.has(k) || k.endsWith("_meaning") || k === "summary") continue;
+      const textVal = toCleanString(v);
+      if (textVal) {
+        const meaningVal = toCleanString(parsed[k + "_meaning"]);
         slotOutputs[k] = {
-          content: v.trim(),
+          content: textVal,
           meaning: meaningVal || undefined,
         };
       }
@@ -70,7 +80,7 @@ export function parseLlmResponse(raw: string): TranslationPayload | null {
     const nonVocabOutputs = Object.entries(slotOutputs)
       .filter(([k]) => k !== "vocab")
       .map(([, val]) => val);
-    const effectiveSpoken = spoken || nonVocabOutputs[0]?.content || "";
+    const effectiveSpoken = spoken || nonVocabOutputs[0]?.content || vocab || "";
     const effectiveSpokenMeaning = spokenMeaning || nonVocabOutputs[0]?.meaning || "";
     if (effectiveSpoken) {
       return {
@@ -203,8 +213,11 @@ export async function translateCore(
       if (slot.role === "source") {
         slotResults.push({ id: slot.id, label: slot.label, role: slot.role, content: text });
       } else {
-        const content = (rawObj[slot.id] || (slot.id === "spoken" ? parsed.spoken : slot.id === "written" ? parsed.written : slot.id === "vocab" ? parsed.vocab : "") || "").trim();
-        const meaning = (rawObj[slot.id + "_meaning"] || (slot.id === "spoken" ? parsed.spokenMeaning : slot.id === "written" ? parsed.writtenMeaning : undefined) || "").trim() || undefined;
+        const out = parsed.slotOutputs && Object.hasOwn(parsed.slotOutputs, slot.id)
+          ? parsed.slotOutputs[slot.id]
+          : undefined;
+        const content = out?.content || toCleanString(rawObj[slot.id]) || (slot.id === "spoken" ? parsed.spoken : slot.id === "written" ? (parsed.written || "") : slot.id === "vocab" ? (parsed.vocab || "") : "");
+        const meaning = out?.meaning || toCleanString(rawObj[slot.id + "_meaning"]) || (slot.id === "spoken" ? parsed.spokenMeaning : slot.id === "written" ? parsed.writtenMeaning : undefined) || undefined;
         if (content) {
           slotResults.push({ id: slot.id, label: slot.label, role: slot.role, content, meaning });
         }
