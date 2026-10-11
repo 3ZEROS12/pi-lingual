@@ -7,7 +7,7 @@
 [![npm version](https://img.shields.io/npm/v/pi-lingual?color=blue)](https://www.npmjs.com/package/pi-lingual)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Built for Pi](https://img.shields.io/badge/Built%20for-Pi%20Coding%20Agent-orange)](https://github.com/earendil-works/pi-coding-agent)
-[![Tests](https://img.shields.io/badge/Tests-90%2F90%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
+[![Tests](https://img.shields.io/badge/Tests-93%2F93%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict%20Zero%20Error-blue)](tsconfig.json)
 
 [English](./README.md) | **简体中文**
@@ -251,7 +251,7 @@ pi install npm:pi-lingual
 
 ```bash
 npm run typecheck   # TypeScript 严格类型检查 (0 错误)
-npm test            # 全套自动化单元测试 (90/90 全绿通过)
+npm test            # 全套自动化单元测试 (93/93 全绿通过)
 npm run build       # 多入口生产构建 (插件 + 核心语言引擎)
 ```
 
