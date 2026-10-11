@@ -138,6 +138,7 @@ export function loadUserLingualConfig(): Partial<LingualConfig> {
     const promptSlots = Array.isArray(target.promptSlots)
       ? target.promptSlots.filter((s: any) => s && typeof s === "object" && typeof s.id === "string" && typeof s.label === "string")
       : undefined;
+    const lastSeenVersion = typeof target.lastSeenVersion === "string" ? target.lastSeenVersion : undefined;
     const reasoning = typeof target.reasoning === "string" ? target.reasoning : undefined;
     const timeoutMs = typeof target.timeoutMs === "number" && Number.isFinite(target.timeoutMs)
       ? Math.min(60_000, Math.max(1000, target.timeoutMs))
@@ -157,6 +158,7 @@ export function loadUserLingualConfig(): Partial<LingualConfig> {
       ...(promptLang ? { promptLang } : {}),
       ...(promptRule ? { promptRule } : {}),
       ...(promptSlots ? { promptSlots } : {}),
+      ...(lastSeenVersion ? { lastSeenVersion } : {}),
       ...(sourceLang ? { sourceLang } : {}),
       ...(targetLang ? { targetLang } : {}),
       ...(reasoning ? { reasoning } : {}),
@@ -550,25 +552,53 @@ export function formatNativeReplyGuardHint(sourceLang = "zh"): string {
   return "\n\n(Please reply in the user's native language.)";
 }
 
-function extractCleanJsonField(raw: string, fieldName: string): string {
+function repairAndParseJsonObject(raw: string): Record<string, any> | null {
   try {
     let cleaned = raw.replace(/<(?:think|thought)>[\s\S]*?<\/(?:think|thought)>/gi, "").trim();
     const fence = cleaned.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
     if (fence) cleaned = fence[1].trim();
     const first = cleaned.indexOf("{");
     const last = cleaned.lastIndexOf("}");
-    if (first !== -1 && last > first) {
-      const jsonStr = cleaned.slice(first, last + 1).replace(/,\s*([}\]])/g, "$1");
-      const obj = JSON.parse(jsonStr);
-      if (obj && typeof obj === "object") {
-        const val = obj[fieldName] ?? obj.prompt ?? obj.written ?? obj.spoken;
-        if (typeof val === "string" && val.trim()) return val.trim();
-      }
+    if (first === -1 || last <= first) return null;
+
+    const jsonSubstr = cleaned.slice(first, last + 1);
+    try {
+      const parsed = JSON.parse(jsonSubstr);
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null;
+    } catch {
+      const repaired = jsonSubstr
+        .replace(/,\s*([}\]])/g, "$1")
+        .replace(
+          /("[a-zA-Z0-9_-]+"\s*:\s*")([\s\S]*?)("(?=\s*,\s*"|\s*\}))/g,
+          (_m, prefix, content, suffix) => prefix + content.replace(/(?<!\\)"/g, '\\"') + suffix
+        );
+      const parsed = JSON.parse(repaired);
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null;
     }
-    return cleaned.replace(/^["']|["']$/g, "").trim();
   } catch {
-    return raw.replace(/<(?:think|thought)>[\s\S]*?<\/(?:think|thought)>/gi, "").trim();
+    return null;
   }
+}
+
+function extractCleanJsonField(raw: string, fieldName: string): string {
+  const obj = repairAndParseJsonObject(raw);
+  if (obj) {
+    const val = obj[fieldName] ?? obj.prompt ?? obj.written ?? obj.spoken;
+    if (typeof val === "string" && val.trim()) return val.trim();
+  }
+  const cleaned = raw
+    .replace(/<(?:think|thought)>[\s\S]*?<\/(?:think|thought)>/gi, "")
+    .replace(/```(?:json)?|```/gi, "")
+    .trim();
+  // Guard against leaking raw JSON wrapper if regex repair still failed
+  const regexFallback = cleaned.match(/"(?:prompt|written|spoken)"\s*:\s*"([\s\S]*?)"\s*\}/);
+  if (regexFallback && regexFallback[1].trim()) {
+    return regexFallback[1].replace(/\\"/g, '"').replace(/\\n/g, "\n").trim();
+  }
+  if (cleaned.startsWith("{") && cleaned.endsWith("}")) {
+    return "";
+  }
+  return cleaned.replace(/^["']|["']$/g, "").trim();
 }
 
 /**
@@ -715,16 +745,8 @@ export async function generatePromptCandidates(
 
     if (typeof raw !== "string" || !raw.trim()) return null;
 
-    let cleaned = raw.replace(/<(?:think|thought)>[\s\S]*?<\/(?:think|thought)>/gi, "").trim();
-    const fence = cleaned.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-    if (fence) cleaned = fence[1].trim();
-    const first = cleaned.indexOf("{");
-    const last = cleaned.lastIndexOf("}");
-    if (first === -1 || last <= first) return null;
-
-    const jsonStr = cleaned.slice(first, last + 1).replace(/,\s*([}\]])/g, "$1");
-    const obj = JSON.parse(jsonStr);
-    if (!obj || typeof obj !== "object" || Array.isArray(obj)) return null;
+    const obj = repairAndParseJsonObject(raw);
+    if (!obj) return null;
 
     const candidates: PromptCandidate[] = [];
     for (const slot of slots) {
@@ -760,4 +782,75 @@ export function stripLingualContextWhenOff(systemPrompt: string, lastUserText = 
     /\s*<skill>\s*<name>lingual-tuner<\/name>[\s\S]*?<\/skill>/gi,
     ""
   );
+}
+
+export const CURRENT_FEATURE_BANNER_VERSION = "0.4";
+
+/**
+ * Render a one-time localized "What's New" feature card above the editor (`aboveEditor`)
+ * when the user upgrades to the v0.4 4-Mode Prompt Optimizer architecture.
+ */
+export function formatReleaseBannerLines(
+  sourceLang = "zh",
+  maxCols = 88,
+  fg: (color: string, text: string) => string = (_c, t) => t
+): string[] {
+  const norm = (sourceLang || "zh").toLowerCase().split("-")[0];
+
+  const copyByLang: Record<string, { title: string; items: [string, string, string, string] }> = {
+    zh: {
+      title: "✦ [pi-lingual v0.4 更新速览] 提示词优化引擎与四态架构已就绪 (发消息后自动收起)",
+      items: [
+        "┌ [⚡english重写] 升级为「提示词规范化重写」：理顺杂乱口语，支持切中/英输出与叠加规范",
+        "├ [✦select多选]  新增「多风格候选填入」：一次生成 极简/规范/深度 3 个候选挑一个发送",
+        "├ [🤖高自由度]   直接对 AI 说“定制提示词模式/伴学槽位”，自由定制 N 个风格与规则",
+        "└ [🛡️off零负担]  切至 off 模式主动从系统提示词剥离自身技能，实现 0 Token 上下文净空",
+      ],
+    },
+    tw: {
+      title: "✦ [pi-lingual v0.4 更新速覽] 提示詞優化引擎與四態架構已就緒 (發消息後自動收起)",
+      items: [
+        "┌ [⚡english重寫] 升級為「提示詞規範化重寫」：理順雜亂口語，支持切中/英輸出與疊加規範",
+        "├ [✦select多選]  新增「多風格候選填入」：一次生成 極簡/規範/深度 3 個候選挑一個發送",
+        "├ [🤖高自由度]   直接對 AI 說「定制提示詞模式/伴學槽位」，自由定制 N 個風格與規則",
+        "└ [🛡️off零負擔]  切至 off 模式主動從系統提示詞剝離自身技能，實現 0 Token 上下文淨空",
+      ],
+    },
+    ja: {
+      title: "✦ [pi-lingual v0.4 新機能] プロンプト最適化＆4モード構成 (入力送信で自動的に閉じます)",
+      items: [
+        "┌ [⚡english最適化] 曖昧な入力を構造化プロンプトへ直接書き換え（英語/母語出力・規約追加対応）",
+        "├ [✦select候補選択] 新モード追加：簡潔・構造化・厳密の3候補を生成し、選んで送信可能に",
+        "├ [🤖自由度向上]   Agentに自然言語で伝えるだけで伴走スロットや候補スタイルを自在に調整",
+        "└ [🛡️off完全ゼロ]  off時はシステムプロンプトからスキル定義も自動除去しコンテキスト負担ゼロ",
+      ],
+    },
+    ko: {
+      title: "✦ [pi-lingual v0.4 업데이트] 프롬프트 최적화 엔진 & 4모드 아키텍처 (입력 시 자동 닫힘)",
+      items: [
+        "┌ [⚡english재작성] 복잡한 구어체 입력을 체계적인 프롬프트로 즉시 최적화 (영어/모국어 및 규칙 추가)",
+        "├ [✦select후보선택] 신규 모드: 간결/구조화/심층 3가지 스타일 후보 중 하나를 골라 전송",
+        "├ [🤖자유도향상]   에이전트에게 자연어로 말해 학습 슬롯과 프롬프트 스타일을 자유롭게 커스텀",
+        "└ [🛡️off부담제로]  off 모드 시 시스템 프롬프트에서 스킬 블록까지 제거하여 0 토큰 달성",
+      ],
+    },
+    en: {
+      title: "✦ [What's New in pi-lingual v0.4] Prompt Optimizer & 4-Mode Architecture (auto-hides on input)",
+      items: [
+        "┌ [⚡english] Upgraded to Direct Prompt Rewrite: structures messy input (EN/Native + custom rules)",
+        "├ [✦select]  New N-Choice Prompt Picker: generates Concise / Structured / Deep candidates to pick",
+        "├ [🤖Freedom] Tell your Agent in plain language to customize companion slots or N prompt styles",
+        "└ [🛡️off 0-Tok] Switching to `off` actively strips skill context for 0.00-byte LLM overhead",
+      ],
+    },
+  };
+
+  const c = copyByLang[norm] || copyByLang.en;
+  return [
+    truncateVisual(`  ${fg("accent", c.title)}`, maxCols),
+    truncateVisual(`  ${fg("muted", c.items[0])}`, maxCols),
+    truncateVisual(`  ${fg("muted", c.items[1])}`, maxCols),
+    truncateVisual(`  ${fg("muted", c.items[2])}`, maxCols),
+    truncateVisual(`  ${fg("muted", c.items[3])}`, maxCols),
+  ];
 }

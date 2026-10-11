@@ -81,6 +81,7 @@ export interface LingualConfig {
   promptLang?: string;      // Output language for Mode 2/3 prompt optimization: "en" (default) | "zh" | "native" | etc.
   promptRule?: string;      // Optional custom engineering rule stacked onto Mode 2/3 prompt optimization
   promptSlots?: PromptSlotConfig[]; // Customizable N prompt style slots for Mode 3 (N-Choice Select)
+  lastSeenVersion?: string; // Tracks the last major feature release banner shown above editor
   sourceLang?: string;      // e.g. "zh" (default) | "en" | "ja"
   targetLang?: string;      // e.g. "en" (default) | "ja" | "zh"
   replyInSourceLang?: boolean; // Optional guard: whether to hint AI to reply in native language when in english mode

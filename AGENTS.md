@@ -142,6 +142,10 @@
     ```
     *(Note: omitting `{ role: "source" }` physically eliminates the source line from HUD rendering).*
 
+### Invariant 10: One-Time Localized `aboveEditor` Release Banner for Major Feature Upgrades (RFC 2119)
+- Whenever a release introduces substantive user-facing feature upgrades (not minor bugfixes or internal refactoring), the extension MUST bump `CURRENT_FEATURE_BANNER_VERSION` and update `formatReleaseBannerLines` in `src/engine.ts`.
+- On `session_start` (`event?.reason !== "resume"`), if `diskConfig.lastSeenVersion !== CURRENT_FEATURE_BANNER_VERSION`, the extension renders a concise 5-line localized "What's New" card above the editor (`aboveEditor`) in the user's configured native language (`state.sourceLang`), records `lastSeenVersion` in `~/.pi/agent/lingual.json` so it only appears once per feature release, and auto-dismisses it on the first user input.
+
 ---
 
 ## 3. Physical Verification & Build Commands

@@ -155,6 +155,7 @@ interface LingualConfig {
     promptLang?: string;
     promptRule?: string;
     promptSlots?: PromptSlotConfig[];
+    lastSeenVersion?: string;
     sourceLang?: string;
     targetLang?: string;
     replyInSourceLang?: boolean;

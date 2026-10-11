@@ -22,6 +22,8 @@ import {
   rewritePromptDirect,
   generatePromptCandidates,
   stripLingualContextWhenOff,
+  formatReleaseBannerLines,
+  CURRENT_FEATURE_BANNER_VERSION,
   getDefaultPromptSlots,
   shouldTriggerTranslation,
   loadUserLingualConfig,
@@ -311,6 +313,20 @@ export default function (pi: ExtensionAPI) {
   let polishTimer: NodeJS.Timeout | undefined;
   let resizeTimer: NodeJS.Timeout | undefined;
   let lastRawInputText = "";
+  let showingReleaseBanner = false;
+
+  const renderReleaseBanner = (ctx: ExtensionContext) => {
+    if (!hasActiveUI(ctx)) return;
+    try {
+      const maxCols = getEffectiveMaxCols();
+      const fg = ctx.ui.theme?.fg
+        ? (c: string, t: string) => ctx.ui.theme.fg(c as any, t)
+        : (_c: string, t: string) => t;
+      const lines = formatReleaseBannerLines(state.sourceLang, maxCols, fg);
+      ctx.ui.setWidget("lingual_hud", lines, { placement: "aboveEditor" });
+      showingReleaseBanner = true;
+    } catch {}
+  };
 
   const onResize = () => {
     clearTimeout(resizeTimer);
@@ -339,16 +355,32 @@ export default function (pi: ExtensionAPI) {
     }
   };
 
-  pi.on("session_start", async (_event, ctx) => {
+  pi.on("session_start", async (event: any, ctx) => {
     clearPendingTimers();
     session.abortActive();
     session.reset();
     lastContext = ctx;
+    showingReleaseBanner = false;
     if (hasActiveUI(ctx)) {
       safeClearWidget(ctx);
+      // 重大功能升级速览卡片：当用户首次升级到 v0.4 四态架构时，在输入框上方按用户母语展示一次更新速览，发消息后自动收起
+      const diskCfg = loadUserLingualConfig();
+      if (!isTestEnvironment() && event?.reason !== "resume" && diskCfg.lastSeenVersion !== CURRENT_FEATURE_BANNER_VERSION) {
+        renderReleaseBanner(ctx);
+        saveUserLingualConfig({ lastSeenVersion: CURRENT_FEATURE_BANNER_VERSION });
+      }
     }
     // 0 侵扰冷启动：静默点亮状态栏指示，绝不弹窗打断敲代码心流
     updateFooter(ctx);
+  });
+
+  pi.on("agent_start" as any, async (_event: any, ctx: ExtensionContext) => {
+    if (showingReleaseBanner) {
+      showingReleaseBanner = false;
+      if (hasActiveUI(ctx)) {
+        safeClearWidget(ctx);
+      }
+    }
   });
 
   // 【主动 0-Token 上下文护盾 (Active 0-Token Context Shield in `off` Mode)】：
@@ -543,6 +575,13 @@ export default function (pi: ExtensionAPI) {
         return match ? { ...match, enabled: s.enabled, showMeaning: s.showMeaning } : s;
       });
     }
+    // Sync built-in promptSlots labels (`concise`, `spec`, `deep`) to the new source language
+    const freshPromptDefaults = getDefaultPromptSlots(newSource);
+    const freshPromptMap = new Map(freshPromptDefaults.map((s) => [s.id, s]));
+    state.promptSlots = (state.promptSlots || freshPromptDefaults).map((s) => {
+      const match = freshPromptMap.get(s.id);
+      return match ? { ...match, enabled: s.enabled } : s;
+    });
     saveUserLingualConfig({ sourceLang: newSource, targetLang: newTarget, slots: state.slots });
     session.reset();
     globalLingualCache.clear();
@@ -915,6 +954,12 @@ export default function (pi: ExtensionAPI) {
       return;
     }
 
+    // 6.1 子命令路由: 查看本版本新特性速览卡片 (/lingual news 或 /lingual whatsnew)
+    if (sub === "news" || sub === "whatsnew" || sub === "changelog") {
+      renderReleaseBanner(ctx);
+      return;
+    }
+
     // 7. 模式切换优先: 显式模式关键词 (/lingual original, /lingual english, /lingual select, /lingual off, /lingual mode ...)
     if (
       sub === "mode" ||
@@ -1117,6 +1162,12 @@ export default function (pi: ExtensionAPI) {
   // 核心拦截层：绝不把双模标注硬塞入用户的消息历史与 Prompt！
   pi.on("input", async (event: InputEvent, ctx: ExtensionContext): Promise<InputEventResult> => {
     lastRawInputText = event?.text || "";
+    if (showingReleaseBanner) {
+      showingReleaseBanner = false;
+      if (hasActiveUI(ctx)) {
+        safeClearWidget(ctx);
+      }
+    }
     if (state.mode === "off") return { action: "continue" };
     if (event.source === "extension") return { action: "continue" };
 
@@ -1275,18 +1326,41 @@ export default function (pi: ExtensionAPI) {
         }
 
         const maxCols = getEffectiveMaxCols();
+        const singleLineSource = promptToTranslate.replace(/\s*\r?\n\s*/g, " ↵ ");
+        const candidateSlotResults: SlotResult[] = [
+          { id: "source", label: state.labels.sourceLabel || "原文", role: "source", content: singleLineSource },
+          ...candidates.map((c, idx) => ({
+            id: c.id,
+            label: `${idx + 1}:${c.label}`,
+            role: "translation" as const,
+            content: c.content.replace(/\s*\r?\n\s*/g, " ↵ "),
+          })),
+        ];
+        session.setPageResult(
+          0,
+          {
+            sourceText: singleLineSource,
+            spoken: candidates[0].content.replace(/\s*\r?\n\s*/g, " ↵ "),
+            written: candidates[1]?.content.replace(/\s*\r?\n\s*/g, " ↵ ") || "",
+            annotated: "",
+            slots: candidateSlotResults,
+          },
+          generation
+        );
+
         if (hasActiveUI(ctx)) {
           const previewLines: string[] = [
             truncateVisual(
-              `  ${ctx.ui.theme.fg("muted", `· [${state.labels.sourceLabel || "原文"}]`)} ${promptToTranslate}`,
+              `  ${ctx.ui.theme.fg("muted", `· [${state.labels.sourceLabel || "原文"}]`)} ${singleLineSource}`,
               maxCols
             ),
           ];
-          candidates.forEach((c, idx) => {
-            const branch = idx === 0 ? "┌" : idx === candidates.length - 1 ? "└" : "├";
+          candidates.slice(0, 6).forEach((c, idx, arr) => {
+            const branch = idx === 0 ? "┌" : idx === arr.length - 1 ? "└" : "├";
+            const oneLineContent = c.content.replace(/\s*\r?\n\s*/g, " ↵ ");
             previewLines.push(
               truncateVisual(
-                `  ${ctx.ui.theme.fg("accent", `${branch} [${idx + 1}:${c.label}]`)} ${c.content}`,
+                `  ${ctx.ui.theme.fg("accent", `${branch} [${idx + 1}:${c.label}]`)} ${oneLineContent}`,
                 maxCols
               )
             );
@@ -1314,8 +1388,8 @@ export default function (pi: ExtensionAPI) {
           const optMaxCols = Math.max(20, maxCols - 18);
 
           const optionLabels = [
-            ...candidates.map((c, idx) => `[${idx + 1}] ${c.label}: ${truncateVisual(c.content, optMaxCols)}`),
-            `[0] ${sp.keepOrig}: ${truncateVisual(promptToTranslate, optMaxCols)}`,
+            ...candidates.map((c, idx) => `[${idx + 1}] ${c.label}: ${truncateVisual(c.content.replace(/\s*\r?\n\s*/g, " ↵ "), optMaxCols)}`),
+            `[0] ${sp.keepOrig}: ${truncateVisual(singleLineSource, optMaxCols)}`,
           ];
           const picked = await (ctx.ui as any).select(sp.title, optionLabels);
           // Pressing Esc (picked === undefined) or choosing [0] passes original prompt through without forcing Candidate #1
@@ -1336,7 +1410,11 @@ export default function (pi: ExtensionAPI) {
           : chosenText;
 
         const diskConfig = loadUserLingualConfig();
-        if (shouldInjectNativeReplyGuard(event.text, state.sourceLang, diskConfig.replyInSourceLang)) {
+        const effectiveOutLang = (state.promptLang || state.targetLang || "en").toLowerCase().split("-")[0];
+        if (
+          effectiveOutLang !== state.sourceLang &&
+          shouldInjectNativeReplyGuard(event.text, state.sourceLang, diskConfig.replyInSourceLang)
+        ) {
           finalText += formatNativeReplyGuardHint(state.sourceLang);
         }
 
@@ -1395,18 +1473,35 @@ export default function (pi: ExtensionAPI) {
         return { action: "continue" };
       }
 
-      // 纯粹展示「原话 vs 重写后的新提示词」，不生成口语/词汇伴学卡片！
+      // 纯粹展示「原话 vs 重写后的新提示词」，并同步至 session 以支撑窗口缩放重绘与 /last 回看
+      const outLang = (state.promptLang || state.targetLang || "en").toLowerCase().split("-")[0];
+      const singleLineSource = promptToTranslate.replace(/\s*\r?\n\s*/g, " ↵ ");
+      const singleLineRewritten = rewritten.replace(/\s*\r?\n\s*/g, " ↵ ");
+      session.setPageResult(
+        0,
+        {
+          sourceText: singleLineSource,
+          spoken: singleLineRewritten,
+          written: "",
+          annotated: "",
+          slots: [
+            { id: "source", label: state.labels.sourceLabel || "原文", role: "source", content: singleLineSource },
+            { id: "rewritten", label: `⚡${outLang.toUpperCase()}`, role: "translation", content: singleLineRewritten },
+          ],
+        },
+        generation
+      );
+
       if (hasActiveUI(ctx)) {
         try {
           const maxCols = getEffectiveMaxCols();
-          const outLang = state.promptLang || state.targetLang;
           const previewLines = [
             truncateVisual(
-              `  ${ctx.ui.theme.fg("muted", `· [${state.labels.sourceLabel || "原文"}]`)} ${promptToTranslate}`,
+              `  ${ctx.ui.theme.fg("muted", `· [${state.labels.sourceLabel || "原文"}]`)} ${singleLineSource}`,
               maxCols
             ),
             truncateVisual(
-              `  ${ctx.ui.theme.fg("accent", `└ [⚡${outLang.toUpperCase()}]`)} ${rewritten}`,
+              `  ${ctx.ui.theme.fg("accent", `└ [⚡${outLang.toUpperCase()}]`)} ${singleLineRewritten}`,
               maxCols
             ),
           ];
@@ -1419,7 +1514,10 @@ export default function (pi: ExtensionAPI) {
         : rewritten;
 
       const diskConfig = loadUserLingualConfig();
-      if (shouldInjectNativeReplyGuard(event.text, state.sourceLang, diskConfig.replyInSourceLang)) {
+      if (
+        outLang !== state.sourceLang &&
+        shouldInjectNativeReplyGuard(event.text, state.sourceLang, diskConfig.replyInSourceLang)
+      ) {
         finalText += formatNativeReplyGuardHint(state.sourceLang);
       }
 

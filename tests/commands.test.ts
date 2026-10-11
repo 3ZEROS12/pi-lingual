@@ -5,6 +5,7 @@ import { formatStatusReport, resolveLabelsForLang } from "../src/presets.js";
 import {
   buildDirectRewriteSystemPrompt,
   buildPromptCandidatesSystemPrompt,
+  formatReleaseBannerLines,
   getDefaultPromptSlots,
   generatePromptCandidates,
   rewritePromptDirect,
@@ -330,7 +331,7 @@ test("v0.4.1 Mode 2 Direct Rewrite & Mode 3 N-Choice Prompt Selector", async () 
   });
   assert.equal(rewritten, "排查并修复页面刷新后登录态丢失问题：检查 Cookie 属性与过期策略，保持最小工作改动面。");
 
-  // 3. Mode 3 N-Choice Candidate Generator (supports default 3 styles or custom N styles)
+  // 3. Mode 3 N-Choice Candidate Generator (supports default 3 styles or custom N styles, plus unescaped quote self-healing)
   const candSys = buildPromptCandidatesSystemPrompt({
     sourceLang: "zh",
     targetLang: "en",
@@ -346,16 +347,25 @@ test("v0.4.1 Mode 2 Direct Rewrite & Mode 3 N-Choice Prompt Selector", async () 
     sourceLang: "zh",
     targetLang: "en",
     complete: async () =>
-      JSON.stringify({
-        concise: "Refactor auth login flow with minimal diff.",
-        spec: "Objective: Optimize auth login flow. Constraints: Preserve session compatibility.",
-        deep: "Trace end-to-end auth flow, resolve root session bottlenecks, and verify boundary cases.",
-      }),
+      `{
+        "concise": "Refactor "auth" login flow with minimal diff.",
+        "spec": "Objective: Optimize auth login flow. Constraints: Preserve session compatibility.",
+        "deep": "Trace end-to-end auth flow, resolve root session bottlenecks, and verify boundary cases."
+      }`,
   });
   assert.ok(candidates);
   assert.equal(candidates!.length, 3);
+  assert.ok(candidates![0].content.includes('"auth"'), "Must self-heal unescaped internal quotes in candidate JSON");
   assert.equal(candidates![1].id, "spec");
   assert.ok(candidates![1].content.includes("Objective:"));
+
+  // 4. Direct Rewrite also self-heals unescaped internal quotes without leaking raw JSON braces
+  const rewrittenUnescaped = await rewritePromptDirect("修复登录报错", {
+    sourceLang: "zh",
+    targetLang: "en",
+    complete: async () => `{"prompt": "Fix the "login" session bug in src/auth.ts"}`,
+  });
+  assert.equal(rewrittenUnescaped, 'Fix the "login" session bug in src/auth.ts');
 });
 
 test("v0.4.1 Mode 4 Active 0-Token Context Shield in off mode & /lingual select routing", async () => {
@@ -418,5 +428,17 @@ test("v0.4.1 Mode 4 Active 0-Token Context Shield in off mode & /lingual select 
 
   // Teardown back to original
   await registeredCommands["lingual"].handler("original", mockCtx);
+
+  // Verify localized What's New release banner above editor (zh, ja, en)
+  const zhBanner = formatReleaseBannerLines("zh", 88);
+  assert.equal(zhBanner.length, 5);
+  assert.ok(zhBanner.some((l) => l.includes("english重写") && l.includes("规范化")));
+  assert.ok(zhBanner.some((l) => l.includes("select多选")));
+  assert.ok(zhBanner.some((l) => l.includes("off零负担")));
+
+  const enBanner = formatReleaseBannerLines("en", 88);
+  assert.equal(enBanner.length, 5);
+  assert.ok(enBanner.some((l) => l.includes("Direct Prompt Rewrite")));
+  assert.ok(enBanner.some((l) => l.includes("0.00-byte")));
 });
 
