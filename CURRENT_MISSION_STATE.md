@@ -1,7 +1,7 @@
 # `pi-lingual` 工程实施状态报告 (Mission State Ledger)
 
 **Baseline Version**: `v0.3.1` (Official Release · SemVer Compliant)  
-**Workspace Root**: `D:/Workspace/projects/pi-lingua`  
+**Workspace Root**: `D:/Workspace/projects/pi-lingual`  
 **Execution Status**: v0.3.1 Industrial Rebuild & Documentation Alignment Completed  
 **Test Suite Health**: **74 / 74 PASS (100% Green)**  
 **Fleet Pre-Flight**: **Passed: 1 | Failed: 0**  
@@ -19,7 +19,7 @@
 
 ### 2. 宿主单挂载源与版本冻结 (Single Harness & Version Freeze)
 - **历史问题**：`npm:pi-lingual` 与本地工程双重挂载导致快捷键冲突、代码遮蔽、频繁碎片化递增版本号。
-- **闭环结果**：`~/.pi/agent/settings.json` 仅直连本地 `D:\Workspace\projects\pi-lingua`，彻底剔除 npm 遮蔽包；版本号严格冻结于 `v0.3.0`，杜绝碎片化发版。
+- **闭环结果**：`~/.pi/agent/settings.json` 仅直连本地 `D:\Workspace\projects\pi-lingual`，彻底剔除 npm 遮蔽包；版本号严格冻结于 `v0.3.0`，杜绝碎片化发版。
 
 ### 3. 底栏状态与指示器纯净性 (Status Indicator Invariant)
 - **历史问题**：底栏带有冗余模式词（如 `zh ⇄ en 原文`）。
@@ -151,12 +151,12 @@
 🧪 Fleet Physical Pre-Flight: Passed: 1 | Failed: 0
 ```
 
-## 🕒 Last Session Snapshot (2026/10/11 15:22:26)
-- **Session ID**: `01a125fa-c24f-7616-a7f6-3cfc84c8f8d6`
-- **User Intent**: 还有我们的软件不能占用任何键位，我们没必要啊，我们只需要检测就行了，跟之前的pi-lingual一样啊，为什么非得要进行这些呢？现在我用enterdou
+## 🕒 Last Session Snapshot (2026/10/11 16:08:36)
+- **Session ID**: `01a129f6-7c64-70d2-8d2f-97c1c9b73d82`
+- **User Intent**: 我应该怎么样直接pi -r到那里
 - **Last Assistant State**:
-> 针对您提出的这几项非常关键的质感与逻辑问题，已全部彻底排查并完成修复与重构。新版本已编译、测试通过，并打包为 **`Lingual v0.2.10`（Commit `5629732`）**，桌面程序已在后台重新启动就绪：
-> ---
-> * **技术根因（Preload 预加载脚本静默崩溃）**：
-> 1. 在 `package.json` 的打包命令中，`tsup` 把 `preload.ts` 编译成了 ESM 格式（带有 `import { contextBridge } from "electron"`）；
-> 2. 但在 Electron 底层沙箱机制中，**预加载脚本（Preload）强制必须使用 CommonJS（`require`）格式**；
+> 你有 **3 种方式**可以直接回到那次对话（会话 ID 前缀：`01a129d7`）：
+> 退出当前会话后，在 `D:\Workspace\projects\pi-lingual` 下直接运行（支持 UUID 前缀匹配）：
+> pi --session 01a129d7
+> 直接在下面输入框输入：
+> /resume

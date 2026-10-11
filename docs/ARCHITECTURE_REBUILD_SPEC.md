@@ -2,7 +2,7 @@
 **Document ID**: `SPEC-LINGUAL-REBUILD-2026-FINAL`  
 **Classification**: Core Architecture / Engineering Blueprint  
 **Status**: APPROVED & FROZEN FOR EXECUTION  
-**Target Root**: `D:/Workspace/projects/pi-lingua`  
+**Target Root**: `D:/Workspace/projects/pi-lingual`  
 
 ---
 

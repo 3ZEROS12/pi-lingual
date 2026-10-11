@@ -933,7 +933,7 @@ export default function (pi: ExtensionAPI) {
       try {
         if (!ctx.modelRegistry) return null;
 
-        // 1. 解析目标模型：支持 auto 跟随主会话，或用户通过 /lingua-model 自选的模型
+        // 1. 解析目标模型：支持 auto 跟随主会话，或用户通过 /lingual-model 自选的模型
         let targetModel = ctx.model;
         if (state.selectedModel && state.selectedModel !== "auto") {
           const available = ctx.modelRegistry.getAvailable?.() || [];

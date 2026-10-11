@@ -2268,7 +2268,7 @@ function loadUserLingualConfig() {
     try {
       const raw = fs.readFileSync(settingsFile, "utf8");
       const parsed = JSON.parse(raw);
-      const legacyBlock = parsed["pi-lingual"] || parsed["lingua"];
+      const legacyBlock = parsed["pi-lingual"];
       if (legacyBlock && typeof legacyBlock === "object") {
         target = legacyBlock;
         try {

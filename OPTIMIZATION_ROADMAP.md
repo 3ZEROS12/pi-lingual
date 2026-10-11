@@ -1,7 +1,7 @@
 # `pi-lingual` 工业级重构与工程发布路线图 (Optimization Roadmap & Release Gate)
 
 > 📌 **基线状态 (Baseline Status)**: `ALL 5 PHASES COMPLETED · 64/64 TESTS PASS (100% GREEN)`  
-> **归属工程池**: `D:/Workspace/projects/pi-lingua`  
+> **归属工程池**: `D:/Workspace/projects/pi-lingual`  
 > **技术规格书**: `docs/ARCHITECTURE_REBUILD_SPEC.md`  
 > **设计准则**: 严格遵循 Ponytail Reflex（Smallest Working Diff & Anti-Overengineering，RFC 2119）与 Trifecta Invariants 1~9
 
