@@ -24,6 +24,15 @@ const CODE_STATEMENT_REGEX = /^(?:const|let|var|function|def|class|import|export
 const SQL_STATEMENT_REGEX = /^(?:SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM|CREATE\s+TABLE|ALTER\s+TABLE|DROP\s+TABLE)\s+/i;
 
 /**
+ * Check if the text contains non-English natural language scripts (CJK, accented Latin, Cyrillic, etc.)
+ * Strictly avoids triggering on pure emojis, typographical quotes, or terminal commands.
+ */
+export function isNonEnglish(text: string): boolean {
+  const naturalLanguageScript = /[\u4e00-\u9fa5\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af\u0400-\u04ff\u0600-\u06ff\u00c0-\u024f]/;
+  return naturalLanguageScript.test(text);
+}
+
+/**
  * 判定输入文本是否为纯代码块、Shell 指令或数据结构体，应当 0ms 旁路放行
  */
 export function shouldShieldBypass(text: string): boolean {

@@ -9,7 +9,6 @@ import {
   getDefaultPromptSlots,
   generatePromptCandidates,
   rewritePromptDirect,
-  rewritePromptDirectWithDetails,
   stripLingualContextWhenOff,
 } from "../src/engine.js";
 import { LingualLruCache } from "../src/cache.js";
@@ -65,47 +64,47 @@ test("extension /lingual - supports explicit mode arguments, 1/2/3/0 jumps, and 
     },
   };
 
-  // 1. Explicitly switch to Mode 2 (Direct Rewrite / english)
+  // 1. Explicitly switch to Mode 2 (Direct / 直接改)
   await registeredCommands["lingual"].handler("2", mockCtx);
   assert.ok(
-    notifications[notifications.length - 1].includes("英文") ||
-      notifications[notifications.length - 1].includes("English") ||
-      notifications[notifications.length - 1].includes("直出")
+    notifications[notifications.length - 1].includes("直接改") ||
+      notifications[notifications.length - 1].includes("direct")
   );
-  assert.ok(typeof lastStatusVal === "string" && lastStatusVal.includes("⚡"));
+  assert.ok(typeof lastStatusVal === "string" && lastStatusVal.includes("直接改"));
 
   // 2. Explicitly switch to Mode 0 (Off) — status bar badge MUST become undefined (0 visual pixels)
   await registeredCommands["lingual"].handler("0", mockCtx);
   assert.ok(
-    notifications[notifications.length - 1].includes("关闭") ||
-      notifications[notifications.length - 1].includes("disabled") ||
+    notifications[notifications.length - 1].includes("已关闭") ||
       notifications[notifications.length - 1].includes("off")
   );
   assert.equal(lastStatusVal, undefined, "Off mode must hide status bar badge completely (undefined)");
 
-  // 3. Explicitly switch to Mode 1 (Original + Learn)
-  await registeredCommands["lingual"].handler("1", mockCtx);
+  // 3. Explicitly switch to Mode 1 (Companion / 纯伴学)
+  await registeredCommands["lingual"].handler("companion", mockCtx);
   assert.ok(
-    notifications[notifications.length - 1].includes("原文") ||
-      notifications[notifications.length - 1].includes("Original")
+    notifications[notifications.length - 1].includes("纯伴学") ||
+      notifications[notifications.length - 1].includes("companion")
   );
-  assert.ok(typeof lastStatusVal === "string" && lastStatusVal.length > 0);
+  assert.ok(typeof lastStatusVal === "string" && String(lastStatusVal).includes("纯伴学"));
 
-  // 4. Cycle without arguments: original (1) -> english (2) -> select (3) -> off (0) -> original (1)
+  // 4. Cycle without arguments: companion (1) -> direct (2) -> candidates (3) -> off (0) -> companion (1)
   await registeredCommands["lingual"].handler("", mockCtx);
   assert.ok(
-    notifications[notifications.length - 1].includes("英文") ||
-      notifications[notifications.length - 1].includes("English") ||
-      notifications[notifications.length - 1].includes("直出")
+    notifications[notifications.length - 1].includes("直接改") ||
+      notifications[notifications.length - 1].includes("direct")
   );
 
   await registeredCommands["lingual"].handler("", mockCtx);
-  assert.ok(notifications[notifications.length - 1].includes("select"));
+  assert.ok(
+    notifications[notifications.length - 1].includes("挑候选") ||
+      notifications[notifications.length - 1].includes("candidates")
+  );
 
   await registeredCommands["lingual"].handler("", mockCtx);
   assert.equal(lastStatusVal, undefined, "Cycling into off mode must clear status bar badge");
 
-  // Teardown: back to original
+  // Teardown: back to companion
   await registeredCommands["lingual"].handler("1", mockCtx);
 });
 
@@ -326,45 +325,30 @@ test("extension paging - non-translating inputs fully clear pagination pool to p
 });
 
 test("v0.4.1 Mode 2 Direct Rewrite & Mode 3 N-Choice Prompt Selector", async () => {
-  // 1. Default 3 prompt optimization slots (concise, spec, deep)
+  // 1. Default prompt optimization slots (concise, spec, deep + vocab)
   const defaultPromptSlots = getDefaultPromptSlots("zh");
-  assert.equal(defaultPromptSlots.length, 3);
-  assert.deepEqual(defaultPromptSlots.map((s) => s.id), ["concise", "spec", "deep"]);
+  assert.equal(defaultPromptSlots.length, 4);
+  assert.deepEqual(defaultPromptSlots.map((s) => s.id), ["concise", "spec", "deep", "vocab"]);
 
-  // 2. Mode 2 Direct Rewrite System Prompt & execution (with custom promptLang and multiple stacked promptRules)
-  const directSys = buildDirectRewriteSystemPrompt({
-    sourceLang: "zh",
-    targetLang: "en",
-    promptLang: "zh",
-    promptRule: ["遵循最小工作 Diff 原则，严禁无关重构", "修改前先定位根因"],
-  });
-  assert.ok(directSys.includes("Chinese (Simplified)"));
-  assert.ok(directSys.includes("(1) 遵循最小工作 Diff 原则，严禁无关重构"));
-  assert.ok(directSys.includes("(2) 修改前先定位根因"));
-
+  // 2. Mode 2 (direct) runs dedicated directSlots[0] (zh_refine), Mode 3 (candidates) runs all promptSlots
   const rewritten = await rewritePromptDirect("那个登录刷新老掉线，帮我看看是不是cookie问题", {
     sourceLang: "zh",
     targetLang: "en",
-    promptLang: "zh",
-    promptRule: "最小改动",
     complete: async () =>
       JSON.stringify({
-        prompt: "排查并修复页面刷新后登录态丢失问题：检查 Cookie 属性与过期策略，保持最小工作改动面。",
+        zh_refine: "排查并修复页面刷新后登录态丢失问题：检查 Cookie 属性与过期策略，保持最小工作改动面。",
       }),
   });
   assert.equal(rewritten, "排查并修复页面刷新后登录态丢失问题：检查 Cookie 属性与过期策略，保持最小工作改动面。");
 
-  // 3. Mode 3 N-Choice Candidate Generator (supports default 3 styles or custom N styles, plus unescaped quote self-healing)
+  // 3. Mode 3 N-Choice Candidate Generator (supports default 3 styles or custom N styles + optional vocab slot)
   const candSys = buildPromptCandidatesSystemPrompt({
     sourceLang: "zh",
     targetLang: "en",
-    promptLang: "en",
-    promptRule: "Follow RFC 2119",
   });
   assert.ok(candSys.includes('"concise"'));
   assert.ok(candSys.includes('"spec"'));
   assert.ok(candSys.includes('"deep"'));
-  assert.ok(candSys.includes("Follow RFC 2119"));
 
   const candidates = await generatePromptCandidates("优化登录鉴权逻辑", {
     sourceLang: "zh",
@@ -386,35 +370,28 @@ test("v0.4.1 Mode 2 Direct Rewrite & Mode 3 N-Choice Prompt Selector", async () 
   const rewrittenUnescaped = await rewritePromptDirect("修复登录报错", {
     sourceLang: "zh",
     targetLang: "en",
-    complete: async () => `{"prompt": "Fix the "login" session bug in src/auth.ts"}`,
+    complete: async () => `{"zh_refine": "Fix the "login" session bug in src/auth.ts"}`,
   });
   assert.equal(rewrittenUnescaped, 'Fix the "login" session bug in src/auth.ts');
 
-  // 5. Hybrid learnInRewrite mode extracts both optimized prompt and 1-line vocab takeaway (#anc-2)
-  const hybridSys = buildDirectRewriteSystemPrompt({
+  // 5. Optional vocab slot in promptSlots extracts 1-line vocab takeaway alongside rewrite (#anc-2)
+  const withVocabRes = await generatePromptCandidates("登录刷新老掉线，帮我查查根因", {
     sourceLang: "zh",
     targetLang: "en",
-    promptLang: "en",
-    promptRule: ["minimal", "root-cause"],
-    learnInRewrite: true,
-  });
-  assert.ok(hybridSys.includes("Smallest Working Diff"), "Must expand 'minimal' preset rule");
-  assert.ok(hybridSys.includes("shared root cause"), "Must expand 'root-cause' preset rule");
-  assert.ok(hybridSys.includes('"vocab"'), "Must request vocab field when learnInRewrite is true");
-
-  const hybridRes = await rewritePromptDirectWithDetails("登录刷新老掉线，帮我查查根因", {
-    sourceLang: "zh",
-    targetLang: "en",
-    learnInRewrite: true,
+    promptSlots: [
+      { id: "concise", label: "极简直改", role: "rewrite", instruction: "Direct imperative prompt", enabled: true },
+      { id: "vocab", label: "重点", role: "vocab", instruction: "Extract 2-3 terms", enabled: true },
+    ],
     complete: async () =>
       JSON.stringify({
-        prompt: "Trace the root cause of session loss on page refresh.",
+        concise: "Trace the root cause of session loss on page refresh.",
         vocab: "session loss (会话丢失) · root cause (根本原因)",
       }),
   });
-  assert.ok(hybridRes);
-  assert.equal(hybridRes!.prompt, "Trace the root cause of session loss on page refresh.");
-  assert.equal(hybridRes!.vocab, "session loss (会话丢失) · root cause (根本原因)");
+  assert.ok(withVocabRes);
+  assert.equal(withVocabRes!.length, 1);
+  assert.equal(withVocabRes![0].content, "Trace the root cause of session loss on page refresh.");
+  assert.equal(withVocabRes![0].vocab, "session loss (会话丢失) · root cause (根本原因)");
 });
 
 test("v0.4.1 Mode 4 Active 0-Token Context Shield in off mode & /lingual select routing", async () => {
@@ -469,18 +446,11 @@ test("v0.4.1 Mode 4 Active 0-Token Context Shield in off mode & /lingual select 
     },
   };
 
-  await registeredCommands["lingual"].handler("select", mockCtx);
-  assert.ok(notifications[notifications.length - 1].includes("select"));
-
-  // Verify /lingual rule and /lingual target subcommands
-  await registeredCommands["lingual"].handler("target native", mockCtx);
-  assert.ok(notifications[notifications.length - 1].includes("native"));
-  await registeredCommands["lingual"].handler("rule 保持最小改动", mockCtx);
-  assert.ok(notifications[notifications.length - 1].includes("保持最小改动"));
-  await registeredCommands["lingual"].handler("rule 先定位根因", mockCtx);
-  assert.ok(notifications[notifications.length - 1].includes("2"));
-  await registeredCommands["lingual"].handler("rule clear", mockCtx);
-  await registeredCommands["lingual"].handler("target reset", mockCtx);
+  await registeredCommands["lingual"].handler("candidates", mockCtx);
+  assert.ok(
+    notifications[notifications.length - 1].includes("挑候选") ||
+      notifications[notifications.length - 1].includes("candidates")
+  );
 
   await registeredCommands["lingual"].handler("off", mockCtx);
   assert.equal((globalThis as any).__piLingualResizeListener, undefined, "Must detach resize listener in off mode");
@@ -488,30 +458,171 @@ test("v0.4.1 Mode 4 Active 0-Token Context Shield in off mode & /lingual select 
   const hookRes = await beforeAgentStartHandler({ systemPrompt: samplePromptWithSkill }, mockCtx);
   assert.ok(hookRes && !hookRes.systemPrompt.includes("lingual-tuner"));
 
-  // Teardown back to original
-  await registeredCommands["lingual"].handler("original", mockCtx);
+  // Teardown back to companion
+  await registeredCommands["lingual"].handler("companion", mockCtx);
   assert.ok((globalThis as any).__piLingualResizeListener, "Must re-attach resize listener when leaving off mode");
 
-  // Verify localized What's New release banner above editor (all 9 languages, 8 lines, zero emojis, apology included)
+  // Verify localized What's New release banner above editor (all 9 languages, 8 lines, zero emojis, ZERO apologies)
+  const bannedApologyWords = ["抱歉", "Sorry", "お詫び", "사과", "Disculpas", "Désolé", "Entschuldigung", "Извините"];
   const zhBanner = formatReleaseBannerLines("zh", 80);
   assert.equal(zhBanner.length, 8);
-  assert.ok(zhBanner.some((l) => l.includes("抱歉连发了几个 0.5 小版本")));
-  assert.ok(zhBanner.some((l) => l.includes("1 原文+伴学")));
-  assert.ok(zhBanner.some((l) => l.includes("2 直出改写")));
-  assert.ok(zhBanner.some((l) => l.includes("3 候选挑一")));
-  assert.ok(zhBanner.some((l) => l.includes("0 彻底无负担") && l.includes("0Token")));
+  assert.ok(zhBanner.some((l) => l.includes("三大模式拥有独立槽位配置")));
+  assert.ok(zhBanner.some((l) => l.includes("1 纯伴学")));
+  assert.ok(zhBanner.some((l) => l.includes("2 直接改")));
+  assert.ok(zhBanner.some((l) => l.includes("3 挑候选")));
+  assert.ok(zhBanner.some((l) => l.includes("0 已关闭") && l.includes("0Token")));
   assert.ok(zhBanner.every((l) => !l.endsWith("...")), "No line should be truncated on an 80-col terminal");
+  assert.ok(
+    zhBanner.every((l) => bannedApologyWords.every((w) => !l.includes(w))),
+    "Release banner must NEVER contain apologies"
+  );
 
   const enBanner = formatReleaseBannerLines("en", 80);
   assert.equal(enBanner.length, 8);
-  assert.ok(enBanner.some((l) => l.includes("Sorry for the 0.5.x patches")));
-  assert.ok(enBanner.some((l) => l.includes("1 Orig+Learn")));
+  assert.ok(enBanner.some((l) => l.includes("Isolated slot arrays per mode")));
+  assert.ok(enBanner.some((l) => l.includes("1 Companion")));
   assert.ok(enBanner.every((l) => !l.endsWith("...")), "No English line should be truncated on an 80-col terminal");
+  assert.ok(
+    enBanner.every((l) => bannedApologyWords.every((w) => !l.includes(w))),
+    "English release banner must NEVER contain apologies"
+  );
 
   for (const lang of ["tw", "ja", "ko", "es", "fr", "de", "ru"]) {
-    const lines = formatReleaseBannerLines(lang, 80);
+    const usedColors = new Set<string>();
+    const lines = formatReleaseBannerLines(lang, 80, (color, text) => {
+      usedColors.add(color);
+      return text;
+    });
     assert.equal(lines.length, 8, `Banner for ${lang} must have 8 lines`);
+    assert.equal(usedColors.size, 1, `Banner for ${lang} must use a single unified color across all lines`);
+    assert.ok(usedColors.has("muted"), `Banner for ${lang} must uniformly use 'muted' color`);
     assert.ok(lines.every((l) => !l.endsWith("...")), `Banner for ${lang} must not truncate on 80-col terminal`);
+    assert.ok(
+      lines.every((l) => bannedApologyWords.every((w) => !l.includes(w))),
+      `Banner for ${lang} must NEVER contain apologies`
+    );
   }
 });
+
+test("Session Feedback Regression: 3-Way Mode Isolation (Zero Leakage), faithful translation without forced summary, and 1..N instant hotkey bar", async () => {
+  // 1. System prompt must NOT force 'Objective:' or '排查并修复' action verbs when slots ask for faithful translation
+  const faithfulSys = buildPromptCandidatesSystemPrompt({
+    sourceLang: "zh",
+    targetLang: "en",
+    promptSlots: [
+      { id: "en", label: "英语", role: "rewrite", instruction: "Translate 100% faithfully into English.", enabled: true },
+      { id: "ja", label: "日语", role: "rewrite", instruction: "Translate 100% faithfully into Japanese.", enabled: true },
+    ],
+  });
+  assert.ok(faithfulSys.includes("NEVER summarize"), "Must explicitly forbid unrequested summarization");
+  assert.ok(!faithfulSys.includes("Start every rewritten prompt directly with a clear action verb"), "Must not force imperative summary verbs");
+
+  // 2. Strict 3-Way Mode Isolation: Mode 1 (`slots`) and Mode 3 (`promptSlots`) NEVER leak into Mode 2 (`directSlots`)
+  const directOut = await rewritePromptDirect("今天天气真不错，我想测试一下多语言功能", {
+    sourceLang: "zh",
+    targetLang: "en",
+    // Suppose Mode 1 has French & Russian learning slots:
+    slots: [
+      { id: "fr", label: "法语", role: "translation", instruction: "Translate into French", enabled: true },
+      { id: "ru", label: "俄语", role: "translation", instruction: "Translate into Russian", enabled: true },
+    ],
+    // And Mode 3 has Japanese & Korean candidate slots:
+    promptSlots: [
+      { id: "ja", label: "日语", role: "rewrite", instruction: "Translate into Japanese", enabled: true },
+      { id: "ko", label: "韩语", role: "rewrite", instruction: "Translate into Korean", enabled: true },
+    ],
+    // While Mode 2 has its own isolated `directSlots`:
+    directSlots: [
+      { id: "direct_en", label: "英语直译", role: "rewrite", instruction: "Translate faithfully into English", enabled: true },
+    ],
+    complete: async (_text, sysPrompt) => {
+      assert.ok(sysPrompt.includes('"direct_en"'), "Mode 2 must ONLY run directSlots");
+      assert.ok(!sysPrompt.includes('"fr"') && !sysPrompt.includes('"ja"'), "Mode 1 slots and Mode 3 promptSlots must NEVER leak into Mode 2");
+      return JSON.stringify({
+        direct_en: "The weather is great today, and I want to test the multilingual feature.",
+      });
+    },
+  });
+  assert.equal(directOut, "The weather is great today, and I want to test the multilingual feature.");
+
+  // 3. Mode 3 (candidates) ctx.ui.custom instant hotkey bar: pressing '2' immediately sends candidate #2 without repeating long text
+  let inputHandler: any = null;
+  const registeredCommands: Record<string, any> = {};
+  const mockPi: any = {
+    on(event: string, handler: any) {
+      if (event === "input") inputHandler = handler;
+    },
+    registerCommand(name: string, def: any) {
+      registeredCommands[name] = def;
+    },
+    registerShortcut() {},
+  };
+  extensionFactory(mockPi);
+
+  let renderedCustomLines: string[] = [];
+  let renderedHudLines: string[] = [];
+  let keyToPress = "2";
+  const mockCtx: any = {
+    hasUI: true,
+    model: { provider: "mock", id: "mock-model" },
+    modelRegistry: {
+      streamSimple: () => ({
+        result: async () => ({
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                concise: "Candidate One Full Sentence Output",
+                spec: "Candidate Two Full Sentence Output",
+                deep: "Candidate Three Full Sentence Output",
+              }),
+            },
+          ],
+        }),
+      }),
+    },
+    ui: {
+      notify() {},
+      setStatus() {},
+      setWidget(_k: string, lines: string[]) {
+        if (Array.isArray(lines)) renderedHudLines = lines;
+      },
+      theme: {
+        fg: (_c: string, t: string) => t,
+        bold: (t: string) => t,
+      },
+      custom: async (factory: any) => {
+        return new Promise((resolve) => {
+          const comp = factory(
+            { requestRender() {} },
+            { fg: (_c: string, t: string) => t, bold: (t: string) => t },
+            { matches: () => false },
+            resolve
+          );
+          renderedCustomLines = comp.render(80);
+          comp.handleInput(keyToPress);
+        });
+      },
+    },
+  };
+
+  await registeredCommands["lingual"].handler("3", mockCtx);
+  const resPick2 = await inputHandler({ type: "input", text: "测试一下多语言候选直发", source: "interactive" }, mockCtx);
+  assert.equal(resPick2.action, "transform");
+  assert.equal(resPick2.text, "Candidate Two Full Sentence Output", "Pressing key '2' must immediately send Candidate #2 without Enter");
+  assert.ok(
+    renderedHudLines.some((l) => l.includes("Candidate Two Full Sentence Output")),
+    "Top HUD card must display full candidate sentence"
+  );
+  assert.ok(
+    !renderedCustomLines.some((l) => l.includes("Candidate Two Full Sentence Output")),
+    "Bottom hotkey bar must NOT redundantly repeat the candidate sentence"
+  );
+
+  // Pressing '0' immediately passes through original raw text
+  keyToPress = "0";
+  const resPick0 = await inputHandler({ type: "input", text: "测试按0原话直发", source: "interactive" }, mockCtx);
+  assert.equal(resPick0.action, "continue", "Pressing key '0' must immediately send original raw text");
+});
+
 

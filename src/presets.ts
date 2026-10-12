@@ -6,7 +6,7 @@ export interface SlotPresetDefinition {
   slots: (sourceLang?: string) => SlotConfig[];
 }
 
-export { getDefaultSlots } from "./core/prompts.js";
+export { getDefaultSlots } from "./prompts.js";
 
 /**
  * 创建自定义槽位配置

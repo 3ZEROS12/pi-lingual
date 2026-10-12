@@ -16,25 +16,8 @@ import type {
   SlotConfig,
   SlotResult,
 } from "./types.js";
-import { getEffectiveMaxCols } from "./layout.js";
 import {
-  translatePrompt,
-  rewritePromptDirect,
-  rewritePromptDirectWithDetails,
-  generatePromptCandidates,
-  stripLingualContextWhenOff,
-  formatReleaseBannerLines,
-  resolveReleaseBannerLang,
-  CURRENT_FEATURE_BANNER_VERSION,
-  getDefaultPromptSlots,
-  normalizePromptRules,
-  PROMPT_RULE_PRESETS,
-  resolvePromptRulePreset,
-  shouldTriggerTranslation,
-  loadUserLingualConfig,
-  invalidateUserConfigCache,
-  shouldInjectNativeReplyGuard,
-  formatNativeReplyGuardHint,
+  getEffectiveMaxCols,
   formatTreeBranch,
   formatSubRail,
   truncateVisual,
@@ -45,6 +28,27 @@ import {
   wrapVisualText,
   formatVocabItemsAtomic,
   renderCardLayout,
+} from "./layout.js";
+import {
+  translatePrompt,
+  rewritePromptDirect,
+  generatePromptCandidates,
+  stripLingualContextWhenOff,
+  formatReleaseBannerLines,
+  resolveReleaseBannerLang,
+  resolveModeDisplaySpec,
+  normalizeLingualModeInput,
+  CURRENT_FEATURE_BANNER_VERSION,
+  getDefaultDirectSlots,
+  getDefaultPromptSlots,
+  resolveDirectSlotsFromConfig,
+  resolveCandidateSlotsFromConfig,
+  shouldTriggerTranslation,
+  isTestEnvironment,
+  loadUserLingualConfig,
+  saveUserLingualConfig,
+  shouldInjectNativeReplyGuard,
+  formatNativeReplyGuardHint,
 } from "./engine.js";
 import {
   resolveLabelsForLang,
@@ -72,21 +76,9 @@ interface ExtensionState {
   selectedModel: string;
   slotPreset: string;
   slots: SlotConfig[];
-  promptLang: string;
-  promptRule: string | string[];
+  directSlots: PromptSlotConfig[];
   promptSlots: PromptSlotConfig[];
-  learnInRewrite: boolean;
   labels: LingualI18nLabels;
-}
-
-function isTestEnvironment(): boolean {
-  return (
-    process.env.NODE_ENV === "test" ||
-    process.env.NODE_TEST_CONTEXT !== undefined ||
-    process.execArgv.some((a) => a.startsWith("--test") || a === "--test") ||
-    process.argv.some((a) => a === "--test" || a.startsWith("--test=") || /\.(?:test|spec)\.[cm]?[jt]s$/i.test(a)) ||
-    process.env.npm_lifecycle_event === "test"
-  );
 }
 
 const initialDiskConfig = isTestEnvironment() ? {} : loadUserLingualConfig();
@@ -96,6 +88,9 @@ const initialSlotPreset = initialDiskConfig.slotPreset;
 const initialSlots = Array.isArray(initialDiskConfig.slots) && initialDiskConfig.slots.length > 0
   ? initialDiskConfig.slots
   : (initialSlotPreset ? resolveSlotsForPreset(initialSlotPreset, initialSourceLang) : getDefaultSlots(initialSourceLang));
+const initialDirectSlots = Array.isArray(initialDiskConfig.directSlots) && initialDiskConfig.directSlots.length > 0
+  ? initialDiskConfig.directSlots
+  : getDefaultDirectSlots(initialSourceLang);
 const initialPromptSlots = Array.isArray(initialDiskConfig.promptSlots) && initialDiskConfig.promptSlots.length > 0
   ? initialDiskConfig.promptSlots
   : getDefaultPromptSlots(initialSourceLang);
@@ -109,68 +104,10 @@ const state: ExtensionState = {
   selectedModel: initialDiskConfig.selectedModel || "auto",
   slotPreset: initialSlotPreset || "",
   slots: initialSlots,
-  promptLang: initialDiskConfig.promptLang || "",
-  promptRule: initialDiskConfig.promptRule || "",
+  directSlots: initialDirectSlots,
   promptSlots: initialPromptSlots,
-  learnInRewrite: Boolean(initialDiskConfig.learnInRewrite),
   labels: initialLabels,
 };
-
-function saveUserLingualConfig(patch: Record<string, any>) {
-  // 测试沙箱隔离：自动化测试期间不污染宿主机用户配置
-  if (isTestEnvironment()) {
-    return;
-  }
-
-  try {
-    const agentDir = path.join(os.homedir(), ".pi", "agent");
-    const configFile = path.join(agentDir, "lingual.json");
-
-    if (!fs.existsSync(agentDir)) {
-      fs.mkdirSync(agentDir, { recursive: true });
-    }
-
-    let existing: Record<string, any> = {};
-    if (fs.existsSync(configFile)) {
-      try {
-        existing = JSON.parse(fs.readFileSync(configFile, "utf8"));
-      } catch {}
-    }
-
-    for (const [k, v] of Object.entries(patch)) {
-      const isEmptyArray = Array.isArray(v) && v.length === 0;
-      if (
-        v === undefined ||
-        v === "" ||
-        isEmptyArray ||
-        v === "auto" ||
-        v === "original" ||
-        (k === "compact" && v === false) ||
-        (k === "learnInRewrite" && v === false)
-      ) {
-        delete existing[k]; // 恢复默认值时物理移除键，零残留回滚 (RFC 2119 Invariant 1)
-      } else {
-        existing[k] = v;
-      }
-    }
-
-    // 原子写入：写入临时文件后 rename，附带 Windows 文件锁冲突安全降级
-    const content = JSON.stringify(existing, null, 2);
-    const tmpFile = `${configFile}.${Date.now()}.${Math.random().toString(36).slice(2, 6)}.tmp`;
-
-    try {
-      fs.writeFileSync(tmpFile, content, "utf8");
-      fs.renameSync(tmpFile, configFile);
-    } catch {
-      // Windows 句柄锁或权限波动时降级直接安全落盘
-      try { fs.writeFileSync(configFile, content, "utf8"); } catch {}
-      try { if (fs.existsSync(tmpFile)) fs.unlinkSync(tmpFile); } catch {}
-    }
-
-    // 同步刷新内存缓存
-    invalidateUserConfigCache();
-  } catch {}
-}
 
 // 单调递增会话 FSM 控制器，彻底根除连续输入并发竞态与幽灵卡片，物理协同掐断上游 Socket
 const session = new LingualSessionController();
@@ -214,24 +151,18 @@ function updateFooter(ctx: ExtensionContext | null | undefined) {
       pair += ` · ${state.slotPreset}`;
     }
 
-    const ruleCount = normalizePromptRules(state.promptRule).length;
-    const ruleBadge = ruleCount > 0 ? `+${ruleCount}` : "";
+    const modeSpec = resolveModeDisplaySpec(state.sourceLang);
 
     switch (state.mode) {
       case "original":
-        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", pair));
+        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", `${pair} · ${modeSpec.companion}`));
         break;
-      case "english": {
-        const outLang = state.promptLang || state.targetLang;
-        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", `${pair} · ⚡${outLang}${ruleBadge}`));
+      case "english":
+        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", `${pair} · ${modeSpec.direct}`));
         break;
-      }
-      case "select": {
-        const outLang = state.promptLang || state.targetLang;
-        const count = (state.promptSlots || []).filter((s) => s.enabled !== false).length || 3;
-        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", `${pair} · ✦${count}-${outLang}${ruleBadge}`));
+      case "select":
+        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", `${pair} · ${modeSpec.candidates}`));
         break;
-      }
       case "off":
         // 彻底隐身：处于 off 关闭状态时，完全移除底栏徽标 (0 像素视觉占用)
         ctx.ui.setStatus("lingual", undefined as any);
@@ -282,7 +213,7 @@ function renderHudWidget(
       state.labels,
       {
         maxCols,
-        maxLines: 9,
+        maxLines: Math.max(9, (slots?.length || state.slots?.length || 0) + 1),
         isCompact,
         slots: state.slots,
         pageTag,
@@ -397,6 +328,15 @@ export default function (pi: ExtensionAPI) {
     if (diskCfg.mode) {
       state.mode = diskCfg.mode;
     }
+    if (diskCfg.slots && Array.isArray(diskCfg.slots) && diskCfg.slots.length > 0) {
+      state.slots = diskCfg.slots;
+    }
+    if (diskCfg.directSlots && Array.isArray(diskCfg.directSlots) && diskCfg.directSlots.length > 0) {
+      state.directSlots = diskCfg.directSlots;
+    }
+    if (diskCfg.promptSlots && Array.isArray(diskCfg.promptSlots) && diskCfg.promptSlots.length > 0) {
+      state.promptSlots = diskCfg.promptSlots;
+    }
     syncResizeListener();
     if (hasActiveUI(ctx)) {
       safeClearWidget(ctx);
@@ -451,39 +391,14 @@ export default function (pi: ExtensionAPI) {
 
   const setModeHandler = async (args: string, ctx: ExtensionContext) => {
     session.abortActive();
-    const trimmed = args?.trim().toLowerCase();
+    const trimmed = args?.trim() || "";
+    const explicitMode = normalizeLingualModeInput(trimmed);
     let nextMode: LingualMode;
 
-    if (
-      trimmed === "english" ||
-      trimmed === "en" ||
-      trimmed === "eng" ||
-      trimmed === "refine" ||
-      trimmed === "rewrite" ||
-      trimmed === "direct" ||
-      trimmed === "2"
-    ) {
-      nextMode = "english";
-    } else if (
-      trimmed === "select" ||
-      trimmed === "choices" ||
-      trimmed === "choice" ||
-      trimmed === "pick" ||
-      trimmed === "3"
-    ) {
-      nextMode = "select";
-    } else if (
-      trimmed === "original" ||
-      trimmed === "orig" ||
-      trimmed === "learn" ||
-      trimmed === "companion" ||
-      trimmed === "1"
-    ) {
-      nextMode = "original";
-    } else if (trimmed === "off" || trimmed === "0" || trimmed === "disable" || trimmed === "stop") {
-      nextMode = "off";
+    if (explicitMode) {
+      nextMode = explicitMode;
     } else {
-      // 缺省或无参数时，平滑四态模式循环轮转 (1.原文+伴学 ➔ 2.直出改写 ➔ 3.候选挑一 ➔ 0.彻底关闭)
+      // 缺省或无参数时，平滑四态模式循环轮转 (1.纯伴学 ➔ 2.直接改 ➔ 3.挑候选 ➔ 0.已关闭)
       nextMode =
         state.mode === "original"
           ? "english"
@@ -506,54 +421,35 @@ export default function (pi: ExtensionAPI) {
     }
     updateFooter(ctx);
 
-    const isZh = state.sourceLang === "zh" || state.sourceLang === "tw";
-    const outLang = state.promptLang || state.targetLang;
-    const rules = normalizePromptRules(state.promptRule);
-    const ruleSummary = rules.length > 0 ? ` + ${rules.length}项设定条件` : "";
-    const ruleSummaryEn = rules.length > 0 ? ` + ${rules.length} rule(s)` : "";
+    const modeSpec = resolveModeDisplaySpec(state.sourceLang);
+    const pair = state.labels.hudTitle || `${state.sourceLang} ⇄ ${state.targetLang}`;
+    const diskForMode = loadUserLingualConfig();
+    const activeDirectSlots = resolveDirectSlotsFromConfig({
+      sourceLang: state.sourceLang,
+      directSlots: diskForMode.directSlots ?? state.directSlots,
+    }).filter((s) => s.enabled !== false && s.role !== "vocab");
+    const activeCandidateSlots = resolveCandidateSlotsFromConfig({
+      sourceLang: state.sourceLang,
+      promptSlots: diskForMode.promptSlots ?? state.promptSlots,
+    }).filter((s) => s.enabled !== false && s.role !== "vocab");
 
     if (nextMode === "english") {
+      const firstLabel = activeDirectSlots[0]?.label || "Direct";
       try {
-        ctx.ui.notify(
-          state.labels.notifyEnglish ||
-            (isZh
-              ? `[${state.labels.hudTitle}] [2/3 直出改写] 目标文字: ${outLang}${ruleSummary} ➔ 直接改写发送 (敲 /lingual 1|2|3|0 可直达)`
-              : `[${state.labels.hudTitle}] [2/3 Direct Rewrite] Target: ${outLang}${ruleSummaryEn} ➔ 1-to-1 send (/lingual 1|2|3|0)`),
-          "info"
-        );
+        ctx.ui.notify(modeSpec.notifyDirect(pair, firstLabel), "info");
       } catch {}
     } else if (nextMode === "select") {
-      const slotLabels = (state.promptSlots || getDefaultPromptSlots(state.sourceLang))
-        .filter((s) => s.enabled !== false)
-        .map((s) => s.label)
-        .join(" / ");
+      const slotLabels = activeCandidateSlots.map((s) => s.label).join(" / ");
       try {
-        ctx.ui.notify(
-          isZh
-            ? `[${state.labels.hudTitle}] [3/3 候选挑一 (select)] 目标文字: ${outLang}${ruleSummary} · 候选(${slotLabels}) (敲 /lingual 1|2|3|0 可直达)`
-            : `[${state.labels.hudTitle}] [3/3 Pick of N (select)] Target: ${outLang}${ruleSummaryEn} · Slots(${slotLabels}) (/lingual 1|2|3|0)`,
-          "info"
-        );
+        ctx.ui.notify(modeSpec.notifyCandidates(pair, slotLabels), "info");
       } catch {}
     } else if (nextMode === "off") {
       try {
-        ctx.ui.notify(
-          state.labels.notifyOff ||
-            (isZh
-              ? `[${state.labels.hudTitle}] [0 已彻底关闭] 底栏隐藏 · 监听已卸 · 0 Token 零负担 (敲 /lingual 重新开启)`
-              : `[${state.labels.hudTitle}] [0 Off] Status hidden · listeners detached · 0-token footprint`),
-          "info"
-        );
+        ctx.ui.notify(modeSpec.notifyOff(pair), "info");
       } catch {}
     } else {
       try {
-        ctx.ui.notify(
-          state.labels.notifyOriginal ||
-            (isZh
-              ? `[${state.labels.hudTitle}] [1/3 原文+伴学] 原话 0ms 直发 + 上方浮现伴学卡 (敲 /lingual 1|2|3|0 可直达)`
-              : `[${state.labels.hudTitle}] [1/3 Orig+Learn] 0ms raw send + learning card above (/lingual 1|2|3|0)`),
-          "info"
-        );
+        ctx.ui.notify(modeSpec.notifyCompanion(pair), "info");
       } catch {}
     }
   };
@@ -627,6 +523,7 @@ export default function (pi: ExtensionAPI) {
       return;
     }
 
+    const diskBeforeSwitch = loadUserLingualConfig();
     state.sourceLang = newSource;
     state.targetLang = newTarget;
     state.labels = resolveLabelsForLang(newSource, undefined, newTarget);
@@ -637,16 +534,23 @@ export default function (pi: ExtensionAPI) {
       const freshMap = new Map(freshDefaults.map((s) => [s.id, s]));
       state.slots = (state.slots || freshDefaults).map((s) => {
         const match = freshMap.get(s.id);
-        return match ? { ...match, enabled: s.enabled, showMeaning: s.showMeaning } : s;
+        return match
+          ? {
+              ...match,
+              enabled: s.enabled,
+              showMeaning: s.showMeaning,
+              ...(s.instruction ? { instruction: s.instruction } : {}),
+            }
+          : s;
       });
     }
-    // Sync built-in promptSlots labels (`concise`, `spec`, `deep`) to the new source language
-    const freshPromptDefaults = getDefaultPromptSlots(newSource);
-    const freshPromptMap = new Map(freshPromptDefaults.map((s) => [s.id, s]));
-    state.promptSlots = (state.promptSlots || freshPromptDefaults).map((s) => {
-      const match = freshPromptMap.get(s.id);
-      return match ? { ...match, enabled: s.enabled } : s;
-    });
+    // Only reset directSlots / promptSlots to newSource defaults if user has NOT customized them on disk
+    if (!diskBeforeSwitch.directSlots || diskBeforeSwitch.directSlots.length === 0) {
+      state.directSlots = getDefaultDirectSlots(newSource);
+    }
+    if (!diskBeforeSwitch.promptSlots || diskBeforeSwitch.promptSlots.length === 0) {
+      state.promptSlots = getDefaultPromptSlots(newSource);
+    }
     saveUserLingualConfig({ sourceLang: newSource, targetLang: newTarget, slots: state.slots });
     session.reset();
     globalLingualCache.clear();
@@ -711,7 +615,7 @@ export default function (pi: ExtensionAPI) {
     const subCmd = (parts[0] || "").toLowerCase();
     const lbl = state.labels;
 
-    // 1. 无参数或 "list": 查看当前所有槽位状态与管理帮助 (根据当前语言严格本地化，Primary Language Sovereignty)
+    // 1. 无参数或 "list": 查看当前所有槽位状态与管理帮助（清晰隔离展示 Mode 1 slots、Mode 2 directSlots、Mode 3 promptSlots）
     if (!subCmd || subCmd === "list" || subCmd === "ls") {
       const slots = state.slots || [];
       const lines = slots.map((s, idx) => {
@@ -723,24 +627,51 @@ export default function (pi: ExtensionAPI) {
         return `  ${idx + 1}. [${s.id}] "${s.label}" (${s.role}, ${status}${meaning})${inst}`;
       });
 
+      const dSlots = state.directSlots || getDefaultDirectSlots(state.sourceLang);
+      const dLines = dSlots.map((s, idx) => {
+        const status = s.enabled !== false
+          ? (lbl.slotsStatusEnabled || "enabled")
+          : (lbl.slotsStatusDisabled || "disabled");
+        const roleTag = s.role === "vocab" ? "vocab" : "direct 1-to-1";
+        const inst = s.instruction ? ` // ${s.instruction.slice(0, 45)}...` : "";
+        return `  ${idx + 1}. [${s.id}] "${s.label}" (${roleTag}, ${status})${inst}`;
+      });
+
+      const pSlots = state.promptSlots || getDefaultPromptSlots(state.sourceLang);
+      const pLines = pSlots.map((s, idx) => {
+        const status = s.enabled !== false
+          ? (lbl.slotsStatusEnabled || "enabled")
+          : (lbl.slotsStatusDisabled || "disabled");
+        const roleTag = s.role === "vocab" ? "vocab" : `candidate #${idx + 1}`;
+        const inst = s.instruction ? ` // ${s.instruction.slice(0, 45)}...` : "";
+        return `  ${idx + 1}. [${s.id}] "${s.label}" (${roleTag}, ${status})${inst}`;
+      });
+
       const enabledCount = slots.filter((s) => s.enabled).length;
-      const header = `⇄ [${lbl.hudTitle}] ${lbl.slotsHeader || "Dynamic Slots"} (${enabledCount}/${slots.length} ${lbl.slotsActiveTag || "active"}):\n`;
+      const modeSpec = resolveModeDisplaySpec(state.sourceLang);
+      const header = `⇄ [${lbl.hudTitle}] ${lbl.slotsHeader || "Dynamic Slots"} [1 ${modeSpec.companion} · slots] (${enabledCount}/${slots.length} ${lbl.slotsActiveTag || "active"}):\n`;
       const body = lines.length > 0 ? lines.join("\n") : `  (${lbl.slotsNone || "No slots configured"})`;
+      const dHeader = `\n\n⚡ [2 ${modeSpec.direct} · directSlots]:\n`;
+      const dBody = dLines.join("\n");
+      const pHeader = `\n\n✦ [3 ${modeSpec.candidates} · promptSlots]:\n`;
+      const pBody = pLines.join("\n");
       const nlTitle = lbl.slotsNlTitle ? `\n\n${lbl.slotsNlTitle}\n` : "";
       const nlExamples = (lbl.slotsNlExamples || []).map((ex) => `  ${ex}`).join("\n");
       const cliTitle = lbl.slotsCliTitle ? `\n\n${lbl.slotsCliTitle}\n` : "";
       const cliHelp = (lbl.slotsCliHelp || []).map((cmd) => `  ${cmd}`).join("\n");
 
-      const help = `${header}${body}${nlTitle}${nlExamples}${cliTitle}${cliHelp}`;
+      const help = `${header}${body}${dHeader}${dBody}${pHeader}${pBody}${nlTitle}${nlExamples}${cliTitle}${cliHelp}`;
       ctx.ui.notify(help, "info");
       return;
     }
 
-    // 2. "/slots reset": 恢复开箱即用默认初始槽位
+    // 2. "/slots reset": 恢复开箱即用默认初始槽位 (同时清理三套独立模式槽位)
     if (subCmd === "reset") {
       state.slots = getDefaultSlots(state.sourceLang);
+      state.directSlots = getDefaultDirectSlots(state.sourceLang);
+      state.promptSlots = getDefaultPromptSlots(state.sourceLang);
       state.slotPreset = "";
-      saveUserLingualConfig({ slots: undefined, slotPreset: undefined });
+      saveUserLingualConfig({ slots: undefined, directSlots: undefined, promptSlots: undefined, slotPreset: undefined });
       globalLingualCache.clear();
       const resetMsg = (lbl.slotsResetSuccess || "⇄ [{pair}] Reset slots to clean defaults").replace("{pair}", lbl.hudTitle);
       ctx.ui.notify(resetMsg, "info");
@@ -749,11 +680,89 @@ export default function (pi: ExtensionAPI) {
       return;
     }
 
-    // 3. "/slots rm <id>" 或 "/slots remove <id>" 或 "/slots del <id>": 彻底删除槽位（支持删除 source 原文槽位！）
+    // 2.1 "/slots hide-source" & "/slots show-source": 架构师极速开关原文行快捷指令
+    if (subCmd === "hide-source" || subCmd === "no-source") {
+      state.slots = removeSlotFromList(state.slots || [], "source");
+      state.slotPreset = "";
+      saveUserLingualConfig({ slots: state.slots, slotPreset: undefined });
+      globalLingualCache.clear();
+      ctx.ui.notify(`[${lbl.hudTitle}] Hidden [source] row on companion cards`, "info");
+      updateFooter(ctx);
+      refreshActiveView(ctx);
+      return;
+    }
+    if (subCmd === "show-source" || subCmd === "with-source") {
+      const hasSource = (state.slots || []).some((s) => s.role === "source");
+      if (!hasSource) {
+        const defaultSource = getDefaultSlots(state.sourceLang).find((s) => s.role === "source") || {
+          id: "source",
+          label: lbl.sourceLabel || "Original",
+          role: "source" as const,
+          enabled: true,
+        };
+        state.slots = [{ ...defaultSource, enabled: true }, ...(state.slots || [])];
+      } else {
+        state.slots = (state.slots || []).map((s) => (s.role === "source" ? { ...s, enabled: true } : s));
+      }
+      state.slotPreset = "";
+      saveUserLingualConfig({ slots: state.slots, slotPreset: undefined });
+      globalLingualCache.clear();
+      ctx.ui.notify(`[${lbl.hudTitle}] Restored [source] row on companion cards`, "info");
+      updateFooter(ctx);
+      refreshActiveView(ctx);
+      return;
+    }
+
+    const parseModeScope = (token = ""): "companion" | "direct" | "candidates" | null => {
+      const t = token.toLowerCase();
+      if (t === "1" || t === "companion" || t === "slots") return "companion";
+      if (t === "2" || t === "direct" || t === "directslots") return "direct";
+      if (t === "3" || t === "candidates" || t === "prompt" || t === "promptslots" || t === "select") return "candidates";
+      return null;
+    };
+
+    const PROMPT_SCOPE_SPEC = {
+      direct: {
+        stateKey: "directSlots" as const,
+        tag: "Mode 2 directSlots",
+        getList: () => state.directSlots || getDefaultDirectSlots(state.sourceLang),
+        setList: (next: PromptSlotConfig[]) => {
+          state.directSlots = next;
+          saveUserLingualConfig({ directSlots: next });
+          globalLingualCache.clear();
+        },
+      },
+      candidates: {
+        stateKey: "promptSlots" as const,
+        tag: "Mode 3 promptSlots",
+        getList: () => state.promptSlots || getDefaultPromptSlots(state.sourceLang),
+        setList: (next: PromptSlotConfig[]) => {
+          state.promptSlots = next;
+          saveUserLingualConfig({ promptSlots: next });
+          globalLingualCache.clear();
+        },
+      },
+    };
+
+    // 3. "/slots rm [mode] <id>": 彻底删除指定模式的槽位（三模式严格物理隔离）
     if (subCmd === "rm" || subCmd === "remove" || subCmd === "del") {
-      const targetId = (parts[1] || "").toLowerCase();
+      const maybeScope = parseModeScope(parts[1]);
+      const scope = maybeScope || "companion";
+      const targetId = (maybeScope ? parts[2] || "" : parts[1] || "").toLowerCase();
       if (!targetId) {
-        ctx.ui.notify(lbl.slotsUsageRm || "Usage: /slots rm <slot-id>", "warning");
+        ctx.ui.notify(lbl.slotsUsageRm || "Usage: /slots rm [1|2|3|direct|candidates] <slot-id>", "warning");
+        return;
+      }
+      if (scope === "direct" || scope === "candidates") {
+        const spec = PROMPT_SCOPE_SPEC[scope];
+        const list = spec.getList();
+        const existing = list.find((s) => s.id.toLowerCase() === targetId);
+        if (!existing) {
+          ctx.ui.notify((lbl.slotsNotFound || "Slot [{id}] not found").replace("{pair}", lbl.hudTitle).replace("{id}", targetId), "warning");
+          return;
+        }
+        spec.setList(list.filter((s) => s.id.toLowerCase() !== targetId));
+        ctx.ui.notify(`[${lbl.hudTitle}] [${spec.tag}] Removed slot [${targetId}] ("${existing.label}")`, "info");
         return;
       }
       const existing = (state.slots || []).find((s) => s.id.toLowerCase() === targetId);
@@ -779,11 +788,30 @@ export default function (pi: ExtensionAPI) {
       return;
     }
 
-    // 4. "/slots toggle <id>": 一键开关槽位
+    // 4. "/slots toggle [mode] <id>": 一键开关指定模式的槽位（三模式严格物理隔离）
     if (subCmd === "toggle") {
-      const targetId = (parts[1] || "").toLowerCase();
+      const maybeScope = parseModeScope(parts[1]);
+      const scope = maybeScope || "companion";
+      const targetId = (maybeScope ? parts[2] || "" : parts[1] || "").toLowerCase();
       if (!targetId) {
-        ctx.ui.notify(lbl.slotsUsageToggle || "Usage: /slots toggle <slot-id>", "warning");
+        ctx.ui.notify(lbl.slotsUsageToggle || "Usage: /slots toggle [1|2|3|direct|candidates] <slot-id>", "warning");
+        return;
+      }
+      if (scope === "direct" || scope === "candidates") {
+        const spec = PROMPT_SCOPE_SPEC[scope];
+        const list = spec.getList();
+        const existing = list.find((s) => s.id.toLowerCase() === targetId);
+        if (!existing) {
+          ctx.ui.notify((lbl.slotsNotFound || "Slot [{id}] not found").replace("{pair}", lbl.hudTitle).replace("{id}", targetId), "warning");
+          return;
+        }
+        const updatedList = list.map((s) => (s.id.toLowerCase() === targetId ? { ...s, enabled: s.enabled === false } : s));
+        spec.setList(updatedList);
+        const updated = updatedList.find((s) => s.id.toLowerCase() === targetId);
+        const statusText = updated?.enabled !== false
+          ? (lbl.slotsStatusEnabled || "enabled")
+          : (lbl.slotsStatusDisabled || "disabled");
+        ctx.ui.notify(`[${lbl.hudTitle}] [${scope}] Slot [${targetId}] is now ${statusText}`, "info");
         return;
       }
       const existing = (state.slots || []).find((s) => s.id.toLowerCase() === targetId);
@@ -811,13 +839,35 @@ export default function (pi: ExtensionAPI) {
       return;
     }
 
-    // 5. "/slots add <id> <label> [instruction...]": 动态添加或修改槽位
+    // 5. "/slots add [mode] <id> <label> [instruction...]": 动态添加或修改指定模式的槽位（三模式严格物理隔离）
     if (subCmd === "add") {
-      const id = (parts[1] || "").toLowerCase();
-      const label = parts[2];
-      const instruction = parts.slice(3).join(" ");
+      const maybeScope = parseModeScope(parts[1]);
+      const scope = maybeScope || "companion";
+      const offset = maybeScope ? 1 : 0;
+      const id = (parts[1 + offset] || "").toLowerCase();
+      const label = parts[2 + offset];
+      const instruction = parts.slice(3 + offset).join(" ");
       if (!id || !label) {
-        ctx.ui.notify(lbl.slotsUsageAdd || "Usage: /slots add <id> <label> [instruction...]", "warning");
+        ctx.ui.notify(lbl.slotsUsageAdd || "Usage: /slots add [1|2|3|direct|candidates] <id> <label> [instruction...]", "warning");
+        return;
+      }
+      if (scope === "direct" || scope === "candidates") {
+        const spec = PROMPT_SCOPE_SPEC[scope];
+        const list = spec.getList();
+        const newPromptSlot: PromptSlotConfig = {
+          id,
+          label,
+          role: id === "vocab" ? "vocab" : "rewrite",
+          instruction: instruction || `Translate 100% faithfully and naturally matching "${label}" style without summarizing.`,
+          enabled: true,
+        };
+        const idx = list.findIndex((s) => s.id.toLowerCase() === id);
+        const nextList = idx >= 0
+          ? list.map((s, i) => (i === idx ? newPromptSlot : s))
+          : (scope === "direct" ? [newPromptSlot, ...list.filter((s) => s.role === "vocab")] : [...list, newPromptSlot]);
+        spec.setList(nextList);
+        const verb = scope === "direct" ? "Updated dedicated direct" : "Added/updated candidate";
+        ctx.ui.notify(`[${lbl.hudTitle}] [${spec.tag}] ${verb} slot [${id}] "${label}"`, "info");
         return;
       }
       const newSlot = createCustomSlot({
@@ -869,11 +919,14 @@ export default function (pi: ExtensionAPI) {
       ? (ctx.model ? `auto (${followDesc}: ${ctx.model.provider}/${ctx.model.id})` : "auto")
       : (state.selectedModel || "auto");
 
+    const directSlotNames = (state.directSlots || getDefaultDirectSlots(state.sourceLang))
+      .filter((s) => s.enabled !== false)
+      .map((s) => s.label)
+      .join(" / ");
     const promptSlotNames = (state.promptSlots || getDefaultPromptSlots(state.sourceLang))
       .filter((s) => s.enabled !== false)
       .map((s) => s.label)
       .join(" / ");
-    const outLang = state.promptLang || state.targetLang;
 
     const statusMsg = formatStatusReport(state.labels, {
       mode: state.mode,
@@ -883,8 +936,9 @@ export default function (pi: ExtensionAPI) {
       layout: state.compact ? "capsule" : "tree",
       cacheStats: globalLingualCache.getStats(),
     }) +
-      `\n• Companion Slots (original): [${state.slotPreset || "developer"}] (${(state.slots || []).filter(s => s.enabled).map(s => s.label).join(", ")})` +
-      `\n• Prompt Optimizer (english/select): Output=[${outLang}] · Styles=[${promptSlotNames}]${state.promptRule ? ` · Rule="${state.promptRule}"` : ""}`;
+      `\n• Mode 1 Companion Slots (slots): [${state.slotPreset || "custom"}] (${(state.slots || []).filter(s => s.enabled).map(s => s.label).join(", ")})` +
+      `\n• Mode 2 Direct Slot (directSlots): [${directSlotNames}]` +
+      `\n• Mode 3 Candidate Slots (promptSlots): [${promptSlotNames}]`;
 
     ctx.ui.notify(statusMsg, "info");
   };
@@ -915,51 +969,25 @@ export default function (pi: ExtensionAPI) {
     ctx.ui.notify(state.labels.notifyHistoryRestored || `[${state.labels.hudTitle}] Restored previous companion card`, "info");
   };
 
-  // 伴学定制与 lingual-tuner 深度指引处理器 (严格依从母语 A 统治权，零跨语言残留)
+  // Universal English baseline guide (when sendUserMessage is unavailable in headless/test mocks)
   const showAgentGuideHandler = async (_args: string, ctx: ExtensionContext) => {
-    const isZh = state.sourceLang === "zh" || state.sourceLang === "tw";
-    const isJa = state.sourceLang === "ja";
-    const isEs = state.sourceLang === "es";
-    const isFr = state.sourceLang === "fr";
-    const isDe = state.sourceLang === "de";
-
-    let guide = "";
-    if (isZh) {
-      guide =
-        `🤖 lingual-tuner 双引擎定制指南 (伴学模式 vs 提示词优化模式):\n\n` +
-        `pi-lingual 内置 lingual-tuner 技能。无需手敲复杂命令，直接跟当前 Agent 说出您的偏好：\n` +
-        `1. 定制【伴学模式 (original · 语感词卡 slots)】:\n` +
-        `   • "伴学卡片不要显示中文原文，只要纯译文"\n` +
-        `   • "帮我配置推特推文和深度分析两个伴学槽位"\n` +
-        `2. 定制【提示词优化模式 (english 直出重写 / select 多风格候选填入)】:\n` +
-        `   • "把我的提示词重写模式设为中文输出，并叠加上最小改动原则"\n` +
-        `   • "开启多风格候选模式 (select)，给我生成极简高效、结构化规范、TDD测试驱动 3 个候选提示词让我选"\n\n` +
-        `Agent 会直接更新 ~/.pi/agent/lingual.json，单回合即刻生效！\n` +
-        `模式切换：/lingual <original|english|select|off> · 语言切换：/lang <zh|ja|en|es|fr|de>。`;
-    } else if (isJa) {
-      guide =
-        `🤖 lingual-tuner カスタマイズ案内 (伴走モード vs プロンプト最適化モード):\n\n` +
-        `pi-lingual は lingual-tuner スキルを内蔵しています。Agent に直接ご要望をお伝えください：\n` +
-        `1. 【伴走モード (original · 語学スロット slots)】:\n` +
-        `   • 「伴走カードに原文を表示せず、訳文のみ表示して」\n` +
-        `2. 【プロンプト最適化モード (english 直接書き換え / select 複数候補選択)】:\n` +
-        `   • 「プロンプト最適化を日本語出力に設定し、最小変更原則を追加して」\n` +
-        `   • 「複数候補モード (select) にして、簡潔・構造化・根本原因の3つの候補から選べるようにして」\n\n` +
-        `Agent が ~/.pi/agent/lingual.json を直接更新し、即座に反映されます！`;
-    } else {
-      guide =
-        `🤖 lingual-tuner Dual-Engine Customization Guide (Companion vs Prompt Optimizer):\n\n` +
-        `pi-lingual includes a built-in lingual-tuner skill. Just describe your preferences to your Agent:\n` +
-        `1. Customize [Companion Mode (original · language learning slots)]:\n` +
-        `   • "Hide original text on companion cards, show translations only"\n` +
-        `   • "Configure companion with Twitter Hook and Technical Insight slots"\n` +
-        `2. Customize [Prompt Optimizer Mode (english direct rewrite / select N-choice picker)]:\n` +
-        `   • "Configure prompt rewrite mode to output in my native language and enforce smallest working diff"\n` +
-        `   • "Switch to select mode with 3 custom prompt styles: Concise, Structured Spec, and TDD"\n\n` +
-        `Your Agent will update ~/.pi/agent/lingual.json directly in a single turn!\n` +
-        `Switch modes: /lingual <original|english|select|off> · Switch language: /lang <zh|ja|en|es|fr|de>.`;
-    }
-
+    const guide =
+      `  pi-lingual Customization Map          Legend: ( ) Edit  (+) Add/Remove  [✓] Toggle\n` +
+      `  ──────────────────────────────────────────────────────────────────────────────────\n` +
+      `  [Mode 1 · Companion]  Send raw text in 0ms, show learning card above editor\n` +
+      `    · Source Row                                                        [✓] Show/Hide\n` +
+      `    ├ (Label) : (Language) · (Style: Spoken / Written / Paper / Script) (+) N Rows\n` +
+      `    │   ↳ Native Nuance Sub-line                                        [✓] On/Off\n` +
+      `    └ Vocab Row : (Focus: Idioms / Exam Collocations)                   [✓] On/Off\n\n` +
+      `  [Mode 2 · Direct]     Convert 1-to-1 on Enter using a single dedicated rule\n` +
+      `    ├ (Label) : (Language) · (Style: Faithful Direct / Keigo / Spec)    1-to-1 Rule\n` +
+      `    └ Vocab Row : Extract 1-line key expressions                        [✓] On/Off\n\n` +
+      `  [Mode 3 · Candidates] Generate N options, press keys 1..N to send (0 for raw)\n` +
+      `    · Source Row                                                        [✓] Show/Hide\n` +
+      `    ├ 1..N (Label) : (Language) · (Style: Business / Keigo / PR)        (+) N Options\n` +
+      `    └ Vocab Row : Extract 1-line key expressions                        [✓] On/Off\n` +
+      `  ──────────────────────────────────────────────────────────────────────────────────\n` +
+      `  Run /lingual tuner [request] to launch the adaptive wizard in your native language (${state.sourceLang}).`;
     ctx.ui.notify(guide, "info");
   };
 
@@ -986,6 +1014,12 @@ export default function (pi: ExtensionAPI) {
     // 1.1 子命令路由: 槽位架构切换 (/lingual slots [args...])
     if (sub === "slots" || sub === "slot" || sub === "preset") {
       await switchSlotsHandler(subArgs, ctx);
+      return;
+    }
+
+    // 1.2 子命令路由: 架构师极速开关原文行 (/lingual hide-source | /lingual show-source)
+    if (sub === "hide-source" || sub === "no-source" || sub === "show-source" || sub === "with-source") {
+      await switchSlotsHandler(sub, ctx);
       return;
     }
 
@@ -1016,40 +1050,22 @@ export default function (pi: ExtensionAPI) {
     // 6. 子命令路由: 按需唤醒 Tuner 定制技能 (/lingual tuner [需求] 或 /lingual agent)
     if (sub === "tuner" || sub === "tune" || sub === "agent" || sub === "help" || sub === "?") {
       tunerArmed = true;
-      const isZh = state.sourceLang === "zh" || state.sourceLang === "tw";
-      if (subArgs && typeof (pi as any).sendUserMessage === "function") {
-        (pi as any).sendUserMessage(
-          isZh
-            ? `[lingual-tuner] 请读取 lingual-tuner 技能并按以下需求直接修改 ~/.pi/agent/lingual.json：${subArgs}`
-            : `[lingual-tuner] Please load the lingual-tuner skill and update ~/.pi/agent/lingual.json for: ${subArgs}`
+      const promptBody = subArgs
+        ? `[lingual-tuner] Load the lingual-tuner skill and update ~/.pi/agent/lingual.json (user native language sourceLang="${state.sourceLang}"). Communicate strictly in the user's native language (${state.sourceLang}) and apply: ${subArgs}`
+        : `[lingual-tuner] Load the lingual-tuner skill and launch the interactive customization wizard (user native language sourceLang="${state.sourceLang}"). Render the Customization Map and all questions/options strictly in the user's native language (${state.sourceLang}).`;
+      if ((sub === "tuner" || sub === "tune" || subArgs) && typeof (pi as any).sendMessage === "function") {
+        // 使用 display: false 发送完全隐形的唤醒指令，聊天窗口零提示词刷屏污染！
+        (pi as any).sendMessage(
+          { customType: "lingual-tuner", content: promptBody, display: false },
+          { triggerTurn: true }
         );
         return;
       }
+      if ((sub === "tuner" || sub === "tune" || subArgs) && typeof (pi as any).sendUserMessage === "function") {
+        (pi as any).sendUserMessage(promptBody);
+        return;
+      }
       await showAgentGuideHandler(subArgs, ctx);
-      return;
-    }
-
-    // 6.05 子命令路由: 改写模式下顺带提取重点词汇伴学开关 (/lingual learn-on | learn-off)
-    if (sub === "learn-on" || sub === "learn-off" || sub === "learn-in-rewrite") {
-      const isZh = state.sourceLang === "zh" || state.sourceLang === "tw";
-      const nextVal =
-        sub === "learn-on"
-          ? true
-          : sub === "learn-off"
-            ? false
-            : subArgs.trim() === "on" || subArgs.trim() === "true"
-              ? true
-              : subArgs.trim() === "off" || subArgs.trim() === "false"
-                ? false
-                : !state.learnInRewrite;
-      state.learnInRewrite = nextVal;
-      saveUserLingualConfig({ learnInRewrite: nextVal });
-      ctx.ui.notify(
-        isZh
-          ? `[改写兼顾伴学] 已${nextVal ? "开启 (在状态 2/3 改写卡片底部同步展示一行重点词)" : "关闭 (状态 2/3 仅展示纯粹改写提示词)"}`
-          : `[Learn in Rewrite] ${nextVal ? "Enabled (shows 1-line vocab takeaway in Mode 2/3)" : "Disabled (pure prompt rewrite)"}`,
-        "info"
-      );
       return;
     }
 
@@ -1060,125 +1076,8 @@ export default function (pi: ExtensionAPI) {
       return;
     }
 
-    // 6.2 子命令路由: 设定改写目标语言 (/lingual target <en|native|zh|ja...>)
-    if (sub === "target" || sub === "outlang" || sub === "promptlang") {
-      const val = subArgs.trim().toLowerCase();
-      const isZh = state.sourceLang === "zh" || state.sourceLang === "tw";
-      if (!val) {
-        const cur = state.promptLang || `${state.targetLang} (default)`;
-        ctx.ui.notify(
-          isZh
-            ? `[改写目标语言] 当前: ${cur} · 用法: /lingual target <en|native|zh|ja>`
-            : `[Rewrite Target Lang] Current: ${cur} · Usage: /lingual target <en|native|zh|ja>`,
-          "info"
-        );
-        return;
-      }
-      state.promptLang = val === "default" || val === "reset" ? "" : val;
-      saveUserLingualConfig({ promptLang: state.promptLang });
-      updateFooter(ctx);
-      ctx.ui.notify(
-        isZh
-          ? `[改写目标语言] 已设为: ${state.promptLang || state.targetLang}`
-          : `[Rewrite Target Lang] Set to: ${state.promptLang || state.targetLang}`,
-        "info"
-      );
-      return;
-    }
-
-    // 6.3 子命令路由: 管理改写设定条件 (/lingual rule [add|rm|clear|<条件>])
-    if (sub === "rule" || sub === "rules" || sub === "cond") {
-      const isZh = state.sourceLang === "zh" || state.sourceLang === "tw";
-      const currentRules = normalizePromptRules(state.promptRule);
-      const argTrim = subArgs.trim();
-
-      if (!argTrim || argTrim === "list") {
-        if (currentRules.length === 0) {
-          ctx.ui.notify(
-            isZh
-              ? `[改写设定条件] 当前无附加条件 · 添加: /lingual rule <条件内容>`
-              : `[Rewrite Conditions] None set · Add: /lingual rule <condition>`,
-            "info"
-          );
-        } else {
-          const listStr = currentRules.map((r, i) => `  [${i + 1}] ${r}`).join("\n");
-          ctx.ui.notify(
-            isZh
-              ? `[改写设定条件 (${currentRules.length}项)]\n${listStr}\n(用 /lingual rule add <条件> 追加，/lingual rule clear 清空)`
-              : `[Rewrite Conditions (${currentRules.length})]\n${listStr}\n(Use /lingual rule add <cond> or /lingual rule clear)`,
-            "info"
-          );
-        }
-        return;
-      }
-
-      if (argTrim === "clear" || argTrim === "reset" || argTrim === "off") {
-        state.promptRule = [];
-        saveUserLingualConfig({ promptRule: [] });
-        updateFooter(ctx);
-        ctx.ui.notify(
-          isZh ? `[改写设定条件] 已清空全部附加设定条件` : `[Rewrite Conditions] Cleared all conditions`,
-          "info"
-        );
-        return;
-      }
-
-      if (argTrim.startsWith("rm ") || argTrim.startsWith("del ")) {
-        const target = argTrim.replace(/^(?:rm|del)\s+/i, "").trim();
-        const idx = parseInt(target, 10) - 1;
-        const nextRules = !Number.isNaN(idx) && idx >= 0 && idx < currentRules.length
-          ? currentRules.filter((_, i) => i !== idx)
-          : currentRules.filter((r) => !r.includes(target));
-        state.promptRule = nextRules;
-        saveUserLingualConfig({ promptRule: nextRules });
-        updateFooter(ctx);
-        ctx.ui.notify(
-          isZh
-            ? `[改写设定条件] 已移除，当前剩余 ${nextRules.length} 项条件`
-            : `[Rewrite Conditions] Removed; ${nextRules.length} condition(s) active`,
-          "info"
-        );
-        return;
-      }
-
-      const rawRule = argTrim.replace(/^add\s+/i, "").trim();
-      const toAdd = resolvePromptRulePreset(rawRule);
-      const nextRules = currentRules.includes(toAdd) ? currentRules : [...currentRules, toAdd];
-      state.promptRule = nextRules;
-      saveUserLingualConfig({ promptRule: nextRules });
-      updateFooter(ctx);
-      ctx.ui.notify(
-        isZh
-          ? `[改写设定条件] 已叠加第 ${nextRules.length} 项条件: "${toAdd}"`
-          : `[Rewrite Conditions] Added condition #${nextRules.length}: "${toAdd}"`,
-        "info"
-      );
-      return;
-    }
-
-    // 7. 模式切换优先: 显式模式关键词或数字直达 (/lingual 1|2|3|0|learn|rewrite|select|off)
-    if (
-      sub === "mode" ||
-      sub === "1" ||
-      sub === "2" ||
-      sub === "3" ||
-      sub === "0" ||
-      sub === "learn" ||
-      sub === "companion" ||
-      sub === "original" ||
-      sub === "english" ||
-      sub === "refine" ||
-      sub === "rewrite" ||
-      sub === "direct" ||
-      sub === "select" ||
-      sub === "choices" ||
-      sub === "choice" ||
-      sub === "pick" ||
-      sub === "off" ||
-      sub === "orig" ||
-      sub === "disable" ||
-      sub === "stop"
-    ) {
+    // 7. 模式切换优先: 显式模式关键词或数字直达 (/lingual 1|2|3|0|companion|direct|candidates|off)
+    if (sub === "mode" || normalizeLingualModeInput(sub) !== null) {
       await setModeHandler(sub === "mode" ? subArgs : trimmed, ctx);
       return;
     }
@@ -1197,7 +1096,7 @@ export default function (pi: ExtensionAPI) {
   pi.registerCommand("lingual", {
     description:
       state.labels.cmdDescMode ||
-      "Cycle mode (1:Learn ➔ 2:Rewrite ➔ 3:Select ➔ 0:Off) or manage: /lingual [1|2|3|0|lang|slots|rule|target|compact|model|status|last]",
+      "Cycle mode (1:Companion ➔ 2:Direct ➔ 3:Candidates ➔ 0:Off) or manage: /lingual [1|2|3|0|tuner|lang|slots|compact|model|status|last]",
     handler: masterCommandHandler,
   });
 
@@ -1323,26 +1222,26 @@ export default function (pi: ExtensionAPI) {
         safeClearWidget(ctx);
       }
     }
-    if (state.mode === "off") return { action: "continue" };
     if (event.source === "extension") return { action: "continue" };
 
-    // Sync external lingual.json updates (e.g. written by lingual-tuner skill)
+    // Sync external lingual.json updates (e.g. written by lingual-tuner skill) BEFORE checking mode === "off"
     const latestDisk = loadUserLingualConfig();
+    if (latestDisk.mode && latestDisk.mode !== state.mode) {
+      state.mode = latestDisk.mode;
+      syncResizeListener();
+      if (hasActiveUI(ctx)) updateFooter(ctx);
+    }
     if (latestDisk.slots && Array.isArray(latestDisk.slots)) {
       state.slots = latestDisk.slots;
     }
-    if (latestDisk.promptLang !== undefined) {
-      state.promptLang = latestDisk.promptLang;
-    }
-    if (latestDisk.promptRule !== undefined) {
-      state.promptRule = latestDisk.promptRule;
+    if (latestDisk.directSlots && Array.isArray(latestDisk.directSlots)) {
+      state.directSlots = latestDisk.directSlots;
     }
     if (latestDisk.promptSlots && Array.isArray(latestDisk.promptSlots)) {
       state.promptSlots = latestDisk.promptSlots;
     }
-    if (latestDisk.learnInRewrite !== undefined) {
-      state.learnInRewrite = Boolean(latestDisk.learnInRewrite);
-    }
+
+    if (state.mode === "off") return { action: "continue" };
 
     const raw = event.text.trim();
     if (!raw) return { action: "continue" };
@@ -1452,55 +1351,106 @@ export default function (pi: ExtensionAPI) {
     }
 
     // =========================================================================
-    // 模式 3：【多风格候选填入模式】(select · N-Choice Interactive Selector)
-    // 生成 N 个预设风格的优化提示词候选（默认：极简高效 / 结构规范 / 深度严谨），供用户选择一个填入
+    // 模式 2 & 3 严格隔离引擎（零跨模式串味/泄露）：
+    // - 模式 2 【直接改 (direct)】：严格只读取 `directSlots`（绝不读取 Mode 1 的 slots 或 Mode 3 的 promptSlots！）
+    // - 模式 3 【挑候选 (candidates)】：严格只读取 `promptSlots`（绝不污染 Mode 2 的 directSlots 或 Mode 1 的 slots！）
     // =========================================================================
-    if (state.mode === "select") {
-      if (hasActiveUI(ctx)) {
-        try {
-          ctx.ui.setWidget(
-            "lingual_hud",
-            [ctx.ui.theme.fg("muted", "  ⋯ ✦ [lingual] generating prompt candidates...")],
-            { placement: "aboveEditor" }
-          );
-          ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", "✦ [lingual] generating candidates..."));
-        } catch {}
-      }
-
-      try {
-        const candidates = await generatePromptCandidates(promptToTranslate, {
+    const isDirectMode = state.mode === "english";
+    const isolatedModeSlots = isDirectMode
+      ? resolveDirectSlotsFromConfig({
           sourceLang: state.sourceLang,
-          targetLang: state.targetLang,
-          promptLang: state.promptLang || undefined,
-          promptRule: state.promptRule || undefined,
-          promptSlots: state.promptSlots,
-          learnInRewrite: state.learnInRewrite,
-          complete: completer,
-          signal,
+          directSlots: latestDisk.directSlots ?? state.directSlots,
+        })
+      : resolveCandidateSlotsFromConfig({
+          sourceLang: state.sourceLang,
+          promptSlots: latestDisk.promptSlots ?? state.promptSlots,
         });
 
-        if (!session.isLatest(generation) || !candidates || candidates.length === 0) {
-          if (hasActiveUI(ctx)) safeClearWidget(ctx);
-          return { action: "continue" };
-        }
+    const rewriteSlots = isolatedModeSlots.filter((s) => s.role !== "vocab");
+    const vocabSlots = isolatedModeSlots.filter((s) => s.role === "vocab");
+    const fallbackFirst = getDefaultDirectSlots(state.sourceLang)[0];
+    const slotsToRun = isDirectMode
+      ? [rewriteSlots[0] || fallbackFirst, ...vocabSlots]
+      : [...(rewriteSlots.length > 0 ? rewriteSlots : getDefaultPromptSlots(state.sourceLang)), ...vocabSlots];
 
-        const maxCols = getEffectiveMaxCols();
-        const singleLineSource = promptToTranslate.replace(/\s*\r?\n\s*/g, " ↵ ");
-        const candidateVocab = state.learnInRewrite ? candidates[0]?.vocab : undefined;
-        const candidateSlotResults: SlotResult[] = [
-          { id: "source", label: state.labels.sourceLabel || "原文", role: "source", content: singleLineSource },
-          ...candidates.map((c, idx) => ({
-            id: c.id,
-            label: `${idx + 1}:${c.label}`,
-            role: "translation" as const,
-            content: c.content.replace(/\s*\r?\n\s*/g, " ↵ "),
-          })),
-          ...(candidateVocab
-            ? [{ id: "vocab", label: state.labels.vocabLabel || "重点", role: "vocab" as const, content: candidateVocab }]
-            : []),
-        ];
-        session.setPageResult(
-          0,
+    if (hasActiveUI(ctx)) {
+      try {
+        const loadingMsg = isDirectMode
+          ? "  ⋯ ⚡ [lingual] optimizing prompt..."
+          : "  ⋯ ✦ [lingual] generating prompt candidates...";
+        ctx.ui.setWidget("lingual_hud", [ctx.ui.theme.fg("muted", loadingMsg)], { placement: "aboveEditor" });
+        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", isDirectMode ? "⚡ [lingual] optimizing..." : "✦ [lingual] generating candidates..."));
+      } catch {}
+    }
+
+    try {
+      const candidates = await generatePromptCandidates(promptToTranslate, {
+        sourceLang: state.sourceLang,
+        targetLang: state.targetLang,
+        promptSlots: slotsToRun,
+        complete: completer,
+        signal,
+      });
+
+      if (!session.isLatest(generation)) {
+        return { action: "continue" };
+      }
+
+      if (!candidates || candidates.length === 0) {
+        if (hasActiveUI(ctx)) {
+          safeClearWidget(ctx);
+          if (isDirectMode) {
+            try {
+              const timeoutTemplate = state.labels.notifyTimeout || "[{pair}] Prompt rewrite timed out or not ready; original prompt passed";
+              ctx.ui.notify(timeoutTemplate.replace("{pair}", state.labels.hudTitle), "warning");
+            } catch {}
+          }
+        }
+        return { action: "continue" };
+      }
+
+      const maxCols = getEffectiveMaxCols();
+      const singleLineSource = promptToTranslate.replace(/\s*\r?\n\s*/g, " ↵ ");
+      const candidateVocab = candidates[0]?.vocab;
+      const keepSourceRow = (state.slots || []).some((s) => s.role === "source" && s.enabled !== false);
+      const candidateSlotResults: SlotResult[] = [
+        ...(keepSourceRow
+          ? [{ id: "source", label: state.labels.sourceLabel || "Original", role: "source" as const, content: singleLineSource }]
+          : []),
+        ...candidates.map((c, idx) => ({
+          id: c.id,
+          label: isDirectMode ? `⚡${c.label}` : `${idx + 1}:${c.label}`,
+          role: "translation" as const,
+          content: c.content.replace(/\s*\r?\n\s*/g, " ↵ "),
+        })),
+        ...(candidateVocab
+          ? [{ id: "vocab", label: state.labels.vocabLabel || "Vocab", role: "vocab" as const, content: candidateVocab }]
+          : []),
+      ];
+
+      session.setPageResult(
+        0,
+        {
+          sourceText: singleLineSource,
+          spoken: candidates[0].content.replace(/\s*\r?\n\s*/g, " ↵ "),
+          written: candidates[1]?.content.replace(/\s*\r?\n\s*/g, " ↵ ") || "",
+          vocab: candidateVocab,
+          annotated: "",
+          slots: candidateSlotResults,
+        },
+        generation
+      );
+
+      if (hasActiveUI(ctx)) {
+        // 使用完整 9 行盒模型排版引擎渲染上方卡片（支持自动悬挂缩进折行，拒绝单行粗暴截断！）
+        const layoutSlots: SlotConfig[] = candidateSlotResults.map((sr) => ({
+          id: sr.id,
+          label: sr.label,
+          role: sr.role,
+          showMeaning: false,
+          enabled: true,
+        }));
+        const cardLines = renderCardLayout(
           {
             sourceText: singleLineSource,
             spoken: candidates[0].content.replace(/\s*\r?\n\s*/g, " ↵ "),
@@ -1509,65 +1459,198 @@ export default function (pi: ExtensionAPI) {
             annotated: "",
             slots: candidateSlotResults,
           },
-          generation
-        );
-
-        if (hasActiveUI(ctx)) {
-          const previewLines: string[] = [
-            truncateVisual(
-              `  ${ctx.ui.theme.fg("muted", `· [${state.labels.sourceLabel || "原文"}]`)} ${singleLineSource}`,
-              maxCols
-            ),
-          ];
-          const sliced = candidates.slice(0, 6);
-          sliced.forEach((c, idx, arr) => {
-            const isLastRow = idx === arr.length - 1 && !candidateVocab;
-            const branch = idx === 0 ? "┌" : isLastRow ? "└" : "├";
-            const oneLineContent = c.content.replace(/\s*\r?\n\s*/g, " ↵ ");
-            previewLines.push(
-              truncateVisual(
-                `  ${ctx.ui.theme.fg("accent", `${branch} [${idx + 1}:${c.label}]`)} ${oneLineContent}`,
-                maxCols
-              )
-            );
-          });
-          if (candidateVocab) {
-            previewLines.push(
-              truncateVisual(
-                `  ${ctx.ui.theme.fg("dim", `└ [${state.labels.vocabLabel || "重点"}]`)} ${candidateVocab}`,
-                maxCols
-              )
-            );
+          state.labels,
+          {
+            maxCols,
+            maxLines: Math.max(9, candidateSlotResults.length + 1),
+            isCompact: state.compact,
+            slots: layoutSlots,
+            themeDecorators: {
+              muted: (s: string) => ctx.ui.theme.fg("muted", s),
+              accent: (s: string) => ctx.ui.theme.fg("accent", s),
+              dim: (s: string) => ctx.ui.theme.fg("dim", s),
+            },
           }
-          try {
-            ctx.ui.setWidget("lingual_hud", previewLines, { placement: "aboveEditor" });
-          } catch {}
-        }
+        );
+        try {
+          ctx.ui.setWidget("lingual_hud", cardLines, { placement: "aboveEditor" });
+        } catch {}
+      }
 
-        let chosenText = candidates[0].content;
-        if (hasActiveUI(ctx) && typeof (ctx.ui as any).select === "function") {
-          const langCode = (state.sourceLang || "zh").toLowerCase().split("-")[0];
-          const selectPrompts: Record<string, { title: string; keepOrig: string }> = {
-            zh: { title: "✦ 选择要发送给 AI 的优化提示词：", keepOrig: "保持原话直发" },
-            tw: { title: "✦ 選擇要發送給 AI 的優化提示詞：", keepOrig: "保持原話直發" },
-            ja: { title: "✦ AI に送信する最適化プロンプトを選択：", keepOrig: "原文のまま送信" },
-            ko: { title: "✦ AI에게 보낼 최적화된 프롬프트 선택:", keepOrig: "원문 그대로 전송" },
-            es: { title: "✦ Seleccione el prompt optimizado para enviar:", keepOrig: "Enviar original" },
-            fr: { title: "✦ Sélectionnez le prompt optimisé à envoyer :", keepOrig: "Envoyer l'original" },
-            de: { title: "✦ Optimierten Prompt zum Senden auswählen:", keepOrig: "Original senden" },
-            ru: { title: "✦ Выберите оптимизированный промпт для отправки:", keepOrig: "Отправить оригинал" },
-            en: { title: "✦ Select optimized prompt to send:", keepOrig: "Send original" },
-          };
-          const sp = selectPrompts[langCode] || selectPrompts.en;
-          const optMaxCols = Math.max(20, maxCols - 18);
+      let chosenText = candidates[0].content;
+      if (!isDirectMode && hasActiveUI(ctx)) {
+        const langCode = (state.sourceLang || "en").toLowerCase().split("-")[0];
+        const selectPrompts: Record<string, { title: string; keepOrig: string; hint: string }> = {
+          zh: {
+            title: "✦ 挑候选发送",
+            keepOrig: "原话直发",
+            hint: `按数字 1-${candidates.length} 直接发出 · ←→/↑↓ 切换 Enter 确认 · 0/Esc 发原话`,
+          },
+          tw: {
+            title: "✦ 挑候選發送",
+            keepOrig: "原話直發",
+            hint: `按數字 1-${candidates.length} 直接發出 · ←→/↑↓ 切換 Enter 確認 · 0/Esc 發原話`,
+          },
+          ja: {
+            title: "✦ 候補を選んで送信",
+            keepOrig: "原文のまま",
+            hint: `数字 1-${candidates.length} で即送信 · ←→/↑↓ 選択 Enter 確定 · 0/Esc 原文送信`,
+          },
+          ko: {
+            title: "✦ 후보 선택 전송",
+            keepOrig: "원문 그대로",
+            hint: `숫자 1-${candidates.length} 즉시 전송 · ←→/↑↓ 이동 Enter 확인 · 0/Esc 원문 전송`,
+          },
+          es: {
+            title: "✦ Elegir candidato",
+            keepOrig: "Original",
+            hint: `Tecla 1-${candidates.length} envío directo · ←→/↑↓ mover Enter · 0/Esc original`,
+          },
+          fr: {
+            title: "✦ Choisir une option",
+            keepOrig: "Original",
+            hint: `Touche 1-${candidates.length} envoi direct · ←→/↑↓ choisir Entrée · 0/Esc original`,
+          },
+          de: {
+            title: "✦ Option senden",
+            keepOrig: "Original",
+            hint: `Taste 1-${candidates.length} direkt senden · ←→/↑↓ wählen Enter · 0/Esc Original`,
+          },
+          ru: {
+            title: "✦ Выберите вариант",
+            keepOrig: "Оригинал",
+            hint: `Клавиши 1-${candidates.length} сразу · ←→/↑↓ выбор Enter · 0/Esc оригинал`,
+          },
+          en: {
+            title: "✦ Pick candidate to send",
+            keepOrig: "Send original",
+            hint: `Press 1-${candidates.length} to send immediately · ←→/↑↓ move Enter · 0/Esc original`,
+          },
+        };
+        const sp = selectPrompts[langCode] || selectPrompts.en;
 
-          const optionLabels = [
-            ...candidates.map((c, idx) => `[${idx + 1}] ${c.label}: ${truncateVisual(c.content.replace(/\s*\r?\n\s*/g, " ↵ "), optMaxCols)}`),
-            `[0] ${sp.keepOrig}: ${truncateVisual(singleLineSource, optMaxCols)}`,
+        if (typeof (ctx.ui as any).custom === "function") {
+          // 极简零重复胶囊快捷键栏：上方卡片已完整展示各槽位内容，下方仅渲染紧凑标签并支持按 1..N 0ms 直接打出去！
+          const items = [
+            ...candidates.map((c, idx) => ({ key: String(idx + 1), label: `[${idx + 1}] ${c.label}`, value: c.content })),
+            { key: "0", label: `[0] ${sp.keepOrig}`, value: "__ORIGINAL__" },
           ];
-          const picked = await (ctx.ui as any).select(sp.title, optionLabels);
-          // Pressing Esc (picked === undefined) or choosing [0] passes original prompt through without forcing Candidate #1
+          const pickedVal = await (ctx.ui as any).custom((tui: any, theme: any, keybindings: any, done: (res: string | undefined) => void) => {
+            let selectedIdx = 0;
+            return {
+              render(width: number): string[] {
+                const border = theme.fg("dim", "─".repeat(Math.max(10, width)));
+                const headerLine =
+                  " " +
+                  theme.fg("accent", theme.bold(sp.title)) +
+                  "  " +
+                  theme.fg("dim", `(${sp.hint})`);
+                // 胶囊流式自动折行（Wrap Pills）：确保窄屏或 4~8 个候选时，[1]..[N] 和 [0] 100% 完整可见、绝不截断丢失！
+                const maxLineCols = Math.max(20, width - 2);
+                const pillLines: string[] = [];
+                let currentLine = " ";
+                let currentWidth = 1;
+                for (let idx = 0; idx < items.length; idx++) {
+                  const it = items[idx];
+                  const renderedPill =
+                    idx === selectedIdx
+                      ? theme.fg("accent", theme.bold(`▸ ${it.label}`))
+                      : `  ${theme.fg("text", it.label)}`;
+                  const pillWidth = getVisualWidth(renderedPill);
+                  const sep = currentWidth > 1 ? "   " : "";
+                  const sepWidth = sep.length;
+                  if (currentWidth > 1 && currentWidth + sepWidth + pillWidth > maxLineCols) {
+                    pillLines.push(currentLine);
+                    currentLine = " " + renderedPill;
+                    currentWidth = 1 + pillWidth;
+                  } else {
+                    currentLine += sep + renderedPill;
+                    currentWidth += sepWidth + pillWidth;
+                  }
+                }
+                if (currentLine.trim()) {
+                  pillLines.push(currentLine);
+                }
+                return [
+                  border,
+                  truncateVisual(headerLine, width),
+                  ...pillLines,
+                  border,
+                ];
+              },
+              handleInput(keyData: string) {
+                // 1. 数字键 1..9 直接 0ms 选中并发出，无需再按回车！
+                if (/^[1-9]$/.test(keyData)) {
+                  const num = parseInt(keyData, 10);
+                  if (num >= 1 && num <= candidates.length) {
+                    done(candidates[num - 1].content);
+                    return;
+                  }
+                }
+                // 2. 数字键 0 或 Esc / Ctrl+C 直接 0ms 发原话！
+                if (
+                  keyData === "0" ||
+                  keyData === "\x1b" ||
+                  keyData === "\x03" ||
+                  keybindings?.matches?.(keyData, "tui.select.cancel")
+                ) {
+                  done("__ORIGINAL__");
+                  return;
+                }
+                // 3. 方向键 / hjkl 切换胶囊高亮
+                if (
+                  keyData === "h" ||
+                  keyData === "k" ||
+                  keyData === "\x1b[A" ||
+                  keyData === "\x1b[D" ||
+                  keybindings?.matches?.(keyData, "tui.select.up")
+                ) {
+                  selectedIdx = (selectedIdx - 1 + items.length) % items.length;
+                  tui?.requestRender?.();
+                  return;
+                }
+                if (
+                  keyData === "l" ||
+                  keyData === "j" ||
+                  keyData === "\x1b[B" ||
+                  keyData === "\x1b[C" ||
+                  keyData === "\t" ||
+                  keybindings?.matches?.(keyData, "tui.select.down")
+                ) {
+                  selectedIdx = (selectedIdx + 1) % items.length;
+                  tui?.requestRender?.();
+                  return;
+                }
+                // 4. Enter / Space 确认当前高亮项
+                if (
+                  keyData === "\r" ||
+                  keyData === "\n" ||
+                  keyData === "\x1bOM" ||
+                  keybindings?.matches?.(keyData, "tui.select.confirm")
+                ) {
+                  done(items[selectedIdx]?.value);
+                  return;
+                }
+              },
+              invalidate() {},
+            };
+          });
+          if (!pickedVal || pickedVal === "__ORIGINAL__") {
+            safeClearWidget(ctx);
+            updateFooter(ctx);
+            return { action: "continue" };
+          }
+          chosenText = pickedVal;
+        } else if (typeof (ctx.ui as any).select === "function") {
+          // 单元测试或无 custom 环境下的紧凑回退（不重复长句子，仅展示槽位标签）
+          const optionLabels = [
+            ...candidates.map((c, idx) => `[${idx + 1}] ${c.label}`),
+            `[0] ${sp.keepOrig}`,
+          ];
+          const picked = await (ctx.ui as any).select(`${sp.title} (${sp.hint})`, optionLabels);
           if (!picked || picked.startsWith("[0]")) {
+            safeClearWidget(ctx);
+            updateFooter(ctx);
             return { action: "continue" };
           }
           const idxMatch = picked.match(/^\[(\d+)\]/);
@@ -1578,137 +1661,14 @@ export default function (pi: ExtensionAPI) {
             }
           }
         }
-
-        let finalText = sanitized.rawPayload
-          ? `${chosenText}\n\n${sanitized.rawPayload}`
-          : chosenText;
-
-        const diskConfig = loadUserLingualConfig();
-        const effectiveOutLang = (state.promptLang || state.targetLang || "en").toLowerCase().split("-")[0];
-        if (
-          effectiveOutLang !== state.sourceLang &&
-          shouldInjectNativeReplyGuard(event.text, state.sourceLang, diskConfig.replyInSourceLang)
-        ) {
-          finalText += formatNativeReplyGuardHint(state.sourceLang);
-        }
-
-        return {
-          action: "transform",
-          text: finalText,
-          images: event.images,
-        };
-      } catch {
-        if (hasActiveUI(ctx)) safeClearWidget(ctx);
-        return { action: "continue" };
-      } finally {
-        if (session.isLatest(generation) && hasActiveUI(ctx)) {
-          updateFooter(ctx);
-        }
-      }
-    }
-
-    // =========================================================================
-    // 模式 2：【直出重写模式】(english · Direct Prompt Rewrite)
-    // 不生成背单词伴学卡，100% 专注将杂乱输入直接重写为结构化、规范化、高效率提示词（默认英文，可切母语与叠加要求）
-    // =========================================================================
-    if (hasActiveUI(ctx)) {
-      try {
-        ctx.ui.setWidget(
-          "lingual_hud",
-          [ctx.ui.theme.fg("muted", "  ⋯ ⚡ [lingual] optimizing prompt...")],
-          { placement: "aboveEditor" }
-        );
-        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", "⚡ [lingual] optimizing..."));
-      } catch {}
-    }
-
-    try {
-      const rewriteDetail = await rewritePromptDirectWithDetails(promptToTranslate, {
-        sourceLang: state.sourceLang,
-        targetLang: state.targetLang,
-        promptLang: state.promptLang || undefined,
-        promptRule: state.promptRule || undefined,
-        learnInRewrite: state.learnInRewrite,
-        complete: completer,
-        signal,
-      });
-
-      if (!session.isLatest(generation)) {
-        return { action: "continue" };
-      }
-
-      if (!rewriteDetail || !rewriteDetail.prompt) {
-        if (hasActiveUI(ctx)) {
-          try {
-            ctx.ui.setWidget("lingual_hud", undefined);
-            const timeoutTemplate = state.labels.notifyTimeout || "[{pair}] Prompt rewrite timed out or not ready; original prompt passed";
-            ctx.ui.notify(timeoutTemplate.replace("{pair}", state.labels.hudTitle), "warning");
-          } catch {}
-        }
-        return { action: "continue" };
-      }
-
-      const rewritten = rewriteDetail.prompt;
-      const rewriteVocab = state.learnInRewrite ? rewriteDetail.vocab : undefined;
-
-      // 展示「原话 vs 重写后的新提示词」（若开启 learnInRewrite 则顺带展示一行重点词），并同步至 session
-      const outLang = (state.promptLang || state.targetLang || "en").toLowerCase().split("-")[0];
-      const singleLineSource = promptToTranslate.replace(/\s*\r?\n\s*/g, " ↵ ");
-      const singleLineRewritten = rewritten.replace(/\s*\r?\n\s*/g, " ↵ ");
-      session.setPageResult(
-        0,
-        {
-          sourceText: singleLineSource,
-          spoken: singleLineRewritten,
-          written: "",
-          vocab: rewriteVocab,
-          annotated: "",
-          slots: [
-            { id: "source", label: state.labels.sourceLabel || "原文", role: "source", content: singleLineSource },
-            { id: "rewritten", label: `⚡${outLang.toUpperCase()}`, role: "translation", content: singleLineRewritten },
-            ...(rewriteVocab
-              ? [{ id: "vocab", label: state.labels.vocabLabel || "重点", role: "vocab" as const, content: rewriteVocab }]
-              : []),
-          ],
-        },
-        generation
-      );
-
-      if (hasActiveUI(ctx)) {
-        try {
-          const maxCols = getEffectiveMaxCols();
-          const rewriteBranch = rewriteVocab ? "┌" : "└";
-          const previewLines = [
-            truncateVisual(
-              `  ${ctx.ui.theme.fg("muted", `· [${state.labels.sourceLabel || "原文"}]`)} ${singleLineSource}`,
-              maxCols
-            ),
-            truncateVisual(
-              `  ${ctx.ui.theme.fg("accent", `${rewriteBranch} [⚡${outLang.toUpperCase()}]`)} ${singleLineRewritten}`,
-              maxCols
-            ),
-          ];
-          if (rewriteVocab) {
-            previewLines.push(
-              truncateVisual(
-                `  ${ctx.ui.theme.fg("dim", `└ [${state.labels.vocabLabel || "重点"}]`)} ${rewriteVocab}`,
-                maxCols
-              )
-            );
-          }
-          ctx.ui.setWidget("lingual_hud", previewLines, { placement: "aboveEditor" });
-        } catch {}
       }
 
       let finalText = sanitized.rawPayload
-        ? `${rewritten}\n\n${sanitized.rawPayload}`
-        : rewritten;
+        ? `${chosenText}\n\n${sanitized.rawPayload}`
+        : chosenText;
 
       const diskConfig = loadUserLingualConfig();
-      if (
-        outLang !== state.sourceLang &&
-        shouldInjectNativeReplyGuard(event.text, state.sourceLang, diskConfig.replyInSourceLang)
-      ) {
+      if (shouldInjectNativeReplyGuard(event.text, state.sourceLang, diskConfig.replyInSourceLang)) {
         finalText += formatNativeReplyGuardHint(state.sourceLang);
       }
 
@@ -1719,11 +1679,13 @@ export default function (pi: ExtensionAPI) {
       };
     } catch {
       if (hasActiveUI(ctx)) {
-        try {
-          ctx.ui.setWidget("lingual_hud", undefined);
-          const errTemplate = state.labels.notifyError || "[{pair}] Prompt rewrite error; original prompt passed";
-          ctx.ui.notify(errTemplate.replace("{pair}", state.labels.hudTitle), "warning");
-        } catch {}
+        safeClearWidget(ctx);
+        if (isDirectMode) {
+          try {
+            const errTemplate = state.labels.notifyError || "[{pair}] Prompt rewrite error; original prompt passed";
+            ctx.ui.notify(errTemplate.replace("{pair}", state.labels.hudTitle), "warning");
+          } catch {}
+        }
       }
       return { action: "continue" };
     } finally {

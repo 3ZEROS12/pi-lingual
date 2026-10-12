@@ -1,21 +1,73 @@
-export type {
-  LingualRequest,
-  LingualResponse,
-  LingualMode,
-  LinguaMode,
-  PromptSlotConfig,
-  PromptCandidate,
-  LingualConfig,
-  LinguaConfig,
-  LingualResult,
-  LinguaResult,
-  TranslationPayload,
-  SlotDefinition,
-  CustomSlotsConfig,
-  SlotRole,
-  SlotConfig,
-  SlotResult,
-} from "./core/types.js";
+export type LingualMode = "original" | "english" | "select" | "off";
+export type LinguaMode = LingualMode;
+
+export type SlotRole = "source" | "translation" | "vocab" | "custom";
+
+export interface PromptSlotConfig {
+  id: string;                 // Unique style identifier, e.g. "concise", "spec", "deep", "vocab"
+  label: string;              // Display label, e.g. "极简行动", "结构规范", "根因溯源", "重点词"
+  role?: "rewrite" | "vocab"; // Optional role: default "rewrite"; set "vocab" to extract a 1-line vocabulary takeaway row
+  instruction: string;        // Specific prompt optimization/structuring instruction (including output language & conditions)
+  enabled: boolean;
+}
+
+export interface PromptCandidate {
+  id: string;
+  label: string;
+  content: string;
+  vocab?: string;
+}
+
+export interface SlotConfig {
+  id: string;               // Unique slot identifier, e.g. "source", "spoken", "written", "twitter", "grammar"
+  label: string;            // Card display label, e.g. "原文", "口语", "写作", "Tweet", "Grammar"
+  role: SlotRole;           // "source" | "translation" | "vocab" | "custom"
+  instruction?: string;     // Specific LLM translation/style prompt
+  showMeaning?: boolean;    // Whether to generate nuance back-translation in language A
+  enabled: boolean;
+}
+
+export interface SlotResult {
+  id: string;
+  label: string;
+  role: SlotRole;
+  content: string;
+  meaning?: string;
+}
+
+export interface SlotDefinition {
+  label: string;       // e.g. "Spoken" | "Hook" | "口語" | "Paper"
+  name: string;        // e.g. "Silicon Valley Spoken" | "Twitter Hook" | "Business Keigo"
+  instruction: string; // Specific tone & style instruction for this register
+}
+
+export interface CustomSlotsConfig {
+  slot1?: Partial<SlotDefinition>;
+  slot2?: Partial<SlotDefinition>;
+}
+
+export interface LingualRequest {
+  text: string;
+  sourceLang?: string;                  // e.g. "zh" (default) | "ja" | "en" | "es" | "fr" | "de"
+  targetLang?: string;                  // e.g. "en" (default) | "ja" | "zh"
+  context?: string;                     // Optional: Context of the tweet being replied to, issue, or Slack thread
+  tone?: "general" | "social" | "tech"; // default "general"
+  isLongInput?: boolean;
+  slots?: SlotConfig[] | CustomSlotsConfig; // Dynamic Multi-Slot Architecture
+}
+
+export interface LingualResponse {
+  spoken: string;
+  spokenMeaning?: string;
+  written?: string;
+  writtenMeaning?: string;
+  vocab?: string;
+  summary?: string;
+  slots?: SlotResult[];                 // Full dynamic slots result array
+  slotOutputs?: Record<string, { content: string; meaning?: string }>;
+  cached: boolean;
+  shieldBypassed: boolean;
+}
 
 export interface LingualI18nLabels {
   slot1Label: string;      // e.g. "Spoken" | "口語" | "Slack"
@@ -36,10 +88,10 @@ export interface LingualI18nLabels {
   notifyNoHistory?: string;
   notifyHistoryRestored?: string;
   notifyAgentHelp?: string;
-  notifyModelSwitched?: string; // template containing {model} or format string
-  notifyLangSwitched?: string;  // template containing {lang}
+  notifyModelSwitched?: string;
+  notifyLangSwitched?: string;
   notifyLangInvalid?: string;
-  notifySlotSwitched?: string;  // template containing {preset}
+  notifySlotSwitched?: string;
   notifyCompactOn?: string;
   notifyCompactOff?: string;
   notifyTimeout?: string;
@@ -58,10 +110,10 @@ export interface LingualI18nLabels {
   shortcutPrevPage?: string;
 
   // Localized capsule prefixes
-  capsuleSlot1Prefix?: string; // e.g. "Spk" | "口"
-  capsuleSlot2Prefix?: string; // e.g. "Wrt" | "写"
-  layoutCapsule?: string;      // e.g. "单行胶囊模式" | "Single-Line Capsule"
-  layoutTree?: string;         // e.g. "左导轨树状架构" | "Left-Rail Tree"
+  capsuleSlot1Prefix?: string;
+  capsuleSlot2Prefix?: string;
+  layoutCapsule?: string;
+  layoutTree?: string;
 
   // Localized status report & model diagnostics
   statusReportTitle?: string;
@@ -89,29 +141,78 @@ export interface LingualI18nLabels {
   langList?: string[];
 
   // Localized dynamic slots chrome (Primary Language Sovereignty)
-  slotsHeader?: string;             // e.g. "动态槽位架构" | "Dynamic Slots" | "動的スロット構成"
-  slotsActiveTag?: string;          // e.g. "激活" | "active" | "有効"
-  slotsNone?: string;               // e.g. "未配置任何槽位" | "No slots configured"
-  slotsStatusEnabled?: string;      // e.g. "已启用" | "enabled" | "有効"
-  slotsStatusDisabled?: string;     // e.g. "已禁用" | "disabled" | "無効"
-  slotsWithNuance?: string;         // e.g. " +母语微释义" | " +nuance" | " +ニュアンス"
-  slotsNlTitle?: string;            // e.g. "💬 自然语言定制（直接跟当前 Agent 聊，无需手敲命令）："
-  slotsNlExamples?: string[];       // Array of 3-4 natural language examples
-  slotsCliTitle?: string;           // e.g. "⚡️ 常用快捷命令："
-  slotsCliHelp?: string[];          // Array of quick CLI commands
-  slotsResetSuccess?: string;       // e.g. "已重置槽位为初始默认状态"
-  slotsRemovedSuccess?: string;     // e.g. "已移除槽位 [{id}] (\"{label}\")"
-  slotsRemovedSourceNote?: string;  // e.g. "（已物理隐藏原文行）"
-  slotsToggled?: string;            // e.g. "槽位 [{id}] 当前状态: {status}"
-  slotsAdded?: string;              // e.g. "已添加/更新槽位 [{id}] \"{label}\""
-  slotsNotFound?: string;           // e.g. "未找到槽位 [{id}]，请运行 /slots 查看"
-  slotsUsageAdd?: string;           // e.g. "用法: /slots add <id> <标签> [提示词...]"
-  slotsUsageRm?: string;            // e.g. "用法: /slots rm <槽位ID>"
-  slotsUsageToggle?: string;        // e.g. "用法: /slots toggle <槽位ID>"
-  slotsUnknown?: string;            // e.g. "未知命令或预设 \"{cmd}\"，输入 /slots 查看帮助"
+  slotsHeader?: string;
+  slotsActiveTag?: string;
+  slotsNone?: string;
+  slotsStatusEnabled?: string;
+  slotsStatusDisabled?: string;
+  slotsWithNuance?: string;
+  slotsNlTitle?: string;
+  slotsNlExamples?: string[];
+  slotsCliTitle?: string;
+  slotsCliHelp?: string[];
+  slotsResetSuccess?: string;
+  slotsRemovedSuccess?: string;
+  slotsRemovedSourceNote?: string;
+  slotsToggled?: string;
+  slotsAdded?: string;
+  slotsNotFound?: string;
+  slotsUsageAdd?: string;
+  slotsUsageRm?: string;
+  slotsUsageToggle?: string;
+  slotsUnknown?: string;
 
   // Aliases for backwards compatibility
   spokenLabel?: string;
   writtenLabel?: string;
 }
 export type LinguaI18nLabels = LingualI18nLabels;
+
+export interface LingualConfig {
+  endpoint: string;
+  apiKey: string;
+  model: string;
+  selectedModel?: string;
+  mode?: LingualMode;
+  compact?: boolean;
+  slotPreset?: string;
+  slots?: SlotConfig[];             // Mode 1 (Companion / 纯伴学) dedicated slots
+  directSlots?: PromptSlotConfig[]; // Mode 2 (Direct / 直接改) dedicated 1-to-1 slot (+ optional vocab slot)
+  promptSlots?: PromptSlotConfig[]; // Mode 3 (Candidates / 挑候选) dedicated multi-candidate slots
+  lastSeenVersion?: string;         // Tracks the last major feature release banner shown above editor
+  sourceLang?: string;
+  targetLang?: string;
+  replyInSourceLang?: boolean;
+  labels?: Partial<LingualI18nLabels>;
+  temperature?: number;
+  reasoning?: string;
+  timeoutMs?: number;
+  complete?: (text: string, systemPrompt: string, signal?: AbortSignal) => Promise<string | null>;
+  signal?: AbortSignal;
+}
+export type LinguaConfig = LingualConfig;
+
+export interface LingualResult {
+  spoken: string;
+  spokenMeaning?: string;
+  written?: string;
+  writtenMeaning?: string;
+  vocab?: string;
+  sourceText: string;
+  summary?: string;
+  annotated: string;
+  slots?: SlotResult[];
+  slotOutputs?: Record<string, { content: string; meaning?: string }>;
+}
+export type LinguaResult = LingualResult;
+
+export interface TranslationPayload {
+  spoken: string;
+  spokenMeaning?: string;
+  written?: string;
+  writtenMeaning?: string;
+  vocab?: string;
+  summary?: string;
+  slots?: SlotResult[];
+  slotOutputs?: Record<string, { content: string; meaning?: string }>;
+}

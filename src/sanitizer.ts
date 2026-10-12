@@ -10,7 +10,7 @@
  * 6. 提炼出核心自然语言意图，防止几百行报错撑爆终端与大模型上下文。
  */
 
-import { isNonEnglish } from "./engine.js";
+import { isNonEnglish } from "./shield.js";
 
 // 常见临时剪贴板图片正则 (精确匹配 pi-clipboard 截图，绝不误伤普通代码或 docs/README.md 文件)
 // 支持 Windows 盘符 (正反斜杠)、支持包含空格的用户名路径 (如 Jason Miller)

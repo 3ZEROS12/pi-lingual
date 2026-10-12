@@ -1,8 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { resolveLabelsForLang, formatStatusReport, formatModelSelectionMessage } from "../src/presets.js";
-import { buildSystemPrompt } from "../src/prompts.js";
-import { formatTerminalAnnotation, stripLingualAnnotation } from "../src/engine.js";
+import { buildSystemPrompt, getDefaultSlots, getDefaultDirectSlots, getDefaultPromptSlots } from "../src/prompts.js";
+import { formatTerminalAnnotation, stripLingualAnnotation, formatReleaseBannerLines, resolveModeDisplaySpec } from "../src/engine.js";
 
 test("Primary Language Sovereignty - Japanese (ja) leaves ZERO Chinese in UI and labels", () => {
   const jaLabels = resolveLabelsForLang("ja");
@@ -138,6 +138,39 @@ test("System Prompt Sovereignty - Generates authentic Language A anchors and rul
   const enPrompt = buildSystemPrompt("en", "ja");
   assert.ok(enPrompt.includes("native English (language A)"));
   assert.ok(enPrompt.includes("Sounds good, let's ship it."));
+
+  // Strict Zero-Chinese-Residue across all non-Chinese source languages in Mode 1, Mode 2, Mode 3, Mode Chrome, and Release Banner
+  for (const lang of ["en", "ko", "es", "fr", "de", "ru"]) {
+    if (lang !== "en") {
+      const sys1 = buildSystemPrompt(lang, "en", false, undefined, "general", getDefaultSlots(lang));
+      assert.ok(!/[\u4e00-\u9fa5]/.test(sys1), `Mode 1 system prompt for [${lang}] must have ZERO Chinese characters`);
+    }
+    const mode1Slots = JSON.stringify(getDefaultSlots(lang));
+    assert.ok(!/[\u4e00-\u9fa5]/.test(mode1Slots), `Mode 1 default slots for [${lang}] must have ZERO Chinese characters`);
+
+    const directSlots = JSON.stringify(getDefaultDirectSlots(lang));
+    assert.ok(!/[\u4e00-\u9fa5]/.test(directSlots), `Mode 2 directSlots for [${lang}] must have ZERO Chinese characters`);
+
+    const promptSlots = JSON.stringify(getDefaultPromptSlots(lang));
+    assert.ok(!/[\u4e00-\u9fa5]/.test(promptSlots), `Mode 3 promptSlots for [${lang}] must have ZERO Chinese characters`);
+
+    const banner = formatReleaseBannerLines(lang, 80).join("\n");
+    assert.ok(!/[\u4e00-\u9fa5]/.test(banner), `Release banner for [${lang}] must have ZERO Chinese characters`);
+    assert.ok(!/IELTS|雅思/i.test(banner), `Public release banner for [${lang}] must not carry exam-specific IELTS branding`);
+  }
+
+  // Japanese (ja ⇄ en) uses authentic Japanese labels & instructions across all 3 modes
+  const jaDirect = getDefaultDirectSlots("ja");
+  assert.equal(jaDirect[0].label, "論理構造化");
+  const jaCandidates = getDefaultPromptSlots("ja");
+  assert.deepEqual(jaCandidates.map((s) => s.label), ["簡潔・高効率", "構造化仕様", "根本原因・厳密", "重要語彙"]);
+  const jaModeSpec = resolveModeDisplaySpec("ja");
+  assert.equal(jaModeSpec.companion, "伴走");
+  assert.equal(jaModeSpec.direct, "直改");
+  assert.equal(jaModeSpec.candidates, "候補選");
+  const jaSys = buildSystemPrompt("ja", "en", false, undefined, "general", getDefaultSlots("ja"));
+  assert.ok(!jaSys.includes("释义"), "Japanese system prompt with default slots must NOT contain Chinese '释义'");
+  assert.ok(jaSys.includes("in Japanese in parentheses"));
 });
 
 test("Visual Consistency - Source line tag matches [Original] format and aligns to column 11", () => {

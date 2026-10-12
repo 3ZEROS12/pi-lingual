@@ -7,7 +7,7 @@
 [![npm version](https://img.shields.io/npm/v/pi-lingual?color=blue)](https://www.npmjs.com/package/pi-lingual)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Built for Pi](https://img.shields.io/badge/Built%20for-Pi%20Coding%20Agent-orange)](https://github.com/earendil-works/pi-coding-agent)
-[![Tests](https://img.shields.io/badge/Tests-95%2F95%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
+[![Tests](https://img.shields.io/badge/Tests-97%2F97%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict%20Zero%20Error-blue)](tsconfig.json)
 
 [English](./README.md) | **简体中文**
@@ -65,25 +65,23 @@ pi install npm:pi-lingual
 
 ## 四大工作状态 (`1 ➔ 2 ➔ 3 ➔ 0`)
 
-终端中输入 `/lingual` 顺序循环切换，或敲 `/lingual <1|2|3|0>` 一步直达：
+终端中输入 `/lingual` 顺序循环切换，或敲 `/lingual <1|2|3|0|companion|direct|candidates|off>` 一步直达：
 
-| 状态 | 你输入什么 | 引擎执行逻辑 | 界面即时反馈 | 适用场景 |
-| :--- | :--- | :--- | :--- | :--- |
-| **`[1] 原文+伴学`** *(`original` / `1`)* | 母语 *(如中文/日文)* | **0ms 原话直发主 AI** + 后台异步生成伴学词卡 (`slots`) | 终端双语视窗 *(口语 + 写作 + 重点词汇)* | 日常高速开发，顺带利用等待间隙积累地道表达 |
-| **`[2] 直出改写`** *(`english` / `2`)* | 杂乱口语想法 / 母语指令 | **按目标文字 (`promptLang`) + 叠加设定条件 (`promptRule`) 直接 1 对 1 改写发送** *(开启 `/lingual learn-on` 可顺带提取一行重点词)* | 展示重写后的新提示词 (`└ [⚡EN] ...`) | 思路零散时，自动将口语整理为带工程约束的清晰指令 |
-| **`[3] 候选挑一`** *(`select` / `3`)* | 杂乱口语想法 / 母语指令 | **按目标文字 + 多组条件槽位 (`promptSlots`) 一次生成 $N$ 个候选** *(默认：极简直达 / 边界规范 / 根因深挖)* | 视窗展示全部候选 + 弹窗挑选 `[1]~[N]` 发送 (`[0]`/`Esc` 保原话) | 复杂需求或关键重构，对比多个改写版本后挑最满意的一条 |
-| **`[0] 彻底无负担`** *(`off` / `0`)* | 任意输入 | **隐藏底栏状态徽标 (`undefined`)、卸载终端监听、剥离技能块** | **0 像素、0 监听、0 Token**，如同未安装般彻底安静 | 纯沉浸编码或录屏演示，不留任何视觉与上下文痕迹 |
+| 状态 | 英文标识 | 你输入什么 | 引擎执行逻辑 | 底栏与界面反馈 | 适用场景 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **`[1] 纯伴学`** | `companion` | 母语 *(如中文/日文)* | **0ms 原话直发主 AI** + 后台异步生成伴学词卡 (`slots`) | 底栏 `zh ⇄ en · 纯伴学` + 顶部伴学卡 | 日常高速开发，顺带利用等待间隙积累地道表达 |
+| **`[2] 直接改`** | `direct` | 母语 / 日常输入 | **自动跑专属 `directSlots`，1 对 1 直接转换发出** | 底栏 `zh ⇄ en · 直接改` + 顶部转换预览 | 回车自动 1 对 1 忠实直译或按唯一标准改好直发 |
+| **`[3] 挑候选`** | `candidates` | 母语 / 多语需求 | **跑 `promptSlots` 全部候选，按键盘数字键 `1..N` 免回车秒发** | 底栏 `zh ⇄ en · 挑候选` + 顶部完整卡片 + 底部数字快捷键栏 | 多语种/多语气同屏对比，按 `1~N` 一键秒发（按 `0`/`Esc` 发原话） |
+| **`[0] 已关闭`** | `off` | 任意输入 | **隐藏底栏状态徽标 (`undefined`)、卸载终端监听、剥离技能块** | **0 像素、0 监听、0 Token**，彻底无痕 | 纯沉浸编码或录屏演示，不留任何视觉与上下文痕迹 |
 
-### 按需唤醒定制 (`/lingual tuner` · 平时 0 系统提示词占用)
-为确保日常写代码时**绝对不占用主 AI 的系统提示词 Token**，`pi-lingual` 默认在所有模式下自动剥离 `lingual-tuner` 技能块；只有当你输入 `/lingual tuner <你的定制要求>` 时才按需唤醒：
-1. **定制【状态 1 · 原文+伴学 (`slots`)】**：
-   - 例如：`/lingual tuner 去掉原文那一行，只保留口语和书面语`
-2. **定制【状态 2 · 直出改写 (`promptLang` + `promptRule` + `learnInRewrite`)】**：
-   - **目标文字 (`promptLang`)**：默认英文 (`"en"`)；可设 `"native"`（保持母语）或任意语言（`/lingual target native`）。
-   - **设定条件 (`promptRule`，支持叠加多个)**：内置 `minimal`（最小改动）、`root-cause`（根因排查）、`tdd`（测试驱动）、`explain-zh`（中文解释）4 个预设，也可叠加任意自定义条件（`/lingual rule minimal`）。
-   - **改写兼顾伴学 (`learnInRewrite`)**：运行 `/lingual learn-on`，在状态 2/3 改写提示词的同时，卡片底部顺带提取一行地道技术词汇。
-3. **定制【状态 3 · 候选挑一 (`promptSlots`)】**：
-   - 例如：`/lingual tuner 把 select 候选改成极简直达和根因深挖 2 个槽位`
+### 三模式严格物理隔离 + 按需隐形唤醒定制 (`/lingual tuner` · 平时 0 系统提示词占用)
+`pi-lingual` 在 `~/.pi/agent/lingual.json` 中为三大工作状态设立了**三套严格物理隔离的槽位数组**，彻底杜绝跨模式配置串味（且日常写代码时自动剥离 `lingual-tuner` 技能块，实现 **0.00 Token** 占用；仅在输入 `/lingual tuner` 时通过 `display: false` 隐形消息按需唤醒向导）：
+1. **`slots`（仅管状态 `[1] 纯伴学`）**：
+   - 定义伴学卡片展示的语域或语种行（支持任意行数自由扩展），也可敲 `/lingual hide-source` 一键隐藏原文行节省纵向高度。
+2. **`directSlots`（仅管状态 `[2] 直接改`）**：
+   - 独立专属的 1 对 1 转换规则（出厂默认为 100% 忠实自然的直译/润色，绝不擅自缩写总结），无论模式 1 或模式 3 如何折腾多国语言，模式 2 稳如泰山绝不串味。
+3. **`promptSlots`（仅管状态 `[3] 挑候选`）**：
+   - 在输入框上方完整折行展示所有候选句子，下方仅渲染紧凑的 `▸ [1] ... [2] ... [0] 原话` 胶囊栏，**直接按键盘数字键 `1..N` 免回车 0ms 秒发对应候选**！
 
 ### 混合意图嫁接（代码与堆栈绝不乱翻）
 在 `english` 模式下，粘贴大段代码块或报错日志时，插件**绝不翻译代码**：
@@ -190,14 +188,11 @@ pi install npm:pi-lingual
 
 | 核心命令 | 常用子命令 / 参数 | 功能说明 |
 | :--- | :--- | :--- |
-| **`/lingual`** | `/lingual [1\|2\|3\|0]` | 无参数按 `1 ➔ 2 ➔ 3 ➔ 0` 循环切换；带数字直接跳到对应状态 |
-| ↳ 子命令 | `/lingual rule [minimal\|root-cause\|tdd\|<条件>]` | 查看、叠加或清空(`clear`)改写模式的设定条件 |
-| ↳ 子命令 | `/lingual target <en\|native\|zh\|ja>` | 设置状态 2/3 改写后的目标输出文字语言 |
-| ↳ 子命令 | `/lingual learn-on` \| `learn-off` | 开关「改写提示词时顺带提取一行重点词汇」 |
-| ↳ 子命令 | `/lingual tuner <自然语言要求>` | 按需唤醒 `lingual-tuner` 技能自动修改配置文件 |
+| **`/lingual`** | `/lingual [1\|2\|3\|0]` | 无参数按 `1 ➔ 2 ➔ 3 ➔ 0` 循环切换；带数字或名称直接跳到对应状态 |
+| ↳ 子命令 | `/lingual tuner <自然语言要求>` | 按需唤醒 `lingual-tuner` 技能自动修改 `slots` 或 `promptSlots` |
 | ↳ 子命令 | `/lingual compact` \| `model` \| `status` \| `news` | 切换单行胶囊、切换伴学模型、查看缓存状态或版本更新说明 |
 | **`/lang`** | `/lang <源> [目标]` | 切换语言对（如 `/lang ja en`、`/lang 日语`） |
-| **`/slots`** | `/slots [add\|rm\|toggle\|reset]` | 全动态槽位管理（自由增删改查槽位、彻底移除 `source` 原文行） |
+| **`/slots`** | `/slots [add\|rm\|toggle\|reset]` | 伴学槽位管理（自由增删改查槽位、彻底移除 `source` 原文行） |
 | **`/last`** | `/last` | 重新浮现上一条伴学或改写卡片 |
 
 *快捷键：`Alt+.`（下一页），`Alt+,`（上一页）。系统独立命令行：`lingual "输入需求"`。*
@@ -263,7 +258,7 @@ pi install npm:pi-lingual
 
 ```bash
 npm run typecheck   # TypeScript 严格类型检查 (0 错误)
-npm test            # 全套自动化单元测试 (95/95 全绿通过)
+npm test            # 全套自动化单元测试 (96/96 全绿通过)
 npm run build       # 多入口生产构建 (插件 + 核心语言引擎)
 ```
 

@@ -670,13 +670,18 @@ export function renderCardLayout(
 
   // 4. 行数守卫与盒模型约束求解 (Kinetic Line Budget Guard: lines.length <= maxLines)
   if (lines.length > maxLines) {
-    // 约束 Tier 1: 原文最多展示 2 行
+    // 约束 Tier 1: 原文最多展示 2 行（若分支数 >= maxLines - 1，例如 7 行多语种壮举，则原文自动收敛为 1 行以完整容纳全部 7 个槽位！）
+    const maxSourceRows = numBranches >= maxLines - 1 ? 1 : 2;
     let clampedSourceLines = sourceLines;
-    if (sourceLines.length > 2) {
-      clampedSourceLines = [
-        sourceLines[0],
-        truncateVisual(sourceLines[1] + "...", maxCols),
-      ];
+    if (sourceLines.length > maxSourceRows) {
+      if (maxSourceRows === 1) {
+        clampedSourceLines = [truncateVisual(sourceLines[0] + "...", maxCols)];
+      } else {
+        clampedSourceLines = [
+          sourceLines[0],
+          truncateVisual(sourceLines[1] + "...", maxCols),
+        ];
+      }
     }
 
     // 约束 Tier 2: 将母语释义内联入括号，消除纵向子导轨
@@ -774,13 +779,12 @@ export function renderCardLayout(
 
           let branchBudget: number;
           if (isVocab) {
-            branchBudget = Math.max(1, Math.min(remainingBudget, 1));
+            branchBudget = 1;
           } else {
-            const transLeft = Math.max(1, transCount - transHandled);
-            const reservedForRest = (transLeft - 1) + vocabCount;
-            const maxPossible = Math.max(1, remainingBudget - reservedForRest);
-            const fairShare = Math.ceil(availForTrans / transCount);
-            branchBudget = Math.min(maxPossible, Math.max(fairShare, Math.min(branchRendered.length, maxPossible)));
+            const branchesLeftAfterThis = numBranches - 1 - i;
+            const maxPossible = Math.max(1, remainingBudget - branchesLeftAfterThis);
+            const evenShare = Math.max(1, Math.floor(remainingBudget / Math.max(1, numBranches - i)));
+            branchBudget = Math.min(maxPossible, Math.min(branchRendered.length, evenShare));
             transHandled++;
           }
 

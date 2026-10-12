@@ -1,3 +1,6 @@
+import fs from "node:fs";
+import path from "node:path";
+import os from "node:os";
 import {
   getVisualWidth,
   truncateVisual,
@@ -13,6 +16,28 @@ import {
   CANNOT_START_LINE_CHARS,
   getEffectiveMaxCols,
 } from "./layout.js";
+import type {
+  LingualConfig,
+  LingualRequest,
+  LingualResponse,
+  LingualResult,
+  PromptCandidate,
+  PromptSlotConfig,
+  SlotConfig,
+  SlotResult,
+  TranslationPayload,
+} from "./types.js";
+import { resolveLabelsForLang, resolveSlotsForPreset } from "./presets.js";
+import {
+  buildSystemPrompt,
+  buildDirectRewriteSystemPrompt,
+  buildPromptCandidatesSystemPrompt,
+  getDefaultSlots,
+  getDefaultDirectSlots,
+  getDefaultPromptSlots,
+} from "./prompts.js";
+import { shouldShieldBypass, isNonEnglish } from "./shield.js";
+import { LingualLruCache, globalLingualCache } from "./cache.js";
 
 export {
   getVisualWidth,
@@ -28,24 +53,13 @@ export {
   formatVocabItemsAtomic,
   CANNOT_START_LINE_CHARS,
   getEffectiveMaxCols,
-};
-import fs from "node:fs";
-import path from "node:path";
-import os from "node:os";
-import type { LingualConfig, LingualResult, PromptCandidate, PromptSlotConfig, TranslationPayload } from "./types.js";
-import { resolveLabelsForLang, resolveSlotsForPreset } from "./presets.js";
-import {
+  isNonEnglish,
   buildSystemPrompt,
   buildDirectRewriteSystemPrompt,
   buildPromptCandidatesSystemPrompt,
+  getDefaultDirectSlots,
   getDefaultPromptSlots,
-  normalizePromptRules,
-  PROMPT_RULE_PRESETS,
-  resolvePromptRulePreset,
-  resolvePromptTargetLangName,
-} from "./prompts.js";
-import { shouldShieldBypass } from "./shield.js";
-import { LingualLruCache, globalLingualCache } from "./cache.js";
+};
 
 let cachedUserConfig: Partial<LingualConfig> | null = null;
 let lastConfigCheckTime = 0;
@@ -56,7 +70,7 @@ export function invalidateUserConfigCache(): void {
   lastConfigCheckTime = 0;
 }
 
-function isTestEnvironment(): boolean {
+export function isTestEnvironment(): boolean {
   return (
     process.env.NODE_ENV === "test" ||
     process.env.NODE_TEST_CONTEXT !== undefined ||
@@ -70,10 +84,8 @@ function isTestEnvironment(): boolean {
  * Load user configuration from single source of truth: ~/.pi/agent/lingual.json
  * If lingual.json does not exist, performs a one-time graceful migration from settings.json ("pi-lingual" block).
  * Uses high-efficiency 2-second in-memory memoization to prevent synchronous disk I/O thrashing.
- * Never writes back to settings.json, protecting host environment.
  */
 export function loadUserLingualConfig(): Partial<LingualConfig> {
-  // 测试沙箱隔离：自动化测试期间不读取宿主机个人配置，防止环境脏数据干扰断言
   if (isTestEnvironment()) {
     return {};
   }
@@ -89,7 +101,6 @@ export function loadUserLingualConfig(): Partial<LingualConfig> {
 
   let target: Record<string, any> | null = null;
 
-  // 1. 优先读取独立单一数据源 lingual.json
   if (fs.existsSync(lingualFile)) {
     try {
       const raw = fs.readFileSync(lingualFile, "utf8");
@@ -103,7 +114,6 @@ export function loadUserLingualConfig(): Partial<LingualConfig> {
     }
   }
 
-  // 2. 若 lingual.json 不存在，执行向下兼容平滑迁移 (读取 settings.json 并静默迁移写入 lingual.json)
   if (!target && fs.existsSync(settingsFile)) {
     try {
       const raw = fs.readFileSync(settingsFile, "utf8");
@@ -111,7 +121,6 @@ export function loadUserLingualConfig(): Partial<LingualConfig> {
       const legacyBlock = parsed["pi-lingual"];
       if (legacyBlock && typeof legacyBlock === "object") {
         target = legacyBlock;
-        // 一次性静默迁移到 lingual.json，后续彻底绝缘 settings.json
         try {
           if (!fs.existsSync(agentDir)) {
             fs.mkdirSync(agentDir, { recursive: true });
@@ -133,20 +142,13 @@ export function loadUserLingualConfig(): Partial<LingualConfig> {
     const targetLang = target.targetLang;
     const compact = target.compact;
     const slotPreset = target.slotPreset;
-    const slots = Array.isArray(target.slots)
-      ? target.slots.filter((s: any) => s && typeof s === "object" && typeof s.id === "string" && typeof s.label === "string")
-      : undefined;
-    const promptLang = typeof target.promptLang === "string" ? target.promptLang : undefined;
-    const promptRule =
-      typeof target.promptRule === "string"
-        ? target.promptRule
-        : Array.isArray(target.promptRule)
-          ? target.promptRule.map((r: any) => String(r || "").trim()).filter(Boolean)
-          : undefined;
-    const promptSlots = Array.isArray(target.promptSlots)
-      ? target.promptSlots.filter((s: any) => s && typeof s === "object" && typeof s.id === "string" && typeof s.label === "string")
-      : undefined;
-    const learnInRewrite = target.learnInRewrite !== undefined ? Boolean(target.learnInRewrite) : undefined;
+    const filterSlots = (arr: any) =>
+      Array.isArray(arr)
+        ? arr.filter((s: any) => s && typeof s === "object" && typeof s.id === "string" && typeof s.label === "string")
+        : undefined;
+    const slots = filterSlots(target.slots);
+    const directSlots = filterSlots(target.directSlots);
+    const promptSlots = filterSlots(target.promptSlots);
     const lastSeenVersion = typeof target.lastSeenVersion === "string" ? target.lastSeenVersion : undefined;
     const reasoning = typeof target.reasoning === "string" ? target.reasoning : undefined;
     const timeoutMs = typeof target.timeoutMs === "number" && Number.isFinite(target.timeoutMs)
@@ -154,20 +156,19 @@ export function loadUserLingualConfig(): Partial<LingualConfig> {
       : undefined;
     const replyInSourceLang = target.replyInSourceLang !== undefined ? Boolean(target.replyInSourceLang) : undefined;
     const labels = resolveLabelsForLang(sourceLang || "zh", target.labels, targetLang);
+    const normalizedMode = typeof target.mode === "string" ? (normalizeLingualModeInput(target.mode) || target.mode) : undefined;
 
     cachedUserConfig = {
       ...(endpoint ? { endpoint } : {}),
       ...(apiKey ? { apiKey } : {}),
       ...(model ? { model } : {}),
       ...(selectedModel ? { selectedModel } : {}),
-      ...(target.mode ? { mode: target.mode } : {}),
+      ...(normalizedMode ? { mode: normalizedMode as any } : {}),
       ...(compact !== undefined ? { compact: Boolean(compact) } : {}),
       ...(slotPreset ? { slotPreset } : {}),
       ...(slots ? { slots } : {}),
-      ...(promptLang ? { promptLang } : {}),
-      ...(promptRule ? { promptRule } : {}),
+      ...(directSlots ? { directSlots } : {}),
       ...(promptSlots ? { promptSlots } : {}),
-      ...(learnInRewrite !== undefined ? { learnInRewrite } : {}),
       ...(lastSeenVersion ? { lastSeenVersion } : {}),
       ...(sourceLang ? { sourceLang } : {}),
       ...(targetLang ? { targetLang } : {}),
@@ -185,6 +186,63 @@ export function loadUserLingualConfig(): Partial<LingualConfig> {
   return {};
 }
 
+/**
+ * Atomic, zero-residue configuration persistence to ~/.pi/agent/lingual.json
+ */
+export function saveUserLingualConfig(patch: Record<string, any>): void {
+  if (isTestEnvironment()) {
+    return;
+  }
+
+  try {
+    const agentDir = path.join(os.homedir(), ".pi", "agent");
+    const configFile = path.join(agentDir, "lingual.json");
+
+    if (!fs.existsSync(agentDir)) {
+      fs.mkdirSync(agentDir, { recursive: true });
+    }
+
+    let existing: Record<string, any> = {};
+    if (fs.existsSync(configFile)) {
+      try {
+        existing = JSON.parse(fs.readFileSync(configFile, "utf8"));
+      } catch {}
+    }
+
+    for (const [k, v] of Object.entries(patch)) {
+      const isEmptyArray = Array.isArray(v) && v.length === 0;
+      if (
+        v === undefined ||
+        v === "" ||
+        isEmptyArray ||
+        v === "auto" ||
+        v === "original" ||
+        v === "companion" ||
+        (k === "compact" && v === false)
+      ) {
+        delete existing[k];
+      } else if (k === "mode") {
+        existing[k] = v === "english" ? "direct" : v === "select" ? "candidates" : v;
+      } else {
+        existing[k] = v;
+      }
+    }
+
+    const content = JSON.stringify(existing, null, 2);
+    const tmpFile = `${configFile}.${Date.now()}.${Math.random().toString(36).slice(2, 6)}.tmp`;
+
+    try {
+      fs.writeFileSync(tmpFile, content, "utf8");
+      fs.renameSync(tmpFile, configFile);
+    } catch {
+      try { fs.writeFileSync(configFile, content, "utf8"); } catch {}
+      try { if (fs.existsSync(tmpFile)) fs.unlinkSync(tmpFile); } catch {}
+    }
+
+    invalidateUserConfigCache();
+  } catch {}
+}
+
 export const DEFAULT_CONFIG: LingualConfig = {
   endpoint: process.env.LINGUAL_ENDPOINT || "",
   apiKey: process.env.LINGUAL_API_KEY || "",
@@ -197,103 +255,287 @@ export const DEFAULT_CONFIG: LingualConfig = {
   timeoutMs: 30000,
 };
 
-/**
- * 现代开发者双语伴学系统提示词 (中文 A ➔ 英文 B，默认导出)
- * 设计哲学：
- * 1. 敏捷口语 (Silicon Valley Slack/Standup) + 现代技术书面 (PR/RFC/Docs) 双语域
- * 2. 母语 A 精准语境释义与反向释义 (Back-translation & Nuance)
- * 3. 典型开发协同的 3 组黄金 Few-Shot 锚点
- * 4. 代码与专有名词绝对防御机制 (Code & Symbol Shield)
- * 5. 水平自适应重点词汇提取，单行紧凑流排列
- */
 export const LINGUAL_SYSTEM_PROMPT = buildSystemPrompt("zh", "en");
-export {
-  buildSystemPrompt,
-  buildDirectRewriteSystemPrompt,
-  buildPromptCandidatesSystemPrompt,
-  getDefaultPromptSlots,
-  normalizePromptRules,
-  PROMPT_RULE_PRESETS,
-  resolvePromptRulePreset,
-  resolvePromptTargetLangName,
-};
-
-/**
- * Check if the text contains non-English natural language scripts (CJK, accented Latin, Cyrillic, etc.)
- * Strictly avoids triggering on pure emojis, typographical quotes, or terminal commands.
- */
-export function isNonEnglish(text: string): boolean {
-  const naturalLanguageScript = /[\u4e00-\u9fa5\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af\u0400-\u04ff\u0600-\u06ff\u00c0-\u024f]/;
-  return naturalLanguageScript.test(text);
-}
+export const LINGUA_SYSTEM_PROMPT = LINGUAL_SYSTEM_PROMPT;
+export const loadUserConfig = loadUserLingualConfig;
 
 export const MAX_TRANSLATION_CHARS = 2500;
 export const MAX_TRANSLATION_LINES = 30;
 
 /**
- * Bidirectional language-aware trigger with strict Length & Payload Guards:
- * - If sourceLang is not English (e.g. "zh", "ja"): triggers on natural language scripts;
- * - If sourceLang is English ("en"): detects English natural language sentences while strictly excluding code and CLI commands;
- * - Centrally delegates to shouldShieldBypass (Single Source of Truth) to exclude code statements, SQL, and 40+ CLI commands;
- * - [Safety Gate]: Rejects oversized payloads (> 1500 chars), monolithic multi-line code (> 8 lines), markdown headings, and code fences.
+ * Bidirectional language-aware trigger with strict Length & Payload Guards
  */
 export function shouldTriggerTranslation(text: string, sourceLang = "zh", allowSameLangPromptOpt = false): boolean {
   const trimmed = text.trim();
   if (!trimmed) return false;
+  if (trimmed.length > MAX_TRANSLATION_CHARS) return false;
+  if (trimmed.split(/\r?\n/).length > MAX_TRANSLATION_LINES) return false;
+  if (/^#{1,6}\s/.test(trimmed) || trimmed.startsWith("---")) return false;
+  if (shouldShieldBypass(trimmed)) return false;
 
-  // 1. Long text and structured payload guard (protects tokens and terminal screen)
-  if (trimmed.length > MAX_TRANSLATION_CHARS) {
-    return false;
-  }
-  const lines = trimmed.split(/\r?\n/);
-  if (lines.length > MAX_TRANSLATION_LINES) {
-    return false;
-  }
-  // Fast bypass markdown headings and horizontal rules
-  if (/^#{1,6}\s/.test(trimmed) || trimmed.startsWith("---")) {
-    return false;
-  }
-
-  // 2. Code & Shell Shield: 0ms bypass for pure commands, code fences, and data structures
-  if (shouldShieldBypass(trimmed)) {
-    return false;
-  }
-
-  // 2b. In Mode 2 (Direct Rewrite) or Mode 3 (N-Choice Select), allow any natural language sentence
-  //     (even if source and output languages are the same!)
   if (allowSameLangPromptOpt) {
     if (isNonEnglish(trimmed)) return true;
     const words = trimmed.split(/\s+/);
     return words.length >= 2 && /[a-zA-Z]{2,}/.test(trimmed);
   }
 
-  // 3. Non-Latin scripts (Chinese, Japanese, Korean, Russian, Arabic) must contain native script characters
   const normSource = (sourceLang || "zh").toLowerCase().split("-")[0];
   const nonLatinLangs = new Set(["zh", "tw", "ja", "ko", "ru", "ar"]);
   if (nonLatinLangs.has(normSource)) {
     return isNonEnglish(trimmed);
   }
 
-  // 4. Latin-script languages (en, es, fr, de, pt, it, vi, tr, ms):
-  // Trigger if accented/non-ASCII chars exist OR if it's a multi-word alphabetic sentence
-  if (isNonEnglish(trimmed)) {
-    return true;
-  }
+  if (isNonEnglish(trimmed)) return true;
   const words = trimmed.split(/\s+/);
-  if (words.length < 2) {
-    return false;
-  }
-
-  // Must contain standard alphabet words
-  return /[a-zA-Z]{2,}/.test(trimmed);
+  return words.length >= 2 && /[a-zA-Z]{2,}/.test(trimmed);
 }
 
-import { parseLlmResponse, translateCore } from "./core/engine.js";
-export { parseLlmResponse, translateCore };
+const BLOCKED_JSON_KEYS = new Set(["__proto__", "constructor", "prototype"]);
+
+function toCleanString(val: unknown): string {
+  if (typeof val === "string") return val.trim();
+  if (typeof val === "number" || typeof val === "boolean") return String(val);
+  if (Array.isArray(val)) return val.map(toCleanString).filter(Boolean).join(" · ");
+  return "";
+}
+
+/**
+ * Unified featherweight JSON repair & object extractor (protected against prototype pollution & >32KB payloads)
+ */
+export function repairAndParseJsonObject(raw: string): Record<string, any> | null {
+  try {
+    if (!raw || typeof raw !== "string" || raw.length > 32_768) return null;
+    let cleaned = raw.replace(/<(?:think|thought)>[\s\S]*?<\/(?:think|thought)>/gi, "").trim();
+    const fence = cleaned.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (fence) cleaned = fence[1].trim();
+    const first = cleaned.indexOf("{");
+    const last = cleaned.lastIndexOf("}");
+    if (first === -1 || last <= first) return null;
+
+    const jsonSubstr = cleaned.slice(first, last + 1);
+    let parsed: any;
+    try {
+      parsed = JSON.parse(jsonSubstr);
+    } catch {
+      const repaired = jsonSubstr
+        .replace(/,\s*([}\]])/g, "$1")
+        .replace(
+          /("[a-zA-Z0-9_-]+"\s*:\s*")([\s\S]*?)("(?=\s*,\s*"|\s*\}))/g,
+          (_m, prefix, content, suffix) => prefix + content.replace(/(?<!\\)"/g, '\\"') + suffix
+        );
+      parsed = JSON.parse(repaired);
+    }
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Clean and parse LLM JSON responses safely (shared across translateCore and translatePrompt)
+ */
+export function parseLlmResponse(raw: string): TranslationPayload | null {
+  const parsed = repairAndParseJsonObject(raw);
+  if (!parsed) return null;
+
+  const spoken = toCleanString(parsed.spoken ?? parsed.casual ?? parsed.slot1);
+  const spokenMeaning = toCleanString(parsed.spoken_meaning ?? parsed.spokenMeaning);
+  const written = toCleanString(parsed.written ?? parsed.academic ?? parsed.slot2);
+  const writtenMeaning = toCleanString(parsed.written_meaning ?? parsed.writtenMeaning);
+  const vocab = toCleanString(parsed.vocab);
+  const summary = toCleanString(parsed.summary ?? parsed.core_intent ?? parsed.coreIntent);
+
+  const slotOutputs: Record<string, { content: string; meaning?: string }> = Object.create(null);
+  for (const [k, v] of Object.entries(parsed)) {
+    if (BLOCKED_JSON_KEYS.has(k) || k.endsWith("_meaning") || k === "summary") continue;
+    const textVal = toCleanString(v);
+    if (textVal) {
+      const meaningVal = toCleanString(parsed[k + "_meaning"]);
+      slotOutputs[k] = {
+        content: textVal,
+        meaning: meaningVal || undefined,
+      };
+    }
+  }
+
+  const nonVocabOutputs = Object.entries(slotOutputs)
+    .filter(([k]) => k !== "vocab")
+    .map(([, val]) => val);
+  const effectiveSpoken = spoken || nonVocabOutputs[0]?.content || vocab || "";
+  const effectiveSpokenMeaning = spokenMeaning || nonVocabOutputs[0]?.meaning || "";
+  if (!effectiveSpoken) return null;
+
+  return {
+    spoken: effectiveSpoken,
+    spokenMeaning: effectiveSpokenMeaning || undefined,
+    written: written || undefined,
+    writtenMeaning: writtenMeaning || undefined,
+    vocab: vocab || undefined,
+    summary: summary || undefined,
+    slotOutputs: Object.keys(slotOutputs).length > 0 ? slotOutputs : undefined,
+  };
+}
+
+export interface LingualCoreOptions {
+  completer?: (prompt: string, systemPrompt: string, signal?: AbortSignal) => Promise<string | null>;
+  cache?: LingualLruCache<TranslationPayload>;
+  signal?: AbortSignal;
+}
+
+/**
+ * Pure translation engine orchestrator for lingual-core (decoupled from Pi host session)
+ */
+export async function translateCore(
+  req: LingualRequest,
+  options?: LingualCoreOptions
+): Promise<LingualResponse> {
+  const text = (req.text || "").trim();
+  const sourceLang = req.sourceLang || "zh";
+  const targetLang = req.targetLang || "en";
+
+  if (!text) {
+    return { spoken: "", written: "", cached: false, shieldBypassed: false };
+  }
+  if (shouldShieldBypass(text)) {
+    return { spoken: text, written: text, cached: false, shieldBypassed: true };
+  }
+
+  const cache = options?.cache || globalLingualCache;
+  const slotSig = Array.isArray(req.slots)
+    ? req.slots.filter((s) => s.enabled !== false).map((s) => s.id).join(",")
+    : undefined;
+  const cacheKey = LingualLruCache.buildKey(text, sourceLang, targetLang, slotSig);
+  const cached = cache.get(cacheKey);
+  if (cached) {
+    return {
+      spoken: cached.spoken,
+      spokenMeaning: cached.spokenMeaning,
+      written: cached.written || cached.spoken,
+      writtenMeaning: cached.writtenMeaning,
+      vocab: cached.vocab,
+      summary: cached.summary,
+      cached: true,
+      shieldBypassed: false,
+    };
+  }
+
+  if (!options?.completer) {
+    return { spoken: text, written: text, cached: false, shieldBypassed: false };
+  }
+
+  const systemPrompt = buildSystemPrompt(
+    sourceLang,
+    targetLang,
+    Boolean(req.isLongInput),
+    req.context,
+    req.tone || "general",
+    req.slots
+  );
+
+  const raw = await options.completer(text, systemPrompt, options.signal);
+  if (!raw) {
+    return { spoken: text, written: text, cached: false, shieldBypassed: false };
+  }
+
+  const parsed = parseLlmResponse(raw);
+  if (!parsed) {
+    return { spoken: text, written: text, cached: false, shieldBypassed: false };
+  }
+
+  cache.set(cacheKey, parsed);
+  const configuredSlots: SlotConfig[] = Array.isArray(req.slots) ? req.slots : getDefaultSlots(sourceLang);
+  const rawObj = repairAndParseJsonObject(raw) || {};
+
+  const slotResults: SlotResult[] = [];
+  for (const slot of configuredSlots) {
+    if (!slot.enabled) continue;
+    if (slot.role === "source") {
+      slotResults.push({ id: slot.id, label: slot.label, role: slot.role, content: text });
+    } else {
+      const out = parsed.slotOutputs && Object.hasOwn(parsed.slotOutputs, slot.id)
+        ? parsed.slotOutputs[slot.id]
+        : undefined;
+      const content =
+        out?.content ||
+        toCleanString(rawObj[slot.id]) ||
+        (slot.id === "spoken" ? parsed.spoken : slot.id === "written" ? (parsed.written || "") : slot.id === "vocab" ? (parsed.vocab || "") : "");
+      const meaning =
+        out?.meaning ||
+        toCleanString(rawObj[slot.id + "_meaning"]) ||
+        (slot.id === "spoken" ? parsed.spokenMeaning : slot.id === "written" ? parsed.writtenMeaning : undefined) ||
+        undefined;
+      if (content) {
+        slotResults.push({ id: slot.id, label: slot.label, role: slot.role, content, meaning });
+      }
+    }
+  }
+
+  return {
+    spoken: parsed.spoken,
+    spokenMeaning: parsed.spokenMeaning,
+    written: parsed.written || parsed.spoken,
+    writtenMeaning: parsed.writtenMeaning,
+    vocab: parsed.vocab,
+    summary: parsed.summary,
+    slots: slotResults,
+    cached: false,
+    shieldBypassed: false,
+  };
+}
+
+/**
+ * Unified LLM transport primitive: handles AbortController timeout synthesis, custom completer, and OpenAI endpoint fallback
+ */
+async function executeLlmCompletion(
+  text: string,
+  sysPrompt: string,
+  cfg: LingualConfig
+): Promise<string | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), cfg.timeoutMs);
+
+  if (cfg.signal) {
+    if (cfg.signal.aborted) {
+      clearTimeout(timer);
+      return null;
+    }
+    cfg.signal.addEventListener("abort", () => controller.abort(), { once: true });
+  }
+
+  try {
+    if (typeof cfg.complete === "function") {
+      return await cfg.complete(text, sysPrompt, controller.signal);
+    }
+    if (cfg.endpoint) {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (cfg.apiKey) headers["Authorization"] = `Bearer ${cfg.apiKey}`;
+      const response = await fetch(cfg.endpoint, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          model: cfg.model || "gemini-3.8-flash",
+          messages: [
+            { role: "system", content: sysPrompt },
+            { role: "user", content: text },
+          ],
+          temperature: cfg.temperature,
+        }),
+        signal: controller.signal,
+      });
+      if (!response.ok) return null;
+      const json = (await response.json()) as any;
+      return json?.choices?.[0]?.message?.content ?? null;
+    }
+    return null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 /**
  * Strip annotations and recover purely clean text to prevent LLM prompt pollution
- * Robust against tree branch glyphs (┌ ├ └) and arrow annotations (↳)
  */
 export function stripLingualAnnotation(annotatedText: string): {
   raw: string;
@@ -309,31 +551,22 @@ export function stripLingualAnnotation(annotatedText: string): {
 
   for (const line of lines) {
     const trimmed = line.trim();
-
-    // Check for source line: · 原文 text or · [原文] text
     const sourceMatch = trimmed.match(/^·\s*\[?(?:原文|source|original|quelle)\]?\s+(.*)$/i);
     if (sourceMatch) {
       rawLines.push(sourceMatch[1].trim());
       continue;
     }
-
-    // Ignore sub-rail nuance lines (↳ ...) so raw text remains completely unpolluted
     if (/^(?:[│\s]*↳\s*\(.*\)|↳\s*\(.*\))/.test(trimmed)) {
       continue;
     }
-
-    // Match tree branch or arrow lines: [prefix] [label] text
     const slotMatch = trimmed.match(/^(?:[┌├└│]\s*|↳\s*)\[([^\]]+)\]\s*(.*)$/);
     if (slotMatch) {
       const tag = slotMatch[1].trim();
       let text = slotMatch[2].trim().replace(/\x1b\[[0-9;]*[a-zA-Z]/g, "");
-
-      // If the text contains parenthetical nuance like "... (释义)", isolate the expression
       const parenIdx = text.lastIndexOf(" (");
       if (parenIdx !== -1 && text.endsWith(")")) {
         text = text.slice(0, parenIdx).trim();
       }
-
       if (/^(?:口语|spoken|口語|slack|slot1)$/i.test(tag)) {
         spoken = text;
       } else if (/^(?:写作|written|文面|rfc|slot2|敬語)$/i.test(tag)) {
@@ -346,19 +579,13 @@ export function stripLingualAnnotation(annotatedText: string): {
     }
   }
 
-  return {
-    raw: rawLines.join("\n").trim(),
-    spoken,
-    written,
-    vocab,
-  };
+  return { raw: rawLines.join("\n").trim(), spoken, written, vocab };
 }
 
+export const stripLinguaAnnotation = stripLingualAnnotation;
+
 /**
- * 动态判定是否需要触发长输入凝练与意图大标题总结 (彻底解决 45~90 字符/多句"中间状态"截断隐患)
- * 核心物理事实：CJK (中日韩) 为高密度表意文字，信息密度为西文 2.5 倍。
- * 45 汉字通常包含 2~3 个分句，直译为英文达 180~220 字符 (3 行 Spoken + 3 行 Written)，
- * 必然冲垮 9 行卡片盒模型预算并挤爆重点词汇。
+ * Dynamic density sensing for long input condensation
  */
 export function isDynamicLongInput(text: string, sourceLang = "zh"): boolean {
   const trimmed = text.trim();
@@ -381,7 +608,7 @@ export function isDynamicLongInput(text: string, sourceLang = "zh"): boolean {
 }
 
 /**
- * Translate a user prompt into idiomatic English with dual registers, native nuance, and vocabulary highlights
+ * Translate a user prompt into idiomatic target registers with native nuance and vocabulary highlights
  */
 export async function translatePrompt(
   text: string,
@@ -393,209 +620,91 @@ export async function translatePrompt(
   const diskConfig = loadUserLingualConfig();
   const cfg = { ...DEFAULT_CONFIG, ...diskConfig, ...userConfig };
 
-  // Language-aware bidirectional trigger check
-  if (!shouldTriggerTranslation(trimmed, cfg.sourceLang)) {
-    return null;
-  }
+  if (!shouldTriggerTranslation(trimmed, cfg.sourceLang)) return null;
+  if (shouldShieldBypass(trimmed)) return null;
 
-  // Code & Shell Pass-through Shield: 0ms bypass for pure commands, code fences, and data structures
-  if (shouldShieldBypass(trimmed)) {
-    return null;
-  }
-
-  // In-Memory LRU Cache: 0ms hit for high-frequency phrases (e.g. "继续", "认同", "开始吧")
   const effectiveSlots = cfg.slots || (cfg.slotPreset ? resolveSlotsForPreset(cfg.slotPreset, cfg.sourceLang) : undefined);
   const slotSig = Array.isArray(effectiveSlots)
     ? effectiveSlots.filter((s) => s.enabled !== false).map((s) => s.id).join(",")
     : undefined;
   const cacheKey = LingualLruCache.buildKey(trimmed, cfg.sourceLang, cfg.targetLang, slotSig);
   const cached = globalLingualCache.get(cacheKey);
-  if (cached) {
-    return cached;
-  }
+  if (cached) return cached;
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), cfg.timeoutMs);
+  const isLongInput = isDynamicLongInput(trimmed, cfg.sourceLang);
+  const sysPrompt = buildSystemPrompt(cfg.sourceLang, cfg.targetLang, isLongInput, undefined, "general", effectiveSlots);
+  const content = await executeLlmCompletion(trimmed, sysPrompt, cfg);
+  if (typeof content !== "string" || !content.trim()) return null;
 
-  if (cfg.signal) {
-    if (cfg.signal.aborted) {
-      clearTimeout(timer);
-      return null;
-    }
-    cfg.signal.addEventListener("abort", () => controller.abort(), { once: true });
-  }
+  const payload = parseLlmResponse(content);
+  if (!payload || !payload.spoken) return null;
 
-  try {
-    let content: string | null = null;
-    const isLongInput = isDynamicLongInput(trimmed, cfg.sourceLang);
-    const sysPrompt = buildSystemPrompt(cfg.sourceLang, cfg.targetLang, isLongInput, undefined, "general", effectiveSlots);
+  const labels = resolveLabelsForLang(cfg.sourceLang || "zh", cfg.labels, cfg.targetLang);
+  const slot1Label = labels.slot1Label || labels.spokenLabel || "Spoken";
+  const slot2Label = labels.slot2Label || labels.writtenLabel || "Written";
+  const vocabLabel = labels.vocabLabel || "Vocab";
+  const sourceLabel = labels.sourceLabel || "Source";
 
-    // 1. If custom complete callback is provided (e.g. Pi native ModelRegistry / ctx.model):
-    if (typeof cfg.complete === "function") {
-      content = await cfg.complete(trimmed, sysPrompt, controller.signal);
-    } else if (cfg.endpoint) {
-      // 2. Otherwise fall back to custom OpenAI-compatible endpoint (BYOK / self-hosted proxy)
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      if (cfg.apiKey) {
-        headers["Authorization"] = `Bearer ${cfg.apiKey}`;
+  const effectiveSourceText = (isLongInput && payload.summary && payload.summary.trim())
+    ? payload.summary.trim()
+    : trimmed;
+
+  const result: LingualResult = {
+    spoken: payload.spoken,
+    spokenMeaning: payload.spokenMeaning,
+    written: payload.written || "",
+    writtenMeaning: payload.writtenMeaning,
+    vocab: payload.vocab,
+    summary: payload.summary,
+    sourceText: effectiveSourceText,
+    slotOutputs: payload.slotOutputs,
+    annotated: formatTerminalAnnotation(
+      effectiveSourceText,
+      payload.spoken,
+      payload.written,
+      payload.vocab,
+      {
+        spokenMeaning: payload.spokenMeaning,
+        writtenMeaning: payload.writtenMeaning,
+        slot1Label,
+        slot2Label,
+        vocabLabel,
+        sourceLabel,
       }
+    ),
+  };
 
-      const response = await fetch(cfg.endpoint, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          model: cfg.model || "gemini-3.8-flash",
-          messages: [
-            { role: "system", content: sysPrompt },
-            { role: "user", content: trimmed },
-          ],
-          temperature: cfg.temperature,
-        }),
-        signal: controller.signal,
-      });
-
-      if (!response.ok) {
-        return null;
-      }
-
-      const json = (await response.json()) as any;
-      content = json?.choices?.[0]?.message?.content ?? null;
-    } else {
-      // Neither complete callback nor endpoint configured
-      return null;
-    }
-
-    if (typeof content !== "string" || !content.trim()) {
-      return null;
-    }
-
-    const payload = parseLlmResponse(content);
-    if (!payload || !payload.spoken) return null;
-
-    const labels = resolveLabelsForLang(cfg.sourceLang || "zh", cfg.labels, cfg.targetLang);
-    const slot1Label = labels.slot1Label || labels.spokenLabel || "Spoken";
-    const slot2Label = labels.slot2Label || labels.writtenLabel || "Written";
-    const vocabLabel = labels.vocabLabel || "Vocab";
-    const sourceLabel = labels.sourceLabel || "Source";
-
-    const effectiveSourceText = (isLongInput && payload.summary && payload.summary.trim())
-      ? payload.summary.trim()
-      : trimmed;
-
-    const result: LingualResult = {
-      spoken: payload.spoken,
-      spokenMeaning: payload.spokenMeaning,
-      written: payload.written || "",
-      writtenMeaning: payload.writtenMeaning,
-      vocab: payload.vocab,
-      summary: payload.summary,
-      sourceText: effectiveSourceText,
-      slotOutputs: payload.slotOutputs,
-      annotated: formatTerminalAnnotation(
-        effectiveSourceText,
-        payload.spoken,
-        payload.written,
-        payload.vocab,
-        {
-          spokenMeaning: payload.spokenMeaning,
-          writtenMeaning: payload.writtenMeaning,
-          slot1Label,
-          slot2Label,
-          vocabLabel,
-          sourceLabel,
-        }
-      ),
-    };
-
-    // Store in LRU cache
-    globalLingualCache.set(cacheKey, result);
-    return result;
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timer);
-  }
+  globalLingualCache.set(cacheKey, result);
+  return result;
 }
 
-export const LINGUA_SYSTEM_PROMPT = LINGUAL_SYSTEM_PROMPT;
-export const stripLinguaAnnotation = stripLingualAnnotation;
-export const loadUserConfig = loadUserLingualConfig;
-
 /**
- * 智能判定是否需要注入母语回复守护指引 (Opt-in Native Reply Guard)
- * 1. 只有当用户显式开启 replyInSourceLang 时；
- * 2. 原始输入必须为母语（如中文/日文等，包含 CJK 字符）；
- * 3. 严格排除用户主动要求撰写英文文本（如 PR description, commit message, 英文邮件等）的意图。
+ * Opt-in Native Reply Guard
  */
 export function shouldInjectNativeReplyGuard(originalText: string, _sourceLang = "zh", enabled = false): boolean {
   if (!enabled) return false;
   const trimmed = originalText.trim();
-  if (!trimmed) return false;
-
-  // 必须是母语自然语言输入
-  if (!isNonEnglish(trimmed)) return false;
-
-  // 意图守卫：若用户本意就是在要求生成英文文本，严禁强加母语回复指示！
+  if (!trimmed || !isNonEnglish(trimmed)) return false;
   const isEnglishWritingIntent = /(?:英文|英语|english|in english|pr\b|pull request|commit message|git commit|tweet|twitter|email|邮件|readme)/i.test(trimmed);
-  if (isEnglishWritingIntent) {
-    return false;
-  }
-
-  return true;
+  return !isEnglishWritingIntent;
 }
 
 export function formatNativeReplyGuardHint(sourceLang = "zh"): string {
-  if (sourceLang === "ja") {
-    return "\n\n(Please reply and explain in Japanese.)";
-  }
-  if (sourceLang === "zh" || sourceLang === "tw") {
-    return "\n\n(Please reply and explain in Chinese.)";
-  }
-  if (sourceLang === "es") {
-    return "\n\n(Please reply and explain in Spanish.)";
-  }
-  if (sourceLang === "fr") {
-    return "\n\n(Please reply and explain in French.)";
-  }
-  if (sourceLang === "de") {
-    return "\n\n(Please reply and explain in German.)";
-  }
-  return "\n\n(Please reply in the user's native language.)";
-}
-
-function repairAndParseJsonObject(raw: string): Record<string, any> | null {
-  try {
-    let cleaned = raw.replace(/<(?:think|thought)>[\s\S]*?<\/(?:think|thought)>/gi, "").trim();
-    const fence = cleaned.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-    if (fence) cleaned = fence[1].trim();
-    const first = cleaned.indexOf("{");
-    const last = cleaned.lastIndexOf("}");
-    if (first === -1 || last <= first) return null;
-
-    const jsonSubstr = cleaned.slice(first, last + 1);
-    try {
-      const parsed = JSON.parse(jsonSubstr);
-      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null;
-    } catch {
-      const repaired = jsonSubstr
-        .replace(/,\s*([}\]])/g, "$1")
-        .replace(
-          /("[a-zA-Z0-9_-]+"\s*:\s*")([\s\S]*?)("(?=\s*,\s*"|\s*\}))/g,
-          (_m, prefix, content, suffix) => prefix + content.replace(/(?<!\\)"/g, '\\"') + suffix
-        );
-      const parsed = JSON.parse(repaired);
-      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null;
-    }
-  } catch {
-    return null;
-  }
+  const langMap: Record<string, string> = {
+    ja: "Japanese",
+    zh: "Chinese",
+    tw: "Chinese",
+    es: "Spanish",
+    fr: "French",
+    de: "German",
+  };
+  const name = langMap[sourceLang] || "the user's native language";
+  return `\n\n(Please reply and explain in ${name}.)`;
 }
 
 function extractCleanJsonField(raw: string, fieldName: string): string {
   const obj = repairAndParseJsonObject(raw);
-  if (obj) {
+  if (obj && !BLOCKED_JSON_KEYS.has(fieldName)) {
     const val = obj[fieldName] ?? obj.prompt ?? obj.written ?? obj.spoken;
     if (typeof val === "string" && val.trim()) return val.trim();
   }
@@ -603,7 +712,6 @@ function extractCleanJsonField(raw: string, fieldName: string): string {
     .replace(/<(?:think|thought)>[\s\S]*?<\/(?:think|thought)>/gi, "")
     .replace(/```(?:json)?|```/gi, "")
     .trim();
-  // Guard against leaking raw JSON wrapper if regex repair still failed
   const regexFallback = cleaned.match(/"(?:prompt|written|spoken)"\s*:\s*"([\s\S]*?)"\s*\}/);
   if (regexFallback && regexFallback[1].trim()) {
     return regexFallback[1].replace(/\\"/g, '"').replace(/\\n/g, "\n").trim();
@@ -614,98 +722,28 @@ function extractCleanJsonField(raw: string, fieldName: string): string {
   return cleaned.replace(/^["']|["']$/g, "").trim();
 }
 
-/**
- * Mode 2 (Direct Prompt Rewrite):
- * Runs the user's raw input through a lightweight model injected with the Direct Rewrite System Prompt
- * (structuring + standardizing + high efficiency + output language + custom rule), returning the new prompt directly
- * without generating vocabulary or spoken learning cards.
- */
-export async function rewritePromptDirectWithDetails(
-  text: string,
-  userConfig: Partial<LingualConfig> = {}
-): Promise<{ prompt: string; vocab?: string } | null> {
-  const trimmed = text.trim();
-  if (!trimmed) return null;
-
-  const diskConfig = loadUserLingualConfig();
-  const cfg = { ...DEFAULT_CONFIG, ...diskConfig, ...userConfig };
-
-  if (!shouldTriggerTranslation(trimmed, cfg.sourceLang, true)) {
-    return null;
+export function resolveDirectSlotsFromConfig(cfg: {
+  sourceLang?: string;
+  directSlots?: PromptSlotConfig[];
+}): PromptSlotConfig[] {
+  if (Array.isArray(cfg.directSlots) && cfg.directSlots.length > 0) {
+    const enabled = cfg.directSlots.filter((s) => s.enabled !== false);
+    if (enabled.length > 0) return enabled;
   }
-
-  const sysPrompt = buildDirectRewriteSystemPrompt({
-    sourceLang: cfg.sourceLang,
-    targetLang: cfg.targetLang,
-    promptLang: cfg.promptLang,
-    promptRule: cfg.promptRule,
-    learnInRewrite: Boolean(cfg.learnInRewrite),
-  });
-
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), cfg.timeoutMs);
-  if (cfg.signal) {
-    if (cfg.signal.aborted) {
-      clearTimeout(timer);
-      return null;
-    }
-    cfg.signal.addEventListener("abort", () => controller.abort(), { once: true });
-  }
-
-  try {
-    let raw: string | null = null;
-    if (typeof cfg.complete === "function") {
-      raw = await cfg.complete(trimmed, sysPrompt, controller.signal);
-    } else if (cfg.endpoint) {
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (cfg.apiKey) headers["Authorization"] = `Bearer ${cfg.apiKey}`;
-      const response = await fetch(cfg.endpoint, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          model: cfg.model || "gemini-3.8-flash",
-          messages: [
-            { role: "system", content: sysPrompt },
-            { role: "user", content: trimmed },
-          ],
-          temperature: cfg.temperature,
-        }),
-        signal: controller.signal,
-      });
-      if (response.ok) {
-        const json = (await response.json()) as any;
-        raw = json?.choices?.[0]?.message?.content ?? null;
-      }
-    }
-
-    if (typeof raw !== "string" || !raw.trim()) return null;
-    const obj = repairAndParseJsonObject(raw);
-    const rewritten = (obj && typeof obj.prompt === "string" && obj.prompt.trim())
-      ? obj.prompt.trim()
-      : extractCleanJsonField(raw, "prompt");
-    if (!rewritten) return null;
-    const vocab = obj && typeof obj.vocab === "string" && obj.vocab.trim() ? obj.vocab.trim() : undefined;
-    return { prompt: rewritten, ...(vocab ? { vocab } : {}) };
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timer);
-  }
+  return getDefaultDirectSlots(cfg.sourceLang);
 }
 
-export async function rewritePromptDirect(
-  text: string,
-  userConfig: Partial<LingualConfig> = {}
-): Promise<string | null> {
-  const res = await rewritePromptDirectWithDetails(text, userConfig);
-  return res ? res.prompt : null;
+export function resolveCandidateSlotsFromConfig(cfg: {
+  sourceLang?: string;
+  promptSlots?: PromptSlotConfig[];
+}): PromptSlotConfig[] {
+  if (Array.isArray(cfg.promptSlots) && cfg.promptSlots.length > 0) {
+    const enabled = cfg.promptSlots.filter((s) => s.enabled !== false);
+    if (enabled.length > 0) return enabled;
+  }
+  return getDefaultPromptSlots(cfg.sourceLang);
 }
 
-/**
- * Mode 3 (N-Choice Interactive Prompt Selector):
- * Generates N distinct optimized prompt candidates according to `promptSlots` (defaulting to Concise, Spec, Deep)
- * so the user can pick the best one via interactive selector.
- */
 export async function generatePromptCandidates(
   text: string,
   userConfig: Partial<LingualConfig> = {}
@@ -720,89 +758,68 @@ export async function generatePromptCandidates(
     return null;
   }
 
-  const activeSlots = (Array.isArray(cfg.promptSlots) && cfg.promptSlots.length > 0
-    ? cfg.promptSlots
-    : getDefaultPromptSlots(cfg.sourceLang)
-  ).filter((s) => s.enabled !== false);
-
-  const slots = activeSlots.length > 0 ? activeSlots : getDefaultPromptSlots(cfg.sourceLang);
+  const slots = resolveCandidateSlotsFromConfig({
+    sourceLang: cfg.sourceLang,
+    promptSlots: userConfig.promptSlots ?? diskConfig.promptSlots,
+  });
   const sysPrompt = buildPromptCandidatesSystemPrompt({
     sourceLang: cfg.sourceLang,
     targetLang: cfg.targetLang,
-    promptLang: cfg.promptLang,
-    promptRule: cfg.promptRule,
     promptSlots: slots,
-    learnInRewrite: Boolean(cfg.learnInRewrite),
   });
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), cfg.timeoutMs);
-  if (cfg.signal) {
-    if (cfg.signal.aborted) {
-      clearTimeout(timer);
-      return null;
+  const raw = await executeLlmCompletion(trimmed, sysPrompt, cfg);
+  if (typeof raw !== "string" || !raw.trim()) return null;
+
+  const obj = repairAndParseJsonObject(raw);
+  if (!obj) {
+    const fallbackSingle = extractCleanJsonField(raw, slots[0]?.id || "prompt");
+    if (fallbackSingle) {
+      return [{ id: slots[0]?.id || "concise", label: slots[0]?.label || "Direct", content: fallbackSingle }];
     }
-    cfg.signal.addEventListener("abort", () => controller.abort(), { once: true });
-  }
-
-  try {
-    let raw: string | null = null;
-    if (typeof cfg.complete === "function") {
-      raw = await cfg.complete(trimmed, sysPrompt, controller.signal);
-    } else if (cfg.endpoint) {
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (cfg.apiKey) headers["Authorization"] = `Bearer ${cfg.apiKey}`;
-      const response = await fetch(cfg.endpoint, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          model: cfg.model || "gemini-3.8-flash",
-          messages: [
-            { role: "system", content: sysPrompt },
-            { role: "user", content: trimmed },
-          ],
-          temperature: cfg.temperature,
-        }),
-        signal: controller.signal,
-      });
-      if (response.ok) {
-        const json = (await response.json()) as any;
-        raw = json?.choices?.[0]?.message?.content ?? null;
-      }
-    }
-
-    if (typeof raw !== "string" || !raw.trim()) return null;
-
-    const obj = repairAndParseJsonObject(raw);
-    if (!obj) return null;
-
-    const extractedVocab = typeof obj.vocab === "string" && obj.vocab.trim() ? obj.vocab.trim() : undefined;
-    const candidates: PromptCandidate[] = [];
-    for (const slot of slots) {
-      const val = obj[slot.id];
-      if (typeof val === "string" && val.trim()) {
-        candidates.push({
-          id: slot.id,
-          label: slot.label,
-          content: val.trim(),
-          ...(extractedVocab ? { vocab: extractedVocab } : {}),
-        });
-      }
-    }
-
-    return candidates.length > 0 ? candidates : null;
-  } catch {
     return null;
-  } finally {
-    clearTimeout(timer);
   }
+
+  const vocabSlot = slots.find((s) => s.role === "vocab");
+  const extractedVocab =
+    (vocabSlot && !BLOCKED_JSON_KEYS.has(vocabSlot.id) && typeof obj[vocabSlot.id] === "string" && obj[vocabSlot.id].trim())
+      ? obj[vocabSlot.id].trim()
+      : (typeof obj.vocab === "string" && obj.vocab.trim() ? obj.vocab.trim() : undefined);
+
+  const candidates: PromptCandidate[] = [];
+  for (const slot of slots) {
+    if (slot.role === "vocab" || BLOCKED_JSON_KEYS.has(slot.id)) continue;
+    const val = obj[slot.id] ?? (slots.length === 1 ? obj.prompt : undefined);
+    if (typeof val === "string" && val.trim()) {
+      candidates.push({
+        id: slot.id,
+        label: slot.label,
+        content: val.trim(),
+        ...(extractedVocab ? { vocab: extractedVocab } : {}),
+      });
+    }
+  }
+
+  return candidates.length > 0 ? candidates : null;
+}
+
+export async function rewritePromptDirect(
+  text: string,
+  userConfig: Partial<LingualConfig> = {}
+): Promise<string | null> {
+  const diskConfig = loadUserLingualConfig();
+  const cfg = { ...DEFAULT_CONFIG, ...diskConfig, ...userConfig };
+  const allSlots = resolveDirectSlotsFromConfig({
+    sourceLang: cfg.sourceLang,
+    directSlots: userConfig.directSlots ?? userConfig.promptSlots ?? diskConfig.directSlots,
+  }).filter((s) => s.enabled !== false && s.role !== "vocab");
+  const firstSlot = allSlots[0] || getDefaultDirectSlots(cfg.sourceLang)[0];
+  const res = await generatePromptCandidates(text, { ...userConfig, promptSlots: [firstSlot] });
+  return res && res[0] ? res[0].content : null;
 }
 
 /**
- * On-Demand Tuner Skill Gate (`stripLingualContextWhenOff`):
- * Physically strips `<skill>...<name>lingual-tuner</name>...</skill>` from `systemPrompt` on normal turns
- * across ALL modes, keeping it ONLY when the user explicitly invokes `/lingual tuner` (`tunerArmed === true`)
- * or explicitly asks to tune `pi-lingual`. Guarantees 0.00 bytes of LLM context overhead during normal coding.
+ * On-Demand Tuner Skill Gate (`stripLingualContextWhenOff`)
  */
 export function stripLingualContextWhenOff(
   systemPrompt: string,
@@ -819,26 +836,144 @@ export function stripLingualContextWhenOff(
   );
 }
 
-export const CURRENT_FEATURE_BANNER_VERSION = "0.5.3";
+export interface ModeDisplaySpec {
+  companion: string;
+  direct: string;
+  candidates: string;
+  off: string;
+  notifyCompanion: (pair: string) => string;
+  notifyDirect: (pair: string, firstSlotLabel: string) => string;
+  notifyCandidates: (pair: string, slotLabels: string) => string;
+  notifyOff: (pair: string) => string;
+}
 
-/**
- * 4-Stage Multi-Probe Native Language Resolution for the In-Pi Release Banner:
- * 1. Explicit `sourceLang` persisted in `~/.pi/agent/lingual.json` (highest priority).
- * 2. Recent user message script inspection from `ctx.sessionManager.getEntries()` or `~/.config/rpiv-i18n/config.json`.
- * 3. Host OS & shell locale (`LC_ALL`, `LANGUAGE`, `LANG`, `Intl.DateTimeFormat().resolvedOptions().locale`).
- * 4. Safe fallback to universal English (`"en"`).
- */
+const MODE_DISPLAY_BY_LANG: Record<string, ModeDisplaySpec> = {
+  zh: {
+    companion: "纯伴学",
+    direct: "直接改",
+    candidates: "挑候选",
+    off: "已关闭",
+    notifyCompanion: (p) => `[${p}] 已切换至【1 纯伴学 (companion)】：原话 0ms 直发 + 上方浮现伴学卡`,
+    notifyDirect: (p, s1) => `[${p}] 已切换至【2 直接改 (direct)】：按首槽 [${s1}] 1对1 直接改好发出`,
+    notifyCandidates: (p, s) => `[${p}] 已切换至【3 挑候选 (candidates)】：生成候选 (${s}) 挑一发出`,
+    notifyOff: (p) => `[${p}] 已切换至【0 已关闭 (off)】：底栏隐藏 · 监听已卸 · 0 Token 零负担`,
+  },
+  tw: {
+    companion: "純伴學",
+    direct: "直接改",
+    candidates: "挑候選",
+    off: "已關閉",
+    notifyCompanion: (p) => `[${p}] 已切換至【1 純伴學 (companion)】：原話 0ms 直發 + 上方浮現伴學卡`,
+    notifyDirect: (p, s1) => `[${p}] 已切換至【2 直接改 (direct)】：按首槽 [${s1}] 1對1 直接改好發出`,
+    notifyCandidates: (p, s) => `[${p}] 已切換至【3 挑候選 (candidates)】：生成候選 (${s}) 挑一發出`,
+    notifyOff: (p) => `[${p}] 已切換至【0 已關閉 (off)】：底欄隱藏 · 監聽已卸 · 0 Token 零負擔`,
+  },
+  ja: {
+    companion: "伴走",
+    direct: "直改",
+    candidates: "候補選",
+    off: "オフ",
+    notifyCompanion: (p) => `[${p}] 【1 伴走 (companion)】に切替：原文0ms送信＋上部に学習カード表示`,
+    notifyDirect: (p, s1) => `[${p}] 【2 直改 (direct)】に切替：第1スロット [${s1}] で直接書き換えて送信`,
+    notifyCandidates: (p, s) => `[${p}] 【3 候補選 (candidates)】に切替：候補 (${s}) から選択して送信`,
+    notifyOff: (p) => `[${p}] 【0 オフ (off)】：下部バー非表示・監視停止・0 Token 無負荷`,
+  },
+  ko: {
+    companion: "동반",
+    direct: "직접수정",
+    candidates: "후보선택",
+    off: "꺼짐",
+    notifyCompanion: (p) => `[${p}] [1 동반 (companion)] 전환: 원문 0ms 전송 + 상단 학습 카드 표시`,
+    notifyDirect: (p, s1) => `[${p}] [2 직접수정 (direct)] 전환: 첫 슬롯 [${s1}] 기준으로 즉시 다듬어 전송`,
+    notifyCandidates: (p, s) => `[${p}] [3 후보선택 (candidates)] 전환: 후보 (${s}) 중 골라서 전송`,
+    notifyOff: (p) => `[${p}] [0 꺼짐 (off)]: 하단바 숨김 · 감시 해제 · 0 Token 무부담`,
+  },
+  es: {
+    companion: "Estudio",
+    direct: "Directo",
+    candidates: "Opciones",
+    off: "Apagado",
+    notifyCompanion: (p) => `[${p}] Modo [1 Estudio (companion)]: Envío 0ms + tarjeta de aprendizaje arriba`,
+    notifyDirect: (p, s1) => `[${p}] Modo [2 Directo (direct)]: Reescritura 1a1 con ranura #1 [${s1}]`,
+    notifyCandidates: (p, s) => `[${p}] Modo [3 Opciones (candidates)]: Elige entre (${s})`,
+    notifyOff: (p) => `[${p}] Modo [0 Apagado (off)]: Barra oculta · 0 hooks · 0 tokens`,
+  },
+  fr: {
+    companion: "Étude",
+    direct: "Direct",
+    candidates: "Options",
+    off: "Désactivé",
+    notifyCompanion: (p) => `[${p}] Mode [1 Étude (companion)] : Envoi 0ms + carte d'étude en haut`,
+    notifyDirect: (p, s1) => `[${p}] Mode [2 Direct (direct)] : Réécriture 1à1 via le slot #1 [${s1}]`,
+    notifyCandidates: (p, s) => `[${p}] Mode [3 Options (candidates)] : Choisissez parmi (${s})`,
+    notifyOff: (p) => `[${p}] Mode [0 Désactivé (off)] : Barre masquée · 0 hook · 0 token`,
+  },
+  de: {
+    companion: "Lernen",
+    direct: "Direkt",
+    candidates: "Auswahl",
+    off: "Aus",
+    notifyCompanion: (p) => `[${p}] Modus [1 Lernen (companion)]: 0ms Senden + Lernkarte oben`,
+    notifyDirect: (p, s1) => `[${p}] Modus [2 Direkt (direct)]: Direktes Umformulieren über Slot #1 [${s1}]`,
+    notifyCandidates: (p, s) => `[${p}] Modus [3 Auswahl (candidates)]: Auswahl aus (${s})`,
+    notifyOff: (p) => `[${p}] Modus [0 Aus (off)]: Leiste ausgeblendet · 0 Hooks · 0 Tokens`,
+  },
+  ru: {
+    companion: "Учеба",
+    direct: "Прямой",
+    candidates: "Выбор",
+    off: "Выкл",
+    notifyCompanion: (p) => `[${p}] Режим [1 Учеба (companion)]: отправка 0мс + карточка сверху`,
+    notifyDirect: (p, s1) => `[${p}] Режим [2 Прямой (direct)]: прямая перезапись по слоту #1 [${s1}]`,
+    notifyCandidates: (p, s) => `[${p}] Режим [3 Выбор (candidates)]: выбор из вариантов (${s})`,
+    notifyOff: (p) => `[${p}] Режим [0 Выкл (off)]: строка скрыта · 0 хуков · 0 токенов`,
+  },
+  en: {
+    companion: "Companion",
+    direct: "Direct",
+    candidates: "Candidates",
+    off: "Off",
+    notifyCompanion: (p) => `[${p}] Switched to [1 Companion] mode: 0ms raw send + learning card above`,
+    notifyDirect: (p, s1) => `[${p}] Switched to [2 Direct (English/Rewrite)] mode: 1-to-1 send via Slot #1 [${s1}]`,
+    notifyCandidates: (p, s) => `[${p}] Switched to [3 Candidates (select)] mode: Pick from (${s})`,
+    notifyOff: (p) => `[${p}] Switched to [0 Off] mode: Status hidden · listeners detached · 0 tokens`,
+  },
+};
+
+export function resolveModeDisplaySpec(sourceLang = "en"): ModeDisplaySpec {
+  const norm = (sourceLang || "en").toLowerCase().split("-")[0];
+  return MODE_DISPLAY_BY_LANG[norm] || MODE_DISPLAY_BY_LANG.en;
+}
+
+const MODE_ALIAS_MAP: Record<string, "original" | "english" | "select" | "off"> = {
+  "1": "original", companion: "original", learn: "original", study: "original", original: "original", orig: "original",
+  "纯伴学": "original", "純伴學": "original", "伴学": "original", "伴走": "original", "동반": "original",
+  estudio: "original", "étude": "original", etude: "original", lernen: "original", "учеба": "original",
+  "2": "english", direct: "english", rewrite: "english", refine: "english", english: "english", en: "english", eng: "english",
+  "直接改": "english", "直改": "english", "直出": "english", "직접수정": "english", directo: "english", direkt: "english", "прямой": "english",
+  "3": "select", candidates: "select", candidate: "select", select: "select", choices: "select", choice: "select", pick: "select",
+  "挑候选": "select", "挑候選": "select", "候选": "select", "候補選": "select", "후보선택": "select",
+  opciones: "select", options: "select", auswahl: "select", "выбор": "select",
+  "0": "off", off: "off", disable: "off", stop: "off",
+  "已关闭": "off", "已關閉": "off", "关闭": "off", "オフ": "off", "꺼짐": "off",
+  apagado: "off", "désactivé": "off", desactive: "off", aus: "off", "выкл": "off",
+};
+
+export function normalizeLingualModeInput(raw?: string): "original" | "english" | "select" | "off" | null {
+  if (!raw) return null;
+  return MODE_ALIAS_MAP[raw.trim().toLowerCase()] || null;
+}
+
+export const CURRENT_FEATURE_BANNER_VERSION = "0.5.4";
+
 export function resolveReleaseBannerLang(explicitSourceLang?: string, sessionEntries?: any[]): string {
   const supported = new Set(["zh", "tw", "ja", "ko", "es", "fr", "de", "ru", "en"]);
 
-  // Probe 1: Explicit user config in lingual.json
   if (explicitSourceLang && explicitSourceLang.trim()) {
     const clean = explicitSourceLang.trim().toLowerCase().split(/[-_]/)[0];
-    if (supported.has(clean)) return clean;
-    return "en";
+    return supported.has(clean) ? clean : "en";
   }
 
-  // Probe 2: Recent user messages in the active Pi session (if any)
   if (Array.isArray(sessionEntries) && sessionEntries.length > 0) {
     for (let i = sessionEntries.length - 1; i >= 0; i--) {
       const e = sessionEntries[i];
@@ -854,7 +989,6 @@ export function resolveReleaseBannerLang(explicitSourceLang?: string, sessionEnt
     }
   }
 
-  // Probe 2b: Check rpiv-i18n config if present on disk
   try {
     const i18nFile = path.join(os.homedir(), ".config", "rpiv-i18n", "config.json");
     if (fs.existsSync(i18nFile)) {
@@ -866,7 +1000,6 @@ export function resolveReleaseBannerLang(explicitSourceLang?: string, sessionEnt
     }
   } catch {}
 
-  // Probe 3: OS & environment locale
   try {
     const envLocale = (
       process.env.LC_ALL ||
@@ -880,21 +1013,15 @@ export function resolveReleaseBannerLang(explicitSourceLang?: string, sessionEnt
     if (supported.has(prefix)) return prefix;
   } catch {}
 
-  // Probe 4: Universal English fallback
   return "en";
 }
 
 interface BannerSpec {
   title: string;
-  apology: string;
+  subtitle: string;
   rows: [string, string, string, string, string, string];
 }
 
-/**
- * Render a one-time plain, grounded, emoji-free "What's New in v0.5.2" card above the editor (`aboveEditor`).
- * Covers all 9 supported languages (`zh`, `tw`, `ja`, `ko`, `es`, `fr`, `de`, `ru`, `en`).
- * Every line is strictly bounded within 78 visual columns so zero text is ever truncated on 80-col terminals.
- */
 export function formatReleaseBannerLines(
   sourceLang = "en",
   maxCols = 80,
@@ -905,124 +1032,116 @@ export function formatReleaseBannerLines(
 
   const copyByLang: Record<string, BannerSpec> = {
     zh: {
-      title: "· [pi-lingual v0.5.3 更新说明] 清晰四态与零负担关闭 (发消息自动收起)",
-      apology: "│ 抱歉连发了几个 0.5 小版本：这次理清了模式命名，并把 off 做到彻底无感",
+      title: "· [pi-lingual v0.5.4 更新说明] 三态物理隔离与黄金双语伴学 (发消息自动收起)",
+      subtitle: "│ 三大模式拥有独立槽位配置；默认方案融合地道口语、架构书面与逻辑规范",
       rows: [
-        "┌ [1 原文+伴学]   原话 0ms 直发 + 上方浮现双语伴学卡 (/lingual 1 或循环)",
-        "│ [2 直出改写]   按目标文字 + 多个设定条件直接改写发送 (/lingual 2 切换)",
-        "├ [3 候选挑一]   按多组设定条件生成 N 个候选弹窗挑一发送 (/lingual 3 切换)",
-        "│   (敲 /lingual 循环 1➔2➔3➔0；/lingual learn-on 可在改写时顺带提取重点词)",
-        "├ [按需唤醒定制] 平时 0 技能块注入；敲 /lingual tuner <需求> 按需唤醒配置",
-        "└ [0 彻底无负担] /lingual off 隐藏底栏、停监听、剥离技能块 (0像素 0Token)",
+        "┌ [1 纯伴学 · companion]  0ms 直发 + 高阶地道双语伴学词卡 (/lingual 1)",
+        "│ [2 直接改 · direct]     专属 directSlots 母语逻辑规范化发出 (/lingual 2)",
+        "├ [3 挑候选 · candidates] 专享 promptSlots 极简/结构/根因候选 (/lingual 3)",
+        "│   (敲 /lingual 循环 1➔2➔3➔0；按数字 1/2/3 免回车秒发，0/Esc 发原话)",
+        "├ [一切自定义归 Tuner]    平时 0 技能块注入；敲 /lingual tuner 隐形唤醒向导",
+        "└ [0 已关闭 · off]        隐藏底栏、停监听、剥离技能块 (0像素 0Token)",
       ],
     },
     tw: {
-      title: "· [pi-lingual v0.5.3 更新說明] 清晰四態與零負擔關閉 (發訊息自動收起)",
-      apology: "│ 抱歉連發了幾個 0.5 小版本：這次理清了模式命名，並把 off 做到徹底無感",
+      title: "· [pi-lingual v0.5.4 更新說明] 三態物理隔離與黃金雙語伴學 (發訊息自動收起)",
+      subtitle: "│ 三大模式擁有獨立槽位配置；預設方案融合道地口語、架構書面與邏輯規範",
       rows: [
-        "┌ [1 原文+伴學]   原話 0ms 直發 + 上方浮現雙語伴學卡 (/lingual 1 或循環)",
-        "│ [2 直出改寫]   按目標文字 + 多個設定條件直接改寫發送 (/lingual 2 切換)",
-        "├ [3 候選挑一]   按多組設定條件生成 N 個候選彈窗挑一發送 (/lingual 3 切換)",
-        "│   (敲 /lingual 循環 1➔2➔3➔0；/lingual learn-on 可在改寫時順帶提取重點詞)",
-        "├ [按需喚醒定制] 平時 0 技能塊注入；敲 /lingual tuner <需求> 按需喚醒配置",
-        "└ [0 徹底無負擔] /lingual off 隱藏底欄、停監聽、剝離技能塊 (0像素 0Token)",
+        "┌ [1 純伴學 · companion]  0ms 直發 + 高階道地雙語伴學詞卡 (/lingual 1)",
+        "│ [2 直接改 · direct]     專屬 directSlots 母語邏輯規範化發出 (/lingual 2)",
+        "├ [3 挑候選 · candidates] 專享 promptSlots 極簡/結構/根因候選 (/lingual 3)",
+        "│   (敲 /lingual 循環 1➔2➔3➔0；按數字 1/2/3 免回車秒發，0/Esc 發原話)",
+        "├ [一切自定義歸 Tuner]    平時 0 技能塊注入；敲 /lingual tuner 隱形喚醒嚮導",
+        "└ [0 已關閉 · off]        隱藏底欄、停監聽、剝離技能塊 (0像素 0Token)",
       ],
     },
     ja: {
-      title: "· [pi-lingual v0.5.3 更新案内] 4状態整理と完全ゼロ負荷 (送信で閉じる)",
-      apology: "│ 0.5系の連続更新をお詫びします：モード名を整理し off を完全無負荷化",
+      title: "· [pi-lingual v0.5.4 更新案内] 3モード完全分離と論理仕様化 (送信で閉じる)",
+      subtitle: "│ 3モードの設定配列を完全分離・自然な口語/技術文面と論理構成化を提供",
       rows: [
-        "┌ [1 原文+学習]  原文0ms送信＋上部に学習カード表示 (/lingual 1 または順送)",
-        "│ [2 直出改稿]  目標言語＋複数条件で直接書き換えて送信 (/lingual 2 切替)",
-        "├ [3 候補選択]  複数条件で N 個の候補を生成し選んで送信 (/lingual 3 切替)",
-        "│   (/lingual で 1➔2➔3➔0 循環 · /lingual learn-on で改稿時も重要語抽出)",
-        "├ [オンデマンド] 通常時スキル注入ゼロ · /lingual tuner <要望> で設定起動",
-        "└ [0 完全ゼロ化] /lingual off で下部バー非表示・監視停止・0 Token 負荷",
+        "┌ [1 伴走 · companion]   0ms送信＋実践的な双方向学習カード (/lingual 1)",
+        "│ [2 直改 · direct]      専用 directSlots で論理指示文を直送信 (/lingual 2)",
+        "├ [3 候補選 · candidates] 3候補を数字キー 1..3 で即送信 (/lingual 3)",
+        "│   (/lingual で 1➔2➔3➔0 循環 · 3モードの設定は完全分離で混線なし)",
+        "├ [Tuner に一元化]       通常時スキル注入ゼロ · /lingual tuner で案内起動",
+        "└ [0 オフ · off]         下部バー非表示・監視停止・0 Token 完全無負荷",
       ],
     },
     ko: {
-      title: "· [pi-lingual v0.5.3 업데이트] 4단계 정리 및 완전 무부담 (입력 시 닫힘)",
-      apology: "│ 0.5 버전의 잦은 업데이트를 사과드립니다: 모드 정리 및 off 완전 무부담화",
+      title: "· [pi-lingual v0.5.4 업데이트] 3모드 분리 및 논리 정제 (입력 시 닫힘)",
+      subtitle: "│ 3가지 모드 슬롯 설정을 물리적으로 분리·실전 구어/문어 및 논리 정제 적용",
       rows: [
-        "┌ [1 원문+학습]  원문 0ms 전송 + 상단 학습 카드 표시 (/lingual 1 또는 순환)",
-        "│ [2 직출개작]   목표 언어 + 복수 조건으로 즉시 다듬어 전송 (/lingual 2)",
-        "├ [3 후보선택]   다중 조건으로 N개 후보 생성 후 골라서 전송 (/lingual 3)",
-        "│   (/lingual 입력 시 1➔2➔3➔0 순환 · /lingual learn-on 으로 어휘 병행)",
-        "├ [맞춤 설정]    평소 스킬 주입 0 · /lingual tuner <요청> 시에만 설정 기동",
-        "└ [0 완전무부담] /lingual off 시 하단바 숨김·감시 해제·스킬 제거 (0 Tok)",
+        "┌ [1 동반 · companion]    0ms 전송 + 실전 이중언어 학습 카드 (/lingual 1)",
+        "│ [2 직접수정 · direct]   전용 directSlots 로 논리 정제 전송 (/lingual 2)",
+        "├ [3 후보선택 · candidates] 3대 후보 숫자 1..3 즉시 전송 (/lingual 3)",
+        "│   (/lingual 입력 시 1➔2➔3➔0 순환 · 3가지 모드 설정 완전 분리 격리)",
+        "├ [Tuner 통합 설정]      평소 스킬 주입 0 · /lingual tuner 마법사 기동",
+        "└ [0 꺼짐 · off]          하단바 숨김·감시 해제·스킬 제거 (0 픽셀 0 Tok)",
       ],
     },
     es: {
-      title: "· [pi-lingual v0.5.3] 4 estados y modo off sin carga (cierra al enviar)",
-      apology: "│ Disculpas por los parches 0.5.x: aclaramos modos y off es 100% limpio",
+      title: "· [pi-lingual v0.5.4] 3 modos aislados y fluidez nativa (cierra al enviar)",
+      subtitle: "│ Modos 100% aislados; fluidez oral/técnica y estructuración lógica",
       rows: [
-        "┌ [1 Orig+Aprender] Envía 0ms + tarjeta arriba (/lingual 1 o en ciclo)",
-        "│ [2 Reescritura]   Idioma meta + condiciones ➔ envío 1a1 (/lingual 2)",
-        "├ [3 Elegir N]      Idioma meta + N estilos ➔ menú elegir (/lingual 3)",
-        "│   (Cicla 1➔2➔3➔0 con /lingual; /lingual learn-on extrae vocabulario)",
-        "├ [Tuner a demanda] 0 tokens en prompt normal; usa /lingual tuner <req>",
-        "└ [0 Off Cero-Carga] /lingual off oculta barra, quita hooks y 0 tokens",
+        "┌ [1 Estudio · companion]  0ms + tarjeta bilingüe arriba (/lingual 1)",
+        "│ [2 Directo · direct]     directSlots estructurado 1a1 (/lingual 2)",
+        "├ [3 Opciones · candidates] 3 opciones teclas 1..3 (/lingual 3)",
+        "│   (Cicla 1➔2➔3➔0 con /lingual; modos 1, 2 y 3 100% aislados entre sí)",
+        "├ [Todo vía Tuner]         0 tokens normal; usa /lingual tuner para ajustar",
+        "└ [0 Apagado · off]        Oculta barra, quita hooks y 0 tok (/lingual 0)",
       ],
     },
     fr: {
-      title: "· [pi-lingual v0.5.3] 4 états clairs et off zéro charge (fermé à l'envoi)",
-      apology: "│ Désolé pour les patchs 0.5.x : modes clarifiés et off 100% invisible",
+      title: "· [pi-lingual v0.5.4] 3 modes isolés et fluidité native (fermé à l'envoi)",
+      subtitle: "│ Modes 100% isolés ; fluidité orale/technique et structure logique",
       rows: [
-        "┌ [1 Orig+Étude]    Envoi 0ms + carte d'étude (/lingual 1 ou en cycle)",
-        "│ [2 Réécriture]    Langue cible + conditions ➔ envoi 1à1 (/lingual 2)",
-        "├ [3 Choix N]       Langue cible + N styles ➔ menu choix (/lingual 3)",
-        "│   (Cyclez 1➔2➔3➔0 via /lingual ; /lingual learn-on extrait le vocab)",
-        "├ [Tuner à demande] 0 token normal ; tapez /lingual tuner <besoin>",
-        "└ [0 Off Invisible] /lingual off masque barre, coupe hooks et 0 token",
+        "┌ [1 Étude · companion]    0ms + carte bilingue en haut (/lingual 1)",
+        "│ [2 Direct · direct]      directSlots structuré 1à1 (/lingual 2)",
+        "├ [3 Options · candidates] 3 options touches 1..3 (/lingual 3)",
+        "│   (Cyclez 1➔2➔3➔0 via /lingual ; modes 1, 2 et 3 strictement isolés)",
+        "├ [Tout via Tuner]         0 token normal ; tapez /lingual tuner pour régler",
+        "└ [0 Désactivé · off]      Masque barre, coupe hooks et 0 tok (/lingual 0)",
       ],
     },
     de: {
-      title: "· [pi-lingual v0.5.3] 4 klare Modi & Null-Last in Off (schließt bei Senden)",
-      apology: "│ Entschuldigung für die 0.5.x Patches: Modi klar & off 100% unsichtbar",
+      title: "· [pi-lingual v0.5.4] 3 isolierte Modi & Logik-Struktur",
+      subtitle: "│ Strikt getrennte Slots; authentische Sprache & logische Struktur",
       rows: [
-        "┌ [1 Orig+Lernen]   0ms Senden + Lernkarte oben (/lingual 1 oder Zyklus)",
-        "│ [2 Direkt-Rewrite] Zielsprache + Bedingungen ➔ direkt (/lingual 2)",
-        "├ [3 N-Auswahl]     Zielsprache + N Stile ➔ Auswahlmenü (/lingual 3)",
-        "│   (/lingual wechselt 1➔2➔3➔0; /lingual learn-on zeigt Vokabel-Zeile)",
-        "├ [On-Demand Tuner] 0 Skill-Tokens im Alltag; /lingual tuner <Wunsch>",
-        "└ [0 Off Null-Last] /lingual off blendet Leiste aus, 0 Hooks & 0 Tok",
+        "┌ [1 Lernen · companion]   0ms + zweisprachige Lernkarte oben (/lingual 1)",
+        "│ [2 Direkt · direct]      directSlots 1-zu-1 strukturiert (/lingual 2)",
+        "├ [3 Auswahl · candidates] 3 Optionen Tasten 1..3 (/lingual 3)",
+        "│   (/lingual wechselt 1➔2➔3➔0; Modi 1, 2 und 3 strikt isoliert)",
+        "├ [Alles per Tuner]        0 Skill-Tokens im Alltag; /lingual tuner starten",
+        "└ [0 Aus · off]            Blendet Leiste aus, 0 Hooks & 0 Tok (/lingual 0)",
       ],
     },
     ru: {
-      title: "· [pi-lingual v0.5.3] 4 четких режима и ноль нагрузки в off",
-      apology: "│ Извините за патчи 0.5.x: уточнили режимы и сделали off невидимым",
+      title: "· [pi-lingual v0.5.4] 3 режима и логическая структура",
+      subtitle: "│ Раздельные слоты; живая речь, тех-стиль и логическая структура",
       rows: [
-        "┌ [1 Ориг+Учеба]    Отправка 0мс + карточка сверху (/lingual 1 / цикл)",
-        "│ [2 Прямой рерайт] Язык цели + условия ➔ отправка 1к1 (/lingual 2)",
-        "├ [3 Выбор из N]    Язык цели + N стилей ➔ меню выбора (/lingual 3)",
-        "│   (/lingual листает 1➔2➔3➔0; /lingual learn-on добавляет словарь)",
-        "├ [Tuner по запросу] 0 токенов обычно; вызывайте /lingual tuner <запрос>",
-        "└ [0 Off Без следа] /lingual off скрывает строку, 0 хуков и 0 токенов",
+        "┌ [1 Учеба · companion]   0мс + карточка обучения сверху (/lingual 1)",
+        "│ [2 Прямой · direct]     directSlots логично 1к1 (/lingual 2)",
+        "├ [3 Выбор · candidates]  3 варианта клавиши 1..3 (/lingual 3)",
+        "│   (/lingual листает 1➔2➔3➔0; режимы 1, 2 и 3 полностью изолированы)",
+        "├ [Все через Tuner]       0 токенов обычно; /lingual tuner для настройки",
+        "└ [0 Выкл · off]          Скрывает строку, 0 хуков и 0 ток (/lingual 0)",
       ],
     },
     en: {
-      title: "· [pi-lingual v0.5.3] Clear 4-State Flow & Zero-Load Off (closes on send)",
-      apology: "│ Sorry for the 0.5.x patches — clarified mode names & off is 100% clean",
+      title: "· [pi-lingual v0.5.4] 3 Isolated Modes & Golden Duality (closes on send)",
+      subtitle: "│ Isolated slot arrays per mode; authentic spoken, RFC prose & logical specs",
       rows: [
-        "┌ [1 Orig+Learn]    0ms raw send + learning card above (/lingual 1 / cycle)",
-        "│ [2 Direct Rewrite] Target lang + conditions ➔ 1-to-1 send (/lingual 2)",
-        "├ [3 Pick of N]     Target lang + N style slots ➔ popup picker (/lingual 3)",
-        "│   (Cycle 1➔2➔3➔0 via /lingual; /lingual learn-on adds 1-line vocab row)",
-        "├ [On-Demand Tuner] 0 skill tokens by default; run /lingual tuner <request>",
-        "└ [0 Zero-Load Off] /lingual off hides status bar, detaches hooks & 0 tok",
+        "┌ [1 Companion]  0ms raw send + bilingual companion card (/lingual 1)",
+        "│ [2 Direct]     Dedicated directSlots logical prompt rewrite (/lingual 2)",
+        "├ [3 Candidates] 1..3 for concise/spec/root-cause candidates (/lingual 3)",
+        "│   (Cycle 1➔2➔3➔0 via /lingual; Modes 1, 2 & 3 are strictly isolated)",
+        "├ [All via Tuner] 0 skill tokens by default; run /lingual tuner to customize",
+        "└ [0 Off]        /lingual off hides status bar, detaches hooks & 0 tokens",
       ],
     },
   };
 
   const c = copyByLang[norm] || copyByLang.en;
-  return [
-    truncateVisual(`  ${fg("accent", c.title)}`, effectiveCols),
-    truncateVisual(`  ${fg("dim", c.apology)}`, effectiveCols),
-    truncateVisual(`  ${fg("muted", c.rows[0])}`, effectiveCols),
-    truncateVisual(`  ${fg("dim", c.rows[1])}`, effectiveCols),
-    truncateVisual(`  ${fg("muted", c.rows[2])}`, effectiveCols),
-    truncateVisual(`  ${fg("dim", c.rows[3])}`, effectiveCols),
-    truncateVisual(`  ${fg("muted", c.rows[4])}`, effectiveCols),
-    truncateVisual(`  ${fg("muted", c.rows[5])}`, effectiveCols),
-  ];
+  const allRawLines = [c.title, c.subtitle, ...c.rows];
+  return allRawLines.map((line) => truncateVisual(`  ${fg("muted", line)}`, effectiveCols));
 }

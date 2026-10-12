@@ -1,17 +1,5 @@
-import { L as LingualResult, a as LingualI18nLabels, S as SlotConfig, b as LingualConfig, P as PromptCandidate } from './index-Bxvt_II7.cjs';
-export { C as CacheStats, c as CustomSlotsConfig, d as LANGUAGE_PRESETS, e as LEGACY_SLOT_PRESETS, f as LinguaConfig, g as LinguaI18nLabels, h as LinguaLruCache, i as LinguaMode, j as LinguaResult, k as LingualCoreOptions, l as LingualLruCache, m as LingualMode, n as LingualRequest, o as LingualResponse, p as PROMPT_RULE_PRESETS, q as PromptSlotConfig, r as SLOT_PRESETS, s as SanitizedPromptResult, t as SlotDefinition, u as SlotPresetDefinition, v as SlotResult, w as SlotRole, T as TranslationPayload, x as addSlotToList, y as buildDirectRewriteSystemPrompt, z as buildPromptCandidatesSystemPrompt, A as buildSystemPrompt, B as createCustomSlot, D as formatModelSelectionMessage, E as formatStatusReport, F as getDefaultPromptSlots, G as getDefaultSlots, H as globalLinguaCache, I as globalLingualCache, J as moveSlotInList, K as normalizePromptRules, M as parseLlmResponse, N as removeSlotFromList, O as resolveLabelsForLang, Q as resolvePromptRulePreset, R as resolvePromptTargetLangName, U as resolveSlotsForPreset, V as sanitizePromptForTranslation, W as shouldShieldBypass, X as toggleSlotInList, Y as translateCore, Z as updateSlotInList } from './index-Bxvt_II7.cjs';
-
-/**
- * Splits text into atomic natural sentence chunks when long.
- * Preserves punctuation (。！？；\n and .!?\n).
- *
- * Line Budget & Ergonomics:
- * 结合 9 行硬预算折叠守卫与树状全景舒展度，单卡最舒适自然容量为 60~70 字符（约 30~35 汉字）。
- * 默认预算校准至 65 字符：
- * - 确保多句诗文/长段落切分后，每一卡均能以 6~8 行完整树状形式优雅展开，绝不触发单行胶囊降级；
- * - 绝不过度粉碎短句，保留自然停顿。
- */
-declare function splitSemanticChunks(text: string, maxChunkChars?: number): string[];
+import { L as LingualResult, a as LingualI18nLabels, S as SlotConfig } from './index-GX1nw1e0.cjs';
+export { C as CURRENT_FEATURE_BANNER_VERSION, b as CacheStats, c as CustomSlotsConfig, D as DEFAULT_CONFIG, d as LANGUAGE_PRESETS, e as LEGACY_SLOT_PRESETS, f as LINGUAL_SYSTEM_PROMPT, g as LINGUA_SYSTEM_PROMPT, h as LinguaConfig, i as LinguaI18nLabels, j as LinguaLruCache, k as LinguaMode, l as LinguaResult, m as LingualConfig, n as LingualCoreOptions, o as LingualLruCache, p as LingualMode, q as LingualRequest, r as LingualResponse, M as MAX_TRANSLATION_CHARS, s as MAX_TRANSLATION_LINES, t as ModeDisplaySpec, P as PROMPT_RULE_PRESETS, u as PromptCandidate, v as PromptSlotConfig, w as SLOT_PRESETS, x as SanitizedPromptResult, y as SlotDefinition, z as SlotPresetDefinition, A as SlotResult, B as SlotRole, T as TranslationPayload, E as addSlotToList, F as buildDirectRewriteSystemPrompt, G as buildPromptCandidatesSystemPrompt, H as buildSystemPrompt, I as createCustomSlot, J as formatModelSelectionMessage, K as formatNativeReplyGuardHint, N as formatReleaseBannerLines, O as formatStatusReport, Q as generatePromptCandidates, R as getDefaultDirectSlots, U as getDefaultPromptSlots, V as getDefaultSlots, W as globalLinguaCache, X as globalLingualCache, Y as invalidateUserConfigCache, Z as isDynamicLongInput, _ as isNonEnglish, $ as isTestEnvironment, a0 as loadUserConfig, a1 as loadUserLingualConfig, a2 as moveSlotInList, a3 as normalizeLingualModeInput, a4 as normalizePromptRules, a5 as parseLlmResponse, a6 as removeSlotFromList, a7 as repairAndParseJsonObject, a8 as resolveCandidateSlotsFromConfig, a9 as resolveDirectSlotsFromConfig, aa as resolveLabelsForLang, ab as resolveModeDisplaySpec, ac as resolvePromptRulePreset, ad as resolvePromptTargetLangName, ae as resolveReleaseBannerLang, af as resolveSlotsForPreset, ag as rewritePromptDirect, ah as sanitizePromptForTranslation, ai as saveUserLingualConfig, aj as shouldInjectNativeReplyGuard, ak as shouldShieldBypass, al as shouldTriggerTranslation, am as stripLinguaAnnotation, an as stripLingualAnnotation, ao as stripLingualContextWhenOff, ap as toggleSlotInList, aq as translateCore, ar as translatePrompt, as as updateSlotInList } from './index-GX1nw1e0.cjs';
 
 /**
  * Terminal Box Model & Layout Engine (终端盒模型与几何排版求解引擎)
@@ -111,6 +99,18 @@ declare function renderCardLayout(card: LingualResult, labels: LingualI18nLabels
 }): string[];
 
 /**
+ * Splits text into atomic natural sentence chunks when long.
+ * Preserves punctuation (。！？；\n and .!?\n).
+ *
+ * Line Budget & Ergonomics:
+ * 结合 9 行硬预算折叠守卫与树状全景舒展度，单卡最舒适自然容量为 60~70 字符（约 30~35 汉字）。
+ * 默认预算校准至 65 字符：
+ * - 确保多句诗文/长段落切分后，每一卡均能以 6~8 行完整树状形式优雅展开，绝不触发单行胶囊降级；
+ * - 绝不过度粉碎短句，保留自然停顿。
+ */
+declare function splitSemanticChunks(text: string, maxChunkChars?: number): string[];
+
+/**
  * Monotonic Session FSM & Cancellation Controller (单调会话状态机与协同掐断控制器)
  *
  * 物理职责：
@@ -204,112 +204,4 @@ declare class LingualSessionController {
     reset(): void;
 }
 
-declare function invalidateUserConfigCache(): void;
-/**
- * Load user configuration from single source of truth: ~/.pi/agent/lingual.json
- * If lingual.json does not exist, performs a one-time graceful migration from settings.json ("pi-lingual" block).
- * Uses high-efficiency 2-second in-memory memoization to prevent synchronous disk I/O thrashing.
- * Never writes back to settings.json, protecting host environment.
- */
-declare function loadUserLingualConfig(): Partial<LingualConfig>;
-declare const DEFAULT_CONFIG: LingualConfig;
-/**
- * 现代开发者双语伴学系统提示词 (中文 A ➔ 英文 B，默认导出)
- * 设计哲学：
- * 1. 敏捷口语 (Silicon Valley Slack/Standup) + 现代技术书面 (PR/RFC/Docs) 双语域
- * 2. 母语 A 精准语境释义与反向释义 (Back-translation & Nuance)
- * 3. 典型开发协同的 3 组黄金 Few-Shot 锚点
- * 4. 代码与专有名词绝对防御机制 (Code & Symbol Shield)
- * 5. 水平自适应重点词汇提取，单行紧凑流排列
- */
-declare const LINGUAL_SYSTEM_PROMPT: string;
-
-/**
- * Check if the text contains non-English natural language scripts (CJK, accented Latin, Cyrillic, etc.)
- * Strictly avoids triggering on pure emojis, typographical quotes, or terminal commands.
- */
-declare function isNonEnglish(text: string): boolean;
-declare const MAX_TRANSLATION_CHARS = 2500;
-declare const MAX_TRANSLATION_LINES = 30;
-/**
- * Bidirectional language-aware trigger with strict Length & Payload Guards:
- * - If sourceLang is not English (e.g. "zh", "ja"): triggers on natural language scripts;
- * - If sourceLang is English ("en"): detects English natural language sentences while strictly excluding code and CLI commands;
- * - Centrally delegates to shouldShieldBypass (Single Source of Truth) to exclude code statements, SQL, and 40+ CLI commands;
- * - [Safety Gate]: Rejects oversized payloads (> 1500 chars), monolithic multi-line code (> 8 lines), markdown headings, and code fences.
- */
-declare function shouldTriggerTranslation(text: string, sourceLang?: string, allowSameLangPromptOpt?: boolean): boolean;
-
-/**
- * Strip annotations and recover purely clean text to prevent LLM prompt pollution
- * Robust against tree branch glyphs (┌ ├ └) and arrow annotations (↳)
- */
-declare function stripLingualAnnotation(annotatedText: string): {
-    raw: string;
-    spoken?: string;
-    written?: string;
-    vocab?: string;
-};
-/**
- * 动态判定是否需要触发长输入凝练与意图大标题总结 (彻底解决 45~90 字符/多句"中间状态"截断隐患)
- * 核心物理事实：CJK (中日韩) 为高密度表意文字，信息密度为西文 2.5 倍。
- * 45 汉字通常包含 2~3 个分句，直译为英文达 180~220 字符 (3 行 Spoken + 3 行 Written)，
- * 必然冲垮 9 行卡片盒模型预算并挤爆重点词汇。
- */
-declare function isDynamicLongInput(text: string, sourceLang?: string): boolean;
-/**
- * Translate a user prompt into idiomatic English with dual registers, native nuance, and vocabulary highlights
- */
-declare function translatePrompt(text: string, userConfig?: Partial<LingualConfig>): Promise<LingualResult | null>;
-declare const LINGUA_SYSTEM_PROMPT: string;
-declare const stripLinguaAnnotation: typeof stripLingualAnnotation;
-declare const loadUserConfig: typeof loadUserLingualConfig;
-/**
- * 智能判定是否需要注入母语回复守护指引 (Opt-in Native Reply Guard)
- * 1. 只有当用户显式开启 replyInSourceLang 时；
- * 2. 原始输入必须为母语（如中文/日文等，包含 CJK 字符）；
- * 3. 严格排除用户主动要求撰写英文文本（如 PR description, commit message, 英文邮件等）的意图。
- */
-declare function shouldInjectNativeReplyGuard(originalText: string, _sourceLang?: string, enabled?: boolean): boolean;
-declare function formatNativeReplyGuardHint(sourceLang?: string): string;
-/**
- * Mode 2 (Direct Prompt Rewrite):
- * Runs the user's raw input through a lightweight model injected with the Direct Rewrite System Prompt
- * (structuring + standardizing + high efficiency + output language + custom rule), returning the new prompt directly
- * without generating vocabulary or spoken learning cards.
- */
-declare function rewritePromptDirectWithDetails(text: string, userConfig?: Partial<LingualConfig>): Promise<{
-    prompt: string;
-    vocab?: string;
-} | null>;
-declare function rewritePromptDirect(text: string, userConfig?: Partial<LingualConfig>): Promise<string | null>;
-/**
- * Mode 3 (N-Choice Interactive Prompt Selector):
- * Generates N distinct optimized prompt candidates according to `promptSlots` (defaulting to Concise, Spec, Deep)
- * so the user can pick the best one via interactive selector.
- */
-declare function generatePromptCandidates(text: string, userConfig?: Partial<LingualConfig>): Promise<PromptCandidate[] | null>;
-/**
- * On-Demand Tuner Skill Gate (`stripLingualContextWhenOff`):
- * Physically strips `<skill>...<name>lingual-tuner</name>...</skill>` from `systemPrompt` on normal turns
- * across ALL modes, keeping it ONLY when the user explicitly invokes `/lingual tuner` (`tunerArmed === true`)
- * or explicitly asks to tune `pi-lingual`. Guarantees 0.00 bytes of LLM context overhead during normal coding.
- */
-declare function stripLingualContextWhenOff(systemPrompt: string, lastUserText?: string, tunerArmed?: boolean): string;
-declare const CURRENT_FEATURE_BANNER_VERSION = "0.5.3";
-/**
- * 4-Stage Multi-Probe Native Language Resolution for the In-Pi Release Banner:
- * 1. Explicit `sourceLang` persisted in `~/.pi/agent/lingual.json` (highest priority).
- * 2. Recent user message script inspection from `ctx.sessionManager.getEntries()` or `~/.config/rpiv-i18n/config.json`.
- * 3. Host OS & shell locale (`LC_ALL`, `LANGUAGE`, `LANG`, `Intl.DateTimeFormat().resolvedOptions().locale`).
- * 4. Safe fallback to universal English (`"en"`).
- */
-declare function resolveReleaseBannerLang(explicitSourceLang?: string, sessionEntries?: any[]): string;
-/**
- * Render a one-time plain, grounded, emoji-free "What's New in v0.5.2" card above the editor (`aboveEditor`).
- * Covers all 9 supported languages (`zh`, `tw`, `ja`, `ko`, `es`, `fr`, `de`, `ru`, `en`).
- * Every line is strictly bounded within 78 visual columns so zero text is ever truncated on 80-col terminals.
- */
-declare function formatReleaseBannerLines(sourceLang?: string, maxCols?: number, fg?: (color: string, text: string) => string): string[];
-
-export { CANNOT_START_LINE_CHARS, CURRENT_FEATURE_BANNER_VERSION, DEFAULT_CONFIG, LINGUAL_SYSTEM_PROMPT, LINGUA_SYSTEM_PROMPT, LingualConfig, LingualI18nLabels, LingualResult, LingualSessionController, MAX_TRANSLATION_CHARS, MAX_TRANSLATION_LINES, type PaginationSnapshot, PromptCandidate, type SessionRequestToken, SlotConfig, extractVocabPhrases, formatCapsuleLine, formatNativeReplyGuardHint, formatReleaseBannerLines, formatSubRail, formatTerminalAnnotation, formatTreeBranch, formatVocabItemsAtomic, generatePromptCandidates, getEffectiveMaxCols, getVisualWidth, invalidateUserConfigCache, isDynamicLongInput, isNonEnglish, loadUserConfig, loadUserLingualConfig, renderCardLayout, resolveReleaseBannerLang, rewritePromptDirect, rewritePromptDirectWithDetails, shouldInjectNativeReplyGuard, shouldTriggerTranslation, splitSemanticChunks, spotlightPhrases, stripLinguaAnnotation, stripLingualAnnotation, stripLingualContextWhenOff, translatePrompt, truncateVisual, wrapVisualText };
+export { CANNOT_START_LINE_CHARS, LingualI18nLabels, LingualResult, LingualSessionController, type PaginationSnapshot, type SessionRequestToken, SlotConfig, extractVocabPhrases, formatCapsuleLine, formatSubRail, formatTerminalAnnotation, formatTreeBranch, formatVocabItemsAtomic, getEffectiveMaxCols, getVisualWidth, renderCardLayout, splitSemanticChunks, spotlightPhrases, truncateVisual, wrapVisualText };

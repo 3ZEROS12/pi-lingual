@@ -60,6 +60,7 @@ __export(index_exports, {
   formatTreeBranch: () => formatTreeBranch,
   formatVocabItemsAtomic: () => formatVocabItemsAtomic,
   generatePromptCandidates: () => generatePromptCandidates,
+  getDefaultDirectSlots: () => getDefaultDirectSlots,
   getDefaultPromptSlots: () => getDefaultPromptSlots,
   getDefaultSlots: () => getDefaultSlots,
   getEffectiveMaxCols: () => getEffectiveMaxCols,
@@ -69,21 +70,27 @@ __export(index_exports, {
   invalidateUserConfigCache: () => invalidateUserConfigCache,
   isDynamicLongInput: () => isDynamicLongInput,
   isNonEnglish: () => isNonEnglish,
+  isTestEnvironment: () => isTestEnvironment,
   loadUserConfig: () => loadUserConfig,
   loadUserLingualConfig: () => loadUserLingualConfig,
   moveSlotInList: () => moveSlotInList,
+  normalizeLingualModeInput: () => normalizeLingualModeInput,
   normalizePromptRules: () => normalizePromptRules,
   parseLlmResponse: () => parseLlmResponse,
   removeSlotFromList: () => removeSlotFromList,
   renderCardLayout: () => renderCardLayout,
+  repairAndParseJsonObject: () => repairAndParseJsonObject,
+  resolveCandidateSlotsFromConfig: () => resolveCandidateSlotsFromConfig,
+  resolveDirectSlotsFromConfig: () => resolveDirectSlotsFromConfig,
   resolveLabelsForLang: () => resolveLabelsForLang,
+  resolveModeDisplaySpec: () => resolveModeDisplaySpec,
   resolvePromptRulePreset: () => resolvePromptRulePreset,
   resolvePromptTargetLangName: () => resolvePromptTargetLangName,
   resolveReleaseBannerLang: () => resolveReleaseBannerLang,
   resolveSlotsForPreset: () => resolveSlotsForPreset,
   rewritePromptDirect: () => rewritePromptDirect,
-  rewritePromptDirectWithDetails: () => rewritePromptDirectWithDetails,
   sanitizePromptForTranslation: () => sanitizePromptForTranslation,
+  saveUserLingualConfig: () => saveUserLingualConfig,
   shouldInjectNativeReplyGuard: () => shouldInjectNativeReplyGuard,
   shouldShieldBypass: () => shouldShieldBypass,
   shouldTriggerTranslation: () => shouldTriggerTranslation,
@@ -101,51 +108,224 @@ __export(index_exports, {
 });
 module.exports = __toCommonJS(index_exports);
 
-// src/core/prompts.ts
-function getDefaultPromptSlots(sourceLang = "zh") {
-  const norm = (sourceLang || "zh").toLowerCase().split("-")[0];
-  const isZh = norm === "zh" || norm === "tw";
-  const isJa = norm === "ja";
-  if (isZh) {
+// src/prompts.ts
+function getDefaultDirectSlots(sourceLang = "en") {
+  const norm = (sourceLang || "en").toLowerCase().split("-")[0];
+  if (norm === "zh") {
+    return [
+      {
+        id: "zh_refine",
+        label: "\u903B\u8F91\u89C4\u8303",
+        role: "rewrite",
+        instruction: "Target Language: Chinese (Simplified). Strictly output in Chinese (Simplified) ONLY: \u5C06\u7528\u6237\u53E3\u8BED\u5316\u3001\u96F6\u6563\u7684\u60F3\u6CD5\u91CD\u7EC4\u4E3A\u903B\u8F91\u4E25\u5BC6\u3001\u5C42\u6B21\u6E05\u6670\u7684\u9AD8\u8D28\u91CF\u4E2D\u6587\u5DE5\u7A0B\u6307\u4EE4\u3002\u660E\u786E\u6838\u5FC3\u76EE\u6807\u3001\u6267\u884C\u52A8\u4F5C\u3001\u7EA6\u675F\u8FB9\u754C\u4E0E\u671F\u671B\u4EA7\u51FA\uFF0C\u5B8C\u6574\u4FDD\u7559\u4EE3\u7801\u6807\u8BC6\u7B26\u3001\u6587\u4EF6\u8DEF\u5F84\u4E0E\u6280\u672F\u4E13\u6709\u540D\u8BCD\uFF0C\u675C\u7EDD\u7A7A\u6D1E\u5957\u8BDD\uFF0C\u8BA9 AI Agent \u80FD\u6700\u7CBE\u51C6\u9AD8\u6548\u5730\u7406\u89E3\u76EE\u6807\u4E0E\u6267\u884C\u3002",
+        enabled: true
+      },
+      {
+        id: "vocab",
+        label: "\u91CD\u70B9\u8BCD\u6C47",
+        role: "vocab",
+        instruction: "\u81EA\u9002\u5E94\u8403\u53D6 2-3 \u4E2A\u4E0E\u672C\u6307\u4EE4\u6700\u5951\u5408\u7684\u5730\u9053\u6280\u672F\u642D\u914D\u6216\u9AD8\u9636\u8BCD\u6C47\uFF0C\u683C\u5F0F\u4E3A 'term (\u4E2D\u6587\u91CA\u4E49) \xB7 term2 (\u4E2D\u6587\u91CA\u4E49)'\u3002",
+        enabled: true
+      }
+    ];
+  }
+  if (norm === "tw") {
+    return [
+      {
+        id: "tw_refine",
+        label: "\u908F\u8F2F\u898F\u7BC4",
+        role: "rewrite",
+        instruction: "Target Language: Chinese (Traditional). Strictly output in Chinese (Traditional) ONLY: \u5C07\u4F7F\u7528\u8005\u53E3\u8A9E\u5316\u3001\u96F6\u6563\u7684\u60F3\u6CD5\u91CD\u7D44\u70BA\u908F\u8F2F\u56B4\u5BC6\u3001\u5C64\u6B21\u6E05\u6670\u7684\u9AD8\u54C1\u8CEA\u7E41\u9AD4\u4E2D\u6587\u5DE5\u7A0B\u6307\u4EE4\u3002\u660E\u78BA\u6838\u5FC3\u76EE\u6A19\u3001\u57F7\u884C\u52D5\u4F5C\u3001\u7D04\u675F\u908A\u754C\u8207\u671F\u671B\u7522\u51FA\uFF0C\u5B8C\u6574\u4FDD\u7559\u7A0B\u5F0F\u78BC\u8B58\u5225\u7B26\u8207\u6A94\u6848\u8DEF\u5F91\u3002",
+        enabled: true
+      },
+      {
+        id: "vocab",
+        label: "\u91CD\u9EDE\u8A5E\u5F59",
+        role: "vocab",
+        instruction: "\u81EA\u9069\u61C9\u8403\u53D6 2-3 \u500B\u8207\u672C\u6307\u4EE4\u6700\u5951\u5408\u7684\u9053\u5730\u6280\u8853\u642D\u914D\u6216\u9AD8\u968E\u8A5E\u5F59\uFF0C\u683C\u5F0F\u70BA 'term (\u4E2D\u6587\u91CB\u7FA9) \xB7 term2 (\u4E2D\u6587\u91CB\u7FA9)'\u3002",
+        enabled: true
+      }
+    ];
+  }
+  if (norm === "ja") {
+    return [
+      {
+        id: "ja_refine",
+        label: "\u8AD6\u7406\u69CB\u9020\u5316",
+        role: "rewrite",
+        instruction: "Target Language: Japanese. Strictly output in Japanese ONLY: \u53E3\u8A9E\u7684\u3067\u65AD\u7247\u7684\u306A\u5165\u529B\u3092\u3001\u8AD6\u7406\u7684\u3067\u660E\u78BA\u306A\u9AD8\u54C1\u8CEA\u30A8\u30F3\u30B8\u30CB\u30A2\u30EA\u30F3\u30B0\u6307\u793A\u6587\u306B\u518D\u69CB\u6210\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u76EE\u7684\u30FB\u5B9F\u884C\u5185\u5BB9\u30FB\u5236\u7D04\u6761\u4EF6\u3092\u660E\u78BA\u5316\u3057\u3001\u30B3\u30FC\u30C9\u8B58\u5225\u5B50\u3084\u30D5\u30A1\u30A4\u30EB\u30D1\u30B9\u306F100%\u4FDD\u6301\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+        enabled: true
+      },
+      {
+        id: "vocab",
+        label: "\u91CD\u8981\u8A9E\u5F59",
+        role: "vocab",
+        instruction: "\u3053\u306E\u6307\u793A\u306B\u95A2\u9023\u3059\u308B\u5B9F\u7528\u7684\u306A\u82F1\u8A9E\u6280\u8853\u8868\u73FE\u3092 2\u301C3 \u500B\u62BD\u51FA\u3057\u3001'term (\u65E5\u672C\u8A9E\u306E\u610F\u5473) \xB7 term2 (\u610F\u5473)' \u306E\u5F62\u5F0F\u3067\u51FA\u529B\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+        enabled: true
+      }
+    ];
+  }
+  if (norm === "ko") {
+    return [
+      {
+        id: "ko_refine",
+        label: "\uB17C\uB9AC \uC815\uC81C",
+        role: "rewrite",
+        instruction: "Target Language: Korean. Strictly output in Korean ONLY: \uAD6C\uC5B4\uCCB4\uC774\uAC70\uB098 \uB2E8\uD3B8\uC801\uC778 \uC785\uB825\uC744 \uB17C\uB9AC\uC801\uC774\uACE0 \uBA85\uD655\uD55C \uC5D4\uC9C0\uB2C8\uC5B4\uB9C1 \uC9C0\uC2DC\uBB38\uC73C\uB85C \uC7AC\uAD6C\uC131\uD558\uC2ED\uC2DC\uC624. \uBAA9\uD45C, \uC791\uC5C5, \uC81C\uC57D \uC870\uAC74\uC744 \uBA85\uD655\uD788 \uD558\uACE0 \uCF54\uB4DC \uC2DD\uBCC4\uC790\uC640 \uD30C\uC77C \uACBD\uB85C\uB97C 100% \uBCF4\uC874\uD558\uC2ED\uC2DC\uC624.",
+        enabled: true
+      },
+      {
+        id: "vocab",
+        label: "\uD575\uC2EC \uC5B4\uD718",
+        role: "vocab",
+        instruction: "\uC774 \uC9C0\uC2DC\uBB38\uACFC \uAD00\uB828\uB41C \uC2E4\uC6A9\uC801\uC778 \uC601\uC5B4 \uAE30\uC220 \uD45C\uD604 2~3\uAC1C\uB97C 'term (\uD55C\uAD6D\uC5B4 \uB73B) \xB7 term2 (\uB73B)' \uD615\uC2DD\uC73C\uB85C \uCD94\uCD9C\uD558\uC2ED\uC2DC\uC624.",
+        enabled: true
+      }
+    ];
+  }
+  return [
+    {
+      id: "en_refine",
+      label: "Logical Spec",
+      role: "rewrite",
+      instruction: "Target Language: English. Strictly output in English ONLY: Restructure messy or fragmented thoughts into a clear, logical, high-signal engineering instruction specifying objective, actions, and constraints while preserving all code tokens verbatim.",
+      enabled: true
+    },
+    {
+      id: "vocab",
+      label: "Key Terms",
+      role: "vocab",
+      instruction: "Extract 2-3 high-value idiomatic technical expressions relevant to this instruction.",
+      enabled: true
+    }
+  ];
+}
+function getDefaultPromptSlots(sourceLang = "en") {
+  const norm = (sourceLang || "en").toLowerCase().split("-")[0];
+  if (norm === "zh") {
     return [
       {
         id: "concise",
-        label: "\u6781\u7B80\u9AD8\u6548",
-        instruction: "\u9AD8\u6548\u7387\u3001\u96F6\u5E9F\u8BDD\u7684\u76F4\u63A5\u884C\u52A8\u6307\u4EE4\uFF1A\u5265\u79BB\u53E3\u8BED\u5BD2\u6684\uFF0C\u76F4\u5954\u76EE\u6807\u52A8\u4F5C\u4E0E\u6700\u5C0F\u5DE5\u4F5C\u6539\u52A8\u9762\uFF08Smallest Working Diff\uFF09\u3002",
+        label: "\u6781\u7B80\u884C\u52A8",
+        role: "rewrite",
+        instruction: "Target Language: Chinese (Simplified). Strictly output in Chinese (Simplified) ONLY: \u53BB\u9664\u5197\u4F59\u53E3\u8BED\u5BD2\u6684\uFF0C\u7CBE\u70BC\u4E3A\u76F4\u5954\u6838\u5FC3\u52A8\u4F5C\u7684\u6781\u7B80\u4E2D\u6587\u6307\u4EE4\uFF0C\u805A\u7126\u6700\u5C0F\u5DE5\u4F5C\u6539\u52A8\u9762\uFF08Smallest Working Diff\uFF09\u3002",
         enabled: true
       },
       {
         id: "spec",
         label: "\u7ED3\u6784\u89C4\u8303",
-        instruction: "\u7ED3\u6784\u5316\u5DE5\u7A0B\u9700\u6C42\u89C4\u8303\uFF1A\u5C06\u6742\u4E71\u8DF3\u8DC3\u7684\u53E3\u8BED\u63D0\u70BC\u4E3A\u6E05\u6670\u7684\u300C\u6838\u5FC3\u76EE\u6807 + \u7EA6\u675F\u8FB9\u754C + \u9884\u671F\u4EA7\u51FA\u300D\uFF0C\u4E25\u7981\u51ED\u7A7A\u634F\u9020\u672A\u8981\u6C42\u7684\u7279\u6027\u3002",
+        role: "rewrite",
+        instruction: "Target Language: Chinese (Simplified). Strictly output in Chinese (Simplified) ONLY: \u7ED3\u6784\u5316\u6574\u7406\u4E3A\u300C\u76EE\u6807 + \u7EA6\u675F\u8FB9\u754C + \u4EA4\u4ED8\u6807\u51C6\u300D\u6E05\u6670\u4E09\u8981\u7D20\u7684\u4E2D\u6587\u89C4\u8303\uFF0C\u4E0D\u81C6\u6D4B\u672A\u63D0\u53CA\u7684\u9700\u6C42\u3002",
         enabled: true
       },
       {
         id: "deep",
-        label: "\u6DF1\u5EA6\u4E25\u8C28",
-        instruction: "\u6839\u56E0\u6EAF\u6E90\u4E0E\u67B6\u6784\u4E25\u8C28\u89C4\u8303\uFF1A\u8981\u6C42\u5168\u94FE\u8DEF\u6392\u67E5\u5171\u4EAB\u6839\u56E0\uFF08\u62D2\u7EDD\u8868\u9762\u6253\u8865\u4E01\uFF09\uFF0C\u517C\u987E\u8FB9\u754C\u6761\u4EF6\u9A8C\u8BC1\u4E0E\u96F6\u56DE\u5F52\u3002",
+        label: "\u6839\u56E0\u6EAF\u6E90",
+        role: "rewrite",
+        instruction: "Target Language: Chinese (Simplified). Strictly output in Chinese (Simplified) ONLY: \u63D0\u70BC\u4E3A\u8981\u6C42\u5168\u94FE\u8DEF\u6EAF\u6E90\u3001\u5B9A\u4F4D\u5171\u4EAB\u6839\u56E0\u4E0E\u8FB9\u754C\u7528\u4F8B\u7269\u7406\u9A8C\u8BC1\u7684\u4E25\u8C28\u6392\u67E5\u6307\u4EE4\uFF0C\u62D2\u7EDD\u6CBB\u6807\u4E0D\u6CBB\u672C\u3002",
+        enabled: true
+      },
+      {
+        id: "vocab",
+        label: "\u91CD\u70B9\u8BCD",
+        role: "vocab",
+        instruction: "\u63D0\u53D6 2-3 \u4E2A\u4E0E\u672C\u63D0\u793A\u8BCD\u76F8\u5173\u7684\u5730\u9053\u82F1\u6587\u6280\u672F\u8BCD\u6C47\uFF0C\u683C\u5F0F\u4E3A 'term (\u4E2D\u6587\u91CA\u4E49) \xB7 term2 (\u4E2D\u6587\u91CA\u4E49)'\u3002",
         enabled: true
       }
     ];
   }
-  if (isJa) {
+  if (norm === "tw") {
+    return [
+      {
+        id: "concise",
+        label: "\u6975\u7C21\u884C\u52D5",
+        role: "rewrite",
+        instruction: "Target Language: Chinese (Traditional). Strictly output in Chinese (Traditional) ONLY: \u53BB\u9664\u5197\u9918\u53E3\u8A9E\u5BD2\u6684\uFF0C\u7CBE\u7149\u70BA\u76F4\u5954\u6838\u5FC3\u52D5\u4F5C\u7684\u6975\u7C21\u7E41\u9AD4\u4E2D\u6587\u6307\u4EE4\uFF0C\u805A\u7126\u6700\u5C0F\u5DE5\u4F5C\u6539\u52D5\u9762\uFF08Smallest Working Diff\uFF09\u3002",
+        enabled: true
+      },
+      {
+        id: "spec",
+        label: "\u7D50\u69CB\u898F\u7BC4",
+        role: "rewrite",
+        instruction: "Target Language: Chinese (Traditional). Strictly output in Chinese (Traditional) ONLY: \u7D50\u69CB\u5316\u6574\u7406\u70BA\u300C\u76EE\u6A19 + \u7D04\u675F\u908A\u754C + \u4EA4\u4ED8\u6A19\u6E96\u300D\u6E05\u6670\u4E09\u8981\u7D20\u7684\u7E41\u9AD4\u4E2D\u6587\u898F\u7BC4\uFF0C\u4E0D\u81C6\u6E2C\u672A\u63D0\u53CA\u7684\u9700\u6C42\u3002",
+        enabled: true
+      },
+      {
+        id: "deep",
+        label: "\u6839\u56E0\u6EAF\u6E90",
+        role: "rewrite",
+        instruction: "Target Language: Chinese (Traditional). Strictly output in Chinese (Traditional) ONLY: \u63D0\u7149\u70BA\u8981\u6C42\u5168\u93C8\u8DEF\u6EAF\u6E90\u3001\u5B9A\u4F4D\u5171\u4EAB\u6839\u56E0\u8207\u908A\u754C\u7528\u4F8B\u7269\u7406\u9A57\u8B49\u7684\u56B4\u8B39\u6392\u67E5\u6307\u4EE4\uFF0C\u62D2\u7D55\u6CBB\u6A19\u4E0D\u6CBB\u672C\u3002",
+        enabled: true
+      },
+      {
+        id: "vocab",
+        label: "\u91CD\u9EDE\u8A5E",
+        role: "vocab",
+        instruction: "\u63D0\u53D6 2-3 \u500B\u8207\u672C\u63D0\u793A\u8A5E\u76F8\u95DC\u7684\u9053\u5730\u82F1\u6587\u6280\u8853\u8A5E\u5F59\uFF0C\u683C\u5F0F\u70BA 'term (\u4E2D\u6587\u91CB\u7FA9) \xB7 term2 (\u4E2D\u6587\u91CB\u7FA9)'\u3002",
+        enabled: true
+      }
+    ];
+  }
+  if (norm === "ja") {
     return [
       {
         id: "concise",
         label: "\u7C21\u6F54\u30FB\u9AD8\u52B9\u7387",
-        instruction: "\u7121\u99C4\u3092\u7701\u3044\u305F\u9AD8\u52B9\u7387\u306A\u6307\u793A\uFF1A\u6838\u5FC3\u306E\u30A2\u30AF\u30B7\u30E7\u30F3\u3068\u6700\u5C0F\u9650\u306E\u5909\u66F4\u5DEE\u5206\uFF08Smallest Working Diff\uFF09\u3092\u76F4\u63A5\u6307\u793A\u3002",
+        role: "rewrite",
+        instruction: "Target Language: Japanese. Strictly output in Japanese ONLY: \u7121\u99C4\u3092\u7701\u3044\u305F\u9AD8\u52B9\u7387\u306A\u6307\u793A\uFF1A\u6838\u5FC3\u306E\u30A2\u30AF\u30B7\u30E7\u30F3\u3068\u6700\u5C0F\u9650\u306E\u5909\u66F4\u5DEE\u5206\uFF08Smallest Working Diff\uFF09\u3092\u76F4\u63A5\u6307\u793A\u3002",
         enabled: true
       },
       {
         id: "spec",
         label: "\u69CB\u9020\u5316\u4ED5\u69D8",
-        instruction: "\u69CB\u9020\u5316\u3055\u308C\u305F\u6280\u8853\u4ED5\u69D8\uFF1A\u66D6\u6627\u306A\u8868\u73FE\u3092\u300C\u76EE\u7684\u30FB\u5236\u7D04\u6761\u4EF6\u30FB\u671F\u5F85\u3055\u308C\u308B\u7D50\u679C\u300D\u306B\u6574\u7406\u3057\u3001\u660E\u78BA\u5316\u3002",
+        role: "rewrite",
+        instruction: "Target Language: Japanese. Strictly output in Japanese ONLY: \u69CB\u9020\u5316\u3055\u308C\u305F\u6280\u8853\u4ED5\u69D8\uFF1A\u66D6\u6627\u306A\u8868\u73FE\u3092\u300C\u76EE\u7684\u30FB\u5236\u7D04\u6761\u4EF6\u30FB\u671F\u5F85\u3055\u308C\u308B\u7D50\u679C\u300D\u306B\u6574\u7406\u3057\u3001\u660E\u78BA\u5316\u3002",
         enabled: true
       },
       {
         id: "deep",
         label: "\u6839\u672C\u539F\u56E0\u30FB\u53B3\u5BC6",
-        instruction: "\u6839\u672C\u539F\u56E0\u306E\u7279\u5B9A\u3068\u53B3\u5BC6\u306A\u691C\u8A3C\uFF1A\u8868\u9762\u7684\u306A\u5BFE\u51E6\u3067\u306F\u306A\u304F\u30A8\u30F3\u30C9\u30C4\u30FC\u30A8\u30F3\u30C9\u306E\u539F\u56E0\u8FFD\u8DE1\u3068\u5883\u754C\u5024\u691C\u8A3C\u3092\u8981\u6C42\u3002",
+        role: "rewrite",
+        instruction: "Target Language: Japanese. Strictly output in Japanese ONLY: \u6839\u672C\u539F\u56E0\u306E\u7279\u5B9A\u3068\u53B3\u5BC6\u306A\u691C\u8A3C\uFF1A\u8868\u9762\u7684\u306A\u5BFE\u51E6\u3067\u306F\u306A\u304F\u30A8\u30F3\u30C9\u30C4\u30FC\u30A8\u30F3\u30C9\u306E\u539F\u56E0\u8FFD\u8DE1\u3068\u5883\u754C\u5024\u691C\u8A3C\u3092\u8981\u6C42\u3002",
+        enabled: true
+      },
+      {
+        id: "vocab",
+        label: "\u91CD\u8981\u8A9E\u5F59",
+        role: "vocab",
+        instruction: "\u95A2\u9023\u3059\u308B\u5B9F\u7528\u7684\u306A\u82F1\u8A9E\u6280\u8853\u8868\u73FE\u3092 2\u301C3 \u500B\u62BD\u51FA\u3057\u3001'term (\u610F\u5473) \xB7 term2 (\u610F\u5473)' \u5F62\u5F0F\u3067\u51FA\u529B\u3002",
+        enabled: true
+      }
+    ];
+  }
+  if (norm === "ko") {
+    return [
+      {
+        id: "concise",
+        label: "\uAC04\uACB0\xB7\uC989\uC2DC\uC2E4\uD589",
+        role: "rewrite",
+        instruction: "Target Language: Korean. Strictly output in Korean ONLY: \uBD88\uD544\uC694\uD55C \uC778\uC0AC\uB9D0\uC744 \uC81C\uAC70\uD558\uACE0 \uD575\uC2EC \uB3D9\uC791\uACFC \uCD5C\uC18C \uBCC0\uACBD \uBC94\uC704(Smallest Working Diff)\uB97C \uC9C0\uC2DC\uD558\uB294 \uAC04\uACB0\uD55C \uD55C\uAD6D\uC5B4 \uBA85\uB839\uBB38.",
+        enabled: true
+      },
+      {
+        id: "spec",
+        label: "\uAD6C\uC870\uD654 \uBA85\uC138",
+        role: "rewrite",
+        instruction: "Target Language: Korean. Strictly output in Korean ONLY: \uBAA8\uD638\uD55C \uD45C\uD604\uC744 '\uBAA9\uD45C + \uC81C\uC57D \uC870\uAC74 + \uC0B0\uCD9C\uBB3C \uAE30\uC900'\uC758 \uBA85\uD655\uD55C 3\uC694\uC18C \uD55C\uAD6D\uC5B4 \uBA85\uC138\uB85C \uAD6C\uC870\uD654.",
+        enabled: true
+      },
+      {
+        id: "deep",
+        label: "\uADFC\uBCF8\uC6D0\uC778 \uCD94\uC801",
+        role: "rewrite",
+        instruction: "Target Language: Korean. Strictly output in Korean ONLY: \uC784\uC2DC\uBC29\uD3B8 \uD328\uCE58\uAC00 \uC544\uB2CC \uC5D4\uB4DC\uD22C\uC5D4\uB4DC \uC2E4\uD589 \uD750\uB984 \uCD94\uC801, \uADFC\uBCF8 \uC6D0\uC778 \uD574\uACB0 \uBC0F \uACBD\uACC4 \uC870\uAC74 \uBB3C\uB9AC\uC801 \uAC80\uC99D\uC744 \uC694\uAD6C\uD558\uB294 \uC5C4\uBC00\uD55C \uC9C0\uC2DC\uBB38.",
+        enabled: true
+      },
+      {
+        id: "vocab",
+        label: "\uD575\uC2EC \uC5B4\uD718",
+        role: "vocab",
+        instruction: "\uAD00\uB828\uB41C \uC2E4\uC6A9\uC801\uC778 \uC601\uC5B4 \uAE30\uC220 \uD45C\uD604 2~3\uAC1C\uB97C 'term (\uD55C\uAD6D\uC5B4 \uB73B) \xB7 term2 (\uB73B)' \uD615\uC2DD\uC73C\uB85C \uCD94\uCD9C.",
         enabled: true
       }
     ];
@@ -154,19 +334,29 @@ function getDefaultPromptSlots(sourceLang = "zh") {
     {
       id: "concise",
       label: "Concise",
-      instruction: "High-efficiency, zero-fluff imperative instruction targeting the exact action and smallest working diff.",
+      role: "rewrite",
+      instruction: "Target Language: English. Strictly output in English ONLY: High-efficiency, zero-fluff imperative instruction targeting the exact action and smallest working diff.",
       enabled: true
     },
     {
       id: "spec",
       label: "Structured",
-      instruction: "Structured engineering specification: distill messy thoughts into clear Objective, Constraints, and Deliverable without inventing unrequested features.",
+      role: "rewrite",
+      instruction: "Target Language: English. Strictly output in English ONLY: Structured engineering specification: distill messy thoughts into clear Objective, Constraints, and Deliverable without inventing unrequested features.",
       enabled: true
     },
     {
       id: "deep",
       label: "Deep Rigor",
-      instruction: "Root-cause & architectural rigor: trace end-to-end execution flow, fix shared root causes rather than symptom patches, and verify edge cases.",
+      role: "rewrite",
+      instruction: "Target Language: English. Strictly output in English ONLY: Root-cause & architectural rigor: trace end-to-end execution flow, fix shared root causes rather than symptom patches, and verify edge cases.",
+      enabled: true
+    },
+    {
+      id: "vocab",
+      label: "Vocab",
+      role: "vocab",
+      instruction: "Extract 2-3 high-value idiomatic English technical expressions relevant to this prompt.",
       enabled: true
     }
   ];
@@ -193,14 +383,14 @@ function getDefaultSlots(sourceLang = "en") {
   const l = labels[norm] || labels.en;
   const instructions = {
     zh: {
-      spoken: "\u81EA\u7136\u5730\u9053\u7684\u7F8E\u5F0F\u53E3\u8BED\u6D41\uFF08\u6BCF\u65E5\u7AD9\u4F1A\u3001Slack\u6C9F\u901A\u3001\u7ED3\u5BF9\u7F16\u7A0B\u3001\u654F\u6377\u534F\u4F5C\uFF09\u3002\u5730\u9053\u7845\u8C37\u53E3\u543B\u3001\u81EA\u7136\u7F29\u8BFB\u3001\u52A8\u8BCD\u77ED\u8BED\u4E0E\u4FDA\u8BED\u4E60\u60EF\u3002",
-      written: "\u4E25\u8C28\u73B0\u4EE3\u7684\u67B6\u6784\u89C4\u8303\u4E66\u9762\u8BED\uFF08PR\u63CF\u8FF0\u3001RFC\u6587\u6863\u3001\u95EE\u9898\u5355\u3001\u67B6\u6784\u8BF4\u660E\uFF09\u3002\u6E05\u6670\u4E13\u4E1A\u7684\u9AD8\u7EA7\u6280\u672F\u6563\u6587\uFF0C\u675C\u7EDD\u9648\u65E7\u7EF4\u591A\u5229\u4E9A\u5F0F\u5957\u8BDD\u4E0EAI\u6C34\u8BCD\u3002",
-      vocab: "\u81EA\u9002\u5E94\u8403\u53D6\u5173\u952E\u5730\u9053\u642D\u914D\u3001\u52A8\u8BCD\u8BCD\u7EC4\u3001\u6280\u672F\u6210\u8BED\u6216\u9AD8\u9636\u8868\u8FBE\uFF0C\u52A9\u529B\u638C\u63E1\u5730\u9053\u6BCD\u8BED\u7EA7\u8BED\u611F\u3002"
+      spoken: "\u81EA\u7136\u5730\u9053\u7684\u7F8E\u5F0F\u53E3\u8BED\u6D41\uFF08\u6BCF\u65E5\u7AD9\u4F1A\u3001Slack\u6C9F\u901A\u3001\u7ED3\u5BF9\u7F16\u7A0B\u3001\u654F\u6377\u534F\u4F5C\uFF09\u3002\u5730\u9053\u7845\u8C37\u53E3\u543B\uFF0C\u81EA\u7136\u878D\u5165\u5E38\u7528\u52A8\u8BCD\u77ED\u8BED\u3001\u8FDE\u8BCD\u4E0E\u4E60\u8BED\uFF08\u5982 happy path\u3001rough edges\uFF09\uFF0C\u6446\u8131\u4E2D\u5F0F\u786C\u8BD1\uFF0C\u638C\u63E1\u6BCD\u8BED\u7EA7\u9AD8\u9636\u6D41\u5229\u5EA6\u3002",
+      written: "\u4E25\u8C28\u73B0\u4EE3\u7684\u67B6\u6784\u89C4\u8303\u4E66\u9762\u8BED\uFF08PR\u63CF\u8FF0\u3001RFC\u6587\u6863\u3001\u95EE\u9898\u5355\u3001\u67B6\u6784\u8BF4\u660E\u4E0E\u6280\u672F\u65B9\u6848\uFF09\u3002\u9AD8\u9636\u5E73\u5B9E\u6563\u6587\uFF0C\u4E25\u5BC6\u56E0\u679C\u903B\u8F91\uFF0C\u7CBE\u51C6\u6280\u672F\u52A8\u8BCD\u4E0E\u5BA2\u89C2\u8868\u8FBE\uFF0C\u675C\u7EDD\u9648\u65E7\u7EF4\u591A\u5229\u4E9A\u5F0F\u5957\u8BDD\u4E0EAI\u6C34\u8BCD\u3002",
+      vocab: "\u81EA\u9002\u5E94\u8403\u53D6\u5173\u952E\u5730\u9053\u8BCD\u4F19\u642D\u914D\uFF08Collocations\uFF09\u3001\u77ED\u8BED\u52A8\u8BCD\u3001\u6280\u672F\u6210\u8BED\u6216\u9AD8\u9636\u8868\u8FBE\uFF0C\u52A9\u529B\u638C\u63E1\u5730\u9053\u6BCD\u8BED\u7EA7\u8BED\u611F\u3002"
     },
     tw: {
-      spoken: "\u81EA\u7136\u9053\u5730\u7684\u7F8E\u5F0F\u53E3\u8A9E\u6D41\uFF08\u6BCF\u65E5\u7AD9\u6703\u3001Slack\u6E9D\u901A\u3001\u7D50\u5C0D\u7DE8\u7A0B\u3001\u654F\u6377\u5354\u4F5C\uFF09\u3002\u9053\u5730\u77FD\u8C37\u8A9E\u611F\u3001\u81EA\u7136\u7E2E\u8B80\u3001\u52D5\u8A5E\u7247\u8A9E\u8207\u6163\u7528\u8A9E\u3002",
-      written: "\u56B4\u8B39\u73FE\u4EE3\u7684\u67B6\u69CB\u898F\u7BC4\u66F8\u9762\u8A9E\uFF08PR\u63CF\u8FF0\u3001RFC\u6587\u6A94\u3001\u554F\u984C\u55AE\u3001\u67B6\u69CB\u8AAA\u660E\uFF09\u3002\u6E05\u6670\u5C08\u696D\u7684\u9AD8\u7D1A\u6280\u8853\u6563\u6587\uFF0C\u675C\u7D55\u9673\u820A\u5957\u8A71\u8207AI\u6D6E\u8A87\u8A5E\u5F59\u3002",
-      vocab: "\u81EA\u9069\u61C9\u8403\u53D6\u95DC\u9375\u9053\u5730\u642D\u914D\u3001\u52D5\u8A5E\u7247\u8A9E\u3001\u6280\u8853\u6210\u8A9E\u6216\u9AD8\u968E\u8868\u9054\uFF0C\u52A9\u529B\u638C\u63E1\u9053\u5730\u6BCD\u8A9E\u7D1A\u8A9E\u611F\u3002"
+      spoken: "\u81EA\u7136\u9053\u5730\u7684\u7F8E\u5F0F\u53E3\u8A9E\u6D41\uFF08\u6BCF\u65E5\u7AD9\u6703\u3001Slack\u6E9D\u901A\u3001\u7D50\u5C0D\u7DE8\u7A0B\u3001\u654F\u6377\u5354\u4F5C\uFF09\u3002\u9053\u5730\u77FD\u8C37\u8A9E\u611F\uFF0C\u81EA\u7136\u878D\u5165\u5E38\u7528\u52D5\u8A5E\u7247\u8A9E\u8207\u6163\u7528\u8A9E\uFF0C\u64FA\u812B\u4E2D\u5F0F\u786C\u8B6F\uFF0C\u638C\u63E1\u6BCD\u8A9E\u7D1A\u9AD8\u968E\u6D41\u5229\u5EA6\u3002",
+      written: "\u56B4\u8B39\u73FE\u4EE3\u7684\u67B6\u69CB\u898F\u7BC4\u66F8\u9762\u8A9E\uFF08PR\u63CF\u8FF0\u3001RFC\u6587\u6A94\u3001\u554F\u984C\u55AE\u3001\u67B6\u69CB\u8AAA\u660E\u8207\u6280\u8853\u65B9\u6848\uFF09\u3002\u9AD8\u968E\u5E73\u5BE6\u6563\u6587\uFF0C\u56B4\u5BC6\u56E0\u679C\u908F\u8F2F\u8207\u7CBE\u6E96\u52D5\u8A5E\uFF0C\u675C\u7D55\u9673\u820A\u5957\u8A71\u8207AI\u6D6E\u8A87\u8A5E\u5F59\u3002",
+      vocab: "\u81EA\u9069\u61C9\u8403\u53D6\u95DC\u9375\u9053\u5730\u8A5E\u5925\u642D\u914D\uFF08Collocations\uFF09\u3001\u52D5\u8A5E\u7247\u8A9E\u3001\u6280\u8853\u6210\u8A9E\u6216\u9AD8\u968E\u8868\u9054\uFF0C\u52A9\u529B\u638C\u63E1\u9053\u5730\u6BCD\u8A9E\u7D1A\u8A9E\u611F\u3002"
     },
     ja: {
       spoken: "\u89AA\u3057\u3044\u540C\u50DA\u3084\u30C1\u30FC\u30E0\u3068\u306E\u81EA\u7136\u306A\u53E3\u8A9E\u8868\u73FE\uFF08\u671D\u4F1A\u3001Slack\u30CF\u30C9\u30EB\u3001\u30DA\u30A2\u30D7\u30ED\u30B0\u30E9\u30DF\u30F3\u30B0\u3001\u30AB\u30B8\u30E5\u30A2\u30EB\u30C1\u30E3\u30C3\u30C8\uFF09\u3002\u81EA\u7136\u306A\u77ED\u7E2E\u5F62\u3084\u30A4\u30C7\u30A3\u30AA\u30E0\u3002",
@@ -610,60 +800,6 @@ function buildSystemPrompt(sourceLang = "zh", targetLang = "en", isLongInput = f
     ms: "Malay"
   };
   const targetName = TARGET_LANGUAGE_NAMES[normTarget] || "English";
-  if (Array.isArray(customSlots)) {
-    const enabledSlots = customSlots.filter((s) => s.enabled && s.role !== "source");
-    let taskLines = [];
-    let jsonProps = [];
-    if (isLongInput) {
-      jsonProps.push(`  "summary": "Concise core intent/question in native ${spec.name} (under 20 words)"`);
-    }
-    enabledSlots.forEach((slot, idx) => {
-      const num = idx + 1;
-      const instruction = slot.instruction || `Express the message in ${slot.label} style in authentic ${targetName}.`;
-      taskLines.push(`${num}. "${slot.id}" (${slot.label}): ${instruction}`);
-      jsonProps.push(`  "${slot.id}": "..."`);
-      if (slot.showMeaning && slot.role !== "vocab") {
-        taskLines.push(`${num}_meaning. "${slot.id}_meaning": The exact nuance and meaning of "${slot.id}" ${spec.meaningInstruction}.`);
-        jsonProps.push(`  "${slot.id}_meaning": "..."`);
-      }
-    });
-    const dynamicTasks = taskLines.join("\n");
-    const dynamicJsonHint = `Strict JSON format:
-{
-${jsonProps.join(",\n")}
-}`;
-    const condensationDirective2 = isLongInput ? `
-
-[LONG INPUT CONDENSATION DIRECTIVE]:
-The user's input text has multiple clauses or sentences.
-CRITICAL: You MUST preserve and translate EVERY clause and question from start to finish \u2014 NEVER drop the second half or final question of the user's message!
-Keep the phrasing tight and high-density (under 20 words) so the complete meaning of all sentences fits cleanly on 1-2 lines without mid-sentence truncation.` : "";
-    const contextDirective2 = context && context.trim() ? `
-
-[CONVERSATION & THREAD CONTEXT]:
-The user's message is a reply to or continuation of the following context:
-"""
-${context.trim().slice(0, 500)}
-"""
-Ensure the generated translations fit naturally as a responsive reply to this specific context.` : "";
-    return `You are an elite bilingual language coach and cross-register translation architect.
-Task:
-Translate the user's message from native ${spec.name} (language A) into the following requested authentic ${targetName} registers/slots (language B):
-${dynamicTasks}
-
-[CODE & SYMBOL SHIELD - STRICT RULE]:
-All inline code (\`foo()\`), file paths (@file, path/to/file), SQL keywords, variable names, and technical identifiers MUST be preserved 100% verbatim in all outputs. Never translate, rephrase, or drop code tokens.
-${condensationDirective2}${contextDirective2}
-
-${dynamicJsonHint}
-Output valid JSON ONLY. Never output markdown code fences, backticks, quotes, or explanations.`;
-  }
-  const defaultSlots = LEGACY_SLOT_PRESETS.developer;
-  const legacyConfig = customSlots;
-  const slot1Name = legacyConfig?.slot1?.name || (tone === "social" ? LEGACY_SLOT_PRESETS.social.slot1.name : defaultSlots.slot1.name);
-  const slot1Instruction = legacyConfig?.slot1?.instruction || (tone === "social" ? LEGACY_SLOT_PRESETS.social.slot1.instruction : defaultSlots.slot1.instruction);
-  const slot2Name = legacyConfig?.slot2?.name || (tone === "social" ? LEGACY_SLOT_PRESETS.social.slot2.name : defaultSlots.slot2.name);
-  const slot2Instruction = legacyConfig?.slot2?.instruction || (tone === "social" ? LEGACY_SLOT_PRESETS.social.slot2.instruction : defaultSlots.slot2.instruction);
   const anchorText = spec.anchors.map(
     (a) => `Input: ${JSON.stringify(a.input)}
 Output: ${JSON.stringify({
@@ -704,7 +840,21 @@ Prioritize RFC, Pull Request, and architectural documentation precision:
 - "spoken": Direct, respectful engineering alignment (Slack huddles, technical triage).
 - "written": High-precision Plain ${targetName} matching modern IETF RFC and open-source release notes.`;
   }
-  const jsonFormatHint = isLongInput ? `Strict JSON format:
+  const isArraySlots = Array.isArray(customSlots);
+  const nonSourceSlots = isArraySlots ? customSlots.filter((s) => s.enabled && s.role !== "source") : [];
+  const hasSpoken = isArraySlots && nonSourceSlots.some((s) => s.id === "spoken");
+  const hasWritten = isArraySlots && nonSourceSlots.some((s) => s.id === "written");
+  const isStandardDuality = !isArraySlots || hasSpoken && hasWritten && nonSourceSlots.length <= 4;
+  if (isStandardDuality) {
+    const defaultSlots = LEGACY_SLOT_PRESETS.developer;
+    const legacyConfig = !isArraySlots ? customSlots : void 0;
+    const spokenSlot = isArraySlots ? nonSourceSlots.find((s) => s.id === "spoken") : void 0;
+    const writtenSlot = isArraySlots ? nonSourceSlots.find((s) => s.id === "written") : void 0;
+    const slot1Name = spokenSlot?.label || legacyConfig?.slot1?.name || (tone === "social" ? LEGACY_SLOT_PRESETS.social.slot1.name : defaultSlots.slot1.name);
+    const slot1Instruction = spokenSlot?.instruction || legacyConfig?.slot1?.instruction || (tone === "social" ? LEGACY_SLOT_PRESETS.social.slot1.instruction : defaultSlots.slot1.instruction);
+    const slot2Name = writtenSlot?.label || legacyConfig?.slot2?.name || (tone === "social" ? LEGACY_SLOT_PRESETS.social.slot2.name : defaultSlots.slot2.name);
+    const slot2Instruction = writtenSlot?.instruction || legacyConfig?.slot2?.instruction || (tone === "social" ? LEGACY_SLOT_PRESETS.social.slot2.instruction : defaultSlots.slot2.instruction);
+    const jsonFormatHint = isLongInput ? `Strict JSON format:
 {
   "summary": "Concise core intent/question in native ${spec.name} (under 20 words)",
   "spoken": "...",
@@ -720,14 +870,14 @@ Prioritize RFC, Pull Request, and architectural documentation precision:
   "written_meaning": "...",
   "vocab": "..."
 }`;
-  return `You are an elite bilingual developer language coach and cross-register translation architect.
+    return `You are an elite bilingual developer language coach and principal software architect.
 Task:
-Translate the user's message from native ${spec.name} (language A) into TWO distinct authentic ${targetName} registers (Slot 1 and Slot 2), and provide the exact back-translation/nuance in native ${spec.name} for each register:
-1. "spoken" (Slot 1: ${slot1Name}): ${slot1Instruction}
-2. "spoken_meaning": The exact nuance and meaning of Slot 1 ${spec.meaningInstruction}.
-3. "written" (Slot 2: ${slot2Name}): ${slot2Instruction}
-4. "written_meaning": The exact nuance and meaning of Slot 2 ${spec.meaningInstruction}.
-5. "vocab": Adaptively extract ALL key idiomatic collocations, phrasal verbs, technical idioms, or advanced expressions bridging the user to high-level/native fluency. Do NOT artificially cap at 1-2; extract as many as genuinely beneficial, while keeping each definition concise ${spec.vocabInstruction} to ensure the terminal HUD remains vertically compact.
+Translate the user's message from native ${spec.name} (language A) into TWO distinct authentic ${targetName} registers (language B), bridging everyday engineering thoughts to native-level fluency, and provide the exact back-translation/nuance ${spec.meaningInstruction} for each register:
+1. "spoken" (Slot 1: ${slot1Name}): ${slot1Instruction} (Natural, fluent spoken flow: authentic Silicon Valley conversational idioms, vivid phrasal verbs, contractions).
+2. "spoken_meaning": The exact colloquial nuance and meaning ${spec.meaningInstruction}.
+3. "written" (Slot 2: ${slot2Name}): ${slot2Instruction} (High-level Plain ${targetName}: active, concise, rigorous causal logic, and precise verbs meeting modern IETF RFC and architecture doc standards; STRICTLY AVOID archaic Victorian fluff and AI-slop buzzwords).
+4. "written_meaning": The exact formal technical nuance and meaning ${spec.meaningInstruction}.
+5. "vocab": Adaptively extract ALL key idiomatic collocations, phrasal verbs, technical idioms, or advanced expressions bridging the user to high-level/native developer fluency. Do NOT artificially cap at 1-2; extract as many as genuinely beneficial, while keeping each definition concise ${spec.vocabInstruction} to ensure the terminal HUD remains vertically compact.
 
 [CODE & SYMBOL SHIELD - STRICT RULE]:
 All inline code (\`foo()\`), file paths (@file, path/to/file), SQL keywords, variable names, and technical identifiers MUST be preserved 100% verbatim in both spoken and written outputs. Never translate, rephrase, or drop code tokens.
@@ -737,6 +887,42 @@ ${condensationDirective}${contextDirective}${toneDirective}
 ${anchorText}
 
 ${jsonFormatHint}
+Output valid JSON ONLY. Never output markdown code fences, backticks, quotes, or explanations.`;
+  }
+  const enabledSlots = customSlots.filter((s) => s.enabled && s.role !== "source");
+  let taskLines = [];
+  let jsonProps = [];
+  if (isLongInput) {
+    jsonProps.push(`  "summary": "Concise core intent/question in native ${spec.name} (under 20 words)"`);
+  }
+  enabledSlots.forEach((slot, idx) => {
+    const num = idx + 1;
+    const instruction = slot.instruction || `Express the message in ${slot.label} style in authentic ${targetName}.`;
+    taskLines.push(`${num}. "${slot.id}" (${slot.label}): ${instruction}`);
+    jsonProps.push(`  "${slot.id}": "..."`);
+    if (slot.showMeaning && slot.role !== "vocab") {
+      taskLines.push(`${num}_meaning. "${slot.id}_meaning": The exact nuance and meaning of "${slot.id}" ${spec.meaningInstruction}.`);
+      jsonProps.push(`  "${slot.id}_meaning": "..."`);
+    }
+  });
+  const dynamicTasks = taskLines.join("\n");
+  const dynamicJsonHint = `Strict JSON format:
+{
+${jsonProps.join(",\n")}
+}`;
+  return `You are an elite multilingual language coach and cross-register translation architect.
+Task:
+Translate the user's message from native ${spec.name} (language A) into the following requested authentic ${targetName} registers/slots (language B):
+${dynamicTasks}
+
+[CODE & SYMBOL SHIELD - STRICT RULE]:
+All inline code (\`foo()\`), file paths (@file, path/to/file), SQL keywords, variable names, and technical identifiers MUST be preserved 100% verbatim in all outputs. Never translate, rephrase, or drop code tokens.
+${condensationDirective}${contextDirective}${toneDirective}
+
+[GOLDEN FEW-SHOT ANCHORS]:
+${anchorText}
+
+${dynamicJsonHint}
 Output valid JSON ONLY. Never output markdown code fences, backticks, quotes, or explanations.`;
 }
 var PROMPT_TARGET_LANGUAGE_NAMES = {
@@ -829,11 +1015,16 @@ function buildPromptCandidatesSystemPrompt(options) {
   const spec = LANGUAGE_SPECS[normSource] || LANGUAGE_SPECS.zh;
   const slots = (Array.isArray(options.promptSlots) && options.promptSlots.length > 0 ? options.promptSlots : getDefaultPromptSlots(normSource)).filter((s) => s.enabled !== false);
   const activeSlots = slots.length > 0 ? slots : getDefaultPromptSlots(normSource);
-  const taskLines = activeSlots.map(
-    (s, idx) => `${idx + 1}. "${s.id}" (${s.label}): ${s.instruction} (MUST be written in **${outLangName}**)`
-  );
+  const taskLines = activeSlots.map((s, idx) => {
+    if (s.role === "vocab") {
+      return `${idx + 1}. "${s.id}" (${s.label}): ${s.instruction || "Extract 2-3 high-value authentic technical expressions or collocations relevant to the input."} ${spec.vocabInstruction}`;
+    }
+    const hasCustomLangDirective = /target language|output in|日本語|中文|english|spanish|french|german|korean|russian|portuguese/i.test(s.instruction || "");
+    const langSuffix = hasCustomLangDirective ? "" : ` (Default language: **${outLangName}** unless instruction specifies otherwise)`;
+    return `${idx + 1}. "${s.id}" (${s.label}): ${s.instruction}${langSuffix}`;
+  });
   const jsonProps = activeSlots.map((s) => `  "${s.id}": "..."`);
-  if (options.learnInRewrite) {
+  if (options.learnInRewrite && !activeSlots.some((s) => s.role === "vocab")) {
     taskLines.push(
       `${activeSlots.length + 1}. "vocab": Extract 2\u20133 high-value authentic English technical expressions or collocations relevant to this prompt as a single inline string \`term (meaning) \xB7 term2 (meaning)\` ${spec.vocabInstruction}.`
     );
@@ -845,15 +1036,15 @@ function buildPromptCandidatesSystemPrompt(options) {
 [USER CUSTOM SPECIFICATION & STACKED CONDITIONS - MANDATORY]:
 Ensure every generated candidate incorporates the following user-specified condition(s):
 ${rules.map((r, i) => `(${i + 1}) ${r}`).join("\n")}` : "";
-  return `You are an elite AI Coding Prompt Architect.
-The user is typing a raw, potentially messy or colloquial instruction for an AI coding agent.
-Generate ${activeSlots.length} distinct, orthogonal prompt candidates in **${outLangName}** so the user can choose the best one to send:
+  return `You are an elite Bilingual Translation & Prompt Architect.
+Transform the user's raw input into ${activeSlots.length} distinct output slots strictly following each slot's specific instruction and target language:
 ${taskLines.join("\n")}
 
 [STRICT QUALITY GUARDRAILS]:
-- **Direct Imperative Opening**: Start every candidate directly with an action verb; NEVER output filler preambles ("Please kindly...", "As an AI...").
-- **100% Intent Fidelity**: Never hallucinate unmentioned files or speculative features.
-- **Code & Symbol Shield**: Preserve all inline code (\`foo()\`), file paths (@file, path/to/file), CLI flags, and technical identifiers 100% verbatim in every candidate.${customRuleBlock}
+- **100% Semantic Fidelity**: Translate or refine EVERY sentence, clause, and detail from the user's input from start to finish. NEVER summarize, truncate, or drop details unless a slot explicitly asks for condensation.
+- **Respect Slot Role & Register**: If a slot asks for spoken/colloquial translation, output natural spoken flow; if it asks for formal/written translation, output polished written prose; if it asks for prompt structuring, structure it cleanly without robotic AI filler ("As an AI...", "Please kindly...").
+- **Zero Hallucination**: Never invent unmentioned files, bug reports, or speculative features.
+- **Code & Symbol Shield**: Preserve all inline code (\`foo()\`), file paths (@file, path/to/file), CLI flags, and technical identifiers 100% verbatim in every slot.${customRuleBlock}
 
 Strict JSON format:
 {
@@ -1954,6 +2145,10 @@ var SHELL_COMMAND_PREFIXES = [
 ];
 var CODE_STATEMENT_REGEX = /^(?:const|let|var|function|def|class|import|export|package|namespace|using|public|private|protected|fn|pub fn|impl|struct|enum|interface|type)\s+/;
 var SQL_STATEMENT_REGEX = /^(?:SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM|CREATE\s+TABLE|ALTER\s+TABLE|DROP\s+TABLE)\s+/i;
+function isNonEnglish(text) {
+  const naturalLanguageScript = /[\u4e00-\u9fa5\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af\u0400-\u04ff\u0600-\u06ff\u00c0-\u024f]/;
+  return naturalLanguageScript.test(text);
+}
 function shouldShieldBypass(text) {
   const trimmed = text.trim();
   if (!trimmed) return true;
@@ -2072,6 +2267,159 @@ var LingualLruCache = class {
 var LinguaLruCache = LingualLruCache;
 var globalLingualCache = new LingualLruCache(50);
 var globalLinguaCache = globalLingualCache;
+
+// src/sanitizer.ts
+var TARGETED_CLIPBOARD_PATH_REGEX = /(?:[a-zA-Z]:[\\\/](?:[^:\r\n\t]+[\\\/])?pi-clipboard-[a-zA-Z0-9\-]+\.png|\/(?:[^\r\n\t]+[\\\/])?pi-clipboard-[a-zA-Z0-9\-]+\.png)/gi;
+var LEADING_TARGETED_CLIPBOARD_REGEX = /^(?:[a-zA-Z]:[\\\/](?:[^:\r\n\t]+[\\\/])?pi-clipboard-[a-zA-Z0-9\-]+\.png|\/(?:[^\r\n\t]+[\\\/])?pi-clipboard-[a-zA-Z0-9\-]+\.png)\s*/i;
+var STACK_LINE_REGEX = /^\s*(?:at\s+(?:[\w$.<>]+|[^\s]+)\s*\(.*:\d+:\d+\)|at\s+.*:\d+:\d+|File\s+".*", line \d+, in\s+.*|goroutine \d+ \[.*\]:|Caused by:.*|^\s*\d+:\s+0x[0-9a-f]+)/;
+var COMPILER_DIAGNOSTIC_REGEX = /^(?:[a-zA-Z]:[\\\/]|\.{0,2}[\\\/]|[a-zA-Z0-9_\-\.]+)[^:\r\n]+:\d+:\d+:\s*(?:error|warning|fatal error|note):/i;
+var LIST_ITEM_REGEX = /^\s*(?:[-*•]|\d+[\.、)])\s+/;
+function sanitizePromptForTranslation(raw) {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return {
+      distilledText: "",
+      hasNaturalLanguage: false,
+      hasCollapsedContent: false,
+      naturalCharsLength: 0
+    };
+  }
+  let text = trimmed;
+  while (LEADING_TARGETED_CLIPBOARD_REGEX.test(text)) {
+    text = text.replace(LEADING_TARGETED_CLIPBOARD_REGEX, "").trim();
+  }
+  const inlinePathMatches = text.match(TARGETED_CLIPBOARD_PATH_REGEX);
+  let trailingPathPayload;
+  if (inlinePathMatches && inlinePathMatches.length > 0) {
+    trailingPathPayload = inlinePathMatches.join("\n");
+    text = text.replace(TARGETED_CLIPBOARD_PATH_REGEX, "").trim();
+  }
+  if (!text) {
+    return {
+      distilledText: "",
+      hasNaturalLanguage: false,
+      hasCollapsedContent: false,
+      naturalCharsLength: 0,
+      rawPayload: trailingPathPayload
+    };
+  }
+  let hasCollapsed = false;
+  text = text.replace(/```[\w\-]*\r?\n([\s\S]*?)\r?\n```/g, (_match, codeContent) => {
+    hasCollapsed = true;
+    const codeLines = codeContent.trim().split(/\r?\n/);
+    if (codeLines.length <= 1) {
+      return `[${codeLines[0] || "code"}]`;
+    }
+    return "[code ...]";
+  });
+  const lines = text.split(/\r?\n/);
+  const resultLines = [];
+  let inStackBlock = false;
+  let inDiagnosticBlock = false;
+  const currentListItems = [];
+  const collapsedListBlocks = [];
+  const flushListItems = () => {
+    const totalLength = currentListItems.reduce((acc, cur) => acc + cur.length, 0);
+    if (currentListItems.length >= 2 && (currentListItems.length > 4 || totalLength > 120)) {
+      hasCollapsed = true;
+      resultLines.push(`[${currentListItems.length} items ...]`);
+      collapsedListBlocks.push(currentListItems.join("\n"));
+      currentListItems.length = 0;
+    } else {
+      resultLines.push(...currentListItems);
+      currentListItems.length = 0;
+    }
+  };
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const lineTrim = line.trim();
+    if (!lineTrim) {
+      flushListItems();
+      inStackBlock = false;
+      inDiagnosticBlock = false;
+      continue;
+    }
+    if (STACK_LINE_REGEX.test(lineTrim) || lineTrim.startsWith("Traceback (most recent call last):")) {
+      flushListItems();
+      hasCollapsed = true;
+      if (!inStackBlock) {
+        resultLines.push("[... stack trace ...]");
+        inStackBlock = true;
+      }
+      continue;
+    } else {
+      inStackBlock = false;
+    }
+    if (COMPILER_DIAGNOSTIC_REGEX.test(lineTrim)) {
+      flushListItems();
+      hasCollapsed = true;
+      if (!inDiagnosticBlock) {
+        resultLines.push(lineTrim);
+        resultLines.push("[... diagnostics ...]");
+        inDiagnosticBlock = true;
+      }
+      continue;
+    } else {
+      inDiagnosticBlock = false;
+    }
+    if (/^npm ERR!/i.test(lineTrim)) {
+      flushListItems();
+      hasCollapsed = true;
+      if (!resultLines[resultLines.length - 1]?.includes("npm ERR! [...]")) {
+        resultLines.push("npm ERR! [...]");
+      }
+      continue;
+    }
+    if (LIST_ITEM_REGEX.test(lineTrim)) {
+      currentListItems.push(line);
+      continue;
+    } else {
+      flushListItems();
+    }
+    resultLines.push(line);
+  }
+  flushListItems();
+  const distilledText = resultLines.join(" ").replace(/\s+/g, " ").trim();
+  const withoutPlaceholders = distilledText.replace(/\[\.\.\.[^\]]*\]|\[\d+\s*items\s*\.\.\.\]/g, "").replace(/[a-zA-Z0-9_\-\.\/\\:]+/g, "").trim();
+  const hasCJK = isNonEnglish(distilledText);
+  const hasQuestionKeywords = /(?:为什么|怎么|如何|帮我|排查|优化|修改|修复|为何|报错|审查|看下|explain|why|how|please|help|could you|fix|should|what|inspect)/i.test(distilledText);
+  const isPureDiagnosticOutput = /^(?:[a-zA-Z0-9_\-\.\/\\:]+\s*-\s*error\s+[a-zA-Z0-9]+|error(?:\s+TS\d+|:)|warning:)/i.test(distilledText) && !hasQuestionKeywords;
+  const isPureErrorOrDiagnostic = isPureDiagnosticOutput || /^Error:\s*[\w\s:]*\[\.\.\.\s*stack trace\s*\.\.\.\]/i.test(distilledText) && !hasQuestionKeywords;
+  const cleanEnglishWords = distilledText.replace(/\[\.\.\.[^\]]*\]|\[code[^\]]*\]|\[\d+\s*items\s*\.\.\.\]/gi, " ").trim();
+  const words = cleanEnglishWords.match(/\b[a-zA-Z]{2,}\b/g) || [];
+  const hasEnglishSentence = !isPureErrorOrDiagnostic && words.length >= 4 && !distilledText.startsWith("Error:");
+  const hasNaturalLanguage = (hasCJK || hasQuestionKeywords || hasEnglishSentence || withoutPlaceholders.length > 5) && !isPureErrorOrDiagnostic;
+  let rawPayload;
+  const payloadParts = [];
+  if (trailingPathPayload) {
+    payloadParts.push(trailingPathPayload);
+  }
+  if (hasCollapsed) {
+    const codeMatch = trimmed.match(/```[\w\-]*\r?\n([\s\S]*?)\r?\n```/g);
+    if (codeMatch) {
+      payloadParts.push(...codeMatch);
+    }
+    const stackLines = lines.filter(
+      (l) => STACK_LINE_REGEX.test(l.trim()) || COMPILER_DIAGNOSTIC_REGEX.test(l.trim()) || l.trim().startsWith("Traceback")
+    );
+    if (stackLines.length > 0 && !codeMatch) {
+      payloadParts.push(stackLines.join("\n"));
+    }
+    if (collapsedListBlocks.length > 0) {
+      payloadParts.push(collapsedListBlocks.join("\n\n"));
+    }
+  }
+  if (payloadParts.length > 0) {
+    rawPayload = payloadParts.join("\n\n").trim();
+  }
+  return {
+    distilledText,
+    hasNaturalLanguage,
+    hasCollapsedContent: hasCollapsed,
+    naturalCharsLength: distilledText.length,
+    rawPayload
+  };
+}
 
 // src/layout.ts
 var CANNOT_START_LINE_CHARS = /* @__PURE__ */ new Set([
@@ -2521,12 +2869,17 @@ function renderCardLayout(card, labels, options = {}) {
     }
   }
   if (lines.length > maxLines) {
+    const maxSourceRows = numBranches >= maxLines - 1 ? 1 : 2;
     let clampedSourceLines = sourceLines;
-    if (sourceLines.length > 2) {
-      clampedSourceLines = [
-        sourceLines[0],
-        truncateVisual(sourceLines[1] + "...", maxCols)
-      ];
+    if (sourceLines.length > maxSourceRows) {
+      if (maxSourceRows === 1) {
+        clampedSourceLines = [truncateVisual(sourceLines[0] + "...", maxCols)];
+      } else {
+        clampedSourceLines = [
+          sourceLines[0],
+          truncateVisual(sourceLines[1] + "...", maxCols)
+        ];
+      }
     }
     const inlineLines = [...clampedSourceLines];
     for (let i = 0; i < numBranches; i++) {
@@ -2612,13 +2965,12 @@ function renderCardLayout(card, labels, options = {}) {
           );
           let branchBudget;
           if (isVocab) {
-            branchBudget = Math.max(1, Math.min(remainingBudget, 1));
+            branchBudget = 1;
           } else {
-            const transLeft = Math.max(1, transCount - transHandled);
-            const reservedForRest = transLeft - 1 + vocabCount;
-            const maxPossible = Math.max(1, remainingBudget - reservedForRest);
-            const fairShare = Math.ceil(availForTrans / transCount);
-            branchBudget = Math.min(maxPossible, Math.max(fairShare, Math.min(branchRendered.length, maxPossible)));
+            const branchesLeftAfterThis = numBranches - 1 - i;
+            const maxPossible = Math.max(1, remainingBudget - branchesLeftAfterThis);
+            const evenShare = Math.max(1, Math.floor(remainingBudget / Math.max(1, numBranches - i)));
+            branchBudget = Math.min(maxPossible, Math.min(branchRendered.length, evenShare));
             transHandled++;
           }
           if (branchRendered.length <= branchBudget) {
@@ -2639,1053 +2991,6 @@ function renderCardLayout(card, labels, options = {}) {
     lines = lines.slice(0, maxLines);
   }
   return lines.map((line) => getVisualWidth(line) > maxCols ? truncateVisual(line, maxCols) : line);
-}
-
-// src/engine.ts
-var import_node_fs = __toESM(require("fs"), 1);
-var import_node_path = __toESM(require("path"), 1);
-var import_node_os = __toESM(require("os"), 1);
-
-// src/core/engine.ts
-function tryParseJson(str) {
-  try {
-    return JSON.parse(str);
-  } catch {
-    try {
-      const repaired = str.replace(/,\s*([}\]])/g, "$1").replace(
-        /("[a-zA-Z0-9_-]+"\s*:\s*")([\s\S]*?)("(?=\s*,\s*"|\s*\}))/g,
-        (_m, prefix, content, suffix) => prefix + content.replace(/(?<!\\)"/g, '\\"') + suffix
-      );
-      return JSON.parse(repaired);
-    } catch {
-      return null;
-    }
-  }
-}
-var BLOCKED_JSON_KEYS = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
-function toCleanString(val) {
-  if (typeof val === "string") return val.trim();
-  if (typeof val === "number" || typeof val === "boolean") return String(val);
-  if (Array.isArray(val)) return val.map(toCleanString).filter(Boolean).join(" \xB7 ");
-  return "";
-}
-function parseLlmResponse(raw) {
-  try {
-    if (!raw || typeof raw !== "string" || raw.length > 32768) return null;
-    let cleaned = raw.replace(/<(?:think|thought)>[\s\S]*?<\/(?:think|thought)>/gi, "").trim();
-    const fenceMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-    if (fenceMatch) {
-      cleaned = fenceMatch[1].trim();
-    }
-    const firstBrace = cleaned.indexOf("{");
-    const lastBrace = cleaned.lastIndexOf("}");
-    if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
-      return null;
-    }
-    const jsonSubstr = cleaned.slice(firstBrace, lastBrace + 1);
-    const parsed = tryParseJson(jsonSubstr);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
-    const spoken = toCleanString(parsed.spoken ?? parsed.casual ?? parsed.slot1);
-    const spokenMeaning = toCleanString(parsed.spoken_meaning ?? parsed.spokenMeaning);
-    const written = toCleanString(parsed.written ?? parsed.academic ?? parsed.slot2);
-    const writtenMeaning = toCleanString(parsed.written_meaning ?? parsed.writtenMeaning);
-    const vocab = toCleanString(parsed.vocab);
-    const summary = toCleanString(parsed.summary ?? parsed.core_intent ?? parsed.coreIntent);
-    const slotOutputs = /* @__PURE__ */ Object.create(null);
-    for (const [k, v] of Object.entries(parsed)) {
-      if (BLOCKED_JSON_KEYS.has(k) || k.endsWith("_meaning") || k === "summary") continue;
-      const textVal = toCleanString(v);
-      if (textVal) {
-        const meaningVal = toCleanString(parsed[k + "_meaning"]);
-        slotOutputs[k] = {
-          content: textVal,
-          meaning: meaningVal || void 0
-        };
-      }
-    }
-    const nonVocabOutputs = Object.entries(slotOutputs).filter(([k]) => k !== "vocab").map(([, val]) => val);
-    const effectiveSpoken = spoken || nonVocabOutputs[0]?.content || vocab || "";
-    const effectiveSpokenMeaning = spokenMeaning || nonVocabOutputs[0]?.meaning || "";
-    if (effectiveSpoken) {
-      return {
-        spoken: effectiveSpoken,
-        spokenMeaning: effectiveSpokenMeaning || void 0,
-        written: written || void 0,
-        writtenMeaning: writtenMeaning || void 0,
-        vocab: vocab || void 0,
-        summary: summary || void 0,
-        slotOutputs: Object.keys(slotOutputs).length > 0 ? slotOutputs : void 0
-      };
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-async function translateCore(req, options) {
-  const text = (req.text || "").trim();
-  const sourceLang = req.sourceLang || "zh";
-  const targetLang = req.targetLang || "en";
-  if (!text) {
-    return {
-      spoken: "",
-      written: "",
-      cached: false,
-      shieldBypassed: false
-    };
-  }
-  if (shouldShieldBypass(text)) {
-    return {
-      spoken: text,
-      written: text,
-      cached: false,
-      shieldBypassed: true
-    };
-  }
-  const cache = options?.cache || globalLingualCache;
-  const slotSig = Array.isArray(req.slots) ? req.slots.filter((s) => s.enabled !== false).map((s) => s.id).join(",") : void 0;
-  const cacheKey = LingualLruCache.buildKey(text, sourceLang, targetLang, slotSig);
-  const cached = cache.get(cacheKey);
-  if (cached) {
-    return {
-      spoken: cached.spoken,
-      spokenMeaning: cached.spokenMeaning,
-      written: cached.written || cached.spoken,
-      writtenMeaning: cached.writtenMeaning,
-      vocab: cached.vocab,
-      summary: cached.summary,
-      cached: true,
-      shieldBypassed: false
-    };
-  }
-  if (!options?.completer) {
-    return {
-      spoken: text,
-      written: text,
-      cached: false,
-      shieldBypassed: false
-    };
-  }
-  const systemPrompt = buildSystemPrompt(
-    sourceLang,
-    targetLang,
-    Boolean(req.isLongInput),
-    req.context,
-    req.tone || "general",
-    req.slots
-  );
-  const raw = await options.completer(text, systemPrompt, options.signal);
-  if (!raw) {
-    return {
-      spoken: text,
-      written: text,
-      cached: false,
-      shieldBypassed: false
-    };
-  }
-  const parsed = parseLlmResponse(raw);
-  if (parsed) {
-    cache.set(cacheKey, parsed);
-    const configuredSlots = Array.isArray(req.slots) ? req.slots : getDefaultSlots(sourceLang);
-    let rawObj = {};
-    try {
-      const firstBrace = raw.indexOf("{");
-      const lastBrace = raw.lastIndexOf("}");
-      if (firstBrace !== -1 && lastBrace > firstBrace) {
-        rawObj = tryParseJson(raw.slice(firstBrace, lastBrace + 1)) || {};
-      }
-    } catch {
-    }
-    const slotResults = [];
-    for (const slot of configuredSlots) {
-      if (!slot.enabled) continue;
-      if (slot.role === "source") {
-        slotResults.push({ id: slot.id, label: slot.label, role: slot.role, content: text });
-      } else {
-        const out = parsed.slotOutputs && Object.hasOwn(parsed.slotOutputs, slot.id) ? parsed.slotOutputs[slot.id] : void 0;
-        const content = out?.content || toCleanString(rawObj[slot.id]) || (slot.id === "spoken" ? parsed.spoken : slot.id === "written" ? parsed.written || "" : slot.id === "vocab" ? parsed.vocab || "" : "");
-        const meaning = out?.meaning || toCleanString(rawObj[slot.id + "_meaning"]) || (slot.id === "spoken" ? parsed.spokenMeaning : slot.id === "written" ? parsed.writtenMeaning : void 0) || void 0;
-        if (content) {
-          slotResults.push({ id: slot.id, label: slot.label, role: slot.role, content, meaning });
-        }
-      }
-    }
-    return {
-      spoken: parsed.spoken,
-      spokenMeaning: parsed.spokenMeaning,
-      written: parsed.written || parsed.spoken,
-      writtenMeaning: parsed.writtenMeaning,
-      vocab: parsed.vocab,
-      summary: parsed.summary,
-      slots: slotResults,
-      cached: false,
-      shieldBypassed: false
-    };
-  }
-  return {
-    spoken: text,
-    written: text,
-    cached: false,
-    shieldBypassed: false
-  };
-}
-
-// src/engine.ts
-var cachedUserConfig = null;
-var lastConfigCheckTime = 0;
-var CONFIG_CACHE_TTL_MS = 2e3;
-function invalidateUserConfigCache() {
-  cachedUserConfig = null;
-  lastConfigCheckTime = 0;
-}
-function isTestEnvironment() {
-  return process.env.NODE_ENV === "test" || process.env.NODE_TEST_CONTEXT !== void 0 || process.execArgv.some((a) => a.startsWith("--test") || a === "--test") || process.argv.some((a) => a === "--test" || a.startsWith("--test=") || /\.(?:test|spec)\.[cm]?[jt]s$/i.test(a)) || process.env.npm_lifecycle_event === "test";
-}
-function loadUserLingualConfig() {
-  if (isTestEnvironment()) {
-    return {};
-  }
-  const now = Date.now();
-  if (cachedUserConfig && now - lastConfigCheckTime < CONFIG_CACHE_TTL_MS) {
-    return cachedUserConfig;
-  }
-  const agentDir = import_node_path.default.join(import_node_os.default.homedir(), ".pi", "agent");
-  const lingualFile = import_node_path.default.join(agentDir, "lingual.json");
-  const settingsFile = import_node_path.default.join(agentDir, "settings.json");
-  let target = null;
-  if (import_node_fs.default.existsSync(lingualFile)) {
-    try {
-      const raw = import_node_fs.default.readFileSync(lingualFile, "utf8");
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-        const inner = parsed["pi-lingual"] || parsed;
-        target = inner && typeof inner === "object" && !Array.isArray(inner) ? inner : null;
-      }
-    } catch {
-      target = null;
-    }
-  }
-  if (!target && import_node_fs.default.existsSync(settingsFile)) {
-    try {
-      const raw = import_node_fs.default.readFileSync(settingsFile, "utf8");
-      const parsed = JSON.parse(raw);
-      const legacyBlock = parsed["pi-lingual"];
-      if (legacyBlock && typeof legacyBlock === "object") {
-        target = legacyBlock;
-        try {
-          if (!import_node_fs.default.existsSync(agentDir)) {
-            import_node_fs.default.mkdirSync(agentDir, { recursive: true });
-          }
-          import_node_fs.default.writeFileSync(lingualFile, JSON.stringify(target, null, 2), "utf8");
-        } catch {
-        }
-      }
-    } catch {
-      target = null;
-    }
-  }
-  if (target) {
-    const endpoint = target.endpoint || target.antigravity?.endpoint;
-    const apiKey = target.apiKey || target.antigravity?.apiKey;
-    const model = target.model || target.antigravity?.model;
-    const selectedModel = target.selectedModel || target.model;
-    const sourceLang = target.sourceLang;
-    const targetLang = target.targetLang;
-    const compact = target.compact;
-    const slotPreset = target.slotPreset;
-    const slots = Array.isArray(target.slots) ? target.slots.filter((s) => s && typeof s === "object" && typeof s.id === "string" && typeof s.label === "string") : void 0;
-    const promptLang = typeof target.promptLang === "string" ? target.promptLang : void 0;
-    const promptRule = typeof target.promptRule === "string" ? target.promptRule : Array.isArray(target.promptRule) ? target.promptRule.map((r) => String(r || "").trim()).filter(Boolean) : void 0;
-    const promptSlots = Array.isArray(target.promptSlots) ? target.promptSlots.filter((s) => s && typeof s === "object" && typeof s.id === "string" && typeof s.label === "string") : void 0;
-    const learnInRewrite = target.learnInRewrite !== void 0 ? Boolean(target.learnInRewrite) : void 0;
-    const lastSeenVersion = typeof target.lastSeenVersion === "string" ? target.lastSeenVersion : void 0;
-    const reasoning = typeof target.reasoning === "string" ? target.reasoning : void 0;
-    const timeoutMs = typeof target.timeoutMs === "number" && Number.isFinite(target.timeoutMs) ? Math.min(6e4, Math.max(1e3, target.timeoutMs)) : void 0;
-    const replyInSourceLang = target.replyInSourceLang !== void 0 ? Boolean(target.replyInSourceLang) : void 0;
-    const labels = resolveLabelsForLang(sourceLang || "zh", target.labels, targetLang);
-    cachedUserConfig = {
-      ...endpoint ? { endpoint } : {},
-      ...apiKey ? { apiKey } : {},
-      ...model ? { model } : {},
-      ...selectedModel ? { selectedModel } : {},
-      ...target.mode ? { mode: target.mode } : {},
-      ...compact !== void 0 ? { compact: Boolean(compact) } : {},
-      ...slotPreset ? { slotPreset } : {},
-      ...slots ? { slots } : {},
-      ...promptLang ? { promptLang } : {},
-      ...promptRule ? { promptRule } : {},
-      ...promptSlots ? { promptSlots } : {},
-      ...learnInRewrite !== void 0 ? { learnInRewrite } : {},
-      ...lastSeenVersion ? { lastSeenVersion } : {},
-      ...sourceLang ? { sourceLang } : {},
-      ...targetLang ? { targetLang } : {},
-      ...reasoning ? { reasoning } : {},
-      ...timeoutMs ? { timeoutMs } : {},
-      ...replyInSourceLang !== void 0 ? { replyInSourceLang } : {},
-      labels
-    };
-    lastConfigCheckTime = now;
-    return cachedUserConfig;
-  }
-  cachedUserConfig = {};
-  lastConfigCheckTime = now;
-  return {};
-}
-var DEFAULT_CONFIG = {
-  endpoint: process.env.LINGUAL_ENDPOINT || "",
-  apiKey: process.env.LINGUAL_API_KEY || "",
-  model: process.env.LINGUAL_MODEL || "",
-  selectedModel: "auto",
-  mode: "original",
-  sourceLang: "zh",
-  targetLang: "en",
-  temperature: 0.2,
-  timeoutMs: 3e4
-};
-var LINGUAL_SYSTEM_PROMPT = buildSystemPrompt("zh", "en");
-function isNonEnglish(text) {
-  const naturalLanguageScript = /[\u4e00-\u9fa5\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af\u0400-\u04ff\u0600-\u06ff\u00c0-\u024f]/;
-  return naturalLanguageScript.test(text);
-}
-var MAX_TRANSLATION_CHARS = 2500;
-var MAX_TRANSLATION_LINES = 30;
-function shouldTriggerTranslation(text, sourceLang = "zh", allowSameLangPromptOpt = false) {
-  const trimmed = text.trim();
-  if (!trimmed) return false;
-  if (trimmed.length > MAX_TRANSLATION_CHARS) {
-    return false;
-  }
-  const lines = trimmed.split(/\r?\n/);
-  if (lines.length > MAX_TRANSLATION_LINES) {
-    return false;
-  }
-  if (/^#{1,6}\s/.test(trimmed) || trimmed.startsWith("---")) {
-    return false;
-  }
-  if (shouldShieldBypass(trimmed)) {
-    return false;
-  }
-  if (allowSameLangPromptOpt) {
-    if (isNonEnglish(trimmed)) return true;
-    const words2 = trimmed.split(/\s+/);
-    return words2.length >= 2 && /[a-zA-Z]{2,}/.test(trimmed);
-  }
-  const normSource = (sourceLang || "zh").toLowerCase().split("-")[0];
-  const nonLatinLangs = /* @__PURE__ */ new Set(["zh", "tw", "ja", "ko", "ru", "ar"]);
-  if (nonLatinLangs.has(normSource)) {
-    return isNonEnglish(trimmed);
-  }
-  if (isNonEnglish(trimmed)) {
-    return true;
-  }
-  const words = trimmed.split(/\s+/);
-  if (words.length < 2) {
-    return false;
-  }
-  return /[a-zA-Z]{2,}/.test(trimmed);
-}
-function stripLingualAnnotation(annotatedText) {
-  const lines = annotatedText.split("\n");
-  const rawLines = [];
-  let spoken;
-  let written;
-  let vocab;
-  for (const line of lines) {
-    const trimmed = line.trim();
-    const sourceMatch = trimmed.match(/^·\s*\[?(?:原文|source|original|quelle)\]?\s+(.*)$/i);
-    if (sourceMatch) {
-      rawLines.push(sourceMatch[1].trim());
-      continue;
-    }
-    if (/^(?:[│\s]*↳\s*\(.*\)|↳\s*\(.*\))/.test(trimmed)) {
-      continue;
-    }
-    const slotMatch = trimmed.match(/^(?:[┌├└│]\s*|↳\s*)\[([^\]]+)\]\s*(.*)$/);
-    if (slotMatch) {
-      const tag = slotMatch[1].trim();
-      let text = slotMatch[2].trim().replace(/\x1b\[[0-9;]*[a-zA-Z]/g, "");
-      const parenIdx = text.lastIndexOf(" (");
-      if (parenIdx !== -1 && text.endsWith(")")) {
-        text = text.slice(0, parenIdx).trim();
-      }
-      if (/^(?:口语|spoken|口語|slack|slot1)$/i.test(tag)) {
-        spoken = text;
-      } else if (/^(?:写作|written|文面|rfc|slot2|敬語)$/i.test(tag)) {
-        written = text;
-      } else if (/^(?:重点|vocab|単語|词汇)$/i.test(tag)) {
-        vocab = text;
-      }
-    } else {
-      rawLines.push(line);
-    }
-  }
-  return {
-    raw: rawLines.join("\n").trim(),
-    spoken,
-    written,
-    vocab
-  };
-}
-function isDynamicLongInput(text, sourceLang = "zh") {
-  const trimmed = text.trim();
-  if (!trimmed) return false;
-  const normSource = (sourceLang || "zh").toLowerCase().split("-")[0];
-  const hasCjk = /[\u4e00-\u9fa5\u3040-\u30ff\uac00-\ud7af]/.test(trimmed);
-  const isCjk = normSource === "zh" || normSource === "tw" || normSource === "ja" || normSource === "ko" || hasCjk;
-  if (isCjk) {
-    if (trimmed.length >= 45) return true;
-    const sentenceCount = (trimmed.match(/[。！？；\n]/g) || []).length;
-    if (sentenceCount >= 2 && trimmed.length >= 30) return true;
-  } else {
-    if (trimmed.length >= 85) return true;
-    const sentenceCount = (trimmed.match(/[.!?](\s+|$)|[\n;]/g) || []).length;
-    if (sentenceCount >= 2 && trimmed.length >= 50) return true;
-  }
-  return trimmed.length >= 85;
-}
-async function translatePrompt(text, userConfig = {}) {
-  const trimmed = text.trim();
-  if (!trimmed) return null;
-  const diskConfig = loadUserLingualConfig();
-  const cfg = { ...DEFAULT_CONFIG, ...diskConfig, ...userConfig };
-  if (!shouldTriggerTranslation(trimmed, cfg.sourceLang)) {
-    return null;
-  }
-  if (shouldShieldBypass(trimmed)) {
-    return null;
-  }
-  const effectiveSlots = cfg.slots || (cfg.slotPreset ? resolveSlotsForPreset(cfg.slotPreset, cfg.sourceLang) : void 0);
-  const slotSig = Array.isArray(effectiveSlots) ? effectiveSlots.filter((s) => s.enabled !== false).map((s) => s.id).join(",") : void 0;
-  const cacheKey = LingualLruCache.buildKey(trimmed, cfg.sourceLang, cfg.targetLang, slotSig);
-  const cached = globalLingualCache.get(cacheKey);
-  if (cached) {
-    return cached;
-  }
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), cfg.timeoutMs);
-  if (cfg.signal) {
-    if (cfg.signal.aborted) {
-      clearTimeout(timer);
-      return null;
-    }
-    cfg.signal.addEventListener("abort", () => controller.abort(), { once: true });
-  }
-  try {
-    let content = null;
-    const isLongInput = isDynamicLongInput(trimmed, cfg.sourceLang);
-    const sysPrompt = buildSystemPrompt(cfg.sourceLang, cfg.targetLang, isLongInput, void 0, "general", effectiveSlots);
-    if (typeof cfg.complete === "function") {
-      content = await cfg.complete(trimmed, sysPrompt, controller.signal);
-    } else if (cfg.endpoint) {
-      const headers = {
-        "Content-Type": "application/json"
-      };
-      if (cfg.apiKey) {
-        headers["Authorization"] = `Bearer ${cfg.apiKey}`;
-      }
-      const response = await fetch(cfg.endpoint, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          model: cfg.model || "gemini-3.8-flash",
-          messages: [
-            { role: "system", content: sysPrompt },
-            { role: "user", content: trimmed }
-          ],
-          temperature: cfg.temperature
-        }),
-        signal: controller.signal
-      });
-      if (!response.ok) {
-        return null;
-      }
-      const json = await response.json();
-      content = json?.choices?.[0]?.message?.content ?? null;
-    } else {
-      return null;
-    }
-    if (typeof content !== "string" || !content.trim()) {
-      return null;
-    }
-    const payload = parseLlmResponse(content);
-    if (!payload || !payload.spoken) return null;
-    const labels = resolveLabelsForLang(cfg.sourceLang || "zh", cfg.labels, cfg.targetLang);
-    const slot1Label = labels.slot1Label || labels.spokenLabel || "Spoken";
-    const slot2Label = labels.slot2Label || labels.writtenLabel || "Written";
-    const vocabLabel = labels.vocabLabel || "Vocab";
-    const sourceLabel = labels.sourceLabel || "Source";
-    const effectiveSourceText = isLongInput && payload.summary && payload.summary.trim() ? payload.summary.trim() : trimmed;
-    const result = {
-      spoken: payload.spoken,
-      spokenMeaning: payload.spokenMeaning,
-      written: payload.written || "",
-      writtenMeaning: payload.writtenMeaning,
-      vocab: payload.vocab,
-      summary: payload.summary,
-      sourceText: effectiveSourceText,
-      slotOutputs: payload.slotOutputs,
-      annotated: formatTerminalAnnotation(
-        effectiveSourceText,
-        payload.spoken,
-        payload.written,
-        payload.vocab,
-        {
-          spokenMeaning: payload.spokenMeaning,
-          writtenMeaning: payload.writtenMeaning,
-          slot1Label,
-          slot2Label,
-          vocabLabel,
-          sourceLabel
-        }
-      )
-    };
-    globalLingualCache.set(cacheKey, result);
-    return result;
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-var LINGUA_SYSTEM_PROMPT = LINGUAL_SYSTEM_PROMPT;
-var stripLinguaAnnotation = stripLingualAnnotation;
-var loadUserConfig = loadUserLingualConfig;
-function shouldInjectNativeReplyGuard(originalText, _sourceLang = "zh", enabled = false) {
-  if (!enabled) return false;
-  const trimmed = originalText.trim();
-  if (!trimmed) return false;
-  if (!isNonEnglish(trimmed)) return false;
-  const isEnglishWritingIntent = /(?:英文|英语|english|in english|pr\b|pull request|commit message|git commit|tweet|twitter|email|邮件|readme)/i.test(trimmed);
-  if (isEnglishWritingIntent) {
-    return false;
-  }
-  return true;
-}
-function formatNativeReplyGuardHint(sourceLang = "zh") {
-  if (sourceLang === "ja") {
-    return "\n\n(Please reply and explain in Japanese.)";
-  }
-  if (sourceLang === "zh" || sourceLang === "tw") {
-    return "\n\n(Please reply and explain in Chinese.)";
-  }
-  if (sourceLang === "es") {
-    return "\n\n(Please reply and explain in Spanish.)";
-  }
-  if (sourceLang === "fr") {
-    return "\n\n(Please reply and explain in French.)";
-  }
-  if (sourceLang === "de") {
-    return "\n\n(Please reply and explain in German.)";
-  }
-  return "\n\n(Please reply in the user's native language.)";
-}
-function repairAndParseJsonObject(raw) {
-  try {
-    let cleaned = raw.replace(/<(?:think|thought)>[\s\S]*?<\/(?:think|thought)>/gi, "").trim();
-    const fence = cleaned.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-    if (fence) cleaned = fence[1].trim();
-    const first = cleaned.indexOf("{");
-    const last = cleaned.lastIndexOf("}");
-    if (first === -1 || last <= first) return null;
-    const jsonSubstr = cleaned.slice(first, last + 1);
-    try {
-      const parsed = JSON.parse(jsonSubstr);
-      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null;
-    } catch {
-      const repaired = jsonSubstr.replace(/,\s*([}\]])/g, "$1").replace(
-        /("[a-zA-Z0-9_-]+"\s*:\s*")([\s\S]*?)("(?=\s*,\s*"|\s*\}))/g,
-        (_m, prefix, content, suffix) => prefix + content.replace(/(?<!\\)"/g, '\\"') + suffix
-      );
-      const parsed = JSON.parse(repaired);
-      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null;
-    }
-  } catch {
-    return null;
-  }
-}
-function extractCleanJsonField(raw, fieldName) {
-  const obj = repairAndParseJsonObject(raw);
-  if (obj) {
-    const val = obj[fieldName] ?? obj.prompt ?? obj.written ?? obj.spoken;
-    if (typeof val === "string" && val.trim()) return val.trim();
-  }
-  const cleaned = raw.replace(/<(?:think|thought)>[\s\S]*?<\/(?:think|thought)>/gi, "").replace(/```(?:json)?|```/gi, "").trim();
-  const regexFallback = cleaned.match(/"(?:prompt|written|spoken)"\s*:\s*"([\s\S]*?)"\s*\}/);
-  if (regexFallback && regexFallback[1].trim()) {
-    return regexFallback[1].replace(/\\"/g, '"').replace(/\\n/g, "\n").trim();
-  }
-  if (cleaned.startsWith("{") && cleaned.endsWith("}")) {
-    return "";
-  }
-  return cleaned.replace(/^["']|["']$/g, "").trim();
-}
-async function rewritePromptDirectWithDetails(text, userConfig = {}) {
-  const trimmed = text.trim();
-  if (!trimmed) return null;
-  const diskConfig = loadUserLingualConfig();
-  const cfg = { ...DEFAULT_CONFIG, ...diskConfig, ...userConfig };
-  if (!shouldTriggerTranslation(trimmed, cfg.sourceLang, true)) {
-    return null;
-  }
-  const sysPrompt = buildDirectRewriteSystemPrompt({
-    sourceLang: cfg.sourceLang,
-    targetLang: cfg.targetLang,
-    promptLang: cfg.promptLang,
-    promptRule: cfg.promptRule,
-    learnInRewrite: Boolean(cfg.learnInRewrite)
-  });
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), cfg.timeoutMs);
-  if (cfg.signal) {
-    if (cfg.signal.aborted) {
-      clearTimeout(timer);
-      return null;
-    }
-    cfg.signal.addEventListener("abort", () => controller.abort(), { once: true });
-  }
-  try {
-    let raw = null;
-    if (typeof cfg.complete === "function") {
-      raw = await cfg.complete(trimmed, sysPrompt, controller.signal);
-    } else if (cfg.endpoint) {
-      const headers = { "Content-Type": "application/json" };
-      if (cfg.apiKey) headers["Authorization"] = `Bearer ${cfg.apiKey}`;
-      const response = await fetch(cfg.endpoint, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          model: cfg.model || "gemini-3.8-flash",
-          messages: [
-            { role: "system", content: sysPrompt },
-            { role: "user", content: trimmed }
-          ],
-          temperature: cfg.temperature
-        }),
-        signal: controller.signal
-      });
-      if (response.ok) {
-        const json = await response.json();
-        raw = json?.choices?.[0]?.message?.content ?? null;
-      }
-    }
-    if (typeof raw !== "string" || !raw.trim()) return null;
-    const obj = repairAndParseJsonObject(raw);
-    const rewritten = obj && typeof obj.prompt === "string" && obj.prompt.trim() ? obj.prompt.trim() : extractCleanJsonField(raw, "prompt");
-    if (!rewritten) return null;
-    const vocab = obj && typeof obj.vocab === "string" && obj.vocab.trim() ? obj.vocab.trim() : void 0;
-    return { prompt: rewritten, ...vocab ? { vocab } : {} };
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-async function rewritePromptDirect(text, userConfig = {}) {
-  const res = await rewritePromptDirectWithDetails(text, userConfig);
-  return res ? res.prompt : null;
-}
-async function generatePromptCandidates(text, userConfig = {}) {
-  const trimmed = text.trim();
-  if (!trimmed) return null;
-  const diskConfig = loadUserLingualConfig();
-  const cfg = { ...DEFAULT_CONFIG, ...diskConfig, ...userConfig };
-  if (!shouldTriggerTranslation(trimmed, cfg.sourceLang, true)) {
-    return null;
-  }
-  const activeSlots = (Array.isArray(cfg.promptSlots) && cfg.promptSlots.length > 0 ? cfg.promptSlots : getDefaultPromptSlots(cfg.sourceLang)).filter((s) => s.enabled !== false);
-  const slots = activeSlots.length > 0 ? activeSlots : getDefaultPromptSlots(cfg.sourceLang);
-  const sysPrompt = buildPromptCandidatesSystemPrompt({
-    sourceLang: cfg.sourceLang,
-    targetLang: cfg.targetLang,
-    promptLang: cfg.promptLang,
-    promptRule: cfg.promptRule,
-    promptSlots: slots,
-    learnInRewrite: Boolean(cfg.learnInRewrite)
-  });
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), cfg.timeoutMs);
-  if (cfg.signal) {
-    if (cfg.signal.aborted) {
-      clearTimeout(timer);
-      return null;
-    }
-    cfg.signal.addEventListener("abort", () => controller.abort(), { once: true });
-  }
-  try {
-    let raw = null;
-    if (typeof cfg.complete === "function") {
-      raw = await cfg.complete(trimmed, sysPrompt, controller.signal);
-    } else if (cfg.endpoint) {
-      const headers = { "Content-Type": "application/json" };
-      if (cfg.apiKey) headers["Authorization"] = `Bearer ${cfg.apiKey}`;
-      const response = await fetch(cfg.endpoint, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          model: cfg.model || "gemini-3.8-flash",
-          messages: [
-            { role: "system", content: sysPrompt },
-            { role: "user", content: trimmed }
-          ],
-          temperature: cfg.temperature
-        }),
-        signal: controller.signal
-      });
-      if (response.ok) {
-        const json = await response.json();
-        raw = json?.choices?.[0]?.message?.content ?? null;
-      }
-    }
-    if (typeof raw !== "string" || !raw.trim()) return null;
-    const obj = repairAndParseJsonObject(raw);
-    if (!obj) return null;
-    const extractedVocab = typeof obj.vocab === "string" && obj.vocab.trim() ? obj.vocab.trim() : void 0;
-    const candidates = [];
-    for (const slot of slots) {
-      const val = obj[slot.id];
-      if (typeof val === "string" && val.trim()) {
-        candidates.push({
-          id: slot.id,
-          label: slot.label,
-          content: val.trim(),
-          ...extractedVocab ? { vocab: extractedVocab } : {}
-        });
-      }
-    }
-    return candidates.length > 0 ? candidates : null;
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-function stripLingualContextWhenOff(systemPrompt, lastUserText = "", tunerArmed = false) {
-  if (!systemPrompt) return systemPrompt;
-  if (tunerArmed || /(?:lingual-tuner|\/lingual\s+(?:tuner|tune|agent)|定制伴学|配置伴学)/i.test(lastUserText)) {
-    return systemPrompt;
-  }
-  return systemPrompt.replace(
-    /\s*<skill>\s*<name>lingual-tuner<\/name>[\s\S]*?<\/skill>/gi,
-    ""
-  );
-}
-var CURRENT_FEATURE_BANNER_VERSION = "0.5.3";
-function resolveReleaseBannerLang(explicitSourceLang, sessionEntries) {
-  const supported = /* @__PURE__ */ new Set(["zh", "tw", "ja", "ko", "es", "fr", "de", "ru", "en"]);
-  if (explicitSourceLang && explicitSourceLang.trim()) {
-    const clean = explicitSourceLang.trim().toLowerCase().split(/[-_]/)[0];
-    if (supported.has(clean)) return clean;
-    return "en";
-  }
-  if (Array.isArray(sessionEntries) && sessionEntries.length > 0) {
-    for (let i = sessionEntries.length - 1; i >= 0; i--) {
-      const e = sessionEntries[i];
-      if (e?.type === "message" && e?.message?.role === "user") {
-        const text = Array.isArray(e.message.content) ? e.message.content.map((c) => c?.text || "").join(" ") : String(e.message.content || "");
-        if (/[\u3040-\u309f\u30a0-\u30ff]/.test(text)) return "ja";
-        if (/[\uac00-\ud7af]/.test(text)) return "ko";
-        if (/[\u0400-\u04ff]/.test(text)) return "ru";
-        if (/[\u4e00-\u9fa5]/.test(text)) return "zh";
-      }
-    }
-  }
-  try {
-    const i18nFile = import_node_path.default.join(import_node_os.default.homedir(), ".config", "rpiv-i18n", "config.json");
-    if (import_node_fs.default.existsSync(i18nFile)) {
-      const raw = JSON.parse(import_node_fs.default.readFileSync(i18nFile, "utf8"));
-      const loc = String(raw?.locale || raw?.lang || "").toLowerCase();
-      if (loc.startsWith("zh-tw") || loc.startsWith("zh-hk")) return "tw";
-      const prefix = loc.split(/[-_]/)[0];
-      if (supported.has(prefix)) return prefix;
-    }
-  } catch {
-  }
-  try {
-    const envLocale = (process.env.LC_ALL || process.env.LANGUAGE || process.env.LANG || Intl.DateTimeFormat().resolvedOptions().locale || "en").toLowerCase();
-    if (envLocale.startsWith("zh-tw") || envLocale.startsWith("zh-hk")) return "tw";
-    const prefix = envLocale.split(/[-_.]/)[0];
-    if (supported.has(prefix)) return prefix;
-  } catch {
-  }
-  return "en";
-}
-function formatReleaseBannerLines(sourceLang = "en", maxCols = 80, fg = (_c, t) => t) {
-  const norm = (sourceLang || "en").toLowerCase().split("-")[0];
-  const effectiveCols = Math.max(80, maxCols);
-  const copyByLang = {
-    zh: {
-      title: "\xB7 [pi-lingual v0.5.3 \u66F4\u65B0\u8BF4\u660E] \u6E05\u6670\u56DB\u6001\u4E0E\u96F6\u8D1F\u62C5\u5173\u95ED (\u53D1\u6D88\u606F\u81EA\u52A8\u6536\u8D77)",
-      apology: "\u2502 \u62B1\u6B49\u8FDE\u53D1\u4E86\u51E0\u4E2A 0.5 \u5C0F\u7248\u672C\uFF1A\u8FD9\u6B21\u7406\u6E05\u4E86\u6A21\u5F0F\u547D\u540D\uFF0C\u5E76\u628A off \u505A\u5230\u5F7B\u5E95\u65E0\u611F",
-      rows: [
-        "\u250C [1 \u539F\u6587+\u4F34\u5B66]   \u539F\u8BDD 0ms \u76F4\u53D1 + \u4E0A\u65B9\u6D6E\u73B0\u53CC\u8BED\u4F34\u5B66\u5361 (/lingual 1 \u6216\u5FAA\u73AF)",
-        "\u2502 [2 \u76F4\u51FA\u6539\u5199]   \u6309\u76EE\u6807\u6587\u5B57 + \u591A\u4E2A\u8BBE\u5B9A\u6761\u4EF6\u76F4\u63A5\u6539\u5199\u53D1\u9001 (/lingual 2 \u5207\u6362)",
-        "\u251C [3 \u5019\u9009\u6311\u4E00]   \u6309\u591A\u7EC4\u8BBE\u5B9A\u6761\u4EF6\u751F\u6210 N \u4E2A\u5019\u9009\u5F39\u7A97\u6311\u4E00\u53D1\u9001 (/lingual 3 \u5207\u6362)",
-        "\u2502   (\u6572 /lingual \u5FAA\u73AF 1\u27942\u27943\u27940\uFF1B/lingual learn-on \u53EF\u5728\u6539\u5199\u65F6\u987A\u5E26\u63D0\u53D6\u91CD\u70B9\u8BCD)",
-        "\u251C [\u6309\u9700\u5524\u9192\u5B9A\u5236] \u5E73\u65F6 0 \u6280\u80FD\u5757\u6CE8\u5165\uFF1B\u6572 /lingual tuner <\u9700\u6C42> \u6309\u9700\u5524\u9192\u914D\u7F6E",
-        "\u2514 [0 \u5F7B\u5E95\u65E0\u8D1F\u62C5] /lingual off \u9690\u85CF\u5E95\u680F\u3001\u505C\u76D1\u542C\u3001\u5265\u79BB\u6280\u80FD\u5757 (0\u50CF\u7D20 0Token)"
-      ]
-    },
-    tw: {
-      title: "\xB7 [pi-lingual v0.5.3 \u66F4\u65B0\u8AAA\u660E] \u6E05\u6670\u56DB\u614B\u8207\u96F6\u8CA0\u64D4\u95DC\u9589 (\u767C\u8A0A\u606F\u81EA\u52D5\u6536\u8D77)",
-      apology: "\u2502 \u62B1\u6B49\u9023\u767C\u4E86\u5E7E\u500B 0.5 \u5C0F\u7248\u672C\uFF1A\u9019\u6B21\u7406\u6E05\u4E86\u6A21\u5F0F\u547D\u540D\uFF0C\u4E26\u628A off \u505A\u5230\u5FB9\u5E95\u7121\u611F",
-      rows: [
-        "\u250C [1 \u539F\u6587+\u4F34\u5B78]   \u539F\u8A71 0ms \u76F4\u767C + \u4E0A\u65B9\u6D6E\u73FE\u96D9\u8A9E\u4F34\u5B78\u5361 (/lingual 1 \u6216\u5FAA\u74B0)",
-        "\u2502 [2 \u76F4\u51FA\u6539\u5BEB]   \u6309\u76EE\u6A19\u6587\u5B57 + \u591A\u500B\u8A2D\u5B9A\u689D\u4EF6\u76F4\u63A5\u6539\u5BEB\u767C\u9001 (/lingual 2 \u5207\u63DB)",
-        "\u251C [3 \u5019\u9078\u6311\u4E00]   \u6309\u591A\u7D44\u8A2D\u5B9A\u689D\u4EF6\u751F\u6210 N \u500B\u5019\u9078\u5F48\u7A97\u6311\u4E00\u767C\u9001 (/lingual 3 \u5207\u63DB)",
-        "\u2502   (\u6572 /lingual \u5FAA\u74B0 1\u27942\u27943\u27940\uFF1B/lingual learn-on \u53EF\u5728\u6539\u5BEB\u6642\u9806\u5E36\u63D0\u53D6\u91CD\u9EDE\u8A5E)",
-        "\u251C [\u6309\u9700\u559A\u9192\u5B9A\u5236] \u5E73\u6642 0 \u6280\u80FD\u584A\u6CE8\u5165\uFF1B\u6572 /lingual tuner <\u9700\u6C42> \u6309\u9700\u559A\u9192\u914D\u7F6E",
-        "\u2514 [0 \u5FB9\u5E95\u7121\u8CA0\u64D4] /lingual off \u96B1\u85CF\u5E95\u6B04\u3001\u505C\u76E3\u807D\u3001\u525D\u96E2\u6280\u80FD\u584A (0\u50CF\u7D20 0Token)"
-      ]
-    },
-    ja: {
-      title: "\xB7 [pi-lingual v0.5.3 \u66F4\u65B0\u6848\u5185] 4\u72B6\u614B\u6574\u7406\u3068\u5B8C\u5168\u30BC\u30ED\u8CA0\u8377 (\u9001\u4FE1\u3067\u9589\u3058\u308B)",
-      apology: "\u2502 0.5\u7CFB\u306E\u9023\u7D9A\u66F4\u65B0\u3092\u304A\u8A6B\u3073\u3057\u307E\u3059\uFF1A\u30E2\u30FC\u30C9\u540D\u3092\u6574\u7406\u3057 off \u3092\u5B8C\u5168\u7121\u8CA0\u8377\u5316",
-      rows: [
-        "\u250C [1 \u539F\u6587+\u5B66\u7FD2]  \u539F\u65870ms\u9001\u4FE1\uFF0B\u4E0A\u90E8\u306B\u5B66\u7FD2\u30AB\u30FC\u30C9\u8868\u793A (/lingual 1 \u307E\u305F\u306F\u9806\u9001)",
-        "\u2502 [2 \u76F4\u51FA\u6539\u7A3F]  \u76EE\u6A19\u8A00\u8A9E\uFF0B\u8907\u6570\u6761\u4EF6\u3067\u76F4\u63A5\u66F8\u304D\u63DB\u3048\u3066\u9001\u4FE1 (/lingual 2 \u5207\u66FF)",
-        "\u251C [3 \u5019\u88DC\u9078\u629E]  \u8907\u6570\u6761\u4EF6\u3067 N \u500B\u306E\u5019\u88DC\u3092\u751F\u6210\u3057\u9078\u3093\u3067\u9001\u4FE1 (/lingual 3 \u5207\u66FF)",
-        "\u2502   (/lingual \u3067 1\u27942\u27943\u27940 \u5FAA\u74B0 \xB7 /lingual learn-on \u3067\u6539\u7A3F\u6642\u3082\u91CD\u8981\u8A9E\u62BD\u51FA)",
-        "\u251C [\u30AA\u30F3\u30C7\u30DE\u30F3\u30C9] \u901A\u5E38\u6642\u30B9\u30AD\u30EB\u6CE8\u5165\u30BC\u30ED \xB7 /lingual tuner <\u8981\u671B> \u3067\u8A2D\u5B9A\u8D77\u52D5",
-        "\u2514 [0 \u5B8C\u5168\u30BC\u30ED\u5316] /lingual off \u3067\u4E0B\u90E8\u30D0\u30FC\u975E\u8868\u793A\u30FB\u76E3\u8996\u505C\u6B62\u30FB0 Token \u8CA0\u8377"
-      ]
-    },
-    ko: {
-      title: "\xB7 [pi-lingual v0.5.3 \uC5C5\uB370\uC774\uD2B8] 4\uB2E8\uACC4 \uC815\uB9AC \uBC0F \uC644\uC804 \uBB34\uBD80\uB2F4 (\uC785\uB825 \uC2DC \uB2EB\uD798)",
-      apology: "\u2502 0.5 \uBC84\uC804\uC758 \uC7A6\uC740 \uC5C5\uB370\uC774\uD2B8\uB97C \uC0AC\uACFC\uB4DC\uB9BD\uB2C8\uB2E4: \uBAA8\uB4DC \uC815\uB9AC \uBC0F off \uC644\uC804 \uBB34\uBD80\uB2F4\uD654",
-      rows: [
-        "\u250C [1 \uC6D0\uBB38+\uD559\uC2B5]  \uC6D0\uBB38 0ms \uC804\uC1A1 + \uC0C1\uB2E8 \uD559\uC2B5 \uCE74\uB4DC \uD45C\uC2DC (/lingual 1 \uB610\uB294 \uC21C\uD658)",
-        "\u2502 [2 \uC9C1\uCD9C\uAC1C\uC791]   \uBAA9\uD45C \uC5B8\uC5B4 + \uBCF5\uC218 \uC870\uAC74\uC73C\uB85C \uC989\uC2DC \uB2E4\uB4EC\uC5B4 \uC804\uC1A1 (/lingual 2)",
-        "\u251C [3 \uD6C4\uBCF4\uC120\uD0DD]   \uB2E4\uC911 \uC870\uAC74\uC73C\uB85C N\uAC1C \uD6C4\uBCF4 \uC0DD\uC131 \uD6C4 \uACE8\uB77C\uC11C \uC804\uC1A1 (/lingual 3)",
-        "\u2502   (/lingual \uC785\uB825 \uC2DC 1\u27942\u27943\u27940 \uC21C\uD658 \xB7 /lingual learn-on \uC73C\uB85C \uC5B4\uD718 \uBCD1\uD589)",
-        "\u251C [\uB9DE\uCDA4 \uC124\uC815]    \uD3C9\uC18C \uC2A4\uD0AC \uC8FC\uC785 0 \xB7 /lingual tuner <\uC694\uCCAD> \uC2DC\uC5D0\uB9CC \uC124\uC815 \uAE30\uB3D9",
-        "\u2514 [0 \uC644\uC804\uBB34\uBD80\uB2F4] /lingual off \uC2DC \uD558\uB2E8\uBC14 \uC228\uAE40\xB7\uAC10\uC2DC \uD574\uC81C\xB7\uC2A4\uD0AC \uC81C\uAC70 (0 Tok)"
-      ]
-    },
-    es: {
-      title: "\xB7 [pi-lingual v0.5.3] 4 estados y modo off sin carga (cierra al enviar)",
-      apology: "\u2502 Disculpas por los parches 0.5.x: aclaramos modos y off es 100% limpio",
-      rows: [
-        "\u250C [1 Orig+Aprender] Env\xEDa 0ms + tarjeta arriba (/lingual 1 o en ciclo)",
-        "\u2502 [2 Reescritura]   Idioma meta + condiciones \u2794 env\xEDo 1a1 (/lingual 2)",
-        "\u251C [3 Elegir N]      Idioma meta + N estilos \u2794 men\xFA elegir (/lingual 3)",
-        "\u2502   (Cicla 1\u27942\u27943\u27940 con /lingual; /lingual learn-on extrae vocabulario)",
-        "\u251C [Tuner a demanda] 0 tokens en prompt normal; usa /lingual tuner <req>",
-        "\u2514 [0 Off Cero-Carga] /lingual off oculta barra, quita hooks y 0 tokens"
-      ]
-    },
-    fr: {
-      title: "\xB7 [pi-lingual v0.5.3] 4 \xE9tats clairs et off z\xE9ro charge (ferm\xE9 \xE0 l'envoi)",
-      apology: "\u2502 D\xE9sol\xE9 pour les patchs 0.5.x : modes clarifi\xE9s et off 100% invisible",
-      rows: [
-        "\u250C [1 Orig+\xC9tude]    Envoi 0ms + carte d'\xE9tude (/lingual 1 ou en cycle)",
-        "\u2502 [2 R\xE9\xE9criture]    Langue cible + conditions \u2794 envoi 1\xE01 (/lingual 2)",
-        "\u251C [3 Choix N]       Langue cible + N styles \u2794 menu choix (/lingual 3)",
-        "\u2502   (Cyclez 1\u27942\u27943\u27940 via /lingual ; /lingual learn-on extrait le vocab)",
-        "\u251C [Tuner \xE0 demande] 0 token normal ; tapez /lingual tuner <besoin>",
-        "\u2514 [0 Off Invisible] /lingual off masque barre, coupe hooks et 0 token"
-      ]
-    },
-    de: {
-      title: "\xB7 [pi-lingual v0.5.3] 4 klare Modi & Null-Last in Off (schlie\xDFt bei Senden)",
-      apology: "\u2502 Entschuldigung f\xFCr die 0.5.x Patches: Modi klar & off 100% unsichtbar",
-      rows: [
-        "\u250C [1 Orig+Lernen]   0ms Senden + Lernkarte oben (/lingual 1 oder Zyklus)",
-        "\u2502 [2 Direkt-Rewrite] Zielsprache + Bedingungen \u2794 direkt (/lingual 2)",
-        "\u251C [3 N-Auswahl]     Zielsprache + N Stile \u2794 Auswahlmen\xFC (/lingual 3)",
-        "\u2502   (/lingual wechselt 1\u27942\u27943\u27940; /lingual learn-on zeigt Vokabel-Zeile)",
-        "\u251C [On-Demand Tuner] 0 Skill-Tokens im Alltag; /lingual tuner <Wunsch>",
-        "\u2514 [0 Off Null-Last] /lingual off blendet Leiste aus, 0 Hooks & 0 Tok"
-      ]
-    },
-    ru: {
-      title: "\xB7 [pi-lingual v0.5.3] 4 \u0447\u0435\u0442\u043A\u0438\u0445 \u0440\u0435\u0436\u0438\u043C\u0430 \u0438 \u043D\u043E\u043B\u044C \u043D\u0430\u0433\u0440\u0443\u0437\u043A\u0438 \u0432 off",
-      apology: "\u2502 \u0418\u0437\u0432\u0438\u043D\u0438\u0442\u0435 \u0437\u0430 \u043F\u0430\u0442\u0447\u0438 0.5.x: \u0443\u0442\u043E\u0447\u043D\u0438\u043B\u0438 \u0440\u0435\u0436\u0438\u043C\u044B \u0438 \u0441\u0434\u0435\u043B\u0430\u043B\u0438 off \u043D\u0435\u0432\u0438\u0434\u0438\u043C\u044B\u043C",
-      rows: [
-        "\u250C [1 \u041E\u0440\u0438\u0433+\u0423\u0447\u0435\u0431\u0430]    \u041E\u0442\u043F\u0440\u0430\u0432\u043A\u0430 0\u043C\u0441 + \u043A\u0430\u0440\u0442\u043E\u0447\u043A\u0430 \u0441\u0432\u0435\u0440\u0445\u0443 (/lingual 1 / \u0446\u0438\u043A\u043B)",
-        "\u2502 [2 \u041F\u0440\u044F\u043C\u043E\u0439 \u0440\u0435\u0440\u0430\u0439\u0442] \u042F\u0437\u044B\u043A \u0446\u0435\u043B\u0438 + \u0443\u0441\u043B\u043E\u0432\u0438\u044F \u2794 \u043E\u0442\u043F\u0440\u0430\u0432\u043A\u0430 1\u043A1 (/lingual 2)",
-        "\u251C [3 \u0412\u044B\u0431\u043E\u0440 \u0438\u0437 N]    \u042F\u0437\u044B\u043A \u0446\u0435\u043B\u0438 + N \u0441\u0442\u0438\u043B\u0435\u0439 \u2794 \u043C\u0435\u043D\u044E \u0432\u044B\u0431\u043E\u0440\u0430 (/lingual 3)",
-        "\u2502   (/lingual \u043B\u0438\u0441\u0442\u0430\u0435\u0442 1\u27942\u27943\u27940; /lingual learn-on \u0434\u043E\u0431\u0430\u0432\u043B\u044F\u0435\u0442 \u0441\u043B\u043E\u0432\u0430\u0440\u044C)",
-        "\u251C [Tuner \u043F\u043E \u0437\u0430\u043F\u0440\u043E\u0441\u0443] 0 \u0442\u043E\u043A\u0435\u043D\u043E\u0432 \u043E\u0431\u044B\u0447\u043D\u043E; \u0432\u044B\u0437\u044B\u0432\u0430\u0439\u0442\u0435 /lingual tuner <\u0437\u0430\u043F\u0440\u043E\u0441>",
-        "\u2514 [0 Off \u0411\u0435\u0437 \u0441\u043B\u0435\u0434\u0430] /lingual off \u0441\u043A\u0440\u044B\u0432\u0430\u0435\u0442 \u0441\u0442\u0440\u043E\u043A\u0443, 0 \u0445\u0443\u043A\u043E\u0432 \u0438 0 \u0442\u043E\u043A\u0435\u043D\u043E\u0432"
-      ]
-    },
-    en: {
-      title: "\xB7 [pi-lingual v0.5.3] Clear 4-State Flow & Zero-Load Off (closes on send)",
-      apology: "\u2502 Sorry for the 0.5.x patches \u2014 clarified mode names & off is 100% clean",
-      rows: [
-        "\u250C [1 Orig+Learn]    0ms raw send + learning card above (/lingual 1 / cycle)",
-        "\u2502 [2 Direct Rewrite] Target lang + conditions \u2794 1-to-1 send (/lingual 2)",
-        "\u251C [3 Pick of N]     Target lang + N style slots \u2794 popup picker (/lingual 3)",
-        "\u2502   (Cycle 1\u27942\u27943\u27940 via /lingual; /lingual learn-on adds 1-line vocab row)",
-        "\u251C [On-Demand Tuner] 0 skill tokens by default; run /lingual tuner <request>",
-        "\u2514 [0 Zero-Load Off] /lingual off hides status bar, detaches hooks & 0 tok"
-      ]
-    }
-  };
-  const c = copyByLang[norm] || copyByLang.en;
-  return [
-    truncateVisual(`  ${fg("accent", c.title)}`, effectiveCols),
-    truncateVisual(`  ${fg("dim", c.apology)}`, effectiveCols),
-    truncateVisual(`  ${fg("muted", c.rows[0])}`, effectiveCols),
-    truncateVisual(`  ${fg("dim", c.rows[1])}`, effectiveCols),
-    truncateVisual(`  ${fg("muted", c.rows[2])}`, effectiveCols),
-    truncateVisual(`  ${fg("dim", c.rows[3])}`, effectiveCols),
-    truncateVisual(`  ${fg("muted", c.rows[4])}`, effectiveCols),
-    truncateVisual(`  ${fg("muted", c.rows[5])}`, effectiveCols)
-  ];
-}
-
-// src/sanitizer.ts
-var TARGETED_CLIPBOARD_PATH_REGEX = /(?:[a-zA-Z]:[\\\/](?:[^:\r\n\t]+[\\\/])?pi-clipboard-[a-zA-Z0-9\-]+\.png|\/(?:[^\r\n\t]+[\\\/])?pi-clipboard-[a-zA-Z0-9\-]+\.png)/gi;
-var LEADING_TARGETED_CLIPBOARD_REGEX = /^(?:[a-zA-Z]:[\\\/](?:[^:\r\n\t]+[\\\/])?pi-clipboard-[a-zA-Z0-9\-]+\.png|\/(?:[^\r\n\t]+[\\\/])?pi-clipboard-[a-zA-Z0-9\-]+\.png)\s*/i;
-var STACK_LINE_REGEX = /^\s*(?:at\s+(?:[\w$.<>]+|[^\s]+)\s*\(.*:\d+:\d+\)|at\s+.*:\d+:\d+|File\s+".*", line \d+, in\s+.*|goroutine \d+ \[.*\]:|Caused by:.*|^\s*\d+:\s+0x[0-9a-f]+)/;
-var COMPILER_DIAGNOSTIC_REGEX = /^(?:[a-zA-Z]:[\\\/]|\.{0,2}[\\\/]|[a-zA-Z0-9_\-\.]+)[^:\r\n]+:\d+:\d+:\s*(?:error|warning|fatal error|note):/i;
-var LIST_ITEM_REGEX = /^\s*(?:[-*•]|\d+[\.、)])\s+/;
-function sanitizePromptForTranslation(raw) {
-  const trimmed = raw.trim();
-  if (!trimmed) {
-    return {
-      distilledText: "",
-      hasNaturalLanguage: false,
-      hasCollapsedContent: false,
-      naturalCharsLength: 0
-    };
-  }
-  let text = trimmed;
-  while (LEADING_TARGETED_CLIPBOARD_REGEX.test(text)) {
-    text = text.replace(LEADING_TARGETED_CLIPBOARD_REGEX, "").trim();
-  }
-  const inlinePathMatches = text.match(TARGETED_CLIPBOARD_PATH_REGEX);
-  let trailingPathPayload;
-  if (inlinePathMatches && inlinePathMatches.length > 0) {
-    trailingPathPayload = inlinePathMatches.join("\n");
-    text = text.replace(TARGETED_CLIPBOARD_PATH_REGEX, "").trim();
-  }
-  if (!text) {
-    return {
-      distilledText: "",
-      hasNaturalLanguage: false,
-      hasCollapsedContent: false,
-      naturalCharsLength: 0,
-      rawPayload: trailingPathPayload
-    };
-  }
-  let hasCollapsed = false;
-  text = text.replace(/```[\w\-]*\r?\n([\s\S]*?)\r?\n```/g, (_match, codeContent) => {
-    hasCollapsed = true;
-    const codeLines = codeContent.trim().split(/\r?\n/);
-    if (codeLines.length <= 1) {
-      return `[${codeLines[0] || "code"}]`;
-    }
-    return "[code ...]";
-  });
-  const lines = text.split(/\r?\n/);
-  const resultLines = [];
-  let inStackBlock = false;
-  let inDiagnosticBlock = false;
-  const currentListItems = [];
-  const collapsedListBlocks = [];
-  const flushListItems = () => {
-    const totalLength = currentListItems.reduce((acc, cur) => acc + cur.length, 0);
-    if (currentListItems.length >= 2 && (currentListItems.length > 4 || totalLength > 120)) {
-      hasCollapsed = true;
-      resultLines.push(`[${currentListItems.length} items ...]`);
-      collapsedListBlocks.push(currentListItems.join("\n"));
-      currentListItems.length = 0;
-    } else {
-      resultLines.push(...currentListItems);
-      currentListItems.length = 0;
-    }
-  };
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const lineTrim = line.trim();
-    if (!lineTrim) {
-      flushListItems();
-      inStackBlock = false;
-      inDiagnosticBlock = false;
-      continue;
-    }
-    if (STACK_LINE_REGEX.test(lineTrim) || lineTrim.startsWith("Traceback (most recent call last):")) {
-      flushListItems();
-      hasCollapsed = true;
-      if (!inStackBlock) {
-        resultLines.push("[... stack trace ...]");
-        inStackBlock = true;
-      }
-      continue;
-    } else {
-      inStackBlock = false;
-    }
-    if (COMPILER_DIAGNOSTIC_REGEX.test(lineTrim)) {
-      flushListItems();
-      hasCollapsed = true;
-      if (!inDiagnosticBlock) {
-        resultLines.push(lineTrim);
-        resultLines.push("[... diagnostics ...]");
-        inDiagnosticBlock = true;
-      }
-      continue;
-    } else {
-      inDiagnosticBlock = false;
-    }
-    if (/^npm ERR!/i.test(lineTrim)) {
-      flushListItems();
-      hasCollapsed = true;
-      if (!resultLines[resultLines.length - 1]?.includes("npm ERR! [...]")) {
-        resultLines.push("npm ERR! [...]");
-      }
-      continue;
-    }
-    if (LIST_ITEM_REGEX.test(lineTrim)) {
-      currentListItems.push(line);
-      continue;
-    } else {
-      flushListItems();
-    }
-    resultLines.push(line);
-  }
-  flushListItems();
-  const distilledText = resultLines.join(" ").replace(/\s+/g, " ").trim();
-  const withoutPlaceholders = distilledText.replace(/\[\.\.\.[^\]]*\]|\[\d+\s*items\s*\.\.\.\]/g, "").replace(/[a-zA-Z0-9_\-\.\/\\:]+/g, "").trim();
-  const hasCJK = isNonEnglish(distilledText);
-  const hasQuestionKeywords = /(?:为什么|怎么|如何|帮我|排查|优化|修改|修复|为何|报错|审查|看下|explain|why|how|please|help|could you|fix|should|what|inspect)/i.test(distilledText);
-  const isPureDiagnosticOutput = /^(?:[a-zA-Z0-9_\-\.\/\\:]+\s*-\s*error\s+[a-zA-Z0-9]+|error(?:\s+TS\d+|:)|warning:)/i.test(distilledText) && !hasQuestionKeywords;
-  const isPureErrorOrDiagnostic = isPureDiagnosticOutput || /^Error:\s*[\w\s:]*\[\.\.\.\s*stack trace\s*\.\.\.\]/i.test(distilledText) && !hasQuestionKeywords;
-  const cleanEnglishWords = distilledText.replace(/\[\.\.\.[^\]]*\]|\[code[^\]]*\]|\[\d+\s*items\s*\.\.\.\]/gi, " ").trim();
-  const words = cleanEnglishWords.match(/\b[a-zA-Z]{2,}\b/g) || [];
-  const hasEnglishSentence = !isPureErrorOrDiagnostic && words.length >= 4 && !distilledText.startsWith("Error:");
-  const hasNaturalLanguage = (hasCJK || hasQuestionKeywords || hasEnglishSentence || withoutPlaceholders.length > 5) && !isPureErrorOrDiagnostic;
-  let rawPayload;
-  const payloadParts = [];
-  if (trailingPathPayload) {
-    payloadParts.push(trailingPathPayload);
-  }
-  if (hasCollapsed) {
-    const codeMatch = trimmed.match(/```[\w\-]*\r?\n([\s\S]*?)\r?\n```/g);
-    if (codeMatch) {
-      payloadParts.push(...codeMatch);
-    }
-    const stackLines = lines.filter(
-      (l) => STACK_LINE_REGEX.test(l.trim()) || COMPILER_DIAGNOSTIC_REGEX.test(l.trim()) || l.trim().startsWith("Traceback")
-    );
-    if (stackLines.length > 0 && !codeMatch) {
-      payloadParts.push(stackLines.join("\n"));
-    }
-    if (collapsedListBlocks.length > 0) {
-      payloadParts.push(collapsedListBlocks.join("\n\n"));
-    }
-  }
-  if (payloadParts.length > 0) {
-    rawPayload = payloadParts.join("\n\n").trim();
-  }
-  return {
-    distilledText,
-    hasNaturalLanguage,
-    hasCollapsedContent: hasCollapsed,
-    naturalCharsLength: distilledText.length,
-    rawPayload
-  };
 }
 
 // src/fsm.ts
@@ -3833,6 +3138,914 @@ var LingualSessionController = class {
     this.lastResult = null;
   }
 };
+
+// src/engine.ts
+var import_node_fs = __toESM(require("fs"), 1);
+var import_node_path = __toESM(require("path"), 1);
+var import_node_os = __toESM(require("os"), 1);
+var cachedUserConfig = null;
+var lastConfigCheckTime = 0;
+var CONFIG_CACHE_TTL_MS = 2e3;
+function invalidateUserConfigCache() {
+  cachedUserConfig = null;
+  lastConfigCheckTime = 0;
+}
+function isTestEnvironment() {
+  return process.env.NODE_ENV === "test" || process.env.NODE_TEST_CONTEXT !== void 0 || process.execArgv.some((a) => a.startsWith("--test") || a === "--test") || process.argv.some((a) => a === "--test" || a.startsWith("--test=") || /\.(?:test|spec)\.[cm]?[jt]s$/i.test(a)) || process.env.npm_lifecycle_event === "test";
+}
+function loadUserLingualConfig() {
+  if (isTestEnvironment()) {
+    return {};
+  }
+  const now = Date.now();
+  if (cachedUserConfig && now - lastConfigCheckTime < CONFIG_CACHE_TTL_MS) {
+    return cachedUserConfig;
+  }
+  const agentDir = import_node_path.default.join(import_node_os.default.homedir(), ".pi", "agent");
+  const lingualFile = import_node_path.default.join(agentDir, "lingual.json");
+  const settingsFile = import_node_path.default.join(agentDir, "settings.json");
+  let target = null;
+  if (import_node_fs.default.existsSync(lingualFile)) {
+    try {
+      const raw = import_node_fs.default.readFileSync(lingualFile, "utf8");
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        const inner = parsed["pi-lingual"] || parsed;
+        target = inner && typeof inner === "object" && !Array.isArray(inner) ? inner : null;
+      }
+    } catch {
+      target = null;
+    }
+  }
+  if (!target && import_node_fs.default.existsSync(settingsFile)) {
+    try {
+      const raw = import_node_fs.default.readFileSync(settingsFile, "utf8");
+      const parsed = JSON.parse(raw);
+      const legacyBlock = parsed["pi-lingual"];
+      if (legacyBlock && typeof legacyBlock === "object") {
+        target = legacyBlock;
+        try {
+          if (!import_node_fs.default.existsSync(agentDir)) {
+            import_node_fs.default.mkdirSync(agentDir, { recursive: true });
+          }
+          import_node_fs.default.writeFileSync(lingualFile, JSON.stringify(target, null, 2), "utf8");
+        } catch {
+        }
+      }
+    } catch {
+      target = null;
+    }
+  }
+  if (target) {
+    const endpoint = target.endpoint || target.antigravity?.endpoint;
+    const apiKey = target.apiKey || target.antigravity?.apiKey;
+    const model = target.model || target.antigravity?.model;
+    const selectedModel = target.selectedModel || target.model;
+    const sourceLang = target.sourceLang;
+    const targetLang = target.targetLang;
+    const compact = target.compact;
+    const slotPreset = target.slotPreset;
+    const filterSlots = (arr) => Array.isArray(arr) ? arr.filter((s) => s && typeof s === "object" && typeof s.id === "string" && typeof s.label === "string") : void 0;
+    const slots = filterSlots(target.slots);
+    const directSlots = filterSlots(target.directSlots);
+    const promptSlots = filterSlots(target.promptSlots);
+    const lastSeenVersion = typeof target.lastSeenVersion === "string" ? target.lastSeenVersion : void 0;
+    const reasoning = typeof target.reasoning === "string" ? target.reasoning : void 0;
+    const timeoutMs = typeof target.timeoutMs === "number" && Number.isFinite(target.timeoutMs) ? Math.min(6e4, Math.max(1e3, target.timeoutMs)) : void 0;
+    const replyInSourceLang = target.replyInSourceLang !== void 0 ? Boolean(target.replyInSourceLang) : void 0;
+    const labels = resolveLabelsForLang(sourceLang || "zh", target.labels, targetLang);
+    const normalizedMode = typeof target.mode === "string" ? normalizeLingualModeInput(target.mode) || target.mode : void 0;
+    cachedUserConfig = {
+      ...endpoint ? { endpoint } : {},
+      ...apiKey ? { apiKey } : {},
+      ...model ? { model } : {},
+      ...selectedModel ? { selectedModel } : {},
+      ...normalizedMode ? { mode: normalizedMode } : {},
+      ...compact !== void 0 ? { compact: Boolean(compact) } : {},
+      ...slotPreset ? { slotPreset } : {},
+      ...slots ? { slots } : {},
+      ...directSlots ? { directSlots } : {},
+      ...promptSlots ? { promptSlots } : {},
+      ...lastSeenVersion ? { lastSeenVersion } : {},
+      ...sourceLang ? { sourceLang } : {},
+      ...targetLang ? { targetLang } : {},
+      ...reasoning ? { reasoning } : {},
+      ...timeoutMs ? { timeoutMs } : {},
+      ...replyInSourceLang !== void 0 ? { replyInSourceLang } : {},
+      labels
+    };
+    lastConfigCheckTime = now;
+    return cachedUserConfig;
+  }
+  cachedUserConfig = {};
+  lastConfigCheckTime = now;
+  return {};
+}
+function saveUserLingualConfig(patch) {
+  if (isTestEnvironment()) {
+    return;
+  }
+  try {
+    const agentDir = import_node_path.default.join(import_node_os.default.homedir(), ".pi", "agent");
+    const configFile = import_node_path.default.join(agentDir, "lingual.json");
+    if (!import_node_fs.default.existsSync(agentDir)) {
+      import_node_fs.default.mkdirSync(agentDir, { recursive: true });
+    }
+    let existing = {};
+    if (import_node_fs.default.existsSync(configFile)) {
+      try {
+        existing = JSON.parse(import_node_fs.default.readFileSync(configFile, "utf8"));
+      } catch {
+      }
+    }
+    for (const [k, v] of Object.entries(patch)) {
+      const isEmptyArray = Array.isArray(v) && v.length === 0;
+      if (v === void 0 || v === "" || isEmptyArray || v === "auto" || v === "original" || v === "companion" || k === "compact" && v === false) {
+        delete existing[k];
+      } else if (k === "mode") {
+        existing[k] = v === "english" ? "direct" : v === "select" ? "candidates" : v;
+      } else {
+        existing[k] = v;
+      }
+    }
+    const content = JSON.stringify(existing, null, 2);
+    const tmpFile = `${configFile}.${Date.now()}.${Math.random().toString(36).slice(2, 6)}.tmp`;
+    try {
+      import_node_fs.default.writeFileSync(tmpFile, content, "utf8");
+      import_node_fs.default.renameSync(tmpFile, configFile);
+    } catch {
+      try {
+        import_node_fs.default.writeFileSync(configFile, content, "utf8");
+      } catch {
+      }
+      try {
+        if (import_node_fs.default.existsSync(tmpFile)) import_node_fs.default.unlinkSync(tmpFile);
+      } catch {
+      }
+    }
+    invalidateUserConfigCache();
+  } catch {
+  }
+}
+var DEFAULT_CONFIG = {
+  endpoint: process.env.LINGUAL_ENDPOINT || "",
+  apiKey: process.env.LINGUAL_API_KEY || "",
+  model: process.env.LINGUAL_MODEL || "",
+  selectedModel: "auto",
+  mode: "original",
+  sourceLang: "zh",
+  targetLang: "en",
+  temperature: 0.2,
+  timeoutMs: 3e4
+};
+var LINGUAL_SYSTEM_PROMPT = buildSystemPrompt("zh", "en");
+var LINGUA_SYSTEM_PROMPT = LINGUAL_SYSTEM_PROMPT;
+var loadUserConfig = loadUserLingualConfig;
+var MAX_TRANSLATION_CHARS = 2500;
+var MAX_TRANSLATION_LINES = 30;
+function shouldTriggerTranslation(text, sourceLang = "zh", allowSameLangPromptOpt = false) {
+  const trimmed = text.trim();
+  if (!trimmed) return false;
+  if (trimmed.length > MAX_TRANSLATION_CHARS) return false;
+  if (trimmed.split(/\r?\n/).length > MAX_TRANSLATION_LINES) return false;
+  if (/^#{1,6}\s/.test(trimmed) || trimmed.startsWith("---")) return false;
+  if (shouldShieldBypass(trimmed)) return false;
+  if (allowSameLangPromptOpt) {
+    if (isNonEnglish(trimmed)) return true;
+    const words2 = trimmed.split(/\s+/);
+    return words2.length >= 2 && /[a-zA-Z]{2,}/.test(trimmed);
+  }
+  const normSource = (sourceLang || "zh").toLowerCase().split("-")[0];
+  const nonLatinLangs = /* @__PURE__ */ new Set(["zh", "tw", "ja", "ko", "ru", "ar"]);
+  if (nonLatinLangs.has(normSource)) {
+    return isNonEnglish(trimmed);
+  }
+  if (isNonEnglish(trimmed)) return true;
+  const words = trimmed.split(/\s+/);
+  return words.length >= 2 && /[a-zA-Z]{2,}/.test(trimmed);
+}
+var BLOCKED_JSON_KEYS = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
+function toCleanString(val) {
+  if (typeof val === "string") return val.trim();
+  if (typeof val === "number" || typeof val === "boolean") return String(val);
+  if (Array.isArray(val)) return val.map(toCleanString).filter(Boolean).join(" \xB7 ");
+  return "";
+}
+function repairAndParseJsonObject(raw) {
+  try {
+    if (!raw || typeof raw !== "string" || raw.length > 32768) return null;
+    let cleaned = raw.replace(/<(?:think|thought)>[\s\S]*?<\/(?:think|thought)>/gi, "").trim();
+    const fence = cleaned.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (fence) cleaned = fence[1].trim();
+    const first = cleaned.indexOf("{");
+    const last = cleaned.lastIndexOf("}");
+    if (first === -1 || last <= first) return null;
+    const jsonSubstr = cleaned.slice(first, last + 1);
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonSubstr);
+    } catch {
+      const repaired = jsonSubstr.replace(/,\s*([}\]])/g, "$1").replace(
+        /("[a-zA-Z0-9_-]+"\s*:\s*")([\s\S]*?)("(?=\s*,\s*"|\s*\}))/g,
+        (_m, prefix, content, suffix) => prefix + content.replace(/(?<!\\)"/g, '\\"') + suffix
+      );
+      parsed = JSON.parse(repaired);
+    }
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+function parseLlmResponse(raw) {
+  const parsed = repairAndParseJsonObject(raw);
+  if (!parsed) return null;
+  const spoken = toCleanString(parsed.spoken ?? parsed.casual ?? parsed.slot1);
+  const spokenMeaning = toCleanString(parsed.spoken_meaning ?? parsed.spokenMeaning);
+  const written = toCleanString(parsed.written ?? parsed.academic ?? parsed.slot2);
+  const writtenMeaning = toCleanString(parsed.written_meaning ?? parsed.writtenMeaning);
+  const vocab = toCleanString(parsed.vocab);
+  const summary = toCleanString(parsed.summary ?? parsed.core_intent ?? parsed.coreIntent);
+  const slotOutputs = /* @__PURE__ */ Object.create(null);
+  for (const [k, v] of Object.entries(parsed)) {
+    if (BLOCKED_JSON_KEYS.has(k) || k.endsWith("_meaning") || k === "summary") continue;
+    const textVal = toCleanString(v);
+    if (textVal) {
+      const meaningVal = toCleanString(parsed[k + "_meaning"]);
+      slotOutputs[k] = {
+        content: textVal,
+        meaning: meaningVal || void 0
+      };
+    }
+  }
+  const nonVocabOutputs = Object.entries(slotOutputs).filter(([k]) => k !== "vocab").map(([, val]) => val);
+  const effectiveSpoken = spoken || nonVocabOutputs[0]?.content || vocab || "";
+  const effectiveSpokenMeaning = spokenMeaning || nonVocabOutputs[0]?.meaning || "";
+  if (!effectiveSpoken) return null;
+  return {
+    spoken: effectiveSpoken,
+    spokenMeaning: effectiveSpokenMeaning || void 0,
+    written: written || void 0,
+    writtenMeaning: writtenMeaning || void 0,
+    vocab: vocab || void 0,
+    summary: summary || void 0,
+    slotOutputs: Object.keys(slotOutputs).length > 0 ? slotOutputs : void 0
+  };
+}
+async function translateCore(req, options) {
+  const text = (req.text || "").trim();
+  const sourceLang = req.sourceLang || "zh";
+  const targetLang = req.targetLang || "en";
+  if (!text) {
+    return { spoken: "", written: "", cached: false, shieldBypassed: false };
+  }
+  if (shouldShieldBypass(text)) {
+    return { spoken: text, written: text, cached: false, shieldBypassed: true };
+  }
+  const cache = options?.cache || globalLingualCache;
+  const slotSig = Array.isArray(req.slots) ? req.slots.filter((s) => s.enabled !== false).map((s) => s.id).join(",") : void 0;
+  const cacheKey = LingualLruCache.buildKey(text, sourceLang, targetLang, slotSig);
+  const cached = cache.get(cacheKey);
+  if (cached) {
+    return {
+      spoken: cached.spoken,
+      spokenMeaning: cached.spokenMeaning,
+      written: cached.written || cached.spoken,
+      writtenMeaning: cached.writtenMeaning,
+      vocab: cached.vocab,
+      summary: cached.summary,
+      cached: true,
+      shieldBypassed: false
+    };
+  }
+  if (!options?.completer) {
+    return { spoken: text, written: text, cached: false, shieldBypassed: false };
+  }
+  const systemPrompt = buildSystemPrompt(
+    sourceLang,
+    targetLang,
+    Boolean(req.isLongInput),
+    req.context,
+    req.tone || "general",
+    req.slots
+  );
+  const raw = await options.completer(text, systemPrompt, options.signal);
+  if (!raw) {
+    return { spoken: text, written: text, cached: false, shieldBypassed: false };
+  }
+  const parsed = parseLlmResponse(raw);
+  if (!parsed) {
+    return { spoken: text, written: text, cached: false, shieldBypassed: false };
+  }
+  cache.set(cacheKey, parsed);
+  const configuredSlots = Array.isArray(req.slots) ? req.slots : getDefaultSlots(sourceLang);
+  const rawObj = repairAndParseJsonObject(raw) || {};
+  const slotResults = [];
+  for (const slot of configuredSlots) {
+    if (!slot.enabled) continue;
+    if (slot.role === "source") {
+      slotResults.push({ id: slot.id, label: slot.label, role: slot.role, content: text });
+    } else {
+      const out = parsed.slotOutputs && Object.hasOwn(parsed.slotOutputs, slot.id) ? parsed.slotOutputs[slot.id] : void 0;
+      const content = out?.content || toCleanString(rawObj[slot.id]) || (slot.id === "spoken" ? parsed.spoken : slot.id === "written" ? parsed.written || "" : slot.id === "vocab" ? parsed.vocab || "" : "");
+      const meaning = out?.meaning || toCleanString(rawObj[slot.id + "_meaning"]) || (slot.id === "spoken" ? parsed.spokenMeaning : slot.id === "written" ? parsed.writtenMeaning : void 0) || void 0;
+      if (content) {
+        slotResults.push({ id: slot.id, label: slot.label, role: slot.role, content, meaning });
+      }
+    }
+  }
+  return {
+    spoken: parsed.spoken,
+    spokenMeaning: parsed.spokenMeaning,
+    written: parsed.written || parsed.spoken,
+    writtenMeaning: parsed.writtenMeaning,
+    vocab: parsed.vocab,
+    summary: parsed.summary,
+    slots: slotResults,
+    cached: false,
+    shieldBypassed: false
+  };
+}
+async function executeLlmCompletion(text, sysPrompt, cfg) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), cfg.timeoutMs);
+  if (cfg.signal) {
+    if (cfg.signal.aborted) {
+      clearTimeout(timer);
+      return null;
+    }
+    cfg.signal.addEventListener("abort", () => controller.abort(), { once: true });
+  }
+  try {
+    if (typeof cfg.complete === "function") {
+      return await cfg.complete(text, sysPrompt, controller.signal);
+    }
+    if (cfg.endpoint) {
+      const headers = { "Content-Type": "application/json" };
+      if (cfg.apiKey) headers["Authorization"] = `Bearer ${cfg.apiKey}`;
+      const response = await fetch(cfg.endpoint, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          model: cfg.model || "gemini-3.8-flash",
+          messages: [
+            { role: "system", content: sysPrompt },
+            { role: "user", content: text }
+          ],
+          temperature: cfg.temperature
+        }),
+        signal: controller.signal
+      });
+      if (!response.ok) return null;
+      const json = await response.json();
+      return json?.choices?.[0]?.message?.content ?? null;
+    }
+    return null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+function stripLingualAnnotation(annotatedText) {
+  const lines = annotatedText.split("\n");
+  const rawLines = [];
+  let spoken;
+  let written;
+  let vocab;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    const sourceMatch = trimmed.match(/^·\s*\[?(?:原文|source|original|quelle)\]?\s+(.*)$/i);
+    if (sourceMatch) {
+      rawLines.push(sourceMatch[1].trim());
+      continue;
+    }
+    if (/^(?:[│\s]*↳\s*\(.*\)|↳\s*\(.*\))/.test(trimmed)) {
+      continue;
+    }
+    const slotMatch = trimmed.match(/^(?:[┌├└│]\s*|↳\s*)\[([^\]]+)\]\s*(.*)$/);
+    if (slotMatch) {
+      const tag = slotMatch[1].trim();
+      let text = slotMatch[2].trim().replace(/\x1b\[[0-9;]*[a-zA-Z]/g, "");
+      const parenIdx = text.lastIndexOf(" (");
+      if (parenIdx !== -1 && text.endsWith(")")) {
+        text = text.slice(0, parenIdx).trim();
+      }
+      if (/^(?:口语|spoken|口語|slack|slot1)$/i.test(tag)) {
+        spoken = text;
+      } else if (/^(?:写作|written|文面|rfc|slot2|敬語)$/i.test(tag)) {
+        written = text;
+      } else if (/^(?:重点|vocab|単語|词汇)$/i.test(tag)) {
+        vocab = text;
+      }
+    } else {
+      rawLines.push(line);
+    }
+  }
+  return { raw: rawLines.join("\n").trim(), spoken, written, vocab };
+}
+var stripLinguaAnnotation = stripLingualAnnotation;
+function isDynamicLongInput(text, sourceLang = "zh") {
+  const trimmed = text.trim();
+  if (!trimmed) return false;
+  const normSource = (sourceLang || "zh").toLowerCase().split("-")[0];
+  const hasCjk = /[\u4e00-\u9fa5\u3040-\u30ff\uac00-\ud7af]/.test(trimmed);
+  const isCjk = normSource === "zh" || normSource === "tw" || normSource === "ja" || normSource === "ko" || hasCjk;
+  if (isCjk) {
+    if (trimmed.length >= 45) return true;
+    const sentenceCount = (trimmed.match(/[。！？；\n]/g) || []).length;
+    if (sentenceCount >= 2 && trimmed.length >= 30) return true;
+  } else {
+    if (trimmed.length >= 85) return true;
+    const sentenceCount = (trimmed.match(/[.!?](\s+|$)|[\n;]/g) || []).length;
+    if (sentenceCount >= 2 && trimmed.length >= 50) return true;
+  }
+  return trimmed.length >= 85;
+}
+async function translatePrompt(text, userConfig = {}) {
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+  const diskConfig = loadUserLingualConfig();
+  const cfg = { ...DEFAULT_CONFIG, ...diskConfig, ...userConfig };
+  if (!shouldTriggerTranslation(trimmed, cfg.sourceLang)) return null;
+  if (shouldShieldBypass(trimmed)) return null;
+  const effectiveSlots = cfg.slots || (cfg.slotPreset ? resolveSlotsForPreset(cfg.slotPreset, cfg.sourceLang) : void 0);
+  const slotSig = Array.isArray(effectiveSlots) ? effectiveSlots.filter((s) => s.enabled !== false).map((s) => s.id).join(",") : void 0;
+  const cacheKey = LingualLruCache.buildKey(trimmed, cfg.sourceLang, cfg.targetLang, slotSig);
+  const cached = globalLingualCache.get(cacheKey);
+  if (cached) return cached;
+  const isLongInput = isDynamicLongInput(trimmed, cfg.sourceLang);
+  const sysPrompt = buildSystemPrompt(cfg.sourceLang, cfg.targetLang, isLongInput, void 0, "general", effectiveSlots);
+  const content = await executeLlmCompletion(trimmed, sysPrompt, cfg);
+  if (typeof content !== "string" || !content.trim()) return null;
+  const payload = parseLlmResponse(content);
+  if (!payload || !payload.spoken) return null;
+  const labels = resolveLabelsForLang(cfg.sourceLang || "zh", cfg.labels, cfg.targetLang);
+  const slot1Label = labels.slot1Label || labels.spokenLabel || "Spoken";
+  const slot2Label = labels.slot2Label || labels.writtenLabel || "Written";
+  const vocabLabel = labels.vocabLabel || "Vocab";
+  const sourceLabel = labels.sourceLabel || "Source";
+  const effectiveSourceText = isLongInput && payload.summary && payload.summary.trim() ? payload.summary.trim() : trimmed;
+  const result = {
+    spoken: payload.spoken,
+    spokenMeaning: payload.spokenMeaning,
+    written: payload.written || "",
+    writtenMeaning: payload.writtenMeaning,
+    vocab: payload.vocab,
+    summary: payload.summary,
+    sourceText: effectiveSourceText,
+    slotOutputs: payload.slotOutputs,
+    annotated: formatTerminalAnnotation(
+      effectiveSourceText,
+      payload.spoken,
+      payload.written,
+      payload.vocab,
+      {
+        spokenMeaning: payload.spokenMeaning,
+        writtenMeaning: payload.writtenMeaning,
+        slot1Label,
+        slot2Label,
+        vocabLabel,
+        sourceLabel
+      }
+    )
+  };
+  globalLingualCache.set(cacheKey, result);
+  return result;
+}
+function shouldInjectNativeReplyGuard(originalText, _sourceLang = "zh", enabled = false) {
+  if (!enabled) return false;
+  const trimmed = originalText.trim();
+  if (!trimmed || !isNonEnglish(trimmed)) return false;
+  const isEnglishWritingIntent = /(?:英文|英语|english|in english|pr\b|pull request|commit message|git commit|tweet|twitter|email|邮件|readme)/i.test(trimmed);
+  return !isEnglishWritingIntent;
+}
+function formatNativeReplyGuardHint(sourceLang = "zh") {
+  const langMap = {
+    ja: "Japanese",
+    zh: "Chinese",
+    tw: "Chinese",
+    es: "Spanish",
+    fr: "French",
+    de: "German"
+  };
+  const name = langMap[sourceLang] || "the user's native language";
+  return `
+
+(Please reply and explain in ${name}.)`;
+}
+function extractCleanJsonField(raw, fieldName) {
+  const obj = repairAndParseJsonObject(raw);
+  if (obj && !BLOCKED_JSON_KEYS.has(fieldName)) {
+    const val = obj[fieldName] ?? obj.prompt ?? obj.written ?? obj.spoken;
+    if (typeof val === "string" && val.trim()) return val.trim();
+  }
+  const cleaned = raw.replace(/<(?:think|thought)>[\s\S]*?<\/(?:think|thought)>/gi, "").replace(/```(?:json)?|```/gi, "").trim();
+  const regexFallback = cleaned.match(/"(?:prompt|written|spoken)"\s*:\s*"([\s\S]*?)"\s*\}/);
+  if (regexFallback && regexFallback[1].trim()) {
+    return regexFallback[1].replace(/\\"/g, '"').replace(/\\n/g, "\n").trim();
+  }
+  if (cleaned.startsWith("{") && cleaned.endsWith("}")) {
+    return "";
+  }
+  return cleaned.replace(/^["']|["']$/g, "").trim();
+}
+function resolveDirectSlotsFromConfig(cfg) {
+  if (Array.isArray(cfg.directSlots) && cfg.directSlots.length > 0) {
+    const enabled = cfg.directSlots.filter((s) => s.enabled !== false);
+    if (enabled.length > 0) return enabled;
+  }
+  return getDefaultDirectSlots(cfg.sourceLang);
+}
+function resolveCandidateSlotsFromConfig(cfg) {
+  if (Array.isArray(cfg.promptSlots) && cfg.promptSlots.length > 0) {
+    const enabled = cfg.promptSlots.filter((s) => s.enabled !== false);
+    if (enabled.length > 0) return enabled;
+  }
+  return getDefaultPromptSlots(cfg.sourceLang);
+}
+async function generatePromptCandidates(text, userConfig = {}) {
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+  const diskConfig = loadUserLingualConfig();
+  const cfg = { ...DEFAULT_CONFIG, ...diskConfig, ...userConfig };
+  if (!shouldTriggerTranslation(trimmed, cfg.sourceLang, true)) {
+    return null;
+  }
+  const slots = resolveCandidateSlotsFromConfig({
+    sourceLang: cfg.sourceLang,
+    promptSlots: userConfig.promptSlots ?? diskConfig.promptSlots
+  });
+  const sysPrompt = buildPromptCandidatesSystemPrompt({
+    sourceLang: cfg.sourceLang,
+    targetLang: cfg.targetLang,
+    promptSlots: slots
+  });
+  const raw = await executeLlmCompletion(trimmed, sysPrompt, cfg);
+  if (typeof raw !== "string" || !raw.trim()) return null;
+  const obj = repairAndParseJsonObject(raw);
+  if (!obj) {
+    const fallbackSingle = extractCleanJsonField(raw, slots[0]?.id || "prompt");
+    if (fallbackSingle) {
+      return [{ id: slots[0]?.id || "concise", label: slots[0]?.label || "Direct", content: fallbackSingle }];
+    }
+    return null;
+  }
+  const vocabSlot = slots.find((s) => s.role === "vocab");
+  const extractedVocab = vocabSlot && !BLOCKED_JSON_KEYS.has(vocabSlot.id) && typeof obj[vocabSlot.id] === "string" && obj[vocabSlot.id].trim() ? obj[vocabSlot.id].trim() : typeof obj.vocab === "string" && obj.vocab.trim() ? obj.vocab.trim() : void 0;
+  const candidates = [];
+  for (const slot of slots) {
+    if (slot.role === "vocab" || BLOCKED_JSON_KEYS.has(slot.id)) continue;
+    const val = obj[slot.id] ?? (slots.length === 1 ? obj.prompt : void 0);
+    if (typeof val === "string" && val.trim()) {
+      candidates.push({
+        id: slot.id,
+        label: slot.label,
+        content: val.trim(),
+        ...extractedVocab ? { vocab: extractedVocab } : {}
+      });
+    }
+  }
+  return candidates.length > 0 ? candidates : null;
+}
+async function rewritePromptDirect(text, userConfig = {}) {
+  const diskConfig = loadUserLingualConfig();
+  const cfg = { ...DEFAULT_CONFIG, ...diskConfig, ...userConfig };
+  const allSlots = resolveDirectSlotsFromConfig({
+    sourceLang: cfg.sourceLang,
+    directSlots: userConfig.directSlots ?? userConfig.promptSlots ?? diskConfig.directSlots
+  }).filter((s) => s.enabled !== false && s.role !== "vocab");
+  const firstSlot = allSlots[0] || getDefaultDirectSlots(cfg.sourceLang)[0];
+  const res = await generatePromptCandidates(text, { ...userConfig, promptSlots: [firstSlot] });
+  return res && res[0] ? res[0].content : null;
+}
+function stripLingualContextWhenOff(systemPrompt, lastUserText = "", tunerArmed = false) {
+  if (!systemPrompt) return systemPrompt;
+  if (tunerArmed || /(?:lingual-tuner|\/lingual\s+(?:tuner|tune|agent)|定制伴学|配置伴学)/i.test(lastUserText)) {
+    return systemPrompt;
+  }
+  return systemPrompt.replace(
+    /\s*<skill>\s*<name>lingual-tuner<\/name>[\s\S]*?<\/skill>/gi,
+    ""
+  );
+}
+var MODE_DISPLAY_BY_LANG = {
+  zh: {
+    companion: "\u7EAF\u4F34\u5B66",
+    direct: "\u76F4\u63A5\u6539",
+    candidates: "\u6311\u5019\u9009",
+    off: "\u5DF2\u5173\u95ED",
+    notifyCompanion: (p) => `[${p}] \u5DF2\u5207\u6362\u81F3\u30101 \u7EAF\u4F34\u5B66 (companion)\u3011\uFF1A\u539F\u8BDD 0ms \u76F4\u53D1 + \u4E0A\u65B9\u6D6E\u73B0\u4F34\u5B66\u5361`,
+    notifyDirect: (p, s1) => `[${p}] \u5DF2\u5207\u6362\u81F3\u30102 \u76F4\u63A5\u6539 (direct)\u3011\uFF1A\u6309\u9996\u69FD [${s1}] 1\u5BF91 \u76F4\u63A5\u6539\u597D\u53D1\u51FA`,
+    notifyCandidates: (p, s) => `[${p}] \u5DF2\u5207\u6362\u81F3\u30103 \u6311\u5019\u9009 (candidates)\u3011\uFF1A\u751F\u6210\u5019\u9009 (${s}) \u6311\u4E00\u53D1\u51FA`,
+    notifyOff: (p) => `[${p}] \u5DF2\u5207\u6362\u81F3\u30100 \u5DF2\u5173\u95ED (off)\u3011\uFF1A\u5E95\u680F\u9690\u85CF \xB7 \u76D1\u542C\u5DF2\u5378 \xB7 0 Token \u96F6\u8D1F\u62C5`
+  },
+  tw: {
+    companion: "\u7D14\u4F34\u5B78",
+    direct: "\u76F4\u63A5\u6539",
+    candidates: "\u6311\u5019\u9078",
+    off: "\u5DF2\u95DC\u9589",
+    notifyCompanion: (p) => `[${p}] \u5DF2\u5207\u63DB\u81F3\u30101 \u7D14\u4F34\u5B78 (companion)\u3011\uFF1A\u539F\u8A71 0ms \u76F4\u767C + \u4E0A\u65B9\u6D6E\u73FE\u4F34\u5B78\u5361`,
+    notifyDirect: (p, s1) => `[${p}] \u5DF2\u5207\u63DB\u81F3\u30102 \u76F4\u63A5\u6539 (direct)\u3011\uFF1A\u6309\u9996\u69FD [${s1}] 1\u5C0D1 \u76F4\u63A5\u6539\u597D\u767C\u51FA`,
+    notifyCandidates: (p, s) => `[${p}] \u5DF2\u5207\u63DB\u81F3\u30103 \u6311\u5019\u9078 (candidates)\u3011\uFF1A\u751F\u6210\u5019\u9078 (${s}) \u6311\u4E00\u767C\u51FA`,
+    notifyOff: (p) => `[${p}] \u5DF2\u5207\u63DB\u81F3\u30100 \u5DF2\u95DC\u9589 (off)\u3011\uFF1A\u5E95\u6B04\u96B1\u85CF \xB7 \u76E3\u807D\u5DF2\u5378 \xB7 0 Token \u96F6\u8CA0\u64D4`
+  },
+  ja: {
+    companion: "\u4F34\u8D70",
+    direct: "\u76F4\u6539",
+    candidates: "\u5019\u88DC\u9078",
+    off: "\u30AA\u30D5",
+    notifyCompanion: (p) => `[${p}] \u30101 \u4F34\u8D70 (companion)\u3011\u306B\u5207\u66FF\uFF1A\u539F\u65870ms\u9001\u4FE1\uFF0B\u4E0A\u90E8\u306B\u5B66\u7FD2\u30AB\u30FC\u30C9\u8868\u793A`,
+    notifyDirect: (p, s1) => `[${p}] \u30102 \u76F4\u6539 (direct)\u3011\u306B\u5207\u66FF\uFF1A\u7B2C1\u30B9\u30ED\u30C3\u30C8 [${s1}] \u3067\u76F4\u63A5\u66F8\u304D\u63DB\u3048\u3066\u9001\u4FE1`,
+    notifyCandidates: (p, s) => `[${p}] \u30103 \u5019\u88DC\u9078 (candidates)\u3011\u306B\u5207\u66FF\uFF1A\u5019\u88DC (${s}) \u304B\u3089\u9078\u629E\u3057\u3066\u9001\u4FE1`,
+    notifyOff: (p) => `[${p}] \u30100 \u30AA\u30D5 (off)\u3011\uFF1A\u4E0B\u90E8\u30D0\u30FC\u975E\u8868\u793A\u30FB\u76E3\u8996\u505C\u6B62\u30FB0 Token \u7121\u8CA0\u8377`
+  },
+  ko: {
+    companion: "\uB3D9\uBC18",
+    direct: "\uC9C1\uC811\uC218\uC815",
+    candidates: "\uD6C4\uBCF4\uC120\uD0DD",
+    off: "\uAEBC\uC9D0",
+    notifyCompanion: (p) => `[${p}] [1 \uB3D9\uBC18 (companion)] \uC804\uD658: \uC6D0\uBB38 0ms \uC804\uC1A1 + \uC0C1\uB2E8 \uD559\uC2B5 \uCE74\uB4DC \uD45C\uC2DC`,
+    notifyDirect: (p, s1) => `[${p}] [2 \uC9C1\uC811\uC218\uC815 (direct)] \uC804\uD658: \uCCAB \uC2AC\uB86F [${s1}] \uAE30\uC900\uC73C\uB85C \uC989\uC2DC \uB2E4\uB4EC\uC5B4 \uC804\uC1A1`,
+    notifyCandidates: (p, s) => `[${p}] [3 \uD6C4\uBCF4\uC120\uD0DD (candidates)] \uC804\uD658: \uD6C4\uBCF4 (${s}) \uC911 \uACE8\uB77C\uC11C \uC804\uC1A1`,
+    notifyOff: (p) => `[${p}] [0 \uAEBC\uC9D0 (off)]: \uD558\uB2E8\uBC14 \uC228\uAE40 \xB7 \uAC10\uC2DC \uD574\uC81C \xB7 0 Token \uBB34\uBD80\uB2F4`
+  },
+  es: {
+    companion: "Estudio",
+    direct: "Directo",
+    candidates: "Opciones",
+    off: "Apagado",
+    notifyCompanion: (p) => `[${p}] Modo [1 Estudio (companion)]: Env\xEDo 0ms + tarjeta de aprendizaje arriba`,
+    notifyDirect: (p, s1) => `[${p}] Modo [2 Directo (direct)]: Reescritura 1a1 con ranura #1 [${s1}]`,
+    notifyCandidates: (p, s) => `[${p}] Modo [3 Opciones (candidates)]: Elige entre (${s})`,
+    notifyOff: (p) => `[${p}] Modo [0 Apagado (off)]: Barra oculta \xB7 0 hooks \xB7 0 tokens`
+  },
+  fr: {
+    companion: "\xC9tude",
+    direct: "Direct",
+    candidates: "Options",
+    off: "D\xE9sactiv\xE9",
+    notifyCompanion: (p) => `[${p}] Mode [1 \xC9tude (companion)] : Envoi 0ms + carte d'\xE9tude en haut`,
+    notifyDirect: (p, s1) => `[${p}] Mode [2 Direct (direct)] : R\xE9\xE9criture 1\xE01 via le slot #1 [${s1}]`,
+    notifyCandidates: (p, s) => `[${p}] Mode [3 Options (candidates)] : Choisissez parmi (${s})`,
+    notifyOff: (p) => `[${p}] Mode [0 D\xE9sactiv\xE9 (off)] : Barre masqu\xE9e \xB7 0 hook \xB7 0 token`
+  },
+  de: {
+    companion: "Lernen",
+    direct: "Direkt",
+    candidates: "Auswahl",
+    off: "Aus",
+    notifyCompanion: (p) => `[${p}] Modus [1 Lernen (companion)]: 0ms Senden + Lernkarte oben`,
+    notifyDirect: (p, s1) => `[${p}] Modus [2 Direkt (direct)]: Direktes Umformulieren \xFCber Slot #1 [${s1}]`,
+    notifyCandidates: (p, s) => `[${p}] Modus [3 Auswahl (candidates)]: Auswahl aus (${s})`,
+    notifyOff: (p) => `[${p}] Modus [0 Aus (off)]: Leiste ausgeblendet \xB7 0 Hooks \xB7 0 Tokens`
+  },
+  ru: {
+    companion: "\u0423\u0447\u0435\u0431\u0430",
+    direct: "\u041F\u0440\u044F\u043C\u043E\u0439",
+    candidates: "\u0412\u044B\u0431\u043E\u0440",
+    off: "\u0412\u044B\u043A\u043B",
+    notifyCompanion: (p) => `[${p}] \u0420\u0435\u0436\u0438\u043C [1 \u0423\u0447\u0435\u0431\u0430 (companion)]: \u043E\u0442\u043F\u0440\u0430\u0432\u043A\u0430 0\u043C\u0441 + \u043A\u0430\u0440\u0442\u043E\u0447\u043A\u0430 \u0441\u0432\u0435\u0440\u0445\u0443`,
+    notifyDirect: (p, s1) => `[${p}] \u0420\u0435\u0436\u0438\u043C [2 \u041F\u0440\u044F\u043C\u043E\u0439 (direct)]: \u043F\u0440\u044F\u043C\u0430\u044F \u043F\u0435\u0440\u0435\u0437\u0430\u043F\u0438\u0441\u044C \u043F\u043E \u0441\u043B\u043E\u0442\u0443 #1 [${s1}]`,
+    notifyCandidates: (p, s) => `[${p}] \u0420\u0435\u0436\u0438\u043C [3 \u0412\u044B\u0431\u043E\u0440 (candidates)]: \u0432\u044B\u0431\u043E\u0440 \u0438\u0437 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u043E\u0432 (${s})`,
+    notifyOff: (p) => `[${p}] \u0420\u0435\u0436\u0438\u043C [0 \u0412\u044B\u043A\u043B (off)]: \u0441\u0442\u0440\u043E\u043A\u0430 \u0441\u043A\u0440\u044B\u0442\u0430 \xB7 0 \u0445\u0443\u043A\u043E\u0432 \xB7 0 \u0442\u043E\u043A\u0435\u043D\u043E\u0432`
+  },
+  en: {
+    companion: "Companion",
+    direct: "Direct",
+    candidates: "Candidates",
+    off: "Off",
+    notifyCompanion: (p) => `[${p}] Switched to [1 Companion] mode: 0ms raw send + learning card above`,
+    notifyDirect: (p, s1) => `[${p}] Switched to [2 Direct (English/Rewrite)] mode: 1-to-1 send via Slot #1 [${s1}]`,
+    notifyCandidates: (p, s) => `[${p}] Switched to [3 Candidates (select)] mode: Pick from (${s})`,
+    notifyOff: (p) => `[${p}] Switched to [0 Off] mode: Status hidden \xB7 listeners detached \xB7 0 tokens`
+  }
+};
+function resolveModeDisplaySpec(sourceLang = "en") {
+  const norm = (sourceLang || "en").toLowerCase().split("-")[0];
+  return MODE_DISPLAY_BY_LANG[norm] || MODE_DISPLAY_BY_LANG.en;
+}
+var MODE_ALIAS_MAP = {
+  "1": "original",
+  companion: "original",
+  learn: "original",
+  study: "original",
+  original: "original",
+  orig: "original",
+  "\u7EAF\u4F34\u5B66": "original",
+  "\u7D14\u4F34\u5B78": "original",
+  "\u4F34\u5B66": "original",
+  "\u4F34\u8D70": "original",
+  "\uB3D9\uBC18": "original",
+  estudio: "original",
+  "\xE9tude": "original",
+  etude: "original",
+  lernen: "original",
+  "\u0443\u0447\u0435\u0431\u0430": "original",
+  "2": "english",
+  direct: "english",
+  rewrite: "english",
+  refine: "english",
+  english: "english",
+  en: "english",
+  eng: "english",
+  "\u76F4\u63A5\u6539": "english",
+  "\u76F4\u6539": "english",
+  "\u76F4\u51FA": "english",
+  "\uC9C1\uC811\uC218\uC815": "english",
+  directo: "english",
+  direkt: "english",
+  "\u043F\u0440\u044F\u043C\u043E\u0439": "english",
+  "3": "select",
+  candidates: "select",
+  candidate: "select",
+  select: "select",
+  choices: "select",
+  choice: "select",
+  pick: "select",
+  "\u6311\u5019\u9009": "select",
+  "\u6311\u5019\u9078": "select",
+  "\u5019\u9009": "select",
+  "\u5019\u88DC\u9078": "select",
+  "\uD6C4\uBCF4\uC120\uD0DD": "select",
+  opciones: "select",
+  options: "select",
+  auswahl: "select",
+  "\u0432\u044B\u0431\u043E\u0440": "select",
+  "0": "off",
+  off: "off",
+  disable: "off",
+  stop: "off",
+  "\u5DF2\u5173\u95ED": "off",
+  "\u5DF2\u95DC\u9589": "off",
+  "\u5173\u95ED": "off",
+  "\u30AA\u30D5": "off",
+  "\uAEBC\uC9D0": "off",
+  apagado: "off",
+  "d\xE9sactiv\xE9": "off",
+  desactive: "off",
+  aus: "off",
+  "\u0432\u044B\u043A\u043B": "off"
+};
+function normalizeLingualModeInput(raw) {
+  if (!raw) return null;
+  return MODE_ALIAS_MAP[raw.trim().toLowerCase()] || null;
+}
+var CURRENT_FEATURE_BANNER_VERSION = "0.5.4";
+function resolveReleaseBannerLang(explicitSourceLang, sessionEntries) {
+  const supported = /* @__PURE__ */ new Set(["zh", "tw", "ja", "ko", "es", "fr", "de", "ru", "en"]);
+  if (explicitSourceLang && explicitSourceLang.trim()) {
+    const clean = explicitSourceLang.trim().toLowerCase().split(/[-_]/)[0];
+    return supported.has(clean) ? clean : "en";
+  }
+  if (Array.isArray(sessionEntries) && sessionEntries.length > 0) {
+    for (let i = sessionEntries.length - 1; i >= 0; i--) {
+      const e = sessionEntries[i];
+      if (e?.type === "message" && e?.message?.role === "user") {
+        const text = Array.isArray(e.message.content) ? e.message.content.map((c) => c?.text || "").join(" ") : String(e.message.content || "");
+        if (/[\u3040-\u309f\u30a0-\u30ff]/.test(text)) return "ja";
+        if (/[\uac00-\ud7af]/.test(text)) return "ko";
+        if (/[\u0400-\u04ff]/.test(text)) return "ru";
+        if (/[\u4e00-\u9fa5]/.test(text)) return "zh";
+      }
+    }
+  }
+  try {
+    const i18nFile = import_node_path.default.join(import_node_os.default.homedir(), ".config", "rpiv-i18n", "config.json");
+    if (import_node_fs.default.existsSync(i18nFile)) {
+      const raw = JSON.parse(import_node_fs.default.readFileSync(i18nFile, "utf8"));
+      const loc = String(raw?.locale || raw?.lang || "").toLowerCase();
+      if (loc.startsWith("zh-tw") || loc.startsWith("zh-hk")) return "tw";
+      const prefix = loc.split(/[-_]/)[0];
+      if (supported.has(prefix)) return prefix;
+    }
+  } catch {
+  }
+  try {
+    const envLocale = (process.env.LC_ALL || process.env.LANGUAGE || process.env.LANG || Intl.DateTimeFormat().resolvedOptions().locale || "en").toLowerCase();
+    if (envLocale.startsWith("zh-tw") || envLocale.startsWith("zh-hk")) return "tw";
+    const prefix = envLocale.split(/[-_.]/)[0];
+    if (supported.has(prefix)) return prefix;
+  } catch {
+  }
+  return "en";
+}
+function formatReleaseBannerLines(sourceLang = "en", maxCols = 80, fg = (_c, t) => t) {
+  const norm = (sourceLang || "en").toLowerCase().split("-")[0];
+  const effectiveCols = Math.max(80, maxCols);
+  const copyByLang = {
+    zh: {
+      title: "\xB7 [pi-lingual v0.5.4 \u66F4\u65B0\u8BF4\u660E] \u4E09\u6001\u7269\u7406\u9694\u79BB\u4E0E\u9EC4\u91D1\u53CC\u8BED\u4F34\u5B66 (\u53D1\u6D88\u606F\u81EA\u52A8\u6536\u8D77)",
+      subtitle: "\u2502 \u4E09\u5927\u6A21\u5F0F\u62E5\u6709\u72EC\u7ACB\u69FD\u4F4D\u914D\u7F6E\uFF1B\u9ED8\u8BA4\u65B9\u6848\u878D\u5408\u5730\u9053\u53E3\u8BED\u3001\u67B6\u6784\u4E66\u9762\u4E0E\u903B\u8F91\u89C4\u8303",
+      rows: [
+        "\u250C [1 \u7EAF\u4F34\u5B66 \xB7 companion]  0ms \u76F4\u53D1 + \u9AD8\u9636\u5730\u9053\u53CC\u8BED\u4F34\u5B66\u8BCD\u5361 (/lingual 1)",
+        "\u2502 [2 \u76F4\u63A5\u6539 \xB7 direct]     \u4E13\u5C5E directSlots \u6BCD\u8BED\u903B\u8F91\u89C4\u8303\u5316\u53D1\u51FA (/lingual 2)",
+        "\u251C [3 \u6311\u5019\u9009 \xB7 candidates] \u4E13\u4EAB promptSlots \u6781\u7B80/\u7ED3\u6784/\u6839\u56E0\u5019\u9009 (/lingual 3)",
+        "\u2502   (\u6572 /lingual \u5FAA\u73AF 1\u27942\u27943\u27940\uFF1B\u6309\u6570\u5B57 1/2/3 \u514D\u56DE\u8F66\u79D2\u53D1\uFF0C0/Esc \u53D1\u539F\u8BDD)",
+        "\u251C [\u4E00\u5207\u81EA\u5B9A\u4E49\u5F52 Tuner]    \u5E73\u65F6 0 \u6280\u80FD\u5757\u6CE8\u5165\uFF1B\u6572 /lingual tuner \u9690\u5F62\u5524\u9192\u5411\u5BFC",
+        "\u2514 [0 \u5DF2\u5173\u95ED \xB7 off]        \u9690\u85CF\u5E95\u680F\u3001\u505C\u76D1\u542C\u3001\u5265\u79BB\u6280\u80FD\u5757 (0\u50CF\u7D20 0Token)"
+      ]
+    },
+    tw: {
+      title: "\xB7 [pi-lingual v0.5.4 \u66F4\u65B0\u8AAA\u660E] \u4E09\u614B\u7269\u7406\u9694\u96E2\u8207\u9EC3\u91D1\u96D9\u8A9E\u4F34\u5B78 (\u767C\u8A0A\u606F\u81EA\u52D5\u6536\u8D77)",
+      subtitle: "\u2502 \u4E09\u5927\u6A21\u5F0F\u64C1\u6709\u7368\u7ACB\u69FD\u4F4D\u914D\u7F6E\uFF1B\u9810\u8A2D\u65B9\u6848\u878D\u5408\u9053\u5730\u53E3\u8A9E\u3001\u67B6\u69CB\u66F8\u9762\u8207\u908F\u8F2F\u898F\u7BC4",
+      rows: [
+        "\u250C [1 \u7D14\u4F34\u5B78 \xB7 companion]  0ms \u76F4\u767C + \u9AD8\u968E\u9053\u5730\u96D9\u8A9E\u4F34\u5B78\u8A5E\u5361 (/lingual 1)",
+        "\u2502 [2 \u76F4\u63A5\u6539 \xB7 direct]     \u5C08\u5C6C directSlots \u6BCD\u8A9E\u908F\u8F2F\u898F\u7BC4\u5316\u767C\u51FA (/lingual 2)",
+        "\u251C [3 \u6311\u5019\u9078 \xB7 candidates] \u5C08\u4EAB promptSlots \u6975\u7C21/\u7D50\u69CB/\u6839\u56E0\u5019\u9078 (/lingual 3)",
+        "\u2502   (\u6572 /lingual \u5FAA\u74B0 1\u27942\u27943\u27940\uFF1B\u6309\u6578\u5B57 1/2/3 \u514D\u56DE\u8ECA\u79D2\u767C\uFF0C0/Esc \u767C\u539F\u8A71)",
+        "\u251C [\u4E00\u5207\u81EA\u5B9A\u7FA9\u6B78 Tuner]    \u5E73\u6642 0 \u6280\u80FD\u584A\u6CE8\u5165\uFF1B\u6572 /lingual tuner \u96B1\u5F62\u559A\u9192\u56AE\u5C0E",
+        "\u2514 [0 \u5DF2\u95DC\u9589 \xB7 off]        \u96B1\u85CF\u5E95\u6B04\u3001\u505C\u76E3\u807D\u3001\u525D\u96E2\u6280\u80FD\u584A (0\u50CF\u7D20 0Token)"
+      ]
+    },
+    ja: {
+      title: "\xB7 [pi-lingual v0.5.4 \u66F4\u65B0\u6848\u5185] 3\u30E2\u30FC\u30C9\u5B8C\u5168\u5206\u96E2\u3068\u8AD6\u7406\u4ED5\u69D8\u5316 (\u9001\u4FE1\u3067\u9589\u3058\u308B)",
+      subtitle: "\u2502 3\u30E2\u30FC\u30C9\u306E\u8A2D\u5B9A\u914D\u5217\u3092\u5B8C\u5168\u5206\u96E2\u30FB\u81EA\u7136\u306A\u53E3\u8A9E/\u6280\u8853\u6587\u9762\u3068\u8AD6\u7406\u69CB\u6210\u5316\u3092\u63D0\u4F9B",
+      rows: [
+        "\u250C [1 \u4F34\u8D70 \xB7 companion]   0ms\u9001\u4FE1\uFF0B\u5B9F\u8DF5\u7684\u306A\u53CC\u65B9\u5411\u5B66\u7FD2\u30AB\u30FC\u30C9 (/lingual 1)",
+        "\u2502 [2 \u76F4\u6539 \xB7 direct]      \u5C02\u7528 directSlots \u3067\u8AD6\u7406\u6307\u793A\u6587\u3092\u76F4\u9001\u4FE1 (/lingual 2)",
+        "\u251C [3 \u5019\u88DC\u9078 \xB7 candidates] 3\u5019\u88DC\u3092\u6570\u5B57\u30AD\u30FC 1..3 \u3067\u5373\u9001\u4FE1 (/lingual 3)",
+        "\u2502   (/lingual \u3067 1\u27942\u27943\u27940 \u5FAA\u74B0 \xB7 3\u30E2\u30FC\u30C9\u306E\u8A2D\u5B9A\u306F\u5B8C\u5168\u5206\u96E2\u3067\u6DF7\u7DDA\u306A\u3057)",
+        "\u251C [Tuner \u306B\u4E00\u5143\u5316]       \u901A\u5E38\u6642\u30B9\u30AD\u30EB\u6CE8\u5165\u30BC\u30ED \xB7 /lingual tuner \u3067\u6848\u5185\u8D77\u52D5",
+        "\u2514 [0 \u30AA\u30D5 \xB7 off]         \u4E0B\u90E8\u30D0\u30FC\u975E\u8868\u793A\u30FB\u76E3\u8996\u505C\u6B62\u30FB0 Token \u5B8C\u5168\u7121\u8CA0\u8377"
+      ]
+    },
+    ko: {
+      title: "\xB7 [pi-lingual v0.5.4 \uC5C5\uB370\uC774\uD2B8] 3\uBAA8\uB4DC \uBD84\uB9AC \uBC0F \uB17C\uB9AC \uC815\uC81C (\uC785\uB825 \uC2DC \uB2EB\uD798)",
+      subtitle: "\u2502 3\uAC00\uC9C0 \uBAA8\uB4DC \uC2AC\uB86F \uC124\uC815\uC744 \uBB3C\uB9AC\uC801\uC73C\uB85C \uBD84\uB9AC\xB7\uC2E4\uC804 \uAD6C\uC5B4/\uBB38\uC5B4 \uBC0F \uB17C\uB9AC \uC815\uC81C \uC801\uC6A9",
+      rows: [
+        "\u250C [1 \uB3D9\uBC18 \xB7 companion]    0ms \uC804\uC1A1 + \uC2E4\uC804 \uC774\uC911\uC5B8\uC5B4 \uD559\uC2B5 \uCE74\uB4DC (/lingual 1)",
+        "\u2502 [2 \uC9C1\uC811\uC218\uC815 \xB7 direct]   \uC804\uC6A9 directSlots \uB85C \uB17C\uB9AC \uC815\uC81C \uC804\uC1A1 (/lingual 2)",
+        "\u251C [3 \uD6C4\uBCF4\uC120\uD0DD \xB7 candidates] 3\uB300 \uD6C4\uBCF4 \uC22B\uC790 1..3 \uC989\uC2DC \uC804\uC1A1 (/lingual 3)",
+        "\u2502   (/lingual \uC785\uB825 \uC2DC 1\u27942\u27943\u27940 \uC21C\uD658 \xB7 3\uAC00\uC9C0 \uBAA8\uB4DC \uC124\uC815 \uC644\uC804 \uBD84\uB9AC \uACA9\uB9AC)",
+        "\u251C [Tuner \uD1B5\uD569 \uC124\uC815]      \uD3C9\uC18C \uC2A4\uD0AC \uC8FC\uC785 0 \xB7 /lingual tuner \uB9C8\uBC95\uC0AC \uAE30\uB3D9",
+        "\u2514 [0 \uAEBC\uC9D0 \xB7 off]          \uD558\uB2E8\uBC14 \uC228\uAE40\xB7\uAC10\uC2DC \uD574\uC81C\xB7\uC2A4\uD0AC \uC81C\uAC70 (0 \uD53D\uC140 0 Tok)"
+      ]
+    },
+    es: {
+      title: "\xB7 [pi-lingual v0.5.4] 3 modos aislados y fluidez nativa (cierra al enviar)",
+      subtitle: "\u2502 Modos 100% aislados; fluidez oral/t\xE9cnica y estructuraci\xF3n l\xF3gica",
+      rows: [
+        "\u250C [1 Estudio \xB7 companion]  0ms + tarjeta biling\xFCe arriba (/lingual 1)",
+        "\u2502 [2 Directo \xB7 direct]     directSlots estructurado 1a1 (/lingual 2)",
+        "\u251C [3 Opciones \xB7 candidates] 3 opciones teclas 1..3 (/lingual 3)",
+        "\u2502   (Cicla 1\u27942\u27943\u27940 con /lingual; modos 1, 2 y 3 100% aislados entre s\xED)",
+        "\u251C [Todo v\xEDa Tuner]         0 tokens normal; usa /lingual tuner para ajustar",
+        "\u2514 [0 Apagado \xB7 off]        Oculta barra, quita hooks y 0 tok (/lingual 0)"
+      ]
+    },
+    fr: {
+      title: "\xB7 [pi-lingual v0.5.4] 3 modes isol\xE9s et fluidit\xE9 native (ferm\xE9 \xE0 l'envoi)",
+      subtitle: "\u2502 Modes 100% isol\xE9s ; fluidit\xE9 orale/technique et structure logique",
+      rows: [
+        "\u250C [1 \xC9tude \xB7 companion]    0ms + carte bilingue en haut (/lingual 1)",
+        "\u2502 [2 Direct \xB7 direct]      directSlots structur\xE9 1\xE01 (/lingual 2)",
+        "\u251C [3 Options \xB7 candidates] 3 options touches 1..3 (/lingual 3)",
+        "\u2502   (Cyclez 1\u27942\u27943\u27940 via /lingual ; modes 1, 2 et 3 strictement isol\xE9s)",
+        "\u251C [Tout via Tuner]         0 token normal ; tapez /lingual tuner pour r\xE9gler",
+        "\u2514 [0 D\xE9sactiv\xE9 \xB7 off]      Masque barre, coupe hooks et 0 tok (/lingual 0)"
+      ]
+    },
+    de: {
+      title: "\xB7 [pi-lingual v0.5.4] 3 isolierte Modi & Logik-Struktur",
+      subtitle: "\u2502 Strikt getrennte Slots; authentische Sprache & logische Struktur",
+      rows: [
+        "\u250C [1 Lernen \xB7 companion]   0ms + zweisprachige Lernkarte oben (/lingual 1)",
+        "\u2502 [2 Direkt \xB7 direct]      directSlots 1-zu-1 strukturiert (/lingual 2)",
+        "\u251C [3 Auswahl \xB7 candidates] 3 Optionen Tasten 1..3 (/lingual 3)",
+        "\u2502   (/lingual wechselt 1\u27942\u27943\u27940; Modi 1, 2 und 3 strikt isoliert)",
+        "\u251C [Alles per Tuner]        0 Skill-Tokens im Alltag; /lingual tuner starten",
+        "\u2514 [0 Aus \xB7 off]            Blendet Leiste aus, 0 Hooks & 0 Tok (/lingual 0)"
+      ]
+    },
+    ru: {
+      title: "\xB7 [pi-lingual v0.5.4] 3 \u0440\u0435\u0436\u0438\u043C\u0430 \u0438 \u043B\u043E\u0433\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u0441\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u0430",
+      subtitle: "\u2502 \u0420\u0430\u0437\u0434\u0435\u043B\u044C\u043D\u044B\u0435 \u0441\u043B\u043E\u0442\u044B; \u0436\u0438\u0432\u0430\u044F \u0440\u0435\u0447\u044C, \u0442\u0435\u0445-\u0441\u0442\u0438\u043B\u044C \u0438 \u043B\u043E\u0433\u0438\u0447\u0435\u0441\u043A\u0430\u044F \u0441\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u0430",
+      rows: [
+        "\u250C [1 \u0423\u0447\u0435\u0431\u0430 \xB7 companion]   0\u043C\u0441 + \u043A\u0430\u0440\u0442\u043E\u0447\u043A\u0430 \u043E\u0431\u0443\u0447\u0435\u043D\u0438\u044F \u0441\u0432\u0435\u0440\u0445\u0443 (/lingual 1)",
+        "\u2502 [2 \u041F\u0440\u044F\u043C\u043E\u0439 \xB7 direct]     directSlots \u043B\u043E\u0433\u0438\u0447\u043D\u043E 1\u043A1 (/lingual 2)",
+        "\u251C [3 \u0412\u044B\u0431\u043E\u0440 \xB7 candidates]  3 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u0430 \u043A\u043B\u0430\u0432\u0438\u0448\u0438 1..3 (/lingual 3)",
+        "\u2502   (/lingual \u043B\u0438\u0441\u0442\u0430\u0435\u0442 1\u27942\u27943\u27940; \u0440\u0435\u0436\u0438\u043C\u044B 1, 2 \u0438 3 \u043F\u043E\u043B\u043D\u043E\u0441\u0442\u044C\u044E \u0438\u0437\u043E\u043B\u0438\u0440\u043E\u0432\u0430\u043D\u044B)",
+        "\u251C [\u0412\u0441\u0435 \u0447\u0435\u0440\u0435\u0437 Tuner]       0 \u0442\u043E\u043A\u0435\u043D\u043E\u0432 \u043E\u0431\u044B\u0447\u043D\u043E; /lingual tuner \u0434\u043B\u044F \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438",
+        "\u2514 [0 \u0412\u044B\u043A\u043B \xB7 off]          \u0421\u043A\u0440\u044B\u0432\u0430\u0435\u0442 \u0441\u0442\u0440\u043E\u043A\u0443, 0 \u0445\u0443\u043A\u043E\u0432 \u0438 0 \u0442\u043E\u043A (/lingual 0)"
+      ]
+    },
+    en: {
+      title: "\xB7 [pi-lingual v0.5.4] 3 Isolated Modes & Golden Duality (closes on send)",
+      subtitle: "\u2502 Isolated slot arrays per mode; authentic spoken, RFC prose & logical specs",
+      rows: [
+        "\u250C [1 Companion]  0ms raw send + bilingual companion card (/lingual 1)",
+        "\u2502 [2 Direct]     Dedicated directSlots logical prompt rewrite (/lingual 2)",
+        "\u251C [3 Candidates] 1..3 for concise/spec/root-cause candidates (/lingual 3)",
+        "\u2502   (Cycle 1\u27942\u27943\u27940 via /lingual; Modes 1, 2 & 3 are strictly isolated)",
+        "\u251C [All via Tuner] 0 skill tokens by default; run /lingual tuner to customize",
+        "\u2514 [0 Off]        /lingual off hides status bar, detaches hooks & 0 tokens"
+      ]
+    }
+  };
+  const c = copyByLang[norm] || copyByLang.en;
+  const allRawLines = [c.title, c.subtitle, ...c.rows];
+  return allRawLines.map((line) => truncateVisual(`  ${fg("muted", line)}`, effectiveCols));
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   CANNOT_START_LINE_CHARS,
@@ -3865,6 +4078,7 @@ var LingualSessionController = class {
   formatTreeBranch,
   formatVocabItemsAtomic,
   generatePromptCandidates,
+  getDefaultDirectSlots,
   getDefaultPromptSlots,
   getDefaultSlots,
   getEffectiveMaxCols,
@@ -3874,21 +4088,27 @@ var LingualSessionController = class {
   invalidateUserConfigCache,
   isDynamicLongInput,
   isNonEnglish,
+  isTestEnvironment,
   loadUserConfig,
   loadUserLingualConfig,
   moveSlotInList,
+  normalizeLingualModeInput,
   normalizePromptRules,
   parseLlmResponse,
   removeSlotFromList,
   renderCardLayout,
+  repairAndParseJsonObject,
+  resolveCandidateSlotsFromConfig,
+  resolveDirectSlotsFromConfig,
   resolveLabelsForLang,
+  resolveModeDisplaySpec,
   resolvePromptRulePreset,
   resolvePromptTargetLangName,
   resolveReleaseBannerLang,
   resolveSlotsForPreset,
   rewritePromptDirect,
-  rewritePromptDirectWithDetails,
   sanitizePromptForTranslation,
+  saveUserLingualConfig,
   shouldInjectNativeReplyGuard,
   shouldShieldBypass,
   shouldTriggerTranslation,

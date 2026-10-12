@@ -194,3 +194,45 @@ test("qa: compact capsule mode balances multiple slots and strictly respects max
   assert.ok(lines[0].includes("写作:"));
 });
 
+test("slots: 7-row polyglot showcase renders all 7 distinct language rows within 9-line budget without dropping any slot", () => {
+  const polyglotSlots = [
+    { id: "source", label: "原文", role: "source" as const, enabled: true },
+    { id: "en", label: "EN", role: "translation" as const, instruction: "English", showMeaning: false, enabled: true },
+    { id: "ja", label: "JA", role: "translation" as const, instruction: "Japanese", showMeaning: false, enabled: true },
+    { id: "ko", label: "KO", role: "translation" as const, instruction: "Korean", showMeaning: false, enabled: true },
+    { id: "fr", label: "FR", role: "translation" as const, instruction: "French", showMeaning: false, enabled: true },
+    { id: "de", label: "DE", role: "translation" as const, instruction: "German", showMeaning: false, enabled: true },
+    { id: "es", label: "ES", role: "translation" as const, instruction: "Spanish", showMeaning: false, enabled: true },
+    { id: "ru", label: "RU", role: "translation" as const, instruction: "Russian", showMeaning: false, enabled: true },
+  ];
+
+  const card: LingualResult = {
+    sourceText: "保持最小工作改动面，先定位根因再修改",
+    spoken: "Keep the smallest working diff and trace the root cause first.",
+    annotated: "",
+    slotOutputs: {
+      en: { content: "Keep the smallest working diff and trace the root cause first." },
+      ja: { content: "最小限の変更差分を保ち、まず根本原因を特定してください。" },
+      ko: { content: "최소 변경 범위를 유지하고 먼저 근본 원인을 파악하세요." },
+      fr: { content: "Gardez un diff minimal et identifiez d'abord la cause racine." },
+      de: { content: "Halten Sie den Diff minimal und finden Sie zuerst die Ursache." },
+      es: { content: "Mantén un diff mínimo e identifica primero la causa raíz." },
+      ru: { content: "Сохраняйте минимальный diff и сначала найдите первопричину." },
+    },
+  };
+
+  const lines = renderCardLayout(card, LANGUAGE_PRESETS.zh, {
+    slots: polyglotSlots,
+    maxCols: 80,
+    maxLines: 9,
+  });
+
+  // 1 source line + 7 language lines = 8 lines total (<= 9 lines hard budget)
+  assert.ok(lines.length <= 9, `Expected <= 9 lines, got ${lines.length}`);
+  const full = lines.join("\n");
+  for (const tag of ["[EN]", "[JA]", "[KO]", "[FR]", "[DE]", "[ES]", "[RU]"]) {
+    assert.ok(full.includes(tag), `7-row polyglot card must retain ${tag} without truncation dropout`);
+  }
+});
+
+

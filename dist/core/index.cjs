@@ -43,14 +43,17 @@ __export(core_exports, {
   createCustomSlot: () => createCustomSlot,
   formatModelSelectionMessage: () => formatModelSelectionMessage,
   formatStatusReport: () => formatStatusReport,
+  getDefaultDirectSlots: () => getDefaultDirectSlots,
   getDefaultPromptSlots: () => getDefaultPromptSlots,
   getDefaultSlots: () => getDefaultSlots,
   globalLinguaCache: () => globalLinguaCache,
   globalLingualCache: () => globalLingualCache,
+  isNonEnglish: () => isNonEnglish,
   moveSlotInList: () => moveSlotInList,
   normalizePromptRules: () => normalizePromptRules,
   parseLlmResponse: () => parseLlmResponse,
   removeSlotFromList: () => removeSlotFromList,
+  repairAndParseJsonObject: () => repairAndParseJsonObject,
   resolveLabelsForLang: () => resolveLabelsForLang,
   resolvePromptRulePreset: () => resolvePromptRulePreset,
   resolvePromptTargetLangName: () => resolvePromptTargetLangName,
@@ -63,51 +66,224 @@ __export(core_exports, {
 });
 module.exports = __toCommonJS(core_exports);
 
-// src/core/prompts.ts
-function getDefaultPromptSlots(sourceLang = "zh") {
-  const norm = (sourceLang || "zh").toLowerCase().split("-")[0];
-  const isZh = norm === "zh" || norm === "tw";
-  const isJa = norm === "ja";
-  if (isZh) {
+// src/prompts.ts
+function getDefaultDirectSlots(sourceLang = "en") {
+  const norm = (sourceLang || "en").toLowerCase().split("-")[0];
+  if (norm === "zh") {
+    return [
+      {
+        id: "zh_refine",
+        label: "\u903B\u8F91\u89C4\u8303",
+        role: "rewrite",
+        instruction: "Target Language: Chinese (Simplified). Strictly output in Chinese (Simplified) ONLY: \u5C06\u7528\u6237\u53E3\u8BED\u5316\u3001\u96F6\u6563\u7684\u60F3\u6CD5\u91CD\u7EC4\u4E3A\u903B\u8F91\u4E25\u5BC6\u3001\u5C42\u6B21\u6E05\u6670\u7684\u9AD8\u8D28\u91CF\u4E2D\u6587\u5DE5\u7A0B\u6307\u4EE4\u3002\u660E\u786E\u6838\u5FC3\u76EE\u6807\u3001\u6267\u884C\u52A8\u4F5C\u3001\u7EA6\u675F\u8FB9\u754C\u4E0E\u671F\u671B\u4EA7\u51FA\uFF0C\u5B8C\u6574\u4FDD\u7559\u4EE3\u7801\u6807\u8BC6\u7B26\u3001\u6587\u4EF6\u8DEF\u5F84\u4E0E\u6280\u672F\u4E13\u6709\u540D\u8BCD\uFF0C\u675C\u7EDD\u7A7A\u6D1E\u5957\u8BDD\uFF0C\u8BA9 AI Agent \u80FD\u6700\u7CBE\u51C6\u9AD8\u6548\u5730\u7406\u89E3\u76EE\u6807\u4E0E\u6267\u884C\u3002",
+        enabled: true
+      },
+      {
+        id: "vocab",
+        label: "\u91CD\u70B9\u8BCD\u6C47",
+        role: "vocab",
+        instruction: "\u81EA\u9002\u5E94\u8403\u53D6 2-3 \u4E2A\u4E0E\u672C\u6307\u4EE4\u6700\u5951\u5408\u7684\u5730\u9053\u6280\u672F\u642D\u914D\u6216\u9AD8\u9636\u8BCD\u6C47\uFF0C\u683C\u5F0F\u4E3A 'term (\u4E2D\u6587\u91CA\u4E49) \xB7 term2 (\u4E2D\u6587\u91CA\u4E49)'\u3002",
+        enabled: true
+      }
+    ];
+  }
+  if (norm === "tw") {
+    return [
+      {
+        id: "tw_refine",
+        label: "\u908F\u8F2F\u898F\u7BC4",
+        role: "rewrite",
+        instruction: "Target Language: Chinese (Traditional). Strictly output in Chinese (Traditional) ONLY: \u5C07\u4F7F\u7528\u8005\u53E3\u8A9E\u5316\u3001\u96F6\u6563\u7684\u60F3\u6CD5\u91CD\u7D44\u70BA\u908F\u8F2F\u56B4\u5BC6\u3001\u5C64\u6B21\u6E05\u6670\u7684\u9AD8\u54C1\u8CEA\u7E41\u9AD4\u4E2D\u6587\u5DE5\u7A0B\u6307\u4EE4\u3002\u660E\u78BA\u6838\u5FC3\u76EE\u6A19\u3001\u57F7\u884C\u52D5\u4F5C\u3001\u7D04\u675F\u908A\u754C\u8207\u671F\u671B\u7522\u51FA\uFF0C\u5B8C\u6574\u4FDD\u7559\u7A0B\u5F0F\u78BC\u8B58\u5225\u7B26\u8207\u6A94\u6848\u8DEF\u5F91\u3002",
+        enabled: true
+      },
+      {
+        id: "vocab",
+        label: "\u91CD\u9EDE\u8A5E\u5F59",
+        role: "vocab",
+        instruction: "\u81EA\u9069\u61C9\u8403\u53D6 2-3 \u500B\u8207\u672C\u6307\u4EE4\u6700\u5951\u5408\u7684\u9053\u5730\u6280\u8853\u642D\u914D\u6216\u9AD8\u968E\u8A5E\u5F59\uFF0C\u683C\u5F0F\u70BA 'term (\u4E2D\u6587\u91CB\u7FA9) \xB7 term2 (\u4E2D\u6587\u91CB\u7FA9)'\u3002",
+        enabled: true
+      }
+    ];
+  }
+  if (norm === "ja") {
+    return [
+      {
+        id: "ja_refine",
+        label: "\u8AD6\u7406\u69CB\u9020\u5316",
+        role: "rewrite",
+        instruction: "Target Language: Japanese. Strictly output in Japanese ONLY: \u53E3\u8A9E\u7684\u3067\u65AD\u7247\u7684\u306A\u5165\u529B\u3092\u3001\u8AD6\u7406\u7684\u3067\u660E\u78BA\u306A\u9AD8\u54C1\u8CEA\u30A8\u30F3\u30B8\u30CB\u30A2\u30EA\u30F3\u30B0\u6307\u793A\u6587\u306B\u518D\u69CB\u6210\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u76EE\u7684\u30FB\u5B9F\u884C\u5185\u5BB9\u30FB\u5236\u7D04\u6761\u4EF6\u3092\u660E\u78BA\u5316\u3057\u3001\u30B3\u30FC\u30C9\u8B58\u5225\u5B50\u3084\u30D5\u30A1\u30A4\u30EB\u30D1\u30B9\u306F100%\u4FDD\u6301\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+        enabled: true
+      },
+      {
+        id: "vocab",
+        label: "\u91CD\u8981\u8A9E\u5F59",
+        role: "vocab",
+        instruction: "\u3053\u306E\u6307\u793A\u306B\u95A2\u9023\u3059\u308B\u5B9F\u7528\u7684\u306A\u82F1\u8A9E\u6280\u8853\u8868\u73FE\u3092 2\u301C3 \u500B\u62BD\u51FA\u3057\u3001'term (\u65E5\u672C\u8A9E\u306E\u610F\u5473) \xB7 term2 (\u610F\u5473)' \u306E\u5F62\u5F0F\u3067\u51FA\u529B\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+        enabled: true
+      }
+    ];
+  }
+  if (norm === "ko") {
+    return [
+      {
+        id: "ko_refine",
+        label: "\uB17C\uB9AC \uC815\uC81C",
+        role: "rewrite",
+        instruction: "Target Language: Korean. Strictly output in Korean ONLY: \uAD6C\uC5B4\uCCB4\uC774\uAC70\uB098 \uB2E8\uD3B8\uC801\uC778 \uC785\uB825\uC744 \uB17C\uB9AC\uC801\uC774\uACE0 \uBA85\uD655\uD55C \uC5D4\uC9C0\uB2C8\uC5B4\uB9C1 \uC9C0\uC2DC\uBB38\uC73C\uB85C \uC7AC\uAD6C\uC131\uD558\uC2ED\uC2DC\uC624. \uBAA9\uD45C, \uC791\uC5C5, \uC81C\uC57D \uC870\uAC74\uC744 \uBA85\uD655\uD788 \uD558\uACE0 \uCF54\uB4DC \uC2DD\uBCC4\uC790\uC640 \uD30C\uC77C \uACBD\uB85C\uB97C 100% \uBCF4\uC874\uD558\uC2ED\uC2DC\uC624.",
+        enabled: true
+      },
+      {
+        id: "vocab",
+        label: "\uD575\uC2EC \uC5B4\uD718",
+        role: "vocab",
+        instruction: "\uC774 \uC9C0\uC2DC\uBB38\uACFC \uAD00\uB828\uB41C \uC2E4\uC6A9\uC801\uC778 \uC601\uC5B4 \uAE30\uC220 \uD45C\uD604 2~3\uAC1C\uB97C 'term (\uD55C\uAD6D\uC5B4 \uB73B) \xB7 term2 (\uB73B)' \uD615\uC2DD\uC73C\uB85C \uCD94\uCD9C\uD558\uC2ED\uC2DC\uC624.",
+        enabled: true
+      }
+    ];
+  }
+  return [
+    {
+      id: "en_refine",
+      label: "Logical Spec",
+      role: "rewrite",
+      instruction: "Target Language: English. Strictly output in English ONLY: Restructure messy or fragmented thoughts into a clear, logical, high-signal engineering instruction specifying objective, actions, and constraints while preserving all code tokens verbatim.",
+      enabled: true
+    },
+    {
+      id: "vocab",
+      label: "Key Terms",
+      role: "vocab",
+      instruction: "Extract 2-3 high-value idiomatic technical expressions relevant to this instruction.",
+      enabled: true
+    }
+  ];
+}
+function getDefaultPromptSlots(sourceLang = "en") {
+  const norm = (sourceLang || "en").toLowerCase().split("-")[0];
+  if (norm === "zh") {
     return [
       {
         id: "concise",
-        label: "\u6781\u7B80\u9AD8\u6548",
-        instruction: "\u9AD8\u6548\u7387\u3001\u96F6\u5E9F\u8BDD\u7684\u76F4\u63A5\u884C\u52A8\u6307\u4EE4\uFF1A\u5265\u79BB\u53E3\u8BED\u5BD2\u6684\uFF0C\u76F4\u5954\u76EE\u6807\u52A8\u4F5C\u4E0E\u6700\u5C0F\u5DE5\u4F5C\u6539\u52A8\u9762\uFF08Smallest Working Diff\uFF09\u3002",
+        label: "\u6781\u7B80\u884C\u52A8",
+        role: "rewrite",
+        instruction: "Target Language: Chinese (Simplified). Strictly output in Chinese (Simplified) ONLY: \u53BB\u9664\u5197\u4F59\u53E3\u8BED\u5BD2\u6684\uFF0C\u7CBE\u70BC\u4E3A\u76F4\u5954\u6838\u5FC3\u52A8\u4F5C\u7684\u6781\u7B80\u4E2D\u6587\u6307\u4EE4\uFF0C\u805A\u7126\u6700\u5C0F\u5DE5\u4F5C\u6539\u52A8\u9762\uFF08Smallest Working Diff\uFF09\u3002",
         enabled: true
       },
       {
         id: "spec",
         label: "\u7ED3\u6784\u89C4\u8303",
-        instruction: "\u7ED3\u6784\u5316\u5DE5\u7A0B\u9700\u6C42\u89C4\u8303\uFF1A\u5C06\u6742\u4E71\u8DF3\u8DC3\u7684\u53E3\u8BED\u63D0\u70BC\u4E3A\u6E05\u6670\u7684\u300C\u6838\u5FC3\u76EE\u6807 + \u7EA6\u675F\u8FB9\u754C + \u9884\u671F\u4EA7\u51FA\u300D\uFF0C\u4E25\u7981\u51ED\u7A7A\u634F\u9020\u672A\u8981\u6C42\u7684\u7279\u6027\u3002",
+        role: "rewrite",
+        instruction: "Target Language: Chinese (Simplified). Strictly output in Chinese (Simplified) ONLY: \u7ED3\u6784\u5316\u6574\u7406\u4E3A\u300C\u76EE\u6807 + \u7EA6\u675F\u8FB9\u754C + \u4EA4\u4ED8\u6807\u51C6\u300D\u6E05\u6670\u4E09\u8981\u7D20\u7684\u4E2D\u6587\u89C4\u8303\uFF0C\u4E0D\u81C6\u6D4B\u672A\u63D0\u53CA\u7684\u9700\u6C42\u3002",
         enabled: true
       },
       {
         id: "deep",
-        label: "\u6DF1\u5EA6\u4E25\u8C28",
-        instruction: "\u6839\u56E0\u6EAF\u6E90\u4E0E\u67B6\u6784\u4E25\u8C28\u89C4\u8303\uFF1A\u8981\u6C42\u5168\u94FE\u8DEF\u6392\u67E5\u5171\u4EAB\u6839\u56E0\uFF08\u62D2\u7EDD\u8868\u9762\u6253\u8865\u4E01\uFF09\uFF0C\u517C\u987E\u8FB9\u754C\u6761\u4EF6\u9A8C\u8BC1\u4E0E\u96F6\u56DE\u5F52\u3002",
+        label: "\u6839\u56E0\u6EAF\u6E90",
+        role: "rewrite",
+        instruction: "Target Language: Chinese (Simplified). Strictly output in Chinese (Simplified) ONLY: \u63D0\u70BC\u4E3A\u8981\u6C42\u5168\u94FE\u8DEF\u6EAF\u6E90\u3001\u5B9A\u4F4D\u5171\u4EAB\u6839\u56E0\u4E0E\u8FB9\u754C\u7528\u4F8B\u7269\u7406\u9A8C\u8BC1\u7684\u4E25\u8C28\u6392\u67E5\u6307\u4EE4\uFF0C\u62D2\u7EDD\u6CBB\u6807\u4E0D\u6CBB\u672C\u3002",
+        enabled: true
+      },
+      {
+        id: "vocab",
+        label: "\u91CD\u70B9\u8BCD",
+        role: "vocab",
+        instruction: "\u63D0\u53D6 2-3 \u4E2A\u4E0E\u672C\u63D0\u793A\u8BCD\u76F8\u5173\u7684\u5730\u9053\u82F1\u6587\u6280\u672F\u8BCD\u6C47\uFF0C\u683C\u5F0F\u4E3A 'term (\u4E2D\u6587\u91CA\u4E49) \xB7 term2 (\u4E2D\u6587\u91CA\u4E49)'\u3002",
         enabled: true
       }
     ];
   }
-  if (isJa) {
+  if (norm === "tw") {
+    return [
+      {
+        id: "concise",
+        label: "\u6975\u7C21\u884C\u52D5",
+        role: "rewrite",
+        instruction: "Target Language: Chinese (Traditional). Strictly output in Chinese (Traditional) ONLY: \u53BB\u9664\u5197\u9918\u53E3\u8A9E\u5BD2\u6684\uFF0C\u7CBE\u7149\u70BA\u76F4\u5954\u6838\u5FC3\u52D5\u4F5C\u7684\u6975\u7C21\u7E41\u9AD4\u4E2D\u6587\u6307\u4EE4\uFF0C\u805A\u7126\u6700\u5C0F\u5DE5\u4F5C\u6539\u52D5\u9762\uFF08Smallest Working Diff\uFF09\u3002",
+        enabled: true
+      },
+      {
+        id: "spec",
+        label: "\u7D50\u69CB\u898F\u7BC4",
+        role: "rewrite",
+        instruction: "Target Language: Chinese (Traditional). Strictly output in Chinese (Traditional) ONLY: \u7D50\u69CB\u5316\u6574\u7406\u70BA\u300C\u76EE\u6A19 + \u7D04\u675F\u908A\u754C + \u4EA4\u4ED8\u6A19\u6E96\u300D\u6E05\u6670\u4E09\u8981\u7D20\u7684\u7E41\u9AD4\u4E2D\u6587\u898F\u7BC4\uFF0C\u4E0D\u81C6\u6E2C\u672A\u63D0\u53CA\u7684\u9700\u6C42\u3002",
+        enabled: true
+      },
+      {
+        id: "deep",
+        label: "\u6839\u56E0\u6EAF\u6E90",
+        role: "rewrite",
+        instruction: "Target Language: Chinese (Traditional). Strictly output in Chinese (Traditional) ONLY: \u63D0\u7149\u70BA\u8981\u6C42\u5168\u93C8\u8DEF\u6EAF\u6E90\u3001\u5B9A\u4F4D\u5171\u4EAB\u6839\u56E0\u8207\u908A\u754C\u7528\u4F8B\u7269\u7406\u9A57\u8B49\u7684\u56B4\u8B39\u6392\u67E5\u6307\u4EE4\uFF0C\u62D2\u7D55\u6CBB\u6A19\u4E0D\u6CBB\u672C\u3002",
+        enabled: true
+      },
+      {
+        id: "vocab",
+        label: "\u91CD\u9EDE\u8A5E",
+        role: "vocab",
+        instruction: "\u63D0\u53D6 2-3 \u500B\u8207\u672C\u63D0\u793A\u8A5E\u76F8\u95DC\u7684\u9053\u5730\u82F1\u6587\u6280\u8853\u8A5E\u5F59\uFF0C\u683C\u5F0F\u70BA 'term (\u4E2D\u6587\u91CB\u7FA9) \xB7 term2 (\u4E2D\u6587\u91CB\u7FA9)'\u3002",
+        enabled: true
+      }
+    ];
+  }
+  if (norm === "ja") {
     return [
       {
         id: "concise",
         label: "\u7C21\u6F54\u30FB\u9AD8\u52B9\u7387",
-        instruction: "\u7121\u99C4\u3092\u7701\u3044\u305F\u9AD8\u52B9\u7387\u306A\u6307\u793A\uFF1A\u6838\u5FC3\u306E\u30A2\u30AF\u30B7\u30E7\u30F3\u3068\u6700\u5C0F\u9650\u306E\u5909\u66F4\u5DEE\u5206\uFF08Smallest Working Diff\uFF09\u3092\u76F4\u63A5\u6307\u793A\u3002",
+        role: "rewrite",
+        instruction: "Target Language: Japanese. Strictly output in Japanese ONLY: \u7121\u99C4\u3092\u7701\u3044\u305F\u9AD8\u52B9\u7387\u306A\u6307\u793A\uFF1A\u6838\u5FC3\u306E\u30A2\u30AF\u30B7\u30E7\u30F3\u3068\u6700\u5C0F\u9650\u306E\u5909\u66F4\u5DEE\u5206\uFF08Smallest Working Diff\uFF09\u3092\u76F4\u63A5\u6307\u793A\u3002",
         enabled: true
       },
       {
         id: "spec",
         label: "\u69CB\u9020\u5316\u4ED5\u69D8",
-        instruction: "\u69CB\u9020\u5316\u3055\u308C\u305F\u6280\u8853\u4ED5\u69D8\uFF1A\u66D6\u6627\u306A\u8868\u73FE\u3092\u300C\u76EE\u7684\u30FB\u5236\u7D04\u6761\u4EF6\u30FB\u671F\u5F85\u3055\u308C\u308B\u7D50\u679C\u300D\u306B\u6574\u7406\u3057\u3001\u660E\u78BA\u5316\u3002",
+        role: "rewrite",
+        instruction: "Target Language: Japanese. Strictly output in Japanese ONLY: \u69CB\u9020\u5316\u3055\u308C\u305F\u6280\u8853\u4ED5\u69D8\uFF1A\u66D6\u6627\u306A\u8868\u73FE\u3092\u300C\u76EE\u7684\u30FB\u5236\u7D04\u6761\u4EF6\u30FB\u671F\u5F85\u3055\u308C\u308B\u7D50\u679C\u300D\u306B\u6574\u7406\u3057\u3001\u660E\u78BA\u5316\u3002",
         enabled: true
       },
       {
         id: "deep",
         label: "\u6839\u672C\u539F\u56E0\u30FB\u53B3\u5BC6",
-        instruction: "\u6839\u672C\u539F\u56E0\u306E\u7279\u5B9A\u3068\u53B3\u5BC6\u306A\u691C\u8A3C\uFF1A\u8868\u9762\u7684\u306A\u5BFE\u51E6\u3067\u306F\u306A\u304F\u30A8\u30F3\u30C9\u30C4\u30FC\u30A8\u30F3\u30C9\u306E\u539F\u56E0\u8FFD\u8DE1\u3068\u5883\u754C\u5024\u691C\u8A3C\u3092\u8981\u6C42\u3002",
+        role: "rewrite",
+        instruction: "Target Language: Japanese. Strictly output in Japanese ONLY: \u6839\u672C\u539F\u56E0\u306E\u7279\u5B9A\u3068\u53B3\u5BC6\u306A\u691C\u8A3C\uFF1A\u8868\u9762\u7684\u306A\u5BFE\u51E6\u3067\u306F\u306A\u304F\u30A8\u30F3\u30C9\u30C4\u30FC\u30A8\u30F3\u30C9\u306E\u539F\u56E0\u8FFD\u8DE1\u3068\u5883\u754C\u5024\u691C\u8A3C\u3092\u8981\u6C42\u3002",
+        enabled: true
+      },
+      {
+        id: "vocab",
+        label: "\u91CD\u8981\u8A9E\u5F59",
+        role: "vocab",
+        instruction: "\u95A2\u9023\u3059\u308B\u5B9F\u7528\u7684\u306A\u82F1\u8A9E\u6280\u8853\u8868\u73FE\u3092 2\u301C3 \u500B\u62BD\u51FA\u3057\u3001'term (\u610F\u5473) \xB7 term2 (\u610F\u5473)' \u5F62\u5F0F\u3067\u51FA\u529B\u3002",
+        enabled: true
+      }
+    ];
+  }
+  if (norm === "ko") {
+    return [
+      {
+        id: "concise",
+        label: "\uAC04\uACB0\xB7\uC989\uC2DC\uC2E4\uD589",
+        role: "rewrite",
+        instruction: "Target Language: Korean. Strictly output in Korean ONLY: \uBD88\uD544\uC694\uD55C \uC778\uC0AC\uB9D0\uC744 \uC81C\uAC70\uD558\uACE0 \uD575\uC2EC \uB3D9\uC791\uACFC \uCD5C\uC18C \uBCC0\uACBD \uBC94\uC704(Smallest Working Diff)\uB97C \uC9C0\uC2DC\uD558\uB294 \uAC04\uACB0\uD55C \uD55C\uAD6D\uC5B4 \uBA85\uB839\uBB38.",
+        enabled: true
+      },
+      {
+        id: "spec",
+        label: "\uAD6C\uC870\uD654 \uBA85\uC138",
+        role: "rewrite",
+        instruction: "Target Language: Korean. Strictly output in Korean ONLY: \uBAA8\uD638\uD55C \uD45C\uD604\uC744 '\uBAA9\uD45C + \uC81C\uC57D \uC870\uAC74 + \uC0B0\uCD9C\uBB3C \uAE30\uC900'\uC758 \uBA85\uD655\uD55C 3\uC694\uC18C \uD55C\uAD6D\uC5B4 \uBA85\uC138\uB85C \uAD6C\uC870\uD654.",
+        enabled: true
+      },
+      {
+        id: "deep",
+        label: "\uADFC\uBCF8\uC6D0\uC778 \uCD94\uC801",
+        role: "rewrite",
+        instruction: "Target Language: Korean. Strictly output in Korean ONLY: \uC784\uC2DC\uBC29\uD3B8 \uD328\uCE58\uAC00 \uC544\uB2CC \uC5D4\uB4DC\uD22C\uC5D4\uB4DC \uC2E4\uD589 \uD750\uB984 \uCD94\uC801, \uADFC\uBCF8 \uC6D0\uC778 \uD574\uACB0 \uBC0F \uACBD\uACC4 \uC870\uAC74 \uBB3C\uB9AC\uC801 \uAC80\uC99D\uC744 \uC694\uAD6C\uD558\uB294 \uC5C4\uBC00\uD55C \uC9C0\uC2DC\uBB38.",
+        enabled: true
+      },
+      {
+        id: "vocab",
+        label: "\uD575\uC2EC \uC5B4\uD718",
+        role: "vocab",
+        instruction: "\uAD00\uB828\uB41C \uC2E4\uC6A9\uC801\uC778 \uC601\uC5B4 \uAE30\uC220 \uD45C\uD604 2~3\uAC1C\uB97C 'term (\uD55C\uAD6D\uC5B4 \uB73B) \xB7 term2 (\uB73B)' \uD615\uC2DD\uC73C\uB85C \uCD94\uCD9C.",
         enabled: true
       }
     ];
@@ -116,19 +292,29 @@ function getDefaultPromptSlots(sourceLang = "zh") {
     {
       id: "concise",
       label: "Concise",
-      instruction: "High-efficiency, zero-fluff imperative instruction targeting the exact action and smallest working diff.",
+      role: "rewrite",
+      instruction: "Target Language: English. Strictly output in English ONLY: High-efficiency, zero-fluff imperative instruction targeting the exact action and smallest working diff.",
       enabled: true
     },
     {
       id: "spec",
       label: "Structured",
-      instruction: "Structured engineering specification: distill messy thoughts into clear Objective, Constraints, and Deliverable without inventing unrequested features.",
+      role: "rewrite",
+      instruction: "Target Language: English. Strictly output in English ONLY: Structured engineering specification: distill messy thoughts into clear Objective, Constraints, and Deliverable without inventing unrequested features.",
       enabled: true
     },
     {
       id: "deep",
       label: "Deep Rigor",
-      instruction: "Root-cause & architectural rigor: trace end-to-end execution flow, fix shared root causes rather than symptom patches, and verify edge cases.",
+      role: "rewrite",
+      instruction: "Target Language: English. Strictly output in English ONLY: Root-cause & architectural rigor: trace end-to-end execution flow, fix shared root causes rather than symptom patches, and verify edge cases.",
+      enabled: true
+    },
+    {
+      id: "vocab",
+      label: "Vocab",
+      role: "vocab",
+      instruction: "Extract 2-3 high-value idiomatic English technical expressions relevant to this prompt.",
       enabled: true
     }
   ];
@@ -155,14 +341,14 @@ function getDefaultSlots(sourceLang = "en") {
   const l = labels[norm] || labels.en;
   const instructions = {
     zh: {
-      spoken: "\u81EA\u7136\u5730\u9053\u7684\u7F8E\u5F0F\u53E3\u8BED\u6D41\uFF08\u6BCF\u65E5\u7AD9\u4F1A\u3001Slack\u6C9F\u901A\u3001\u7ED3\u5BF9\u7F16\u7A0B\u3001\u654F\u6377\u534F\u4F5C\uFF09\u3002\u5730\u9053\u7845\u8C37\u53E3\u543B\u3001\u81EA\u7136\u7F29\u8BFB\u3001\u52A8\u8BCD\u77ED\u8BED\u4E0E\u4FDA\u8BED\u4E60\u60EF\u3002",
-      written: "\u4E25\u8C28\u73B0\u4EE3\u7684\u67B6\u6784\u89C4\u8303\u4E66\u9762\u8BED\uFF08PR\u63CF\u8FF0\u3001RFC\u6587\u6863\u3001\u95EE\u9898\u5355\u3001\u67B6\u6784\u8BF4\u660E\uFF09\u3002\u6E05\u6670\u4E13\u4E1A\u7684\u9AD8\u7EA7\u6280\u672F\u6563\u6587\uFF0C\u675C\u7EDD\u9648\u65E7\u7EF4\u591A\u5229\u4E9A\u5F0F\u5957\u8BDD\u4E0EAI\u6C34\u8BCD\u3002",
-      vocab: "\u81EA\u9002\u5E94\u8403\u53D6\u5173\u952E\u5730\u9053\u642D\u914D\u3001\u52A8\u8BCD\u8BCD\u7EC4\u3001\u6280\u672F\u6210\u8BED\u6216\u9AD8\u9636\u8868\u8FBE\uFF0C\u52A9\u529B\u638C\u63E1\u5730\u9053\u6BCD\u8BED\u7EA7\u8BED\u611F\u3002"
+      spoken: "\u81EA\u7136\u5730\u9053\u7684\u7F8E\u5F0F\u53E3\u8BED\u6D41\uFF08\u6BCF\u65E5\u7AD9\u4F1A\u3001Slack\u6C9F\u901A\u3001\u7ED3\u5BF9\u7F16\u7A0B\u3001\u654F\u6377\u534F\u4F5C\uFF09\u3002\u5730\u9053\u7845\u8C37\u53E3\u543B\uFF0C\u81EA\u7136\u878D\u5165\u5E38\u7528\u52A8\u8BCD\u77ED\u8BED\u3001\u8FDE\u8BCD\u4E0E\u4E60\u8BED\uFF08\u5982 happy path\u3001rough edges\uFF09\uFF0C\u6446\u8131\u4E2D\u5F0F\u786C\u8BD1\uFF0C\u638C\u63E1\u6BCD\u8BED\u7EA7\u9AD8\u9636\u6D41\u5229\u5EA6\u3002",
+      written: "\u4E25\u8C28\u73B0\u4EE3\u7684\u67B6\u6784\u89C4\u8303\u4E66\u9762\u8BED\uFF08PR\u63CF\u8FF0\u3001RFC\u6587\u6863\u3001\u95EE\u9898\u5355\u3001\u67B6\u6784\u8BF4\u660E\u4E0E\u6280\u672F\u65B9\u6848\uFF09\u3002\u9AD8\u9636\u5E73\u5B9E\u6563\u6587\uFF0C\u4E25\u5BC6\u56E0\u679C\u903B\u8F91\uFF0C\u7CBE\u51C6\u6280\u672F\u52A8\u8BCD\u4E0E\u5BA2\u89C2\u8868\u8FBE\uFF0C\u675C\u7EDD\u9648\u65E7\u7EF4\u591A\u5229\u4E9A\u5F0F\u5957\u8BDD\u4E0EAI\u6C34\u8BCD\u3002",
+      vocab: "\u81EA\u9002\u5E94\u8403\u53D6\u5173\u952E\u5730\u9053\u8BCD\u4F19\u642D\u914D\uFF08Collocations\uFF09\u3001\u77ED\u8BED\u52A8\u8BCD\u3001\u6280\u672F\u6210\u8BED\u6216\u9AD8\u9636\u8868\u8FBE\uFF0C\u52A9\u529B\u638C\u63E1\u5730\u9053\u6BCD\u8BED\u7EA7\u8BED\u611F\u3002"
     },
     tw: {
-      spoken: "\u81EA\u7136\u9053\u5730\u7684\u7F8E\u5F0F\u53E3\u8A9E\u6D41\uFF08\u6BCF\u65E5\u7AD9\u6703\u3001Slack\u6E9D\u901A\u3001\u7D50\u5C0D\u7DE8\u7A0B\u3001\u654F\u6377\u5354\u4F5C\uFF09\u3002\u9053\u5730\u77FD\u8C37\u8A9E\u611F\u3001\u81EA\u7136\u7E2E\u8B80\u3001\u52D5\u8A5E\u7247\u8A9E\u8207\u6163\u7528\u8A9E\u3002",
-      written: "\u56B4\u8B39\u73FE\u4EE3\u7684\u67B6\u69CB\u898F\u7BC4\u66F8\u9762\u8A9E\uFF08PR\u63CF\u8FF0\u3001RFC\u6587\u6A94\u3001\u554F\u984C\u55AE\u3001\u67B6\u69CB\u8AAA\u660E\uFF09\u3002\u6E05\u6670\u5C08\u696D\u7684\u9AD8\u7D1A\u6280\u8853\u6563\u6587\uFF0C\u675C\u7D55\u9673\u820A\u5957\u8A71\u8207AI\u6D6E\u8A87\u8A5E\u5F59\u3002",
-      vocab: "\u81EA\u9069\u61C9\u8403\u53D6\u95DC\u9375\u9053\u5730\u642D\u914D\u3001\u52D5\u8A5E\u7247\u8A9E\u3001\u6280\u8853\u6210\u8A9E\u6216\u9AD8\u968E\u8868\u9054\uFF0C\u52A9\u529B\u638C\u63E1\u9053\u5730\u6BCD\u8A9E\u7D1A\u8A9E\u611F\u3002"
+      spoken: "\u81EA\u7136\u9053\u5730\u7684\u7F8E\u5F0F\u53E3\u8A9E\u6D41\uFF08\u6BCF\u65E5\u7AD9\u6703\u3001Slack\u6E9D\u901A\u3001\u7D50\u5C0D\u7DE8\u7A0B\u3001\u654F\u6377\u5354\u4F5C\uFF09\u3002\u9053\u5730\u77FD\u8C37\u8A9E\u611F\uFF0C\u81EA\u7136\u878D\u5165\u5E38\u7528\u52D5\u8A5E\u7247\u8A9E\u8207\u6163\u7528\u8A9E\uFF0C\u64FA\u812B\u4E2D\u5F0F\u786C\u8B6F\uFF0C\u638C\u63E1\u6BCD\u8A9E\u7D1A\u9AD8\u968E\u6D41\u5229\u5EA6\u3002",
+      written: "\u56B4\u8B39\u73FE\u4EE3\u7684\u67B6\u69CB\u898F\u7BC4\u66F8\u9762\u8A9E\uFF08PR\u63CF\u8FF0\u3001RFC\u6587\u6A94\u3001\u554F\u984C\u55AE\u3001\u67B6\u69CB\u8AAA\u660E\u8207\u6280\u8853\u65B9\u6848\uFF09\u3002\u9AD8\u968E\u5E73\u5BE6\u6563\u6587\uFF0C\u56B4\u5BC6\u56E0\u679C\u908F\u8F2F\u8207\u7CBE\u6E96\u52D5\u8A5E\uFF0C\u675C\u7D55\u9673\u820A\u5957\u8A71\u8207AI\u6D6E\u8A87\u8A5E\u5F59\u3002",
+      vocab: "\u81EA\u9069\u61C9\u8403\u53D6\u95DC\u9375\u9053\u5730\u8A5E\u5925\u642D\u914D\uFF08Collocations\uFF09\u3001\u52D5\u8A5E\u7247\u8A9E\u3001\u6280\u8853\u6210\u8A9E\u6216\u9AD8\u968E\u8868\u9054\uFF0C\u52A9\u529B\u638C\u63E1\u9053\u5730\u6BCD\u8A9E\u7D1A\u8A9E\u611F\u3002"
     },
     ja: {
       spoken: "\u89AA\u3057\u3044\u540C\u50DA\u3084\u30C1\u30FC\u30E0\u3068\u306E\u81EA\u7136\u306A\u53E3\u8A9E\u8868\u73FE\uFF08\u671D\u4F1A\u3001Slack\u30CF\u30C9\u30EB\u3001\u30DA\u30A2\u30D7\u30ED\u30B0\u30E9\u30DF\u30F3\u30B0\u3001\u30AB\u30B8\u30E5\u30A2\u30EB\u30C1\u30E3\u30C3\u30C8\uFF09\u3002\u81EA\u7136\u306A\u77ED\u7E2E\u5F62\u3084\u30A4\u30C7\u30A3\u30AA\u30E0\u3002",
@@ -572,60 +758,6 @@ function buildSystemPrompt(sourceLang = "zh", targetLang = "en", isLongInput = f
     ms: "Malay"
   };
   const targetName = TARGET_LANGUAGE_NAMES[normTarget] || "English";
-  if (Array.isArray(customSlots)) {
-    const enabledSlots = customSlots.filter((s) => s.enabled && s.role !== "source");
-    let taskLines = [];
-    let jsonProps = [];
-    if (isLongInput) {
-      jsonProps.push(`  "summary": "Concise core intent/question in native ${spec.name} (under 20 words)"`);
-    }
-    enabledSlots.forEach((slot, idx) => {
-      const num = idx + 1;
-      const instruction = slot.instruction || `Express the message in ${slot.label} style in authentic ${targetName}.`;
-      taskLines.push(`${num}. "${slot.id}" (${slot.label}): ${instruction}`);
-      jsonProps.push(`  "${slot.id}": "..."`);
-      if (slot.showMeaning && slot.role !== "vocab") {
-        taskLines.push(`${num}_meaning. "${slot.id}_meaning": The exact nuance and meaning of "${slot.id}" ${spec.meaningInstruction}.`);
-        jsonProps.push(`  "${slot.id}_meaning": "..."`);
-      }
-    });
-    const dynamicTasks = taskLines.join("\n");
-    const dynamicJsonHint = `Strict JSON format:
-{
-${jsonProps.join(",\n")}
-}`;
-    const condensationDirective2 = isLongInput ? `
-
-[LONG INPUT CONDENSATION DIRECTIVE]:
-The user's input text has multiple clauses or sentences.
-CRITICAL: You MUST preserve and translate EVERY clause and question from start to finish \u2014 NEVER drop the second half or final question of the user's message!
-Keep the phrasing tight and high-density (under 20 words) so the complete meaning of all sentences fits cleanly on 1-2 lines without mid-sentence truncation.` : "";
-    const contextDirective2 = context && context.trim() ? `
-
-[CONVERSATION & THREAD CONTEXT]:
-The user's message is a reply to or continuation of the following context:
-"""
-${context.trim().slice(0, 500)}
-"""
-Ensure the generated translations fit naturally as a responsive reply to this specific context.` : "";
-    return `You are an elite bilingual language coach and cross-register translation architect.
-Task:
-Translate the user's message from native ${spec.name} (language A) into the following requested authentic ${targetName} registers/slots (language B):
-${dynamicTasks}
-
-[CODE & SYMBOL SHIELD - STRICT RULE]:
-All inline code (\`foo()\`), file paths (@file, path/to/file), SQL keywords, variable names, and technical identifiers MUST be preserved 100% verbatim in all outputs. Never translate, rephrase, or drop code tokens.
-${condensationDirective2}${contextDirective2}
-
-${dynamicJsonHint}
-Output valid JSON ONLY. Never output markdown code fences, backticks, quotes, or explanations.`;
-  }
-  const defaultSlots = LEGACY_SLOT_PRESETS.developer;
-  const legacyConfig = customSlots;
-  const slot1Name = legacyConfig?.slot1?.name || (tone === "social" ? LEGACY_SLOT_PRESETS.social.slot1.name : defaultSlots.slot1.name);
-  const slot1Instruction = legacyConfig?.slot1?.instruction || (tone === "social" ? LEGACY_SLOT_PRESETS.social.slot1.instruction : defaultSlots.slot1.instruction);
-  const slot2Name = legacyConfig?.slot2?.name || (tone === "social" ? LEGACY_SLOT_PRESETS.social.slot2.name : defaultSlots.slot2.name);
-  const slot2Instruction = legacyConfig?.slot2?.instruction || (tone === "social" ? LEGACY_SLOT_PRESETS.social.slot2.instruction : defaultSlots.slot2.instruction);
   const anchorText = spec.anchors.map(
     (a) => `Input: ${JSON.stringify(a.input)}
 Output: ${JSON.stringify({
@@ -666,7 +798,21 @@ Prioritize RFC, Pull Request, and architectural documentation precision:
 - "spoken": Direct, respectful engineering alignment (Slack huddles, technical triage).
 - "written": High-precision Plain ${targetName} matching modern IETF RFC and open-source release notes.`;
   }
-  const jsonFormatHint = isLongInput ? `Strict JSON format:
+  const isArraySlots = Array.isArray(customSlots);
+  const nonSourceSlots = isArraySlots ? customSlots.filter((s) => s.enabled && s.role !== "source") : [];
+  const hasSpoken = isArraySlots && nonSourceSlots.some((s) => s.id === "spoken");
+  const hasWritten = isArraySlots && nonSourceSlots.some((s) => s.id === "written");
+  const isStandardDuality = !isArraySlots || hasSpoken && hasWritten && nonSourceSlots.length <= 4;
+  if (isStandardDuality) {
+    const defaultSlots = LEGACY_SLOT_PRESETS.developer;
+    const legacyConfig = !isArraySlots ? customSlots : void 0;
+    const spokenSlot = isArraySlots ? nonSourceSlots.find((s) => s.id === "spoken") : void 0;
+    const writtenSlot = isArraySlots ? nonSourceSlots.find((s) => s.id === "written") : void 0;
+    const slot1Name = spokenSlot?.label || legacyConfig?.slot1?.name || (tone === "social" ? LEGACY_SLOT_PRESETS.social.slot1.name : defaultSlots.slot1.name);
+    const slot1Instruction = spokenSlot?.instruction || legacyConfig?.slot1?.instruction || (tone === "social" ? LEGACY_SLOT_PRESETS.social.slot1.instruction : defaultSlots.slot1.instruction);
+    const slot2Name = writtenSlot?.label || legacyConfig?.slot2?.name || (tone === "social" ? LEGACY_SLOT_PRESETS.social.slot2.name : defaultSlots.slot2.name);
+    const slot2Instruction = writtenSlot?.instruction || legacyConfig?.slot2?.instruction || (tone === "social" ? LEGACY_SLOT_PRESETS.social.slot2.instruction : defaultSlots.slot2.instruction);
+    const jsonFormatHint = isLongInput ? `Strict JSON format:
 {
   "summary": "Concise core intent/question in native ${spec.name} (under 20 words)",
   "spoken": "...",
@@ -682,14 +828,14 @@ Prioritize RFC, Pull Request, and architectural documentation precision:
   "written_meaning": "...",
   "vocab": "..."
 }`;
-  return `You are an elite bilingual developer language coach and cross-register translation architect.
+    return `You are an elite bilingual developer language coach and principal software architect.
 Task:
-Translate the user's message from native ${spec.name} (language A) into TWO distinct authentic ${targetName} registers (Slot 1 and Slot 2), and provide the exact back-translation/nuance in native ${spec.name} for each register:
-1. "spoken" (Slot 1: ${slot1Name}): ${slot1Instruction}
-2. "spoken_meaning": The exact nuance and meaning of Slot 1 ${spec.meaningInstruction}.
-3. "written" (Slot 2: ${slot2Name}): ${slot2Instruction}
-4. "written_meaning": The exact nuance and meaning of Slot 2 ${spec.meaningInstruction}.
-5. "vocab": Adaptively extract ALL key idiomatic collocations, phrasal verbs, technical idioms, or advanced expressions bridging the user to high-level/native fluency. Do NOT artificially cap at 1-2; extract as many as genuinely beneficial, while keeping each definition concise ${spec.vocabInstruction} to ensure the terminal HUD remains vertically compact.
+Translate the user's message from native ${spec.name} (language A) into TWO distinct authentic ${targetName} registers (language B), bridging everyday engineering thoughts to native-level fluency, and provide the exact back-translation/nuance ${spec.meaningInstruction} for each register:
+1. "spoken" (Slot 1: ${slot1Name}): ${slot1Instruction} (Natural, fluent spoken flow: authentic Silicon Valley conversational idioms, vivid phrasal verbs, contractions).
+2. "spoken_meaning": The exact colloquial nuance and meaning ${spec.meaningInstruction}.
+3. "written" (Slot 2: ${slot2Name}): ${slot2Instruction} (High-level Plain ${targetName}: active, concise, rigorous causal logic, and precise verbs meeting modern IETF RFC and architecture doc standards; STRICTLY AVOID archaic Victorian fluff and AI-slop buzzwords).
+4. "written_meaning": The exact formal technical nuance and meaning ${spec.meaningInstruction}.
+5. "vocab": Adaptively extract ALL key idiomatic collocations, phrasal verbs, technical idioms, or advanced expressions bridging the user to high-level/native developer fluency. Do NOT artificially cap at 1-2; extract as many as genuinely beneficial, while keeping each definition concise ${spec.vocabInstruction} to ensure the terminal HUD remains vertically compact.
 
 [CODE & SYMBOL SHIELD - STRICT RULE]:
 All inline code (\`foo()\`), file paths (@file, path/to/file), SQL keywords, variable names, and technical identifiers MUST be preserved 100% verbatim in both spoken and written outputs. Never translate, rephrase, or drop code tokens.
@@ -699,6 +845,42 @@ ${condensationDirective}${contextDirective}${toneDirective}
 ${anchorText}
 
 ${jsonFormatHint}
+Output valid JSON ONLY. Never output markdown code fences, backticks, quotes, or explanations.`;
+  }
+  const enabledSlots = customSlots.filter((s) => s.enabled && s.role !== "source");
+  let taskLines = [];
+  let jsonProps = [];
+  if (isLongInput) {
+    jsonProps.push(`  "summary": "Concise core intent/question in native ${spec.name} (under 20 words)"`);
+  }
+  enabledSlots.forEach((slot, idx) => {
+    const num = idx + 1;
+    const instruction = slot.instruction || `Express the message in ${slot.label} style in authentic ${targetName}.`;
+    taskLines.push(`${num}. "${slot.id}" (${slot.label}): ${instruction}`);
+    jsonProps.push(`  "${slot.id}": "..."`);
+    if (slot.showMeaning && slot.role !== "vocab") {
+      taskLines.push(`${num}_meaning. "${slot.id}_meaning": The exact nuance and meaning of "${slot.id}" ${spec.meaningInstruction}.`);
+      jsonProps.push(`  "${slot.id}_meaning": "..."`);
+    }
+  });
+  const dynamicTasks = taskLines.join("\n");
+  const dynamicJsonHint = `Strict JSON format:
+{
+${jsonProps.join(",\n")}
+}`;
+  return `You are an elite multilingual language coach and cross-register translation architect.
+Task:
+Translate the user's message from native ${spec.name} (language A) into the following requested authentic ${targetName} registers/slots (language B):
+${dynamicTasks}
+
+[CODE & SYMBOL SHIELD - STRICT RULE]:
+All inline code (\`foo()\`), file paths (@file, path/to/file), SQL keywords, variable names, and technical identifiers MUST be preserved 100% verbatim in all outputs. Never translate, rephrase, or drop code tokens.
+${condensationDirective}${contextDirective}${toneDirective}
+
+[GOLDEN FEW-SHOT ANCHORS]:
+${anchorText}
+
+${dynamicJsonHint}
 Output valid JSON ONLY. Never output markdown code fences, backticks, quotes, or explanations.`;
 }
 var PROMPT_TARGET_LANGUAGE_NAMES = {
@@ -791,11 +973,16 @@ function buildPromptCandidatesSystemPrompt(options) {
   const spec = LANGUAGE_SPECS[normSource] || LANGUAGE_SPECS.zh;
   const slots = (Array.isArray(options.promptSlots) && options.promptSlots.length > 0 ? options.promptSlots : getDefaultPromptSlots(normSource)).filter((s) => s.enabled !== false);
   const activeSlots = slots.length > 0 ? slots : getDefaultPromptSlots(normSource);
-  const taskLines = activeSlots.map(
-    (s, idx) => `${idx + 1}. "${s.id}" (${s.label}): ${s.instruction} (MUST be written in **${outLangName}**)`
-  );
+  const taskLines = activeSlots.map((s, idx) => {
+    if (s.role === "vocab") {
+      return `${idx + 1}. "${s.id}" (${s.label}): ${s.instruction || "Extract 2-3 high-value authentic technical expressions or collocations relevant to the input."} ${spec.vocabInstruction}`;
+    }
+    const hasCustomLangDirective = /target language|output in|日本語|中文|english|spanish|french|german|korean|russian|portuguese/i.test(s.instruction || "");
+    const langSuffix = hasCustomLangDirective ? "" : ` (Default language: **${outLangName}** unless instruction specifies otherwise)`;
+    return `${idx + 1}. "${s.id}" (${s.label}): ${s.instruction}${langSuffix}`;
+  });
   const jsonProps = activeSlots.map((s) => `  "${s.id}": "..."`);
-  if (options.learnInRewrite) {
+  if (options.learnInRewrite && !activeSlots.some((s) => s.role === "vocab")) {
     taskLines.push(
       `${activeSlots.length + 1}. "vocab": Extract 2\u20133 high-value authentic English technical expressions or collocations relevant to this prompt as a single inline string \`term (meaning) \xB7 term2 (meaning)\` ${spec.vocabInstruction}.`
     );
@@ -807,15 +994,15 @@ function buildPromptCandidatesSystemPrompt(options) {
 [USER CUSTOM SPECIFICATION & STACKED CONDITIONS - MANDATORY]:
 Ensure every generated candidate incorporates the following user-specified condition(s):
 ${rules.map((r, i) => `(${i + 1}) ${r}`).join("\n")}` : "";
-  return `You are an elite AI Coding Prompt Architect.
-The user is typing a raw, potentially messy or colloquial instruction for an AI coding agent.
-Generate ${activeSlots.length} distinct, orthogonal prompt candidates in **${outLangName}** so the user can choose the best one to send:
+  return `You are an elite Bilingual Translation & Prompt Architect.
+Transform the user's raw input into ${activeSlots.length} distinct output slots strictly following each slot's specific instruction and target language:
 ${taskLines.join("\n")}
 
 [STRICT QUALITY GUARDRAILS]:
-- **Direct Imperative Opening**: Start every candidate directly with an action verb; NEVER output filler preambles ("Please kindly...", "As an AI...").
-- **100% Intent Fidelity**: Never hallucinate unmentioned files or speculative features.
-- **Code & Symbol Shield**: Preserve all inline code (\`foo()\`), file paths (@file, path/to/file), CLI flags, and technical identifiers 100% verbatim in every candidate.${customRuleBlock}
+- **100% Semantic Fidelity**: Translate or refine EVERY sentence, clause, and detail from the user's input from start to finish. NEVER summarize, truncate, or drop details unless a slot explicitly asks for condensation.
+- **Respect Slot Role & Register**: If a slot asks for spoken/colloquial translation, output natural spoken flow; if it asks for formal/written translation, output polished written prose; if it asks for prompt structuring, structure it cleanly without robotic AI filler ("As an AI...", "Please kindly...").
+- **Zero Hallucination**: Never invent unmentioned files, bug reports, or speculative features.
+- **Code & Symbol Shield**: Preserve all inline code (\`foo()\`), file paths (@file, path/to/file), CLI flags, and technical identifiers 100% verbatim in every slot.${customRuleBlock}
 
 Strict JSON format:
 {
@@ -824,365 +1011,10 @@ ${jsonProps.join(",\n")}
 Output valid JSON ONLY. Never output markdown code fences or explanations.`;
 }
 
-// src/shield.ts
-var SHELL_COMMAND_PREFIXES = [
-  "git ",
-  "npm ",
-  "pnpm ",
-  "yarn ",
-  "bun ",
-  "cargo ",
-  "rustc ",
-  "go ",
-  "python ",
-  "python3 ",
-  "pip ",
-  "node ",
-  "deno ",
-  "docker ",
-  "podman ",
-  "kubectl ",
-  "helm ",
-  "make ",
-  "cmake ",
-  "ninja ",
-  "gcc ",
-  "g++ ",
-  "clang ",
-  "cd ",
-  "ls ",
-  "dir ",
-  "cat ",
-  "type ",
-  "rm ",
-  "cp ",
-  "mv ",
-  "mkdir ",
-  "chmod ",
-  "chown ",
-  "curl ",
-  "wget ",
-  "ssh ",
-  "scp ",
-  "grep ",
-  "find ",
-  "ps ",
-  "kill ",
-  "echo ",
-  "export ",
-  "set ",
-  "typst ",
-  "ffmpeg ",
-  "yt-dlp ",
-  "npx ",
-  "tar ",
-  "zip ",
-  "unzip "
-];
-var CODE_STATEMENT_REGEX = /^(?:const|let|var|function|def|class|import|export|package|namespace|using|public|private|protected|fn|pub fn|impl|struct|enum|interface|type)\s+/;
-var SQL_STATEMENT_REGEX = /^(?:SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM|CREATE\s+TABLE|ALTER\s+TABLE|DROP\s+TABLE)\s+/i;
-function shouldShieldBypass(text) {
-  const trimmed = text.trim();
-  if (!trimmed) return true;
-  if (trimmed.startsWith("```")) {
-    const withoutCodeFence = trimmed.replace(/```[\s\S]*?```/g, "").trim();
-    if (withoutCodeFence && (/[?？]/.test(withoutCodeFence) || /(?:为什么|怎么|如何|帮我|排查|优化|修改|修复|为何|报错|审查|看下|explain|why|how|please|help|could you|fix)/i.test(withoutCodeFence))) {
-      return false;
-    }
-    return true;
-  }
-  if (trimmed.startsWith("{") && trimmed.endsWith("}") || trimmed.startsWith("[") && trimmed.endsWith("]")) {
-    if (trimmed.includes(":") || trimmed.includes(",")) {
-      return true;
-    }
-  }
-  const lower = trimmed.toLowerCase();
-  for (const prefix of SHELL_COMMAND_PREFIXES) {
-    if (lower.startsWith(prefix)) {
-      if (/[?？]/.test(trimmed) || /(?:为什么|怎么|如何|报错|为何|explain|why|how)/i.test(trimmed)) {
-        return false;
-      }
-      if (!/[\u4e00-\u9fa5\u3040-\u30ff\uac00-\ud7af]/.test(trimmed)) {
-        return true;
-      }
-      if (/^git\s+(?:commit|tag)\s+.*-m\s+["'].*["']/i.test(trimmed)) {
-        return true;
-      }
-    }
-  }
-  if (CODE_STATEMENT_REGEX.test(trimmed) && !trimmed.includes("\uFF1F") && !trimmed.includes("?")) {
-    if (!/[\u4e00-\u9fa5]/.test(trimmed) || /^[a-zA-Z0-9_\s<>{}\[\]();:=,"'.]+$/.test(trimmed)) {
-      return true;
-    }
-  }
-  if (SQL_STATEMENT_REGEX.test(trimmed) && !trimmed.includes("\uFF1F") && !trimmed.includes("?")) {
-    return true;
-  }
-  const SECRET_PATTERNS = [
-    /-----BEGIN [A-Z ]+PRIVATE KEY-----/,
-    /(?:postgres|postgresql|mysql|mongodb|redis):\/\/[^:\s]+:[^@\s]+@[^\s]+/i,
-    /(?:sk-[a-zA-Z0-9_-]{20,}|ghp_[a-zA-Z0-9]{36}|glpat-[a-zA-Z0-9_-]{20}|AKIA[0-9A-Z]{16})/,
-    /eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/
-  ];
-  for (const pattern of SECRET_PATTERNS) {
-    if (pattern.test(trimmed)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-// src/cache.ts
-var LingualLruCache = class {
-  constructor(capacity = 50) {
-    this.capacity = capacity;
-  }
-  capacity;
-  cache = /* @__PURE__ */ new Map();
-  hits = 0;
-  misses = 0;
-  /**
-   * 生成标准化缓存键（结合源语言与目标语言）
-   */
-  static buildKey(text, sourceLang = "zh", targetLang = "en", slotSignature) {
-    const sig = slotSignature ? `[${slotSignature}]` : "";
-    return `${sourceLang}\u2794${targetLang}${sig}:${text.trim()}`;
-  }
-  get(key) {
-    if (!this.cache.has(key)) {
-      this.misses++;
-      return void 0;
-    }
-    this.hits++;
-    const val = this.cache.get(key);
-    this.cache.delete(key);
-    this.cache.set(key, val);
-    return val;
-  }
-  set(key, val) {
-    if (!key || key.length > 256) {
-      return;
-    }
-    if (typeof val === "string" && val.length > 2048) {
-      return;
-    }
-    if (this.cache.has(key)) {
-      this.cache.delete(key);
-    } else if (this.cache.size >= this.capacity) {
-      const oldestKey = this.cache.keys().next().value;
-      if (oldestKey !== void 0) {
-        this.cache.delete(oldestKey);
-      }
-    }
-    this.cache.set(key, val);
-  }
-  has(key) {
-    return this.cache.has(key);
-  }
-  clear() {
-    this.cache.clear();
-    this.hits = 0;
-    this.misses = 0;
-  }
-  get size() {
-    return this.cache.size;
-  }
-  getStats() {
-    return {
-      hits: this.hits,
-      misses: this.misses,
-      size: this.cache.size,
-      capacity: this.capacity
-    };
-  }
-};
-var LinguaLruCache = LingualLruCache;
-var globalLingualCache = new LingualLruCache(50);
-var globalLinguaCache = globalLingualCache;
-
-// src/core/engine.ts
-function tryParseJson(str) {
-  try {
-    return JSON.parse(str);
-  } catch {
-    try {
-      const repaired = str.replace(/,\s*([}\]])/g, "$1").replace(
-        /("[a-zA-Z0-9_-]+"\s*:\s*")([\s\S]*?)("(?=\s*,\s*"|\s*\}))/g,
-        (_m, prefix, content, suffix) => prefix + content.replace(/(?<!\\)"/g, '\\"') + suffix
-      );
-      return JSON.parse(repaired);
-    } catch {
-      return null;
-    }
-  }
-}
-var BLOCKED_JSON_KEYS = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
-function toCleanString(val) {
-  if (typeof val === "string") return val.trim();
-  if (typeof val === "number" || typeof val === "boolean") return String(val);
-  if (Array.isArray(val)) return val.map(toCleanString).filter(Boolean).join(" \xB7 ");
-  return "";
-}
-function parseLlmResponse(raw) {
-  try {
-    if (!raw || typeof raw !== "string" || raw.length > 32768) return null;
-    let cleaned = raw.replace(/<(?:think|thought)>[\s\S]*?<\/(?:think|thought)>/gi, "").trim();
-    const fenceMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-    if (fenceMatch) {
-      cleaned = fenceMatch[1].trim();
-    }
-    const firstBrace = cleaned.indexOf("{");
-    const lastBrace = cleaned.lastIndexOf("}");
-    if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
-      return null;
-    }
-    const jsonSubstr = cleaned.slice(firstBrace, lastBrace + 1);
-    const parsed = tryParseJson(jsonSubstr);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
-    const spoken = toCleanString(parsed.spoken ?? parsed.casual ?? parsed.slot1);
-    const spokenMeaning = toCleanString(parsed.spoken_meaning ?? parsed.spokenMeaning);
-    const written = toCleanString(parsed.written ?? parsed.academic ?? parsed.slot2);
-    const writtenMeaning = toCleanString(parsed.written_meaning ?? parsed.writtenMeaning);
-    const vocab = toCleanString(parsed.vocab);
-    const summary = toCleanString(parsed.summary ?? parsed.core_intent ?? parsed.coreIntent);
-    const slotOutputs = /* @__PURE__ */ Object.create(null);
-    for (const [k, v] of Object.entries(parsed)) {
-      if (BLOCKED_JSON_KEYS.has(k) || k.endsWith("_meaning") || k === "summary") continue;
-      const textVal = toCleanString(v);
-      if (textVal) {
-        const meaningVal = toCleanString(parsed[k + "_meaning"]);
-        slotOutputs[k] = {
-          content: textVal,
-          meaning: meaningVal || void 0
-        };
-      }
-    }
-    const nonVocabOutputs = Object.entries(slotOutputs).filter(([k]) => k !== "vocab").map(([, val]) => val);
-    const effectiveSpoken = spoken || nonVocabOutputs[0]?.content || vocab || "";
-    const effectiveSpokenMeaning = spokenMeaning || nonVocabOutputs[0]?.meaning || "";
-    if (effectiveSpoken) {
-      return {
-        spoken: effectiveSpoken,
-        spokenMeaning: effectiveSpokenMeaning || void 0,
-        written: written || void 0,
-        writtenMeaning: writtenMeaning || void 0,
-        vocab: vocab || void 0,
-        summary: summary || void 0,
-        slotOutputs: Object.keys(slotOutputs).length > 0 ? slotOutputs : void 0
-      };
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-async function translateCore(req, options) {
-  const text = (req.text || "").trim();
-  const sourceLang = req.sourceLang || "zh";
-  const targetLang = req.targetLang || "en";
-  if (!text) {
-    return {
-      spoken: "",
-      written: "",
-      cached: false,
-      shieldBypassed: false
-    };
-  }
-  if (shouldShieldBypass(text)) {
-    return {
-      spoken: text,
-      written: text,
-      cached: false,
-      shieldBypassed: true
-    };
-  }
-  const cache = options?.cache || globalLingualCache;
-  const slotSig = Array.isArray(req.slots) ? req.slots.filter((s) => s.enabled !== false).map((s) => s.id).join(",") : void 0;
-  const cacheKey = LingualLruCache.buildKey(text, sourceLang, targetLang, slotSig);
-  const cached = cache.get(cacheKey);
-  if (cached) {
-    return {
-      spoken: cached.spoken,
-      spokenMeaning: cached.spokenMeaning,
-      written: cached.written || cached.spoken,
-      writtenMeaning: cached.writtenMeaning,
-      vocab: cached.vocab,
-      summary: cached.summary,
-      cached: true,
-      shieldBypassed: false
-    };
-  }
-  if (!options?.completer) {
-    return {
-      spoken: text,
-      written: text,
-      cached: false,
-      shieldBypassed: false
-    };
-  }
-  const systemPrompt = buildSystemPrompt(
-    sourceLang,
-    targetLang,
-    Boolean(req.isLongInput),
-    req.context,
-    req.tone || "general",
-    req.slots
-  );
-  const raw = await options.completer(text, systemPrompt, options.signal);
-  if (!raw) {
-    return {
-      spoken: text,
-      written: text,
-      cached: false,
-      shieldBypassed: false
-    };
-  }
-  const parsed = parseLlmResponse(raw);
-  if (parsed) {
-    cache.set(cacheKey, parsed);
-    const configuredSlots = Array.isArray(req.slots) ? req.slots : getDefaultSlots(sourceLang);
-    let rawObj = {};
-    try {
-      const firstBrace = raw.indexOf("{");
-      const lastBrace = raw.lastIndexOf("}");
-      if (firstBrace !== -1 && lastBrace > firstBrace) {
-        rawObj = tryParseJson(raw.slice(firstBrace, lastBrace + 1)) || {};
-      }
-    } catch {
-    }
-    const slotResults = [];
-    for (const slot of configuredSlots) {
-      if (!slot.enabled) continue;
-      if (slot.role === "source") {
-        slotResults.push({ id: slot.id, label: slot.label, role: slot.role, content: text });
-      } else {
-        const out = parsed.slotOutputs && Object.hasOwn(parsed.slotOutputs, slot.id) ? parsed.slotOutputs[slot.id] : void 0;
-        const content = out?.content || toCleanString(rawObj[slot.id]) || (slot.id === "spoken" ? parsed.spoken : slot.id === "written" ? parsed.written || "" : slot.id === "vocab" ? parsed.vocab || "" : "");
-        const meaning = out?.meaning || toCleanString(rawObj[slot.id + "_meaning"]) || (slot.id === "spoken" ? parsed.spokenMeaning : slot.id === "written" ? parsed.writtenMeaning : void 0) || void 0;
-        if (content) {
-          slotResults.push({ id: slot.id, label: slot.label, role: slot.role, content, meaning });
-        }
-      }
-    }
-    return {
-      spoken: parsed.spoken,
-      spokenMeaning: parsed.spokenMeaning,
-      written: parsed.written || parsed.spoken,
-      writtenMeaning: parsed.writtenMeaning,
-      vocab: parsed.vocab,
-      summary: parsed.summary,
-      slots: slotResults,
-      cached: false,
-      shieldBypassed: false
-    };
-  }
-  return {
-    spoken: text,
-    written: text,
-    cached: false,
-    shieldBypassed: false
-  };
-}
+// src/engine.ts
+var import_node_fs = __toESM(require("fs"), 1);
+var import_node_path = __toESM(require("path"), 1);
+var import_node_os = __toESM(require("os"), 1);
 
 // src/presets.ts
 function createCustomSlot(params) {
@@ -2132,10 +1964,187 @@ ${availableList}
   return msg;
 }
 
+// src/shield.ts
+var SHELL_COMMAND_PREFIXES = [
+  "git ",
+  "npm ",
+  "pnpm ",
+  "yarn ",
+  "bun ",
+  "cargo ",
+  "rustc ",
+  "go ",
+  "python ",
+  "python3 ",
+  "pip ",
+  "node ",
+  "deno ",
+  "docker ",
+  "podman ",
+  "kubectl ",
+  "helm ",
+  "make ",
+  "cmake ",
+  "ninja ",
+  "gcc ",
+  "g++ ",
+  "clang ",
+  "cd ",
+  "ls ",
+  "dir ",
+  "cat ",
+  "type ",
+  "rm ",
+  "cp ",
+  "mv ",
+  "mkdir ",
+  "chmod ",
+  "chown ",
+  "curl ",
+  "wget ",
+  "ssh ",
+  "scp ",
+  "grep ",
+  "find ",
+  "ps ",
+  "kill ",
+  "echo ",
+  "export ",
+  "set ",
+  "typst ",
+  "ffmpeg ",
+  "yt-dlp ",
+  "npx ",
+  "tar ",
+  "zip ",
+  "unzip "
+];
+var CODE_STATEMENT_REGEX = /^(?:const|let|var|function|def|class|import|export|package|namespace|using|public|private|protected|fn|pub fn|impl|struct|enum|interface|type)\s+/;
+var SQL_STATEMENT_REGEX = /^(?:SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM|CREATE\s+TABLE|ALTER\s+TABLE|DROP\s+TABLE)\s+/i;
+function isNonEnglish(text) {
+  const naturalLanguageScript = /[\u4e00-\u9fa5\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af\u0400-\u04ff\u0600-\u06ff\u00c0-\u024f]/;
+  return naturalLanguageScript.test(text);
+}
+function shouldShieldBypass(text) {
+  const trimmed = text.trim();
+  if (!trimmed) return true;
+  if (trimmed.startsWith("```")) {
+    const withoutCodeFence = trimmed.replace(/```[\s\S]*?```/g, "").trim();
+    if (withoutCodeFence && (/[?？]/.test(withoutCodeFence) || /(?:为什么|怎么|如何|帮我|排查|优化|修改|修复|为何|报错|审查|看下|explain|why|how|please|help|could you|fix)/i.test(withoutCodeFence))) {
+      return false;
+    }
+    return true;
+  }
+  if (trimmed.startsWith("{") && trimmed.endsWith("}") || trimmed.startsWith("[") && trimmed.endsWith("]")) {
+    if (trimmed.includes(":") || trimmed.includes(",")) {
+      return true;
+    }
+  }
+  const lower = trimmed.toLowerCase();
+  for (const prefix of SHELL_COMMAND_PREFIXES) {
+    if (lower.startsWith(prefix)) {
+      if (/[?？]/.test(trimmed) || /(?:为什么|怎么|如何|报错|为何|explain|why|how)/i.test(trimmed)) {
+        return false;
+      }
+      if (!/[\u4e00-\u9fa5\u3040-\u30ff\uac00-\ud7af]/.test(trimmed)) {
+        return true;
+      }
+      if (/^git\s+(?:commit|tag)\s+.*-m\s+["'].*["']/i.test(trimmed)) {
+        return true;
+      }
+    }
+  }
+  if (CODE_STATEMENT_REGEX.test(trimmed) && !trimmed.includes("\uFF1F") && !trimmed.includes("?")) {
+    if (!/[\u4e00-\u9fa5]/.test(trimmed) || /^[a-zA-Z0-9_\s<>{}\[\]();:=,"'.]+$/.test(trimmed)) {
+      return true;
+    }
+  }
+  if (SQL_STATEMENT_REGEX.test(trimmed) && !trimmed.includes("\uFF1F") && !trimmed.includes("?")) {
+    return true;
+  }
+  const SECRET_PATTERNS = [
+    /-----BEGIN [A-Z ]+PRIVATE KEY-----/,
+    /(?:postgres|postgresql|mysql|mongodb|redis):\/\/[^:\s]+:[^@\s]+@[^\s]+/i,
+    /(?:sk-[a-zA-Z0-9_-]{20,}|ghp_[a-zA-Z0-9]{36}|glpat-[a-zA-Z0-9_-]{20}|AKIA[0-9A-Z]{16})/,
+    /eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/
+  ];
+  for (const pattern of SECRET_PATTERNS) {
+    if (pattern.test(trimmed)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// src/cache.ts
+var LingualLruCache = class {
+  constructor(capacity = 50) {
+    this.capacity = capacity;
+  }
+  capacity;
+  cache = /* @__PURE__ */ new Map();
+  hits = 0;
+  misses = 0;
+  /**
+   * 生成标准化缓存键（结合源语言与目标语言）
+   */
+  static buildKey(text, sourceLang = "zh", targetLang = "en", slotSignature) {
+    const sig = slotSignature ? `[${slotSignature}]` : "";
+    return `${sourceLang}\u2794${targetLang}${sig}:${text.trim()}`;
+  }
+  get(key) {
+    if (!this.cache.has(key)) {
+      this.misses++;
+      return void 0;
+    }
+    this.hits++;
+    const val = this.cache.get(key);
+    this.cache.delete(key);
+    this.cache.set(key, val);
+    return val;
+  }
+  set(key, val) {
+    if (!key || key.length > 256) {
+      return;
+    }
+    if (typeof val === "string" && val.length > 2048) {
+      return;
+    }
+    if (this.cache.has(key)) {
+      this.cache.delete(key);
+    } else if (this.cache.size >= this.capacity) {
+      const oldestKey = this.cache.keys().next().value;
+      if (oldestKey !== void 0) {
+        this.cache.delete(oldestKey);
+      }
+    }
+    this.cache.set(key, val);
+  }
+  has(key) {
+    return this.cache.has(key);
+  }
+  clear() {
+    this.cache.clear();
+    this.hits = 0;
+    this.misses = 0;
+  }
+  get size() {
+    return this.cache.size;
+  }
+  getStats() {
+    return {
+      hits: this.hits,
+      misses: this.misses,
+      size: this.cache.size,
+      capacity: this.capacity
+    };
+  }
+};
+var LinguaLruCache = LingualLruCache;
+var globalLingualCache = new LingualLruCache(50);
+var globalLinguaCache = globalLingualCache;
+
 // src/engine.ts
-var import_node_fs = __toESM(require("fs"), 1);
-var import_node_path = __toESM(require("path"), 1);
-var import_node_os = __toESM(require("os"), 1);
 var DEFAULT_CONFIG = {
   endpoint: process.env.LINGUAL_ENDPOINT || "",
   apiKey: process.env.LINGUAL_API_KEY || "",
@@ -2148,9 +2157,146 @@ var DEFAULT_CONFIG = {
   timeoutMs: 3e4
 };
 var LINGUAL_SYSTEM_PROMPT = buildSystemPrompt("zh", "en");
-function isNonEnglish(text) {
-  const naturalLanguageScript = /[\u4e00-\u9fa5\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af\u0400-\u04ff\u0600-\u06ff\u00c0-\u024f]/;
-  return naturalLanguageScript.test(text);
+var BLOCKED_JSON_KEYS = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
+function toCleanString(val) {
+  if (typeof val === "string") return val.trim();
+  if (typeof val === "number" || typeof val === "boolean") return String(val);
+  if (Array.isArray(val)) return val.map(toCleanString).filter(Boolean).join(" \xB7 ");
+  return "";
+}
+function repairAndParseJsonObject(raw) {
+  try {
+    if (!raw || typeof raw !== "string" || raw.length > 32768) return null;
+    let cleaned = raw.replace(/<(?:think|thought)>[\s\S]*?<\/(?:think|thought)>/gi, "").trim();
+    const fence = cleaned.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (fence) cleaned = fence[1].trim();
+    const first = cleaned.indexOf("{");
+    const last = cleaned.lastIndexOf("}");
+    if (first === -1 || last <= first) return null;
+    const jsonSubstr = cleaned.slice(first, last + 1);
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonSubstr);
+    } catch {
+      const repaired = jsonSubstr.replace(/,\s*([}\]])/g, "$1").replace(
+        /("[a-zA-Z0-9_-]+"\s*:\s*")([\s\S]*?)("(?=\s*,\s*"|\s*\}))/g,
+        (_m, prefix, content, suffix) => prefix + content.replace(/(?<!\\)"/g, '\\"') + suffix
+      );
+      parsed = JSON.parse(repaired);
+    }
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+function parseLlmResponse(raw) {
+  const parsed = repairAndParseJsonObject(raw);
+  if (!parsed) return null;
+  const spoken = toCleanString(parsed.spoken ?? parsed.casual ?? parsed.slot1);
+  const spokenMeaning = toCleanString(parsed.spoken_meaning ?? parsed.spokenMeaning);
+  const written = toCleanString(parsed.written ?? parsed.academic ?? parsed.slot2);
+  const writtenMeaning = toCleanString(parsed.written_meaning ?? parsed.writtenMeaning);
+  const vocab = toCleanString(parsed.vocab);
+  const summary = toCleanString(parsed.summary ?? parsed.core_intent ?? parsed.coreIntent);
+  const slotOutputs = /* @__PURE__ */ Object.create(null);
+  for (const [k, v] of Object.entries(parsed)) {
+    if (BLOCKED_JSON_KEYS.has(k) || k.endsWith("_meaning") || k === "summary") continue;
+    const textVal = toCleanString(v);
+    if (textVal) {
+      const meaningVal = toCleanString(parsed[k + "_meaning"]);
+      slotOutputs[k] = {
+        content: textVal,
+        meaning: meaningVal || void 0
+      };
+    }
+  }
+  const nonVocabOutputs = Object.entries(slotOutputs).filter(([k]) => k !== "vocab").map(([, val]) => val);
+  const effectiveSpoken = spoken || nonVocabOutputs[0]?.content || vocab || "";
+  const effectiveSpokenMeaning = spokenMeaning || nonVocabOutputs[0]?.meaning || "";
+  if (!effectiveSpoken) return null;
+  return {
+    spoken: effectiveSpoken,
+    spokenMeaning: effectiveSpokenMeaning || void 0,
+    written: written || void 0,
+    writtenMeaning: writtenMeaning || void 0,
+    vocab: vocab || void 0,
+    summary: summary || void 0,
+    slotOutputs: Object.keys(slotOutputs).length > 0 ? slotOutputs : void 0
+  };
+}
+async function translateCore(req, options) {
+  const text = (req.text || "").trim();
+  const sourceLang = req.sourceLang || "zh";
+  const targetLang = req.targetLang || "en";
+  if (!text) {
+    return { spoken: "", written: "", cached: false, shieldBypassed: false };
+  }
+  if (shouldShieldBypass(text)) {
+    return { spoken: text, written: text, cached: false, shieldBypassed: true };
+  }
+  const cache = options?.cache || globalLingualCache;
+  const slotSig = Array.isArray(req.slots) ? req.slots.filter((s) => s.enabled !== false).map((s) => s.id).join(",") : void 0;
+  const cacheKey = LingualLruCache.buildKey(text, sourceLang, targetLang, slotSig);
+  const cached = cache.get(cacheKey);
+  if (cached) {
+    return {
+      spoken: cached.spoken,
+      spokenMeaning: cached.spokenMeaning,
+      written: cached.written || cached.spoken,
+      writtenMeaning: cached.writtenMeaning,
+      vocab: cached.vocab,
+      summary: cached.summary,
+      cached: true,
+      shieldBypassed: false
+    };
+  }
+  if (!options?.completer) {
+    return { spoken: text, written: text, cached: false, shieldBypassed: false };
+  }
+  const systemPrompt = buildSystemPrompt(
+    sourceLang,
+    targetLang,
+    Boolean(req.isLongInput),
+    req.context,
+    req.tone || "general",
+    req.slots
+  );
+  const raw = await options.completer(text, systemPrompt, options.signal);
+  if (!raw) {
+    return { spoken: text, written: text, cached: false, shieldBypassed: false };
+  }
+  const parsed = parseLlmResponse(raw);
+  if (!parsed) {
+    return { spoken: text, written: text, cached: false, shieldBypassed: false };
+  }
+  cache.set(cacheKey, parsed);
+  const configuredSlots = Array.isArray(req.slots) ? req.slots : getDefaultSlots(sourceLang);
+  const rawObj = repairAndParseJsonObject(raw) || {};
+  const slotResults = [];
+  for (const slot of configuredSlots) {
+    if (!slot.enabled) continue;
+    if (slot.role === "source") {
+      slotResults.push({ id: slot.id, label: slot.label, role: slot.role, content: text });
+    } else {
+      const out = parsed.slotOutputs && Object.hasOwn(parsed.slotOutputs, slot.id) ? parsed.slotOutputs[slot.id] : void 0;
+      const content = out?.content || toCleanString(rawObj[slot.id]) || (slot.id === "spoken" ? parsed.spoken : slot.id === "written" ? parsed.written || "" : slot.id === "vocab" ? parsed.vocab || "" : "");
+      const meaning = out?.meaning || toCleanString(rawObj[slot.id + "_meaning"]) || (slot.id === "spoken" ? parsed.spokenMeaning : slot.id === "written" ? parsed.writtenMeaning : void 0) || void 0;
+      if (content) {
+        slotResults.push({ id: slot.id, label: slot.label, role: slot.role, content, meaning });
+      }
+    }
+  }
+  return {
+    spoken: parsed.spoken,
+    spokenMeaning: parsed.spokenMeaning,
+    written: parsed.written || parsed.spoken,
+    writtenMeaning: parsed.writtenMeaning,
+    vocab: parsed.vocab,
+    summary: parsed.summary,
+    slots: slotResults,
+    cached: false,
+    shieldBypassed: false
+  };
 }
 
 // src/sanitizer.ts
@@ -2320,14 +2466,17 @@ function sanitizePromptForTranslation(raw) {
   createCustomSlot,
   formatModelSelectionMessage,
   formatStatusReport,
+  getDefaultDirectSlots,
   getDefaultPromptSlots,
   getDefaultSlots,
   globalLinguaCache,
   globalLingualCache,
+  isNonEnglish,
   moveSlotInList,
   normalizePromptRules,
   parseLlmResponse,
   removeSlotFromList,
+  repairAndParseJsonObject,
   resolveLabelsForLang,
   resolvePromptRulePreset,
   resolvePromptTargetLangName,

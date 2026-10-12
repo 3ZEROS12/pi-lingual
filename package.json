@@ -1,7 +1,7 @@
 {
   "name": "pi-lingual",
-  "version": "0.5.3",
-  "description": "Bilingual companion & Prompt Optimizer for Pi — [1] 0ms Companion Cards (learn/original), [2] Target Lang + Stacked Conditions Direct Rewrite (rewrite/english), [3] N-Choice Candidate Picker (select), and [0] Zero-Footprint Off Mode (off).",
+  "version": "0.5.4",
+  "description": "Bilingual developer companion & Prompt Optimizer for Pi — [1] 0ms Companion Cards (slots), [2] Dedicated 1-to-1 Logical Structuring (directSlots), [3] 3-Angle Engineering Candidates (promptSlots), and [0] Zero-Footprint Off Mode (off).",
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -27,7 +27,6 @@
     "README.md",
     "README_zh.md",
     "CHANGELOG.md",
-    "OPTIMIZATION_ROADMAP.md",
     "LICENSE"
   ],
   "bin": {
