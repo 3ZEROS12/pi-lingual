@@ -63,25 +63,27 @@ Traditional closed rectangular boxes (`│ ... │`) fracture when character wid
 
 ---
 
-## Four Operating Modes
+## Four Operating States (`1 ➔ 2 ➔ 3 ➔ 0`)
 
-Switch modes anytime with `/lingual <original|english|select|off>`:
+Press `/lingual` to cycle sequentially, or jump directly via `/lingual <1|2|3|0>`:
 
-| Mode | What You Type | What the Engine Does | What You See | Best For |
+| State | What You Type | What the Engine Does | What You See | Best For |
 | :--- | :--- | :--- | :--- | :--- |
-| **`original`** *(Default · Companion)* | Native Language *(e.g. Chinese / Japanese)* | **0ms Pass-Through** to main AI + async companion card (`slots`) | Dual-register HUD *(Spoken + Written + Vocab)* | Coding at full speed while absorbing authentic engineering phrasing |
-| **`english`** *(Direct Prompt Rewrite)* | Messy / Colloquial Input | **Direct 1-to-1 Prompt Optimization** *(structures, standardizes & sharpens in English or `promptLang`, 0 vocab bloat)* | Clean preview of the rewritten prompt (`└ [⚡EN] ...`) | Turning messy thoughts into structured, high-efficiency instructions |
-| **`select`** *(N-Choice Prompt Picker)* | Messy / Colloquial Input | Generates **$N$ Candidate Prompts** across preset styles (`promptSlots`: *Concise*, *Structured*, *Deep Rigor*) | Interactive selector menu (`[1]..[N]`) + full candidate preview | Comparing multiple prompt styles and picking the best one to send |
-| **`off`** *(Active 0-Token Shield)* | Any Text | **Disables hooks & strips skill block from `systemPrompt`** (`before_agent_start`) | Hidden (`0.00 bytes` of LLM context overhead) | Pure coding sessions with zero UI overlays and zero token footprint |
+| **`[1] Orig + Learn`** *(`original` / `1`)* | Native Language *(e.g. Chinese / Japanese)* | **0ms Pass-Through** to main AI + async companion card (`slots`) | Dual-register HUD *(Spoken + Written + Vocab)* | Coding at full speed while absorbing authentic engineering phrasing |
+| **`[2] Direct Rewrite`** *(`english` / `2`)* | Messy / Colloquial Input | **Target Language (`promptLang`) + Stacked Conditions (`promptRule`) ➔ 1-to-1 Direct Send** *(optional `/lingual learn-on` adds 1-line vocab row)* | Clean preview of the rewritten prompt (`└ [⚡EN] ...`) | Turning messy thoughts into structured instructions with zero extra keypresses |
+| **`[3] Pick of N`** *(`select` / `3`)* | Messy / Colloquial Input | **Target Language + $N$ Condition Slots (`promptSlots`)** *(Default: *Direct Action* / *Structured Spec* / *Root-Cause First*)* | Interactive selector menu (`[1]..[N]`, or `[0]`/`Esc` for raw text) | Comparing orthogonal prompt styles on complex tasks before sending |
+| **`[0] Zero-Load Off`** *(`off` / `0`)* | Any Text | **Hides status bar badge (`undefined`), detaches resize listeners & strips skill block** | **0 pixels, 0 listeners, 0 tokens** — completely invisible inside Pi | Pure coding or screen recording with zero visual or context footprint |
 
-### Dual-Engine Customization via `lingual-tuner` (Zero CLI Memorization)
-`pi-lingual` ships with an upgraded `lingual-tuner` skill that lets you customize **both** engines simply by talking to your Agent (stored in `~/.pi/agent/lingual.json`):
-1. **Customize Companion Mode (`original` ➔ `slots`)**:
-   - Add, remove, or reorder language-learning slots (`Spoken`, `Written`, `Vocab`, `Tweet`), or omit `{ "role": "source" }` to hide original text.
-2. **Customize Prompt Optimizer Mode (`english` Direct Rewrite & `select` N-Choice Picker ➔ `promptLang`, `promptRule`, `promptSlots`)**:
-   - **Output Language (`promptLang`)**: Defaults to `"en"` (English), or set `"zh"` / `"native"` to structure and sharpen messy thoughts in your own native language.
-   - **Stacked Custom Rules (`promptRule`)**: Layer custom engineering rules (e.g. *"Enforce smallest working diff and root-cause triage"*) onto every optimized prompt.
-   - **Custom N-Choice Styles (`promptSlots`)**: Customize the 3 default candidate styles (`concise`, `spec`, `deep`) or define your own $1..N$ prompt optimization slots.
+### On-Demand Customization via `/lingual tuner` (0 System Prompt Tokens by Default)
+To guarantee **0.00 bytes of `systemPrompt` overhead during normal coding**, `pi-lingual` strips the `lingual-tuner` skill block across all modes by default and activates it only when you run `/lingual tuner <your request>`:
+1. **Customize State [1] Companion Slots (`slots`)**:
+   - Example: `/lingual tuner remove the original text row and keep only Spoken and Written`
+2. **Customize State [2] Direct Rewrite (`promptLang` + `promptRule` + `learnInRewrite`)**:
+   - **Target Language (`promptLang`)**: Defaults to `"en"`, or set `"native"` (`/lingual target native`) to structure prompts in your own native language.
+   - **Stacked Conditions (`promptRule`)**: Supports built-in presets (`minimal`, `root-cause`, `tdd`, `explain-zh`) or multiple custom rules (`/lingual rule minimal`).
+   - **Hybrid Learn-in-Rewrite (`learnInRewrite`)**: Run `/lingual learn-on` to extract a 1-line vocabulary takeaway row beneath your rewritten prompt in States [2] & [3].
+3. **Customize State [3] Pick of N (`promptSlots`)**:
+   - Example: `/lingual tuner set select mode to 2 slots: concise action and TDD verification`
 
 ### Hybrid Intent Grafting (Code Stays Untouched)
 In `english` mode, pasting code blocks or error logs never translates the code:
@@ -183,17 +185,21 @@ Switch language pairs anytime:
 
 ---
 
-## Commands & Shortcuts
+## Streamlined 4-Command Matrix (Zero Autocomplete Clutter)
 
-| Command | Full / Alias | Description |
+To keep Pi's `/` autocomplete menu clean, `pi-lingual` registers only **4 top-level commands** and routes all management actions through `/lingual`:
+
+| Core Command | Subcommands / Arguments | Description |
 | :--- | :--- | :--- |
-| `/lingual [sub]` | `/lingual-mode` | Master command: cycle modes, or route subcommands (e.g. `/lingual compact`) |
-| `/slots [cmd]` | `/lingual-slots` | Dynamic slot pipeline: add custom slots or remove source text row |
-| `/lingual-compact` | `/lingual compact` | Toggle between Tree HUD and Capsule mode (preserves Pi core `/compact`) |
-| `/lang <source> [target]` | `/lingual-lang` | Switch language pair (e.g. `/lang ja en`, `/lang 日语`) |
-| `/last` | `/lingual-last` | Replay the most recent companion card |
-| `/lingual-model <id>` | — | Switch companion model (`auto` to follow session, or specify a model ID) |
-| `/status` | `/lingual-status` | Display diagnostics, active model, and cache stats |
+| **`/lingual`** | `/lingual [1\|2\|3\|0]` | Cycle `1 ➔ 2 ➔ 3 ➔ 0` when called without args, or jump directly by number/name |
+| ↳ Subcommand | `/lingual rule [minimal\|root-cause\|tdd\|<rule>]` | Inspect, stack, or `clear` custom rewrite conditions |
+| ↳ Subcommand | `/lingual target <en\|native\|zh\|ja>` | Set target output language (`promptLang`) for States [2] & [3] |
+| ↳ Subcommand | `/lingual learn-on` \| `learn-off` | Toggle 1-line vocabulary takeaway row in States [2] & [3] |
+| ↳ Subcommand | `/lingual tuner <request>` | Activate on-demand `lingual-tuner` skill to update `~/.pi/agent/lingual.json` |
+| ↳ Subcommand | `/lingual compact` \| `model` \| `status` \| `news` | Toggle single-line capsule, switch model, inspect cache stats, or view release notes |
+| **`/lang`** | `/lang <source> [target]` | Switch language pair (e.g. `/lang ja en`, `/lang 日语`) |
+| **`/slots`** | `/slots [add\|rm\|toggle\|reset]` | Manage companion slots (add custom slots or remove `source` text row) |
+| **`/last`** | `/last` | Replay the most recent companion or rewrite card |
 
 *Keyboard shortcuts: `Alt+.` (next page), `Alt+,` (previous page). Standalone CLI: `lingual "prompt"`.*
 
@@ -258,7 +264,7 @@ I hope everyone takes the time to tune a prompt that works best for them, catche
 
 ```bash
 npm run typecheck   # Strict tsc --noEmit check (0 errors)
-npm test            # 93/93 test assertions passing (100% green)
+npm test            # 95/95 test assertions passing (100% green)
 npm run build       # Multi-entry compilation via tsup (extension + core engine)
 ```
 
