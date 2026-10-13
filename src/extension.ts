@@ -41,8 +41,10 @@ import {
   CURRENT_FEATURE_BANNER_VERSION,
   getDefaultDirectSlots,
   getDefaultPromptSlots,
+  getDefaultModifySlots,
   resolveDirectSlotsFromConfig,
   resolveCandidateSlotsFromConfig,
+  resolveModifySlotsFromConfig,
   shouldTriggerTranslation,
   isTestEnvironment,
   loadUserLingualConfig,
@@ -70,6 +72,7 @@ import { globalLingualCache } from "./cache.js";
 
 interface ExtensionState {
   mode: LingualMode;
+  modeLocked: boolean;
   compact: boolean;
   sourceLang: string;
   targetLang: string;
@@ -78,11 +81,12 @@ interface ExtensionState {
   slots: SlotConfig[];
   directSlots: PromptSlotConfig[];
   promptSlots: PromptSlotConfig[];
+  modifySlots: PromptSlotConfig[];
   labels: LingualI18nLabels;
 }
 
 const initialDiskConfig = isTestEnvironment() ? {} : loadUserLingualConfig();
-const initialSourceLang = initialDiskConfig.sourceLang || "zh";
+const initialSourceLang = initialDiskConfig.sourceLang || (isTestEnvironment() ? "en" : resolveReleaseBannerLang());
 const initialTargetLang = initialDiskConfig.targetLang || (initialSourceLang === "en" ? "ja" : "en");
 const initialSlotPreset = initialDiskConfig.slotPreset;
 const initialSlots = Array.isArray(initialDiskConfig.slots) && initialDiskConfig.slots.length > 0
@@ -94,10 +98,14 @@ const initialDirectSlots = Array.isArray(initialDiskConfig.directSlots) && initi
 const initialPromptSlots = Array.isArray(initialDiskConfig.promptSlots) && initialDiskConfig.promptSlots.length > 0
   ? initialDiskConfig.promptSlots
   : getDefaultPromptSlots(initialSourceLang);
+const initialModifySlots = Array.isArray(initialDiskConfig.modifySlots) && initialDiskConfig.modifySlots.length > 0
+  ? initialDiskConfig.modifySlots
+  : getDefaultModifySlots(initialSourceLang);
 const initialLabels = resolveLabelsForLang(initialSourceLang, initialDiskConfig.labels, initialTargetLang);
 
 const state: ExtensionState = {
   mode: initialDiskConfig.mode || "original",
+  modeLocked: Boolean(initialDiskConfig.modeLocked),
   compact: Boolean(initialDiskConfig.compact),
   sourceLang: initialSourceLang,
   targetLang: initialTargetLang,
@@ -106,6 +114,7 @@ const state: ExtensionState = {
   slots: initialSlots,
   directSlots: initialDirectSlots,
   promptSlots: initialPromptSlots,
+  modifySlots: initialModifySlots,
   labels: initialLabels,
 };
 
@@ -162,6 +171,9 @@ function updateFooter(ctx: ExtensionContext | null | undefined) {
         break;
       case "select":
         ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", `${pair} · ${modeSpec.candidates}`));
+        break;
+      case "modify":
+        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", `${pair} · ${modeSpec.modify}`));
         break;
       case "off":
         // 彻底隐身：处于 off 关闭状态时，完全移除底栏徽标 (0 像素视觉占用)
@@ -398,15 +410,38 @@ export default function (pi: ExtensionAPI) {
     if (explicitMode) {
       nextMode = explicitMode;
     } else {
-      // 缺省或无参数时，平滑四态模式循环轮转 (1.纯伴学 ➔ 2.直接改 ➔ 3.挑候选 ➔ 0.已关闭)
+      // 检查当前模式是否已被锁定
+      if (state.modeLocked) {
+        const pair = state.labels.hudTitle || `${state.sourceLang} ⇄ ${state.targetLang}`;
+        const modeSpec = resolveModeDisplaySpec(state.sourceLang);
+        const currentName =
+          state.mode === "original"
+            ? modeSpec.companion
+            : state.mode === "english"
+              ? modeSpec.direct
+              : state.mode === "select"
+                ? modeSpec.candidates
+                : modeSpec.off;
+        try {
+          ctx.ui.notify(
+            `[${pair}] 当前模式已锁定在 [${currentName}]。如需轮转，请先输入 /lingual unlock 解锁，或使用 /lingual 1|2|3|0 显式指定。`,
+            "warning"
+          );
+        } catch {}
+        return;
+      }
+
+      // 缺省或无参数时，平滑五态模式循环轮转 (1.纯伴学 ➔ 2.直接改 ➔ 3.挑候选 ➔ 4.原句修补 ➔ 0.已关闭)
       nextMode =
         state.mode === "original"
           ? "english"
           : state.mode === "english"
             ? "select"
             : state.mode === "select"
-              ? "off"
-              : "original";
+              ? "modify"
+              : state.mode === "modify"
+                ? "off"
+                : "original";
     }
 
     state.mode = nextMode;
@@ -442,6 +477,15 @@ export default function (pi: ExtensionAPI) {
       const slotLabels = activeCandidateSlots.map((s) => s.label).join(" / ");
       try {
         ctx.ui.notify(modeSpec.notifyCandidates(pair, slotLabels), "info");
+      } catch {}
+    } else if (nextMode === "modify") {
+      const activeModifySlots = resolveModifySlotsFromConfig({
+        sourceLang: state.sourceLang,
+        modifySlots: diskForMode.modifySlots ?? state.modifySlots,
+      }).filter((s) => s.enabled !== false && s.role !== "vocab");
+      const firstLabel = activeModifySlots[0]?.label || "Fixed";
+      try {
+        ctx.ui.notify(modeSpec.notifyModify(pair, firstLabel), "info");
       } catch {}
     } else if (nextMode === "off") {
       try {
@@ -495,32 +539,43 @@ export default function (pi: ExtensionAPI) {
   const switchLangHandler = async (args: string, ctx: ExtensionContext) => {
     const trimmed = args.trim().toLowerCase();
     if (!trimmed || trimmed === "list" || trimmed === "help" || trimmed === "?") {
-      const listText = (state.labels.langList || [
-        "• zh (Chinese ➔ English)",
-        "• ja (Japanese ➔ English)",
-        "• en (English ➔ Japanese)",
-        "• es (Spanish ➔ English)",
-        "• fr (French ➔ English)",
-        "• de (German ➔ English)",
-      ]).join("\n");
-      const usage = state.labels.langUsageHint || "Usage: /lang <zh|ja|en|es|fr|de> [target] (e.g. /lang ja or /lang zh ja)";
+      const flowText = `${state.sourceLang} ➔ ${state.targetLang}`;
       ctx.ui.notify(
-        `[${state.sourceLang} ⇄ ${state.targetLang}] ${state.labels.statusReportFlow || "Flow"}: [${state.sourceLang} ➔ ${state.targetLang}]\n${listText}\n${usage}`,
+        `[当前伴学语言: ${flowText}]\n• 常用切换: /lang ja (切换目标为日语) · /lang en (切换目标为英语)\n• 双向切换: /lang zh ja · /lang ja en · /lang en zh\n• 支持语种: zh (中文), ja (日语), ko (韩语), en (英语), es (西语), fr (法语), de (德语), ru (俄语)`,
         "info"
       );
       return;
     }
 
     const parts = trimmed.split(/\s*->\s*|\s*➔\s*|\s+to\s+|\s+/).filter(Boolean);
-    const newSource = normalizeLangCode(parts[0]);
-    const newTarget = parts.length > 1 ? normalizeLangCode(parts[1]) : (newSource === "en" ? "ja" : "en");
+    let newSource = state.sourceLang;
+    let newTarget = state.targetLang;
 
-    if (!LANGUAGE_PRESETS[newSource]) {
-      ctx.ui.notify(
-        state.labels.notifyLangInvalid || "Invalid language code. Supported: zh, ja, en, es, fr, de",
-        "warning"
-      );
-      return;
+    if (parts.length === 1) {
+      const code = normalizeLangCode(parts[0]);
+      if (!LANGUAGE_PRESETS[code]) {
+        ctx.ui.notify(
+          state.labels.notifyLangInvalid || "Invalid language code. Supported: zh, ja, ko, en, es, fr, de, ru",
+          "warning"
+        );
+        return;
+      }
+      if (code === state.sourceLang) {
+        newTarget = code === "en" ? "ja" : "en";
+      } else {
+        // 开发者最常见意图：保持当前母语不变，直接切换学习/翻译的目标语（如 /lang ja）！
+        newTarget = code;
+      }
+    } else {
+      newSource = normalizeLangCode(parts[0]);
+      newTarget = normalizeLangCode(parts[1]);
+      if (!LANGUAGE_PRESETS[newSource]) {
+        ctx.ui.notify(
+          state.labels.notifyLangInvalid || "Invalid language code. Supported: zh, ja, ko, en, es, fr, de, ru",
+          "warning"
+        );
+        return;
+      }
     }
 
     const diskBeforeSwitch = loadUserLingualConfig();
@@ -551,7 +606,13 @@ export default function (pi: ExtensionAPI) {
     if (!diskBeforeSwitch.promptSlots || diskBeforeSwitch.promptSlots.length === 0) {
       state.promptSlots = getDefaultPromptSlots(newSource);
     }
-    saveUserLingualConfig({ sourceLang: newSource, targetLang: newTarget, slots: state.slots });
+    saveUserLingualConfig({
+      sourceLang: newSource,
+      targetLang: newTarget,
+      slots: state.slots,
+      directSlots: state.directSlots,
+      promptSlots: state.promptSlots,
+    });
     session.reset();
     globalLingualCache.clear();
     updateFooter(ctx);
@@ -1076,6 +1137,41 @@ export default function (pi: ExtensionAPI) {
       return;
     }
 
+    // 6.2 子命令路由: 模式锁定与防漂移保护 (/lingual lock | /lingual unlock)
+    if (sub === "lock") {
+      state.modeLocked = true;
+      saveUserLingualConfig({ modeLocked: true });
+      const pair = state.labels.hudTitle || `${state.sourceLang} ⇄ ${state.targetLang}`;
+      const modeSpec = resolveModeDisplaySpec(state.sourceLang);
+      const currentName =
+        state.mode === "original"
+          ? modeSpec.companion
+          : state.mode === "english"
+            ? modeSpec.direct
+            : state.mode === "select"
+              ? modeSpec.candidates
+              : modeSpec.off;
+      try {
+        ctx.ui.notify(
+          `[${pair}] 会话模式已锁定在 [${currentName}]。防止外部进程覆盖与无意轮转，输入 /lingual unlock 可解锁。`,
+          "info"
+        );
+      } catch {}
+      updateFooter(ctx);
+      return;
+    }
+
+    if (sub === "unlock") {
+      state.modeLocked = false;
+      saveUserLingualConfig({ modeLocked: false });
+      const pair = state.labels.hudTitle || `${state.sourceLang} ⇄ ${state.targetLang}`;
+      try {
+        ctx.ui.notify(`[${pair}] 模式锁定已解除（已解锁），恢复自由轮转与外部配置同步。`, "info");
+      } catch {}
+      updateFooter(ctx);
+      return;
+    }
+
     // 7. 模式切换优先: 显式模式关键词或数字直达 (/lingual 1|2|3|0|companion|direct|candidates|off)
     if (sub === "mode" || normalizeLingualModeInput(sub) !== null) {
       await setModeHandler(sub === "mode" ? subArgs : trimmed, ctx);
@@ -1089,20 +1185,37 @@ export default function (pi: ExtensionAPI) {
       return;
     }
 
-    await setModeHandler(trimmed, ctx);
+    // 9. 未识别子命令安全防线：严禁穿透到模式轮转，避免用户打错单词意外篡改工作模式！
+    const pair = state.labels.hudTitle || `${state.sourceLang} ⇄ ${state.targetLang}`;
+    try {
+      ctx.ui.notify(
+        `[${pair}] 未识别的子命令: "${trimmed}"。当前模式保持不变。可用命令: /lingual [1|2|3|0|lock|unlock|tuner|lang|slots|compact|status]`,
+        "warning"
+      );
+    } catch {}
   };
 
-  // 精简命令矩阵：仅在 Pi 的 / 菜单注册 4 个核心命令 (/lingual, /lang, /slots, /last)，零菜单刷屏负担
+  // 核心命令矩阵：注册直觉第一公民命令 (/lingual, /lang, /tuner, /lingual-mode, /slots, /last)
   pi.registerCommand("lingual", {
     description:
       state.labels.cmdDescMode ||
-      "Cycle mode (1:Companion ➔ 2:Direct ➔ 3:Candidates ➔ 0:Off) or manage: /lingual [1|2|3|0|tuner|lang|slots|compact|model|status|last]",
+      "Cycle mode (1:Companion ➔ 2:Direct ➔ 3:Candidates ➔ 4:Modify ➔ 0:Off) or manage: /lingual [1|2|3|4|0|tuner|lang|slots|compact|model|status|last]",
     handler: masterCommandHandler,
   });
 
   pi.registerCommand("lang", {
     description: state.labels.cmdDescLang || "Switch companion language: /lang <zh|ja|ko|en|es|fr|de|ru> [target]",
     handler: switchLangHandler,
+  });
+
+  pi.registerCommand("tuner", {
+    description: "Launch lingual tuner wizard: /tuner",
+    handler: (args, ctx) => masterCommandHandler(`tuner ${args}`, ctx),
+  });
+
+  pi.registerCommand("lingual-mode", {
+    description: state.labels.cmdDescMode || "Set companion mode directly: /lingual-mode <1|2|3|0|companion|direct|candidates|off>",
+    handler: setModeHandler,
   });
 
   pi.registerCommand("slots", {
@@ -1226,10 +1339,32 @@ export default function (pi: ExtensionAPI) {
 
     // Sync external lingual.json updates (e.g. written by lingual-tuner skill) BEFORE checking mode === "off"
     const latestDisk = loadUserLingualConfig();
+    let footerNeedsRefresh = false;
+    if (latestDisk.sourceLang && latestDisk.sourceLang !== state.sourceLang) {
+      state.sourceLang = latestDisk.sourceLang;
+      footerNeedsRefresh = true;
+    }
+    if (latestDisk.targetLang && latestDisk.targetLang !== state.targetLang) {
+      state.targetLang = latestDisk.targetLang;
+      footerNeedsRefresh = true;
+    }
+    if (footerNeedsRefresh) {
+      state.labels = resolveLabelsForLang(state.sourceLang, latestDisk.labels, state.targetLang);
+    }
+    if (latestDisk.modeLocked !== undefined && latestDisk.modeLocked !== state.modeLocked) {
+      state.modeLocked = latestDisk.modeLocked;
+    }
     if (latestDisk.mode && latestDisk.mode !== state.mode) {
-      state.mode = latestDisk.mode;
-      syncResizeListener();
-      if (hasActiveUI(ctx)) updateFooter(ctx);
+      if (state.modeLocked) {
+        // 当前模式已被锁定，物理拒绝外部磁盘修改覆盖！保持会话模式严格稳定！
+      } else {
+        state.mode = latestDisk.mode;
+        syncResizeListener();
+        footerNeedsRefresh = true;
+      }
+    }
+    if (footerNeedsRefresh && hasActiveUI(ctx)) {
+      updateFooter(ctx);
     }
     if (latestDisk.slots && Array.isArray(latestDisk.slots)) {
       state.slots = latestDisk.slots;
@@ -1259,7 +1394,7 @@ export default function (pi: ExtensionAPI) {
     // 智能审查与意图萃取：剥离剪贴板图片、折叠多行堆栈追踪与代码块为 [...]，提炼真实自然语言核心
     const sanitized = sanitizePromptForTranslation(raw);
     const promptToTranslate = sanitized.distilledText;
-    const isPromptOptMode = state.mode === "english" || state.mode === "select";
+    const isPromptOptMode = state.mode === "english" || state.mode === "select" || state.mode === "modify";
 
     // 判定 1：若整段输入经过审查后，发现毫无自然语言意图 (纯堆栈/纯代码/纯命令)
     // 判定 2：或命中底层代码与 CLI 盾牌及字符长度防护 (由 shouldTriggerTranslation 统一管控)
@@ -1351,35 +1486,49 @@ export default function (pi: ExtensionAPI) {
     }
 
     // =========================================================================
-    // 模式 2 & 3 严格隔离引擎（零跨模式串味/泄露）：
-    // - 模式 2 【直接改 (direct)】：严格只读取 `directSlots`（绝不读取 Mode 1 的 slots 或 Mode 3 的 promptSlots！）
-    // - 模式 3 【挑候选 (candidates)】：严格只读取 `promptSlots`（绝不污染 Mode 2 的 directSlots 或 Mode 1 的 slots！）
+    // 模式 2 & 3 & 4 严格隔离引擎（零跨模式串味/泄露）：
+    // - 模式 2 【直接改 (direct)】：严格只读取 `directSlots`
+    // - 模式 3 【挑候选 (candidates)】：严格只读取 `promptSlots`
+    // - 模式 4 【原句修补 (modify)】：严格只读取 `modifySlots`（Smallest Working Diff 极简原句修正）
     // =========================================================================
+    const isModifyMode = state.mode === "modify";
     const isDirectMode = state.mode === "english";
-    const isolatedModeSlots = isDirectMode
-      ? resolveDirectSlotsFromConfig({
+    const isolatedModeSlots = isModifyMode
+      ? resolveModifySlotsFromConfig({
           sourceLang: state.sourceLang,
-          directSlots: latestDisk.directSlots ?? state.directSlots,
+          explainLang: latestDisk.explainLang,
+          modifySlots: latestDisk.modifySlots ?? state.modifySlots,
         })
-      : resolveCandidateSlotsFromConfig({
-          sourceLang: state.sourceLang,
-          promptSlots: latestDisk.promptSlots ?? state.promptSlots,
-        });
+      : isDirectMode
+        ? resolveDirectSlotsFromConfig({
+            sourceLang: state.sourceLang,
+            directSlots: latestDisk.directSlots ?? state.directSlots,
+          })
+        : resolveCandidateSlotsFromConfig({
+            sourceLang: state.sourceLang,
+            promptSlots: latestDisk.promptSlots ?? state.promptSlots,
+          });
 
     const rewriteSlots = isolatedModeSlots.filter((s) => s.role !== "vocab");
     const vocabSlots = isolatedModeSlots.filter((s) => s.role === "vocab");
-    const fallbackFirst = getDefaultDirectSlots(state.sourceLang)[0];
-    const slotsToRun = isDirectMode
-      ? [rewriteSlots[0] || fallbackFirst, ...vocabSlots]
-      : [...(rewriteSlots.length > 0 ? rewriteSlots : getDefaultPromptSlots(state.sourceLang)), ...vocabSlots];
+    const fallbackFirst = isModifyMode
+      ? getDefaultModifySlots(state.sourceLang, latestDisk.explainLang)[0]
+      : getDefaultDirectSlots(state.sourceLang)[0];
+    const slotsToRun = isModifyMode
+      ? (isolatedModeSlots.length > 0 ? isolatedModeSlots : getDefaultModifySlots(state.sourceLang, latestDisk.explainLang))
+      : isDirectMode
+        ? [rewriteSlots[0] || fallbackFirst, ...vocabSlots]
+        : [...(rewriteSlots.length > 0 ? rewriteSlots : getDefaultPromptSlots(state.sourceLang)), ...vocabSlots];
 
     if (hasActiveUI(ctx)) {
       try {
-        const loadingMsg = isDirectMode
-          ? "  ⋯ ⚡ [lingual] optimizing prompt..."
-          : "  ⋯ ✦ [lingual] generating prompt candidates...";
+        const loadingMsg = isModifyMode
+          ? "  ⋯ ⚡ [lingual] fixing syntax & typos..."
+          : isDirectMode
+            ? "  ⋯ ⚡ [lingual] optimizing prompt..."
+            : "  ⋯ ✦ [lingual] generating prompt candidates...";
         ctx.ui.setWidget("lingual_hud", [ctx.ui.theme.fg("muted", loadingMsg)], { placement: "aboveEditor" });
-        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", isDirectMode ? "⚡ [lingual] optimizing..." : "✦ [lingual] generating candidates..."));
+        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", isModifyMode ? "⚡ [lingual] fixing..." : isDirectMode ? "⚡ [lingual] optimizing..." : "✦ [lingual] generating candidates..."));
       } catch {}
     }
 
@@ -1387,6 +1536,7 @@ export default function (pi: ExtensionAPI) {
       const candidates = await generatePromptCandidates(promptToTranslate, {
         sourceLang: state.sourceLang,
         targetLang: state.targetLang,
+        explainLang: latestDisk.explainLang,
         promptSlots: slotsToRun,
         complete: completer,
         signal,
@@ -1412,19 +1562,30 @@ export default function (pi: ExtensionAPI) {
       const maxCols = getEffectiveMaxCols();
       const singleLineSource = promptToTranslate.replace(/\s*\r?\n\s*/g, " ↵ ");
       const candidateVocab = candidates[0]?.vocab;
-      const keepSourceRow = (state.slots || []).some((s) => s.role === "source" && s.enabled !== false);
+      const isLongModifyInput = isModifyMode && (promptToTranslate.length > 120 || (promptToTranslate.match(/[.!?。！？\n]/g) || []).length >= 3);
+      const keepSourceRow = !isModifyMode && (state.slots || []).some((s) => s.role === "source" && s.enabled !== false);
+      const takeawayLabel = isModifyMode
+        ? (slotsToRun.find((s) => s.role === "vocab")?.label || "Takeaway")
+        : (state.labels.vocabLabel || "Vocab");
+
+      // Mode 4 体验物理学：
+      // 1. 原文行彻底不显示（用户刚刚敲完，绝不占高复读）
+      // 2. 长句/段落：自适应折叠改版全文（已直发 Agent），HUD 仅显示 100% 绝对保留的 Takeaway 核心盲点复盘！
+      // 3. 短句：呈现 [Fixed] 改版 + [Takeaway] 核心盲点！
       const candidateSlotResults: SlotResult[] = [
         ...(keepSourceRow
           ? [{ id: "source", label: state.labels.sourceLabel || "Original", role: "source" as const, content: singleLineSource }]
           : []),
-        ...candidates.map((c, idx) => ({
-          id: c.id,
-          label: isDirectMode ? `⚡${c.label}` : `${idx + 1}:${c.label}`,
-          role: "translation" as const,
-          content: c.content.replace(/\s*\r?\n\s*/g, " ↵ "),
-        })),
+        ...(!isLongModifyInput
+          ? candidates.map((c, idx) => ({
+              id: c.id,
+              label: isModifyMode ? c.label : isDirectMode ? `⚡${c.label}` : `${idx + 1}:${c.label}`,
+              role: "translation" as const,
+              content: c.content.replace(/\s*\r?\n\s*/g, " ↵ "),
+            }))
+          : []),
         ...(candidateVocab
-          ? [{ id: "vocab", label: state.labels.vocabLabel || "Vocab", role: "vocab" as const, content: candidateVocab }]
+          ? [{ id: "vocab", label: takeawayLabel, role: "vocab" as const, content: candidateVocab }]
           : []),
       ];
 
@@ -1477,8 +1638,16 @@ export default function (pi: ExtensionAPI) {
         } catch {}
       }
 
+      const isDirectOrModify = isDirectMode || isModifyMode;
       let chosenText = candidates[0].content;
-      if (!isDirectMode && hasActiveUI(ctx)) {
+      if (isModifyMode) {
+        const fixedCandidate = candidates.find((c) => c.id === "fixed");
+        if (fixedCandidate) {
+          chosenText = fixedCandidate.content;
+        }
+      }
+
+      if (!isDirectOrModify && hasActiveUI(ctx)) {
         const langCode = (state.sourceLang || "en").toLowerCase().split("-")[0];
         const selectPrompts: Record<string, { title: string; keepOrig: string; hint: string }> = {
           zh: {
@@ -1502,29 +1671,29 @@ export default function (pi: ExtensionAPI) {
             hint: `숫자 1-${candidates.length} 즉시 전송 · ←→/↑↓ 이동 Enter 확인 · 0/Esc 원문 전송`,
           },
           es: {
-            title: "✦ Elegir candidato",
+            title: "✦ Elegir opción",
             keepOrig: "Original",
-            hint: `Tecla 1-${candidates.length} envío directo · ←→/↑↓ mover Enter · 0/Esc original`,
+            hint: `1-${candidates.length} enviar · ←→/↑↓ Enter · 0/Esc original`,
           },
           fr: {
-            title: "✦ Choisir une option",
+            title: "✦ Choisir option",
             keepOrig: "Original",
-            hint: `Touche 1-${candidates.length} envoi direct · ←→/↑↓ choisir Entrée · 0/Esc original`,
+            hint: `1-${candidates.length} envoyer · ←→/↑↓ Entrée · 0/Esc original`,
           },
           de: {
             title: "✦ Option senden",
             keepOrig: "Original",
-            hint: `Taste 1-${candidates.length} direkt senden · ←→/↑↓ wählen Enter · 0/Esc Original`,
+            hint: `1-${candidates.length} senden · ←→/↑↓ Enter · 0/Esc Original`,
           },
           ru: {
-            title: "✦ Выберите вариант",
+            title: "✦ Выбор варианта",
             keepOrig: "Оригинал",
-            hint: `Клавиши 1-${candidates.length} сразу · ←→/↑↓ выбор Enter · 0/Esc оригинал`,
+            hint: `1-${candidates.length} сразу · ←→/↑↓ Enter · 0/Esc оригинал`,
           },
           en: {
-            title: "✦ Pick candidate to send",
+            title: "✦ Pick candidate",
             keepOrig: "Send original",
-            hint: `Press 1-${candidates.length} to send immediately · ←→/↑↓ move Enter · 0/Esc original`,
+            hint: `1-${candidates.length} send · ←→/↑↓ Enter · 0/Esc original`,
           },
         };
         const sp = selectPrompts[langCode] || selectPrompts.en;

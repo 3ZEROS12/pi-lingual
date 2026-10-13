@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { resolveLabelsForLang, formatStatusReport, formatModelSelectionMessage } from "../src/presets.js";
@@ -161,7 +163,7 @@ test("System Prompt Sovereignty - Generates authentic Language A anchors and rul
 
   // Japanese (ja ⇄ en) uses authentic Japanese labels & instructions across all 3 modes
   const jaDirect = getDefaultDirectSlots("ja");
-  assert.equal(jaDirect[0].label, "論理構造化");
+  assert.equal(jaDirect[0].label, "標準英語");
   const jaCandidates = getDefaultPromptSlots("ja");
   assert.deepEqual(jaCandidates.map((s) => s.label), ["簡潔・高効率", "構造化仕様", "根本原因・厳密", "重要語彙"]);
   const jaModeSpec = resolveModeDisplaySpec("ja");
@@ -199,3 +201,83 @@ test("Visual Consistency - Source line tag matches [Original] format and aligns 
   assert.equal(recovered.raw, "认同，开始吧");
   assert.equal(recovered.spoken, "Totally on board with that.");
 });
+
+test("English Developer Sovereignty - Zero Chinese residue across en ⇄ ja, en ⇄ zh, en ⇄ es, en ⇄ de", () => {
+  // English-speaking developer persona (sourceLang: "en") learning or translating to foreign targets
+  const targets = ["ja", "es", "de", "fr", "ko"];
+
+  for (const target of targets) {
+    // 1. Mode 1 Companion System Prompt for English developer
+    const enSys = buildSystemPrompt("en", target, false, undefined, "general", getDefaultSlots("en"));
+    assert.ok(
+      !/[\u4e00-\u9fa5]/.test(enSys),
+      `Mode 1 system prompt for English developer [en ➔ ${target}] must have ZERO Chinese characters`
+    );
+    assert.ok(enSys.includes("native English (language A)"), `Must declare English as language A for [en ➔ ${target}]`);
+
+    // 2. Default slots for English developer
+    const enSlots = getDefaultSlots("en");
+    assert.deepEqual(
+      enSlots.map((s) => s.label),
+      ["Original", "Spoken", "Written", "Vocab"],
+      "English developer slot labels must be 100% English"
+    );
+    const slotsStr = JSON.stringify(enSlots);
+    assert.ok(
+      !/[\u4e00-\u9fa5]/.test(slotsStr),
+      `Default slots for English developer must have ZERO Chinese characters`
+    );
+
+    // 3. Mode 2 Direct Slots for English developer
+    const directSlots = getDefaultDirectSlots("en");
+    assert.equal(directSlots[0].label, "Logical Spec");
+    assert.ok(
+      !/[\u4e00-\u9fa5]/.test(JSON.stringify(directSlots)),
+      `Mode 2 directSlots for English developer must have ZERO Chinese characters`
+    );
+
+    // 4. Mode 3 Candidate Slots for English developer
+    const candidateSlots = getDefaultPromptSlots("en");
+    assert.deepEqual(
+      candidateSlots.map((s) => s.label),
+      ["Concise", "Structured", "Deep Rigor", "Vocab"],
+      "English developer candidate slot labels must be 100% English"
+    );
+    assert.ok(
+      !/[\u4e00-\u9fa5]/.test(JSON.stringify(candidateSlots)),
+      `Mode 3 promptSlots for English developer must have ZERO Chinese characters`
+    );
+  }
+});
+
+test("Tuner Skill Guardrails - Zero desktop office fluff & zero Sino-centric assumptions in SKILL.md", () => {
+  const skillPath = path.resolve("skills/lingual-tuner/SKILL.md");
+  assert.ok(fs.existsSync(skillPath), "SKILL.md must exist in skills/lingual-tuner/");
+
+  const content = fs.readFileSync(skillPath, "utf8");
+
+  // 1. Zero desktop office/corporate email fluff
+  const bannedDesktopJargon = [
+    "ビジネス敬語",
+    "丁寧語/謙譲語",
+    "해요체",
+    "customer support",
+    "advisor email",
+    "theater & game script",
+    "ielts band 8.0",
+  ];
+  for (const banned of bannedDesktopJargon) {
+    assert.ok(
+      !content.toLowerCase().includes(banned.toLowerCase()),
+      `SKILL.md must NOT contain desktop corporate fluff: '${banned}'`
+    );
+  }
+
+  // 2. Must enforce pure CLI software engineering & developer workflows
+  assert.ok(content.includes("Claude Code"), "SKILL.md must target AI coding agents");
+  assert.ok(content.includes("Smallest Working Diff"), "SKILL.md must include Smallest Working Diff preset");
+  assert.ok(content.includes("Single-Round Instant Flow"), "SKILL.md must mandate single-round flow");
+  assert.ok(content.includes("Confusion Circuit Breaker"), "SKILL.md must enforce confusion circuit breaker");
+  assert.ok(content.includes("Strict Primary Language Sovereignty"), "SKILL.md must enforce language sovereignty");
+});
+

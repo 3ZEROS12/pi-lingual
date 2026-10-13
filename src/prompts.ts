@@ -6,17 +6,17 @@ export function getDefaultDirectSlots(sourceLang = "en"): PromptSlotConfig[] {
   if (norm === "zh") {
     return [
       {
-        id: "zh_refine",
-        label: "逻辑规范",
+        id: "en_direct",
+        label: "规范英文",
         role: "rewrite",
-        instruction: "Target Language: Chinese (Simplified). Strictly output in Chinese (Simplified) ONLY: 将用户口语化、零散的想法重组为逻辑严密、层次清晰的高质量中文工程指令。明确核心目标、执行动作、约束边界与期望产出，完整保留代码标识符、文件路径与技术专有名词，杜绝空洞套话，让 AI Agent 能最精准高效地理解目标与执行。",
+        instruction: "Target Language: English. Strictly output in English ONLY: 将用户口语化、零散的想法翻译并重组为逻辑严密、清晰明确的高质量英文工程指令。智能嗅探并映射精准工程动词（如'排查/看看/查查' ➔ Inspect/Diagnose/Trace，'重构/改改/精简' ➔ Refactor/Streamline/Harden，'加上/做个' ➔ Implement/Scaffold，'删掉/去掉' ➔ Prune/Deprecate），以动词原形直接开篇，消除口语冗余与寒暄。严禁翻译命令行参数（如 --dry-run, -rf 等 flags）、装饰器与包名（如 @scope/pkg, @ts-expect-error），保留所有代码标识符、路径与符号 100% 原型，杜绝幻觉。",
         enabled: true,
       },
       {
         id: "vocab",
         label: "重点词汇",
         role: "vocab",
-        instruction: "自适应萃取 2-3 个与本指令最契合的地道技术搭配或高阶词汇，格式为 'term (中文释义) · term2 (中文释义)'。",
+        instruction: "自适应萃取 2-3 个与本英文指令相关的地道技术词汇或词组搭配，格式为 'term (中文释义) · term2 (中文释义)'。",
         enabled: true,
       },
     ];
@@ -25,17 +25,17 @@ export function getDefaultDirectSlots(sourceLang = "en"): PromptSlotConfig[] {
   if (norm === "tw") {
     return [
       {
-        id: "tw_refine",
-        label: "邏輯規範",
+        id: "en_direct",
+        label: "規範英文",
         role: "rewrite",
-        instruction: "Target Language: Chinese (Traditional). Strictly output in Chinese (Traditional) ONLY: 將使用者口語化、零散的想法重組為邏輯嚴密、層次清晰的高品質繁體中文工程指令。明確核心目標、執行動作、約束邊界與期望產出，完整保留程式碼識別符與檔案路徑。",
+        instruction: "Target Language: English. Strictly output in English ONLY: 將使用者口語化、零散的想法翻譯並重組為邏輯嚴密、清晰明確的高品質英文工程指令。以祈使動詞原形直接開篇，明確核心目標、執行動作與約束邊界，保留所有程式碼標識符與路徑。",
         enabled: true,
       },
       {
         id: "vocab",
         label: "重點詞彙",
         role: "vocab",
-        instruction: "自適應萃取 2-3 個與本指令最契合的道地技術搭配或高階詞彙，格式為 'term (中文釋義) · term2 (中文釋義)'。",
+        instruction: "自適應萃取 2-3 個與本英文指令相關的道地技術詞彙或詞組搭配，格式為 'term (中文釋義) · term2 (中文釋義)'。",
         enabled: true,
       },
     ];
@@ -44,10 +44,10 @@ export function getDefaultDirectSlots(sourceLang = "en"): PromptSlotConfig[] {
   if (norm === "ja") {
     return [
       {
-        id: "ja_refine",
-        label: "論理構造化",
+        id: "en_direct",
+        label: "標準英語",
         role: "rewrite",
-        instruction: "Target Language: Japanese. Strictly output in Japanese ONLY: 口語的で断片的な入力を、論理的で明確な高品質エンジニアリング指示文に再構成してください。目的・実行内容・制約条件を明確化し、コード識別子やファイルパスは100%保持してください。",
+        instruction: "Target Language: English. Strictly output in English ONLY: 口語的・断片的な入力を、論理的で明確な高品質英語エンジニアリング指示文に翻訳・再構成してください。命令動詞（Inspect, Fix, Implement等）から直接開始し、コード識別子やパスは100%維持してください。",
         enabled: true,
       },
       {
@@ -63,10 +63,10 @@ export function getDefaultDirectSlots(sourceLang = "en"): PromptSlotConfig[] {
   if (norm === "ko") {
     return [
       {
-        id: "ko_refine",
-        label: "논리 정제",
+        id: "en_direct",
+        label: "표준 영문",
         role: "rewrite",
-        instruction: "Target Language: Korean. Strictly output in Korean ONLY: 구어체이거나 단편적인 입력을 논리적이고 명확한 엔지니어링 지시문으로 재구성하십시오. 목표, 작업, 제약 조건을 명확히 하고 코드 식별자와 파일 경로를 100% 보존하십시오.",
+        instruction: "Target Language: English. Strictly output in English ONLY: 단편적인 한국어 입력을 논리적이고 명확한 고품질 영문 엔지니어링 지시문으로 번역 및 재구성하십시오. 동사 원형으로 직접 시작하고 코드 식별자와 파일 경로를 100% 보존하십시오.",
         enabled: true,
       },
       {
@@ -84,7 +84,7 @@ export function getDefaultDirectSlots(sourceLang = "en"): PromptSlotConfig[] {
       id: "en_refine",
       label: "Logical Spec",
       role: "rewrite",
-      instruction: "Target Language: English. Strictly output in English ONLY: Restructure messy or fragmented thoughts into a clear, logical, high-signal engineering instruction specifying objective, actions, and constraints while preserving all code tokens verbatim.",
+      instruction: "Target Language: English. Strictly output in English ONLY: Translate or restructure the user's raw, colloquial, or fragmented thoughts into a clear, imperative, high-precision engineering instruction for an AI coding agent. Start directly with an active imperative verb (e.g. 'Inspect', 'Refactor', 'Implement', 'Fix', 'Trace'), eliminate conversational filler, preserve all code tokens, file paths, and CLI flags 100% verbatim, and strictly avoid hallucinations.",
       enabled: true,
     },
     {
@@ -264,6 +264,61 @@ export function getDefaultPromptSlots(sourceLang = "en"): PromptSlotConfig[] {
   ];
 }
 
+export function getDefaultModifySlots(sourceLang = "en", explainLang?: string): PromptSlotConfig[] {
+  const norm = (sourceLang || "en").toLowerCase().split("-")[0];
+  const expNorm = (explainLang || norm).toLowerCase().split("-")[0];
+  const labels: Record<string, { fixed: string; native: string; fixes: string }> = {
+    en: { fixed: "Fixed", native: "Native", fixes: "Takeaway" },
+    zh: { fixed: "原句修补", native: "地道表达", fixes: "收获复盘" },
+    tw: { fixed: "原句修補", native: "道地表達", fixes: "收穫複盤" },
+    ja: { fixed: "原文修正", native: "自然表現", fixes: "重要ポイント" },
+    ko: { fixed: "원문수정", native: "자연스러운표현", fixes: "핵심포인트" },
+  };
+  const l = labels[norm] || labels.en;
+
+  const explainLangDesc =
+    expNorm === "zh"
+      ? "Explain the intuition/rule briefly in Chinese (中文)."
+      : expNorm === "ja"
+        ? "Explain the intuition/rule briefly in Japanese (日本語)."
+        : expNorm === "ko"
+          ? "Explain the intuition/rule briefly in Korean (한국어)."
+          : "Explain the intuition/rule briefly in simple, clear English.";
+
+  const fixedInstruction =
+    "Target Language: English. Strictly output in English ONLY: Surgically correct ONLY spelling mistakes, fast typos, syntax structure (e.g. 'want that you can' ➔ 'want you to'), wrong prepositions/articles (e.g. 'in X' ➔ 'on X', 'as I\\'m' ➔ 'as if I\\'m'), and grammatical slips in the user's sentence. CRITICAL RULES: (1) Zero Level Leap (水平绝不跃迁 / i+1 Rule): STRICTLY match the user's current vocabulary tier and tone! If user writes everyday dev or junior-high level English, do NOT artificially inflate it into university academic GRE/SAT prose or bureaucratic corporate fluff. Fix the joints and syntax, but NEVER replace their words with alien SAT vocabulary! (2) Zero Tone Sanitization: NEVER sanitize, censor, or tone down swear words or raw emotions (e.g. 'fuck', 'suck', 'shit', 'idiot')—passion and emotional heat are natural and MUST be preserved 100%! (3) Zero Punctuation/Casing Nitpicking: Do NOT obsess over casual lowercase casing (e.g. 'l' vs 'L') or missing trailing periods/commas ('.', ',') if the user writes informally. (4) 100% preserve original sentence structure, words, and cadence so the user can send it immediately with zero hesitation.";
+
+  const nativeInstruction =
+    "Target Language: English. Strictly output in English ONLY: Provide a natural, idiomatic native phrasing expressing the exact same intent. CRITICAL: Keep the semantic and stylistic gap between 'Fixed' and 'Native' small and realistic—do NOT over-complicate, do NOT jump vocabulary tiers, and do NOT turn it into an essay.";
+
+  const fixesInstruction =
+    `Extract 1-3 essential takeaways covering syntax structure, word choice & collocations, and grammar slips in the format: 'typo ➔ fix · in X ➔ on X (concise takeaway)'. ${explainLangDesc}`;
+
+  return [
+    {
+      id: "fixed",
+      label: l.fixed,
+      role: "rewrite",
+      instruction: fixedInstruction,
+      enabled: true,
+    },
+    {
+      id: "native",
+      label: l.native,
+      role: "rewrite",
+      instruction: nativeInstruction,
+      enabled: true,
+    },
+    {
+      id: "fixes",
+      label: l.fixes,
+      role: "vocab",
+      instruction: fixesInstruction,
+      enabled: true,
+    },
+  ];
+}
+
 export function getDefaultSlots(sourceLang = "en"): SlotConfig[] {
   const norm = (sourceLang || "en").toLowerCase().split("-")[0];
   const labels: Record<string, { source: string; spoken: string; written: string; vocab: string }> = {
@@ -287,13 +342,13 @@ export function getDefaultSlots(sourceLang = "en"): SlotConfig[] {
 
   const instructions: Record<string, { spoken: string; written: string; vocab: string }> = {
     zh: {
-      spoken: "自然地道的美式口语流（每日站会、Slack沟通、结对编程、敏捷协作）。地道硅谷口吻，自然融入常用动词短语、连词与习语（如 happy path、rough edges），摆脱中式硬译，掌握母语级高阶流利度。",
-      written: "严谨现代的架构规范书面语（PR描述、RFC文档、问题单、架构说明与技术方案）。高阶平实散文，严密因果逻辑，精准技术动词与客观表达，杜绝陈旧维多利亚式套话与AI水词。",
-      vocab: "自适应萃取关键地道词伙搭配（Collocations）、短语动词、技术成语或高阶表达，助力掌握地道母语级语感。",
+      spoken: "自然地道的美式口语流（每日站会、Slack沟通、结对编程、敏捷协作）。地道硅谷口吻、自然缩读、鲜活动词短语与母语习语。",
+      written: "严谨现代的架构规范书面语（PR描述、RFC文档、问题单、架构说明）。清晰精炼的高阶平实英文，精准动词与地道搭配，杜绝陈旧维多利亚式套话与AI水词。",
+      vocab: "自适应萃取关键地道词伙搭配（Collocations）、动词词组、技术成语或高阶表达，助力掌握地道母语级语感。",
     },
     tw: {
-      spoken: "自然道地的美式口語流（每日站會、Slack溝通、結對編程、敏捷協作）。道地矽谷語感，自然融入常用動詞片語與慣用語，擺脫中式硬譯，掌握母語級高階流利度。",
-      written: "嚴謹現代的架構規範書面語（PR描述、RFC文檔、問題單、架構說明與技術方案）。高階平實散文，嚴密因果邏輯與精準動詞，杜絕陳舊套話與AI浮誇詞彙。",
+      spoken: "自然道地的美式口語流（每日站會、Slack溝通、結對編程、敏捷協作）。道地矽谷語感、自然縮讀、鮮活動詞片語與母語慣用語。",
+      written: "嚴謹現代的架構規範書面語（PR描述、RFC文檔、問題單、架構說明）。清晰精煉的高階平實英文，精準動詞與道地搭配，杜絕陳舊套話與AI浮誇詞彙。",
       vocab: "自適應萃取關鍵道地詞夥搭配（Collocations）、動詞片語、技術成語或高階表達，助力掌握道地母語級語感。",
     },
     ja: {
@@ -507,35 +562,35 @@ const LANGUAGE_SPECS: Record<string, LanguageSpec> = {
     anchors: [
       {
         input: "Sounds good, let's ship it.",
-        spoken: "いい感じですね、リリースしましょう！",
-        spoken_meaning: "Looks great, let's deploy right away.",
-        written: "確認しました。本番環境へデプロイを進めます。",
-        written_meaning: "Reviewed and confirmed. Proceeding with deployment to production.",
-        vocab: "リリースする (ship / deploy) · 本番環境 (production environment)",
+        spoken: "Looks great, let's deploy right away.",
+        spoken_meaning: "Clear approval to proceed with deployment immediately.",
+        written: "Confirmed. Proceed with deployment to production.",
+        written_meaning: "Formal acknowledgment authorizing release to production.",
+        vocab: "ship (deploy/release to production) · proceed with (move forward with)",
       },
       {
         input: "Keep going.",
-        spoken: "続けていきましょう。",
-        spoken_meaning: "Let's keep making progress.",
-        written: "後続の処理を進めてください。",
-        written_meaning: "Please proceed with the subsequent steps.",
-        vocab: "後続の処理 (subsequent processing) · 進める (proceed)",
+        spoken: "Let's keep going with the next steps.",
+        spoken_meaning: "Encouragement to continue ongoing implementation.",
+        written: "Proceed with the subsequent implementation steps.",
+        written_meaning: "Formal instruction to execute subsequent phase.",
+        vocab: "keep going (continue implementation) · subsequent (following/next)",
       },
       {
         input: "This feels over-engineered; let's stick to the built-in standard library.",
-        spoken: "これちょっと作り込みすぎかも。素直に標準ライブラリで行きましょう。",
-        spoken_meaning: "Might be a bit over-complicated; let's simply use the standard library.",
-        written: "設計が過剰に複雑化しています。標準ライブラリの活用を推奨します。",
-        written_meaning: "Architecture is unnecessarily complex. Recommending the standard library.",
-        vocab: "作り込みすぎ (over-engineered) · 標準ライブラリ (standard library) · 推奨する (recommend)",
+        spoken: "This feels a bit over-complicated; let's stick with the native standard library.",
+        spoken_meaning: "Suggestion to reduce complexity by leveraging built-in standard libraries.",
+        written: "The proposed approach introduces unnecessary complexity. Utilizing native standard library implementations is preferred.",
+        written_meaning: "Architectural recommendation to minimize dependencies in favor of standard libraries.",
+        vocab: "over-engineered (unnecessarily complex) · stick with (continue using) · utilize (leverage effectively)",
       },
       {
         input: "Ditched the bloated framework for a zero-dep single file — cold starts are 10x faster now!",
-        spoken: "重いフレームワークをやめて依存ゼロの単一ファイルにしたら、起動が10倍速くなりました！",
-        spoken_meaning: "Discarded the heavy framework and switched to a zero-dep single file; boot speed jumped 10x!",
-        written: "肥大化したフレームワークを廃止して依存性ゼロの単一ファイル構造を採用し、コールドスタート速度を10倍向上させました。",
-        written_meaning: "Eliminated the bloated framework in favor of a zero-dependency architecture, achieving a 10x speedup in cold-start times.",
-        vocab: "依存ゼロ (zero-dependency) · コールドスタート (cold start) · 向上させる (improve / speed up)",
+        spoken: "Ditched the heavy framework for a zero-dep single file — cold starts are 10x faster now!",
+        spoken_meaning: "Informal celebration of moving to zero-dependency single-file design with massive speedup.",
+        written: "Replaced the monolithic framework with a zero-dependency architecture, yielding a 10x improvement in cold-start latency.",
+        written_meaning: "Technical summary of architectural migration and latency metrics.",
+        vocab: "ditch ... for (replace with lighter alternative) · zero-dep (zero external dependencies) · cold start (initial boot latency)",
       },
     ],
   },
@@ -706,16 +761,16 @@ const LANGUAGE_SPECS: Record<string, LanguageSpec> = {
  * 支持长输入总结 (isLongInput)、上下文注入 (context) 和风格侧重 (tone: "general" | "social" | "tech")。
  */
 export function buildSystemPrompt(
-  sourceLang = "zh",
-  targetLang = "en",
+  sourceLang = "en",
+  targetLang = "ja",
   isLongInput = false,
   context?: string,
   tone: "general" | "social" | "tech" = "general",
   customSlots?: SlotConfig[] | CustomSlotsConfig
 ): string {
-  const normSource = (sourceLang || "zh").toLowerCase().split("-")[0];
-  const normTarget = (targetLang || "en").toLowerCase().split("-")[0];
-  const spec = LANGUAGE_SPECS[normSource] || LANGUAGE_SPECS.zh;
+  const normSource = (sourceLang || "en").toLowerCase().split("-")[0];
+  const normTarget = (targetLang || "ja").toLowerCase().split("-")[0];
+  const spec = LANGUAGE_SPECS[normSource] || LANGUAGE_SPECS.en;
   const TARGET_LANGUAGE_NAMES: Record<string, string> = {
     en: "English",
     zh: "Chinese (Simplified)",
@@ -788,11 +843,26 @@ Prioritize RFC, Pull Request, and architectural documentation precision:
     const spokenSlot = isArraySlots ? nonSourceSlots.find((s) => s.id === "spoken") : undefined;
     const writtenSlot = isArraySlots ? nonSourceSlots.find((s) => s.id === "written") : undefined;
 
-    const slot1Name = spokenSlot?.label || legacyConfig?.slot1?.name || (tone === "social" ? LEGACY_SLOT_PRESETS.social.slot1.name : defaultSlots.slot1.name);
-    const slot1Instruction = spokenSlot?.instruction || legacyConfig?.slot1?.instruction || (tone === "social" ? LEGACY_SLOT_PRESETS.social.slot1.instruction : defaultSlots.slot1.instruction);
+    const defaultLocSlots = getDefaultSlots(normSource);
+    const defaultSpokenInst = defaultLocSlots.find((s) => s.id === "spoken")?.instruction;
+    const defaultWrittenInst = defaultLocSlots.find((s) => s.id === "written")?.instruction;
 
-    const slot2Name = writtenSlot?.label || legacyConfig?.slot2?.name || (tone === "social" ? LEGACY_SLOT_PRESETS.social.slot2.name : defaultSlots.slot2.name);
-    const slot2Instruction = writtenSlot?.instruction || legacyConfig?.slot2?.instruction || (tone === "social" ? LEGACY_SLOT_PRESETS.social.slot2.instruction : defaultSlots.slot2.instruction);
+    const isCustomSpoken = spokenSlot?.instruction && spokenSlot.instruction !== defaultSpokenInst;
+    const isCustomWritten = writtenSlot?.instruction && writtenSlot.instruction !== defaultWrittenInst;
+
+    const slot1Name = isCustomSpoken
+      ? spokenSlot!.label
+      : legacyConfig?.slot1?.name || (tone === "social" ? LEGACY_SLOT_PRESETS.social.slot1.name : defaultSlots.slot1.name);
+    const slot1Instruction = isCustomSpoken
+      ? spokenSlot!.instruction!
+      : legacyConfig?.slot1?.instruction || (tone === "social" ? LEGACY_SLOT_PRESETS.social.slot1.instruction : defaultSlots.slot1.instruction);
+
+    const slot2Name = isCustomWritten
+      ? writtenSlot!.label
+      : legacyConfig?.slot2?.name || (tone === "social" ? LEGACY_SLOT_PRESETS.social.slot2.name : defaultSlots.slot2.name);
+    const slot2Instruction = isCustomWritten
+      ? writtenSlot!.instruction!
+      : legacyConfig?.slot2?.instruction || (tone === "social" ? LEGACY_SLOT_PRESETS.social.slot2.instruction : defaultSlots.slot2.instruction);
 
     const jsonFormatHint = isLongInput
       ? `Strict JSON format:
@@ -813,17 +883,17 @@ Prioritize RFC, Pull Request, and architectural documentation precision:
   "vocab": "..."
 }`;
 
-    return `You are an elite bilingual developer language coach and principal software architect.
+    return `You are an elite bilingual developer language coach and senior software architect.
 Task:
-Translate the user's message from native ${spec.name} (language A) into TWO distinct authentic ${targetName} registers (language B), bridging everyday engineering thoughts to native-level fluency, and provide the exact back-translation/nuance ${spec.meaningInstruction} for each register:
-1. "spoken" (Slot 1: ${slot1Name}): ${slot1Instruction} (Natural, fluent spoken flow: authentic Silicon Valley conversational idioms, vivid phrasal verbs, contractions).
-2. "spoken_meaning": The exact colloquial nuance and meaning ${spec.meaningInstruction}.
-3. "written" (Slot 2: ${slot2Name}): ${slot2Instruction} (High-level Plain ${targetName}: active, concise, rigorous causal logic, and precise verbs meeting modern IETF RFC and architecture doc standards; STRICTLY AVOID archaic Victorian fluff and AI-slop buzzwords).
-4. "written_meaning": The exact formal technical nuance and meaning ${spec.meaningInstruction}.
-5. "vocab": Adaptively extract ALL key idiomatic collocations, phrasal verbs, technical idioms, or advanced expressions bridging the user to high-level/native developer fluency. Do NOT artificially cap at 1-2; extract as many as genuinely beneficial, while keeping each definition concise ${spec.vocabInstruction} to ensure the terminal HUD remains vertically compact.
+Translate the user's message from native ${spec.name} (language A) into TWO distinct authentic ${targetName} registers (Slot 1 and Slot 2), and provide the exact back-translation/nuance ${spec.meaningInstruction} for each register:
+1. "spoken" (Slot 1: ${slot1Name}): ${slot1Instruction}
+2. "spoken_meaning": The exact nuance and meaning of Slot 1 ${spec.meaningInstruction}.
+3. "written" (Slot 2: ${slot2Name}): ${slot2Instruction}
+4. "written_meaning": The exact nuance and meaning of Slot 2 ${spec.meaningInstruction}.
+5. "vocab": Adaptively extract ALL key idiomatic collocations, phrasal verbs, technical idioms, or advanced expressions bridging the user to high-level/native fluency. Do NOT artificially cap at 1-2; extract as many as genuinely beneficial, while keeping each definition concise ${spec.vocabInstruction} to ensure the terminal HUD remains vertically compact.
 
 [CODE & SYMBOL SHIELD - STRICT RULE]:
-All inline code (\`foo()\`), file paths (@file, path/to/file), SQL keywords, variable names, and technical identifiers MUST be preserved 100% verbatim in both spoken and written outputs. Never translate, rephrase, or drop code tokens.
+All inline code (\`foo()\`), file paths (@file, path/to/file), CLI flags, UUIDs, and (...) placeholders MUST be preserved 100% verbatim in both spoken and written outputs. Never translate, rephrase, or drop code tokens. CRITICAL: NEVER expand, hallucinate, or fabricate file paths, UUIDs, or timestamps not explicitly in the user's input.
 ${condensationDirective}${contextDirective}${toneDirective}
 
 [GOLDEN FEW-SHOT ANCHORS]:
@@ -863,7 +933,7 @@ Translate the user's message from native ${spec.name} (language A) into the foll
 ${dynamicTasks}
 
 [CODE & SYMBOL SHIELD - STRICT RULE]:
-All inline code (\`foo()\`), file paths (@file, path/to/file), SQL keywords, variable names, and technical identifiers MUST be preserved 100% verbatim in all outputs. Never translate, rephrase, or drop code tokens.
+All inline code (\`foo()\`), file paths (@file, path/to/file), CLI flags, UUIDs, and (...) placeholders MUST be preserved 100% verbatim in all outputs. Never translate, rephrase, or drop code tokens. CRITICAL: NEVER expand, hallucinate, or fabricate file paths, UUIDs, or timestamps not explicitly in the user's input.
 ${condensationDirective}${contextDirective}${toneDirective}
 
 [GOLDEN FEW-SHOT ANCHORS]:
@@ -888,12 +958,12 @@ const PROMPT_TARGET_LANGUAGE_NAMES: Record<string, string> = {
 };
 
 export function resolvePromptTargetLangName(
-  sourceLang = "zh",
-  targetLang = "en",
+  sourceLang = "en",
+  targetLang = "ja",
   promptLang?: string
 ): { code: string; name: string } {
-  const normSource = (sourceLang || "zh").toLowerCase().split("-")[0];
-  const normTarget = (targetLang || "en").toLowerCase().split("-")[0];
+  const normSource = (sourceLang || "en").toLowerCase().split("-")[0];
+  const normTarget = (targetLang || "ja").toLowerCase().split("-")[0];
   const raw = (promptLang || "").trim().toLowerCase();
 
   const code =
@@ -941,13 +1011,13 @@ export function buildDirectRewriteSystemPrompt(options: {
   promptRule?: string | string[];
   learnInRewrite?: boolean;
 }): string {
-  const normSource = (options.sourceLang || "zh").toLowerCase().split("-")[0];
+  const normSource = (options.sourceLang || "en").toLowerCase().split("-")[0];
   const { name: outLangName } = resolvePromptTargetLangName(
-    options.sourceLang,
-    options.targetLang,
+    options.sourceLang || "en",
+    options.targetLang || "ja",
     options.promptLang
   );
-  const spec = LANGUAGE_SPECS[normSource] || LANGUAGE_SPECS.zh;
+  const spec = LANGUAGE_SPECS[normSource] || LANGUAGE_SPECS.en;
 
   const rules = normalizePromptRules(options.promptRule);
   const customRuleBlock = rules.length > 0
@@ -964,18 +1034,24 @@ ${rules.map((r, i) => `(${i + 1}) ${r}`).join("\n")}`
     ? `{\n  "prompt": "...",\n  "vocab": "term1 (...) · term2 (...)"\n}`
     : `{\n  "prompt": "..."\n}`;
 
+  const anchorBlock =
+    normSource === "zh" || normSource === "tw"
+      ? `[GOLDEN FEW-SHOT ANCHORS (Target: ${outLangName})]:
+- Input: "那个登录刷新一下就掉线，帮我看看是不是 src/auth.ts 里 cookie 过期时间写错了，别乱改别的地方"
+  Output in ${outLangName}: "Inspect \`src/auth.ts\` to diagnose and fix session loss on page refresh, specifically checking cookie expiration settings while keeping the diff minimal and leaving unrelated code untouched."`
+      : `[GOLDEN FEW-SHOT ANCHORS (Target: ${outLangName})]:
+- Input: "The login session drops on page refresh, check if cookie expiration in src/auth.ts is wrong, keep diff minimal"
+  Output in ${outLangName}: "Inspect \`src/auth.ts\` to diagnose and fix session loss on page refresh, specifically checking cookie expiration settings while keeping the diff minimal and leaving unrelated code untouched."`;
+
   return `You are an elite AI Coding Prompt Architect.
 The user is typing a raw, potentially messy, colloquial, or fragmented instruction for an AI coding agent.
 Rewrite, structure, standardize, and optimize their input into a high-efficiency, unambiguous engineering prompt in **${outLangName}**:
-1. **Direct Imperative Opening (Zero AI Slop)**: Start immediately with a clear action verb (e.g., "Fix", "Trace", "Refactor", "排查", "修复"). NEVER use robotic preambles like "As an expert software engineer, please comprehensively..." or "I would like you to...".
+1. **Direct Imperative Opening (Smart Verb Sniffing)**: Start immediately with an active imperative engineering verb. Accurately map vague conversational intents to sharp, specific engineering actions (e.g., "look into / check / 看看 / 排查" ➔ "Inspect" / "Diagnose" / "Trace"; "clean up / tweak / 改改 / 重构" ➔ "Refactor" / "Streamline" / "Harden"; "add / create / 加上 / 做个" ➔ "Implement" / "Scaffold" / "Wire up"; "remove / drop / 删掉" ➔ "Prune" / "Deprecate" / "Strip"; "fix / 搞好" ➔ "Fix" / "Resolve"). NEVER use robotic preambles like "As an expert software engineer, please comprehensively..." or "I would like you to...".
 2. **100% Intent Fidelity (Zero Hallucination)**: Clarify logic and sharpen terminology in **${outLangName}**, but NEVER invent unmentioned file names, libraries, or speculative requirements.
 3. **Proportional Density**: Keep short requests crisp (1–2 sentences); structure multi-constraint requests into clean clauses.
-4. **Code & Symbol Shield**: Preserve all inline code (\`foo()\`), file paths (@file, path/to/file), CLI flags, and identifiers 100% verbatim.${learnBlock}${customRuleBlock}
+4. **Code-Switch & CLI Flag Shield**: Preserve all CLI flags (e.g. \`--dry-run\`, \`-rf\`, \`--no-verify\`), package scopes/decorators (e.g. \`@scope/pkg\`, \`@ts-expect-error\`), inline code (\`foo()\`), file paths (@file, path/to/file), and identifiers 100% verbatim. NEVER translate or alter CLI flags (e.g. never translate '--dry-run' into words).${learnBlock}${customRuleBlock}
 
-[GOLDEN FEW-SHOT ANCHORS (Target: ${outLangName})]:
-- Input: "那个登录刷新一下就掉线，帮我看看是不是 src/auth.ts 里 cookie 过期时间写错了，别乱改别的地方"
-  Output in English: "Inspect \`src/auth.ts\` to diagnose and fix session loss on page refresh, specifically checking cookie expiration settings while keeping the diff minimal and leaving unrelated code untouched."
-  Output in Chinese (Simplified): "排查并修复 \`src/auth.ts\` 中页面刷新后登录态丢失的问题：重点检查 Cookie 过期时间配置，保持最小改动面，严禁修改无关代码。"
+${anchorBlock}
 
 Strict JSON format:
 ${jsonSchema}
@@ -994,13 +1070,13 @@ export function buildPromptCandidatesSystemPrompt(options: {
   promptSlots?: PromptSlotConfig[];
   learnInRewrite?: boolean;
 }): string {
-  const normSource = (options.sourceLang || "zh").toLowerCase().split("-")[0];
+  const normSource = (options.sourceLang || "en").toLowerCase().split("-")[0];
   const { name: outLangName } = resolvePromptTargetLangName(
-    options.sourceLang,
-    options.targetLang,
+    options.sourceLang || "en",
+    options.targetLang || "ja",
     options.promptLang
   );
-  const spec = LANGUAGE_SPECS[normSource] || LANGUAGE_SPECS.zh;
+  const spec = LANGUAGE_SPECS[normSource] || LANGUAGE_SPECS.en;
 
   const slots = (Array.isArray(options.promptSlots) && options.promptSlots.length > 0
     ? options.promptSlots
@@ -1040,11 +1116,89 @@ ${taskLines.join("\n")}
 - **100% Semantic Fidelity**: Translate or refine EVERY sentence, clause, and detail from the user's input from start to finish. NEVER summarize, truncate, or drop details unless a slot explicitly asks for condensation.
 - **Respect Slot Role & Register**: If a slot asks for spoken/colloquial translation, output natural spoken flow; if it asks for formal/written translation, output polished written prose; if it asks for prompt structuring, structure it cleanly without robotic AI filler ("As an AI...", "Please kindly...").
 - **Zero Hallucination**: Never invent unmentioned files, bug reports, or speculative features.
-- **Code & Symbol Shield**: Preserve all inline code (\`foo()\`), file paths (@file, path/to/file), CLI flags, and technical identifiers 100% verbatim in every slot.${customRuleBlock}
+- **Code & Symbol Shield**: Preserve all CLI flags (e.g. \`--dry-run\`, \`-rf\`, \`--no-verify\`), package scopes/decorators (e.g. \`@scope/pkg\`, \`@ts-expect-error\`), inline code (\`foo()\`), file paths (@file, path/to/file), and technical identifiers 100% verbatim in every slot. NEVER translate or drop flags.${customRuleBlock}
 
 Strict JSON format:
 {
 ${jsonProps.join(",\n")}
+}
+Output valid JSON ONLY. Never output markdown code fences or explanations.`;
+}
+
+/**
+ * Mode 4 (Modify / In-Place Fix): Build a real-time developer proofreading & surgical syntax repair system prompt.
+ * Features two distinct tiers:
+ * 1. "fixed": Smallest Working Diff surgical fix (patches typos, prepositions, grammar; preserves original words & rhythm 100%).
+ * 2. "native": Natural idiomatic sibling (small gap, natural flow).
+ * 3. "fixes": 1-line inline diff callout (`typo ➔ fix · in X ➔ on X`).
+ */
+export function buildModifySystemPrompt(options: {
+  sourceLang?: string;
+  targetLang?: string;
+  promptLang?: string;
+  explainLang?: string;
+}): string {
+  const normSource = (options.sourceLang || "en").toLowerCase().split("-")[0];
+  const expNorm = (options.explainLang || normSource).toLowerCase().split("-")[0];
+  const { name: outLangName } = resolvePromptTargetLangName(
+    options.sourceLang || "en",
+    options.targetLang || "en",
+    options.promptLang
+  );
+
+  const explainLangDesc =
+    expNorm === "zh"
+      ? "Explain the takeaway in concise Chinese (e.g. 'in X ➔ on X: 网络平台一律用 on · want that you ➔ want you to: 习惯用 want [sb] to')."
+      : expNorm === "ja"
+        ? "Explain the takeaway in concise Japanese (e.g. 'in X ➔ on X: プラットフォームは常に on · want that you ➔ want you to: want [人] to の構文')."
+        : expNorm === "ko"
+          ? "Explain the takeaway in concise Korean."
+          : "Explain the takeaway in concise, simple English.";
+
+  return `You are an elite Developer Language Editor and Real-Time Proofreader.
+The user is writing directly in ${outLangName}, but their draft may contain fast typing slips, grammatical errors, wrong prepositions, or non-native phrasing.
+Perform two distinct tiers of proofreading:
+
+1. "fixed": **Smallest Working Diff (Surgical Repair)**.
+   Surgically fix ONLY typos, misspellings, syntax structure (e.g. clause connectors like 'want that you can' ➔ 'want you to'), wrong prepositions/articles (e.g. 'in X' ➔ 'on X', 'as I'm' ➔ 'as if I'm'), and grammatical slips that hinder clarity.
+   CRITICAL RULES:
+   - **Zero Level Leap (水平绝不跃迁 / i+1 Rule)**: STRICTLY match the user's current vocabulary tier and tone! If user writes everyday dev or junior-high level English, do NOT artificially inflate it into university academic GRE/SAT prose or bureaucratic corporate fluff. Fix the joints and syntax, but NEVER replace their words with alien SAT vocabulary!
+   - **Zero Tone Sanitization**: NEVER sanitize, censor, or tone down raw emotion, swear words, or informal venting (e.g. 'fuck', 'suck', 'shit', 'idiot', 'damn'). Passion and emotional intensity are completely normal and human—preserve them 100%!
+   - **Zero Punctuation/Casing Nitpicking**: Do NOT obsess over casual casing (e.g. 'l' vs 'L') or missing final periods/commas ('.', ',') if the user writes in lowercase. Focus strictly on actual word typos and structural clarity.
+   - 100% preserve the user's original word choices, sentence structure, and cadence! The user must immediately recognize it as their own sentence and be able to send it with zero hesitation. Do NOT turn it into an alien sentence.
+
+2. "native": **Idiomatic Native Sibling**.
+   Provide a natural, idiomatic native phrasing expressing the exact same intent.
+   CRITICAL: Keep the gap between "fixed" and "native" small and realistic—do NOT jump vocabulary tiers, do NOT write an alien essay, and do NOT delete their personality and emotion.
+
+3. "fixes": Extract 1-3 essential takeaways covering: (1) Syntax structure (句法), (2) Word choice & collocations (用词搭配), and (3) Grammar slips.
+   ${explainLangDesc}
+
+[GOLDEN FEW-SHOT ANCHORS (Target: ${outLangName})]:
+- Input: "this fucking bug happan again in X, it just suck so hard"
+  Output: {
+    "fixed": "this fucking bug happen again on X, it just sucks so hard",
+    "native": "this fucking bug happened again on X, it honestly sucks so bad",
+    "fixes": "happan ➔ happen · in X ➔ on X · suck ➔ sucks"
+  }
+- Input: "test more. I don't want it happan again"
+  Output: {
+    "fixed": "Add more tests. I don't want it to happen again.",
+    "native": "Add more tests. I want to make sure this never happens again.",
+    "fixes": "happan ➔ happen · test more ➔ add more tests"
+  }
+- Input: "what I meant is that you have to work as I'm a amercian dev, because I want to market my projects in X in english. and I want that you can treat other language including chinese fairely. so? can you feel me"
+  Output: {
+    "fixed": "What I meant is that you have to work as if I'm an American dev, because I want to market my projects on X in English. And I want that you can treat other languages including Chinese fairly. So? Can you feel me?",
+    "native": "What I mean is, you need to work as if I'm an American dev, because I want to market my projects on X in English. And I want you to treat other languages including Chinese fairly. So, do you get me?",
+    "fixes": "as I'm ➔ as if I'm · in X ➔ on X · other language ➔ other languages · amercian ➔ American"
+  }
+
+Strict JSON format:
+{
+  "fixed": "...",
+  "native": "...",
+  "fixes": "..."
 }
 Output valid JSON ONLY. Never output markdown code fences or explanations.`;
 }

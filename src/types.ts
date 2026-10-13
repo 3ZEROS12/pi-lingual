@@ -1,4 +1,4 @@
-export type LingualMode = "original" | "english" | "select" | "off";
+export type LingualMode = "original" | "english" | "select" | "modify" | "off";
 export type LinguaMode = LingualMode;
 
 export type SlotRole = "source" | "translation" | "vocab" | "custom";
@@ -48,8 +48,8 @@ export interface CustomSlotsConfig {
 
 export interface LingualRequest {
   text: string;
-  sourceLang?: string;                  // e.g. "zh" (default) | "ja" | "en" | "es" | "fr" | "de"
-  targetLang?: string;                  // e.g. "en" (default) | "ja" | "zh"
+  sourceLang?: string;                  // e.g. "en" (default) | "ja" | "zh" | "es" | "fr" | "de"
+  targetLang?: string;                  // e.g. "ja" (default) | "en" | "zh"
   context?: string;                     // Optional: Context of the tweet being replied to, issue, or Slack thread
   tone?: "general" | "social" | "tech"; // default "general"
   isLongInput?: boolean;
@@ -174,11 +174,14 @@ export interface LingualConfig {
   model: string;
   selectedModel?: string;
   mode?: LingualMode;
+  modeLocked?: boolean;            // When true, locks active mode to prevent cross-process or unrequested drift
   compact?: boolean;
   slotPreset?: string;
   slots?: SlotConfig[];             // Mode 1 (Companion / 纯伴学) dedicated slots
   directSlots?: PromptSlotConfig[]; // Mode 2 (Direct / 直接改) dedicated 1-to-1 slot (+ optional vocab slot)
   promptSlots?: PromptSlotConfig[]; // Mode 3 (Candidates / 挑候选) dedicated multi-candidate slots
+  modifySlots?: PromptSlotConfig[]; // Mode 4 (Modify / 原句修正) dedicated minimal fix + native sibling + diff slots
+  explainLang?: string;             // Cognitive explanation language for Mode 4 takeaways (e.g. "zh", "en", "ja")
   lastSeenVersion?: string;         // Tracks the last major feature release banner shown above editor
   sourceLang?: string;
   targetLang?: string;

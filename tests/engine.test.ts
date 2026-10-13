@@ -227,7 +227,7 @@ test("translatePrompt - supports custom completion callback (Pi native ModelRegi
     });
   };
 
-  const res = await translatePrompt("认同，开始吧", { complete: mockComplete });
+  const res = await translatePrompt("认同，开始吧", { sourceLang: "zh", targetLang: "en", complete: mockComplete });
   assert.ok(res, "Must return valid translation from complete callback");
   assert.equal(res.spoken, "Totally on board with that — let's dive right in.");
   assert.equal(res.spokenMeaning, "完全赞同，咱们直接开搞");
@@ -242,7 +242,7 @@ test("translatePrompt - supports custom completion callback (Pi native ModelRegi
 
 test("translatePrompt - live integration test against local gateway if configured", async () => {
   try {
-    const res = await translatePrompt("认同，开始吧");
+    const res = await translatePrompt("认同，开始吧", { sourceLang: "zh", targetLang: "en" });
     if (!res) {
       console.log("Skipping live integration test: gateway offline or returned null");
       return;

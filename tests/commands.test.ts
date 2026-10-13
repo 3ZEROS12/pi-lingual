@@ -26,11 +26,11 @@ test("extension command matrix - registers 4 core commands without menu clutter"
 
   extensionFactory(mockPi);
 
-  // Only 4 core commands registered in Pi's / menu
+  // Register core developer commands in Pi's / menu
   assert.deepEqual(
     Object.keys(registeredCommands).sort(),
-    ["lang", "last", "lingual", "slots"],
-    "Must register strictly the 4 core commands (/lingual, /lang, /slots, /last)"
+    ["lang", "last", "lingual", "lingual-mode", "slots", "tuner"],
+    "Must register strictly the core developer commands (/lingual, /lang, /tuner, /lingual-mode, /slots, /last)"
   );
   assert.equal(registeredCommands["compact"], undefined, "Must NOT occupy Pi core /compact command");
   assert.equal(registeredCommands["status"], undefined, "Must NOT hijack generic /status command");
@@ -68,15 +68,18 @@ test("extension /lingual - supports explicit mode arguments, 1/2/3/0 jumps, and 
   await registeredCommands["lingual"].handler("2", mockCtx);
   assert.ok(
     notifications[notifications.length - 1].includes("直接改") ||
-      notifications[notifications.length - 1].includes("direct")
+      notifications[notifications.length - 1].toLowerCase().includes("direct")
   );
-  assert.ok(typeof lastStatusVal === "string" && lastStatusVal.includes("直接改"));
+  assert.ok(
+    typeof lastStatusVal === "string" &&
+      (lastStatusVal.includes("直接改") || lastStatusVal.includes("Direct"))
+  );
 
   // 2. Explicitly switch to Mode 0 (Off) — status bar badge MUST become undefined (0 visual pixels)
   await registeredCommands["lingual"].handler("0", mockCtx);
   assert.ok(
     notifications[notifications.length - 1].includes("已关闭") ||
-      notifications[notifications.length - 1].includes("off")
+      notifications[notifications.length - 1].toLowerCase().includes("off")
   );
   assert.equal(lastStatusVal, undefined, "Off mode must hide status bar badge completely (undefined)");
 
@@ -84,21 +87,30 @@ test("extension /lingual - supports explicit mode arguments, 1/2/3/0 jumps, and 
   await registeredCommands["lingual"].handler("companion", mockCtx);
   assert.ok(
     notifications[notifications.length - 1].includes("纯伴学") ||
-      notifications[notifications.length - 1].includes("companion")
+      notifications[notifications.length - 1].toLowerCase().includes("companion")
   );
-  assert.ok(typeof lastStatusVal === "string" && String(lastStatusVal).includes("纯伴学"));
+  assert.ok(
+    typeof lastStatusVal === "string" &&
+      (String(lastStatusVal).includes("纯伴学") || String(lastStatusVal).includes("Companion"))
+  );
 
-  // 4. Cycle without arguments: companion (1) -> direct (2) -> candidates (3) -> off (0) -> companion (1)
+  // 4. Cycle without arguments: companion (1) -> direct (2) -> candidates (3) -> modify (4) -> off (0) -> companion (1)
   await registeredCommands["lingual"].handler("", mockCtx);
   assert.ok(
     notifications[notifications.length - 1].includes("直接改") ||
-      notifications[notifications.length - 1].includes("direct")
+      notifications[notifications.length - 1].toLowerCase().includes("direct")
   );
 
   await registeredCommands["lingual"].handler("", mockCtx);
   assert.ok(
     notifications[notifications.length - 1].includes("挑候选") ||
-      notifications[notifications.length - 1].includes("candidates")
+      notifications[notifications.length - 1].toLowerCase().includes("candidates")
+  );
+
+  await registeredCommands["lingual"].handler("", mockCtx);
+  assert.ok(
+    notifications[notifications.length - 1].includes("原句修补") ||
+      notifications[notifications.length - 1].toLowerCase().includes("modify")
   );
 
   await registeredCommands["lingual"].handler("", mockCtx);
@@ -134,8 +146,8 @@ test("extension /lingual compact - toggles capsule and tree layout with notifica
   await registeredCommands["lingual"].handler("compact", mockCtx);
   assert.ok(notifications.length > 0);
   assert.ok(
+    notifications[notifications.length - 1].toLowerCase().includes("capsule") ||
     notifications[notifications.length - 1].includes("胶囊") ||
-    notifications[notifications.length - 1].includes("Capsule") ||
     notifications[notifications.length - 1].includes("カプセル")
   );
 
@@ -143,8 +155,8 @@ test("extension /lingual compact - toggles capsule and tree layout with notifica
   await registeredCommands["lingual"].handler("compact", mockCtx);
   assert.ok(notifications.length > 1);
   assert.ok(
+    notifications[notifications.length - 1].toLowerCase().includes("tree") ||
     notifications[notifications.length - 1].includes("树状") ||
-    notifications[notifications.length - 1].includes("tree") ||
     notifications[notifications.length - 1].includes("ツリー")
   );
 });
@@ -190,9 +202,10 @@ test("standalone /lang and language normalization - switches languages and handl
   // 5. Subcommand /lingual compact
   await registeredCommands["lingual"].handler("compact", mockCtx);
   assert.ok(
+    notifications[notifications.length - 1].toLowerCase().includes("capsule") ||
+    notifications[notifications.length - 1].toLowerCase().includes("tree") ||
     notifications[notifications.length - 1].includes("胶囊") ||
-    notifications[notifications.length - 1].includes("Capsule") ||
-    notifications[notifications.length - 1].includes("capsule") ||
+    notifications[notifications.length - 1].includes("树状") ||
     notifications[notifications.length - 1].includes("カプセル")
   );
 
@@ -330,16 +343,16 @@ test("v0.4.1 Mode 2 Direct Rewrite & Mode 3 N-Choice Prompt Selector", async () 
   assert.equal(defaultPromptSlots.length, 4);
   assert.deepEqual(defaultPromptSlots.map((s) => s.id), ["concise", "spec", "deep", "vocab"]);
 
-  // 2. Mode 2 (direct) runs dedicated directSlots[0] (zh_refine), Mode 3 (candidates) runs all promptSlots
+  // 2. Mode 2 (direct) runs dedicated directSlots[0] (en_direct), Mode 3 (candidates) runs all promptSlots
   const rewritten = await rewritePromptDirect("那个登录刷新老掉线，帮我看看是不是cookie问题", {
     sourceLang: "zh",
     targetLang: "en",
     complete: async () =>
       JSON.stringify({
-        zh_refine: "排查并修复页面刷新后登录态丢失问题：检查 Cookie 属性与过期策略，保持最小工作改动面。",
+        en_direct: "Diagnose and fix session loss on page refresh: check cookie expiration policy while maintaining minimal diff.",
       }),
   });
-  assert.equal(rewritten, "排查并修复页面刷新后登录态丢失问题：检查 Cookie 属性与过期策略，保持最小工作改动面。");
+  assert.equal(rewritten, "Diagnose and fix session loss on page refresh: check cookie expiration policy while maintaining minimal diff.");
 
   // 3. Mode 3 N-Choice Candidate Generator (supports default 3 styles or custom N styles + optional vocab slot)
   const candSys = buildPromptCandidatesSystemPrompt({
@@ -370,7 +383,7 @@ test("v0.4.1 Mode 2 Direct Rewrite & Mode 3 N-Choice Prompt Selector", async () 
   const rewrittenUnescaped = await rewritePromptDirect("修复登录报错", {
     sourceLang: "zh",
     targetLang: "en",
-    complete: async () => `{"zh_refine": "Fix the "login" session bug in src/auth.ts"}`,
+    complete: async () => `{"en_direct": "Fix the "login" session bug in src/auth.ts"}`,
   });
   assert.equal(rewrittenUnescaped, 'Fix the "login" session bug in src/auth.ts');
 
@@ -466,11 +479,8 @@ test("v0.4.1 Mode 4 Active 0-Token Context Shield in off mode & /lingual select 
   const bannedApologyWords = ["抱歉", "Sorry", "お詫び", "사과", "Disculpas", "Désolé", "Entschuldigung", "Извините"];
   const zhBanner = formatReleaseBannerLines("zh", 80);
   assert.equal(zhBanner.length, 8);
-  assert.ok(zhBanner.some((l) => l.includes("三大模式拥有独立槽位配置")));
-  assert.ok(zhBanner.some((l) => l.includes("1 纯伴学")));
-  assert.ok(zhBanner.some((l) => l.includes("2 直接改")));
-  assert.ok(zhBanner.some((l) => l.includes("3 挑候选")));
-  assert.ok(zhBanner.some((l) => l.includes("0 已关闭") && l.includes("0Token")));
+  assert.ok(zhBanner.some((l) => l.includes("实战狂飙") || l.includes("粗口与情绪")));
+  assert.ok(zhBanner.some((l) => l.includes("4 实战狂飙")));
   assert.ok(zhBanner.every((l) => !l.endsWith("...")), "No line should be truncated on an 80-col terminal");
   assert.ok(
     zhBanner.every((l) => bannedApologyWords.every((w) => !l.includes(w))),
@@ -479,8 +489,8 @@ test("v0.4.1 Mode 4 Active 0-Token Context Shield in off mode & /lingual select 
 
   const enBanner = formatReleaseBannerLines("en", 80);
   assert.equal(enBanner.length, 8);
-  assert.ok(enBanner.some((l) => l.includes("Isolated slot arrays per mode")));
-  assert.ok(enBanner.some((l) => l.includes("1 Companion")));
+  assert.ok(enBanner.some((l) => l.includes("Live Flow") || l.includes("profanity")));
+  assert.ok(enBanner.some((l) => l.includes("4 Live Flow")));
   assert.ok(enBanner.every((l) => !l.endsWith("...")), "No English line should be truncated on an 80-col terminal");
   assert.ok(
     enBanner.every((l) => bannedApologyWords.every((w) => !l.includes(w))),
@@ -624,5 +634,261 @@ test("Session Feedback Regression: 3-Way Mode Isolation (Zero Leakage), faithful
   const resPick0 = await inputHandler({ type: "input", text: "测试按0原话直发", source: "interactive" }, mockCtx);
   assert.equal(resPick0.action, "continue", "Pressing key '0' must immediately send original raw text");
 });
+
+test("extension /lingual anti-drift: blocks unrecognized subcommands and supports /lingual lock & unlock", async () => {
+  const registeredCommands: Record<string, any> = {};
+  const mockPi: any = {
+    on() {},
+    registerCommand(name: string, def: any) {
+      registeredCommands[name] = def;
+    },
+    registerShortcut() {},
+  };
+
+  extensionFactory(mockPi);
+
+  const notifications: { msg: string; type: string }[] = [];
+  const mockCtx: any = {
+    hasUI: true,
+    ui: {
+      notify(msg: string, type = "info") {
+        notifications.push({ msg, type });
+      },
+      setStatus() {},
+      setWidget() {},
+      theme: { fg: (_c: string, t: string) => t },
+    },
+  };
+
+  // 1. Set mode to Mode 1 (Companion)
+  await registeredCommands["lingual"].handler("1", mockCtx);
+  notifications.length = 0;
+
+  // 2. Unrecognized sub-command MUST NOT fall through to mode cycling!
+  await registeredCommands["lingual"].handler("invalid_subcommand_test", mockCtx);
+  assert.ok(notifications.some((n) => n.msg.includes("未识别的子命令") && n.type === "warning"), "Must show warning for unrecognized subcommand");
+
+  // 3. Lock mode via /lingual lock
+  notifications.length = 0;
+  await registeredCommands["lingual"].handler("lock", mockCtx);
+  assert.ok(notifications.some((n) => n.msg.includes("已锁定")), "Must notify that mode is locked");
+
+  // 4. While locked, bare /lingual MUST NOT cycle mode!
+  notifications.length = 0;
+  await registeredCommands["lingual"].handler("", mockCtx);
+  assert.ok(notifications.some((n) => n.msg.includes("已锁定在") && n.type === "warning"), "Must warn that mode is locked and refuse blind cycling");
+
+  // 5. Unlock mode via /lingual unlock
+  notifications.length = 0;
+  await registeredCommands["lingual"].handler("unlock", mockCtx);
+  assert.ok(notifications.some((n) => n.msg.includes("解锁")), "Must notify that lock is released");
+
+  // 6. After unlock, bare /lingual cycles mode normally
+  notifications.length = 0;
+  await registeredCommands["lingual"].handler("", mockCtx);
+  assert.ok(notifications.some((n) => n.msg.includes("直接改") || n.msg.includes("Direct")), "Must cycle to Direct mode after unlock");
+});
+
+test("extension Mode 4 Modify - surgically fixes typos in-place and renders Fixed + Native + Fixes card", async () => {
+  let inputHandler: any = null;
+  const registeredCommands: Record<string, any> = {};
+  const mockPi: any = {
+    on(event: string, handler: any) {
+      if (event === "input") inputHandler = handler;
+    },
+    registerCommand(name: string, def: any) {
+      registeredCommands[name] = def;
+    },
+    registerShortcut() {},
+  };
+
+  extensionFactory(mockPi);
+
+  let renderedHudLines: string[] = [];
+  const mockCtx: any = {
+    hasUI: true,
+    model: { provider: "mock", id: "mock-model" },
+    modelRegistry: {
+      streamSimple: () => ({
+        result: async () => ({
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                fixed: "Add more tests. I don't want it to happen again.",
+                native: "Add more tests. I want to make sure this never happens again.",
+                fixes: "happan ➔ happen · test more ➔ add more tests",
+              }),
+            },
+          ],
+        }),
+      }),
+    },
+    ui: {
+      notify() {},
+      setStatus() {},
+      setWidget(_k: string, lines: string[]) {
+        if (Array.isArray(lines)) renderedHudLines = lines;
+      },
+      theme: {
+        fg: (_c: string, t: string) => t,
+        bold: (t: string) => t,
+      },
+    },
+  };
+
+  // Jump directly to Mode 4 (modify)
+  await registeredCommands["lingual"].handler("4", mockCtx);
+
+  const rawUserText = "test more. I don't want it happan again";
+  const res = await inputHandler({ type: "input", text: rawUserText, source: "interactive" }, mockCtx);
+
+  // 1. In-place prompt transform returns the surgical fix (user's exact sentence patched)
+  assert.equal(res.action, "transform");
+  assert.equal(res.text, "Add more tests. I don't want it to happen again.", "Prompt must be surgically fixed without alien gap");
+
+  // 2. HUD card above displays Fixed, Native sibling, and Fixes diff
+  assert.ok(renderedHudLines.some((l) => l.includes("Add more tests. I don't want it to happen again.")));
+  assert.ok(renderedHudLines.some((l) => l.includes("Add more tests. I want to make sure this never happens again.")));
+  assert.ok(renderedHudLines.some((l) => l.includes("happan ➔ happen")));
+});
+
+test("extension Mode 4 Modify - preserves raw emotion/profanity and avoids pedantic casing/punctuation nitpicking", async () => {
+  let inputHandler: any = null;
+  const registeredCommands: Record<string, any> = {};
+  const mockPi: any = {
+    on(event: string, handler: any) {
+      if (event === "input") inputHandler = handler;
+    },
+    registerCommand(name: string, def: any) {
+      registeredCommands[name] = def;
+    },
+    registerShortcut() {},
+  };
+
+  extensionFactory(mockPi);
+
+  let renderedHudLines: string[] = [];
+  const mockCtx: any = {
+    hasUI: true,
+    model: { provider: "mock", id: "mock-model" },
+    modelRegistry: {
+      streamSimple: () => ({
+        result: async () => ({
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                fixed: "this fucking bug happen again on X, it just sucks so hard",
+                native: "this fucking bug happened again on X, it honestly sucks so bad",
+                fixes: "happan ➔ happen · in X ➔ on X · suck ➔ sucks",
+              }),
+            },
+          ],
+        }),
+      }),
+    },
+    ui: {
+      notify() {},
+      setStatus() {},
+      setWidget(_k: string, lines: string[]) {
+        if (Array.isArray(lines)) renderedHudLines = lines;
+      },
+      theme: {
+        fg: (_c: string, t: string) => t,
+        bold: (t: string) => t,
+      },
+    },
+  };
+
+  await registeredCommands["lingual"].handler("4", mockCtx);
+
+  const rawUserText = "this fucking bug happan again in X, it just suck so hard";
+  const res = await inputHandler({ type: "input", text: rawUserText, source: "interactive" }, mockCtx);
+
+  // 1. Raw profanity ('fucking', 'sucks') is 100% preserved; no pedantic capitalization of 't'; no forced trailing period
+  assert.equal(res.action, "transform");
+  assert.equal(res.text, "this fucking bug happen again on X, it just sucks so hard");
+  assert.ok(res.text.includes("fucking"), "Profanity must NOT be sanitized into corporate PR speak");
+  assert.ok(res.text.startsWith("this"), "Casual lowercase casing must NOT be forced into uppercase");
+
+  // 2. HUD card renders the fixes takeaway
+  assert.ok(renderedHudLines.some((l) => l.includes("happan ➔ happen · in X ➔ on X · suck ➔ sucks")));
+});
+
+test("extension Mode 4 Modify - long input adaptively suppresses full sentence in HUD and 100% preserves Takeaways", async () => {
+  let inputHandler: any = null;
+  const registeredCommands: Record<string, any> = {};
+  const mockPi: any = {
+    on(event: string, handler: any) {
+      if (event === "input") inputHandler = handler;
+    },
+    registerCommand(name: string, def: any) {
+      registeredCommands[name] = def;
+    },
+    registerShortcut() {},
+  };
+
+  extensionFactory(mockPi);
+
+  let renderedHudLines: string[] = [];
+  const mockCtx: any = {
+    hasUI: true,
+    model: { provider: "mock", id: "mock-model" },
+    modelRegistry: {
+      streamSimple: () => ({
+        result: async () => ({
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                fixed: "What I meant is that you have to work as if I'm an American dev, because I want to market my projects on X in English. And I want you to treat other languages including Chinese fairly. So? Can you feel me?",
+                native: "What I mean is, you need to work as if I'm an American dev, because I want to market my projects on X in English. And I want you to treat other languages including Chinese fairly. So, do you get me?",
+                fixes: "as I'm ➔ as if I'm: 假设角色用 as if · in X ➔ on X: 平台介词用 on · other language ➔ other languages",
+              }),
+            },
+          ],
+        }),
+      }),
+    },
+    ui: {
+      notify() {},
+      setStatus() {},
+      setWidget(_k: string, lines: string[]) {
+        if (Array.isArray(lines)) renderedHudLines = lines;
+      },
+      theme: {
+        fg: (_c: string, t: string) => t,
+        bold: (t: string) => t,
+      },
+    },
+  };
+
+  await registeredCommands["lingual"].handler("4", mockCtx);
+
+  // Input > 120 chars (a real developer long vent/description)
+  const longUserText =
+    "what I meant is that you have to work as I'm a amercian dev, because I want to market my projects in X in english. and I want that you can treat other language including chinese fairely. so? can you feel me";
+  const res = await inputHandler({ type: "input", text: longUserText, source: "interactive" }, mockCtx);
+
+  // 1. In-place prompt transform returns the full surgical fix to AI Agent without compromise
+  assert.equal(res.action, "transform");
+  assert.ok(res.text.includes("work as if I'm an American dev"));
+  assert.ok(res.text.includes("on X in English"));
+
+  // 2. HUD card suppresses the full multi-line fixed paragraph to avoid blowing terminal line budget
+  assert.ok(
+    !renderedHudLines.some((l) => l.includes("What I meant is that you have to work as if I'm an American dev")),
+    "Long sentence text must be adaptively suppressed from HUD to prevent terminal overflow"
+  );
+
+  // 3. Takeaway is 100% absolutely preserved in HUD
+  assert.ok(
+    renderedHudLines.some((l) => l.includes("as I'm ➔ as if I'm") && l.includes("in X ➔ on X")),
+    "Takeaways must be 100% absolutely preserved in HUD"
+  );
+});
+
+
 
 

@@ -152,6 +152,12 @@
   Resolves language via: (1) explicit `lingual.json -> sourceLang`, (2) recent user message scripts in `ctx.sessionManager.getEntries()` / `rpiv-i18n`, (3) OS locale (`Intl`), and (4) universal English (`"en"`) fallback.
 - On `session_start` (`event?.reason !== "resume"`), if `diskConfig.lastSeenVersion !== CURRENT_FEATURE_BANNER_VERSION`, the extension renders the banner above the editor (`aboveEditor`), records `lastSeenVersion` in `~/.pi/agent/lingual.json`, and auto-dismisses it on the first user input.
 
+### Invariant 11: Strict Working Mode Lock & Zero-Drift Guardrail (RFC 2119)
+- **Active Mode Sovereignty**: The active working mode (`companion` [1] / `direct` [2] / `candidates` [3] / `off` [0]) of `pi-lingual` is user-sovereign.
+- **Zero-Drift Prohibition**: Coding Agents are STRICTLY FORBIDDEN from mutating the top-level `"mode"` key in `~/.pi/agent/lingual.json` or executing mode-switching commands in response to general conversational requests (e.g. "be direct", "switch style", "summarize", "simplify").
+- **Tuner Scope Isolation**: When customizing prompt slots for Mode 2 (`directSlots`) or Mode 3 (`promptSlots`), Agents MUST preserve the top-level `"mode"` untouched, modifying ONLY the respective slot array.
+- **Mode Lock Protection (`/lingual lock`)**: When `modeLocked: true` is configured in `lingual.json` or activated via `/lingual lock`, `pi-lingual` physically blocks unparameterized mode cycling and refuses external disk mode overrides on input events, guaranteeing 100% session mode stability.
+
 ---
 
 ## 3. Physical Verification & Build Commands

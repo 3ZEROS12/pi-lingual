@@ -63,18 +63,19 @@ Traditional closed rectangular boxes (`│ ... │`) fracture when character wid
 
 ---
 
-## Four Operating States (`1 ➔ 2 ➔ 3 ➔ 0`)
+## Five Operating States (`1 ➔ 2 ➔ 3 ➔ 4 ➔ 0`)
 
-Press `/lingual` to cycle sequentially, or jump directly via `/lingual <1|2|3|0|companion|direct|candidates|off>`:
+Press `/lingual` to cycle sequentially, or jump directly via `/lingual <1|2|3|4|0|companion|direct|candidates|modify|off>`:
 
 | State | CLI ID | What You Type | What the Engine Does | Status & UI Feedback | Best For |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **`[1] Companion`** | `companion` | Native Language *(e.g. Chinese / Japanese)* | **0ms Pass-Through** to main AI + async companion card (`slots`) | `zh ⇄ en · Companion` + Dual-register HUD | Coding at full speed while absorbing authentic phrasing |
 | **`[2] Direct`** | `direct` | Native / Colloquial Input | **Runs dedicated `directSlots` ➔ 1-to-1 Direct Send** | `zh ⇄ en · Direct` + Clean conversion preview | Instant 1-to-1 faithful translation or polishing on Enter |
 | **`[3] Candidates`** | `candidates` | Native / Colloquial Input | **Runs `promptSlots` ➔ Press keys `1..N` to send immediately (`0`/`Esc` raw)** | `zh ⇄ en · Candidates` + Full card + `1..N` hotkey bar | Comparing multiple languages or registers and firing with 1 keypress |
+| **`[4] Live Flow`** | `modify` | Target Language Draft / Raw Input | **Surgically repairs typos, prepositions & syntax, preserves profanity/heat, sends to AI** | `zh ⇄ en · Live Flow` + Adaptive takeaway HUD (short: fixed+diff, long: diff focus) | Taking the steering wheel directly in English with an invisible safety net |
 | **`[0] Off`** | `off` | Any Text | **Hides status bar badge (`undefined`), detaches resize listeners & strips skill block** | **0 pixels, 0 listeners, 0 tokens** — completely invisible inside Pi | Pure coding or screen recording with zero visual or context footprint |
 
-### Strict 3-Way Mode Isolation + On-Demand `/lingual tuner` (0 System Prompt Tokens by Default)
+### Strict 4-Way Mode Isolation + On-Demand `/lingual tuner` (0 System Prompt Tokens by Default)
 `pi-lingual` isolates each mode's configuration in `~/.pi/agent/lingual.json` so experiments in one mode never leak into another (while stripping the `lingual-tuner` skill block across all modes during normal coding for **0.00-token** overhead, waking it invisibly via `display: false` only when you run `/lingual tuner`):
 1. **`slots` (Powers `[1] Companion` ONLY)**:
    - Defines your non-blocking learning card rows (`Spoken`, `Written`, `Vocab`, or multi-language rows), or omits `{ role: "source" }` via `/lingual hide-source` to save vertical height.
@@ -82,6 +83,11 @@ Press `/lingual` to cycle sequentially, or jump directly via `/lingual <1|2|3|0|
    - Dedicated 1-to-1 conversion rule (defaults to 100% faithful natural translation without forced summarization), immune to changes in Mode 1 or Mode 3.
 3. **`promptSlots` (Powers `[3] Candidates` ONLY)**:
    - Multi-candidate list displayed in full on the `aboveEditor` card, paired with a compact bottom hotkey bar where pressing number keys **`1`..`N`** fires your chosen candidate in `0ms` without pressing Enter (`0`/`Esc` sends original raw text).
+4. **`modifySlots` (Powers `[4] Live Flow` ONLY)**:
+   - **Zero Level Leap (i+1 Rule)**: Repairs your draft at your natural vocabulary tier; never inflates casual dev English into stuffy academic GRE prose.
+   - **Zero Tone Sanitization**: Preserves swear words and raw emotional intensity (`fuck`, `suck`, `shit`) 100%; zero nitpicking over casual lowercase casing or missing punctuation.
+   - **Adaptive HUD Retention**: Short sentences display fixed version + takeaways; long sentences/paragraphs suppress the full fixed text (dispatched to AI in background) to keep the HUD focused on 2-3 core takeaway diffs.
+   - **`explainLang` Cognitive Memory**: Stores your native language (e.g. `zh`, `ja`, `en`) to explain takeaways in the tongue you understand most effortlessly, surviving updates permanently.
 
 ### Hybrid Intent Grafting (Code Stays Untouched)
 In `english` mode, pasting code blocks or error logs never translates the code:

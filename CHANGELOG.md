@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.5.5
+
+- **Mode 4 [Live Flow · 实战狂飙] (`/lingual 4` / `modify`)**:
+  - **Direct Target Language Flow**: Enter raw, fast, emotional draft text in English (or target language). Surgically patches spelling mistakes, fast typos, prepositions (e.g. `in X ➔ on X`), syntax structure (e.g. `want that you can ➔ want you to`), and tenses in 0ms, and dispatches the clean prompt to the AI agent with zero delay.
+  - **Zero Tone Sanitization (100% Profanity & Heat Preserved)**: Passion and raw emotional expressions (`fuck`, `suck`, `shit`, `damn`) are completely preserved without corporate censorship.
+  - **Anti-Level-Leap Guardrail (i+1 Rule)**: Repairs your draft at your natural vocabulary tier; strictly avoids artificially inflating everyday dev English into academic GRE or pompous PR prose.
+  - **Zero Punctuation/Casing Nitpicking**: Casual lowercase letters (`l` vs `L`) and missing trailing punctuation are never flagged as errors.
+  - **Adaptive Takeaway Retention**: Short inputs display `[Fixed]` + `[Takeaways]`; long inputs/paragraphs automatically suppress the full sentence text to avoid terminal blowouts, focusing 100% on the core takeaway diffs.
+  - **`explainLang: "zh"` Cognitive Memory**: Permanently stores your preferred cognitive language in `~/.pi/agent/lingual.json` to explain grammar intuitions and blind spots in the language you understand most effortlessly.
+- **Strict 4-Way Mode Slot Isolation (`slots` / `directSlots` / `promptSlots` / `modifySlots`)**:
+  - Each mode maintains an independent, non-leaking configuration slot array in `~/.pi/agent/lingual.json`.
+- **Path & UUID Folding Shield**:
+  - Automatically folds copied local absolute file paths (`C:\Users\...`) and session UUIDs into `(...)` while preserving the raw payload, eliminating LLM path hallucinations.
+- **Next Leap Roadmap Forecast**:
+  - Officially announced the upcoming "Mode as Configuration (模式即配置)" declarative architecture in the in-terminal release banner, paving the way for complete user-defined mode pipelines with dual-core golden defaults.
+
 ## 0.5.3
 
 - **Clear 4-State Taxonomy (`1 ➔ 2 ➔ 3 ➔ 0`)**:

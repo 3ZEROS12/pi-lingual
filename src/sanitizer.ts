@@ -17,6 +17,11 @@ import { isNonEnglish } from "./shield.js";
 const TARGETED_CLIPBOARD_PATH_REGEX = /(?:[a-zA-Z]:[\\\/](?:[^:\r\n\t]+[\\\/])?pi-clipboard-[a-zA-Z0-9\-]+\.png|\/(?:[^\r\n\t]+[\\\/])?pi-clipboard-[a-zA-Z0-9\-]+\.png)/gi;
 const LEADING_TARGETED_CLIPBOARD_REGEX = /^(?:[a-zA-Z]:[\\\/](?:[^:\r\n\t]+[\\\/])?pi-clipboard-[a-zA-Z0-9\-]+\.png|\/(?:[^\r\n\t]+[\\\/])?pi-clipboard-[a-zA-Z0-9\-]+\.png)\s*/i;
 
+// 常见长绝对文件路径 (如 C:\Users\Jason\... 或 /var/log/...) 与 UUID/会话哈希
+// 自动折叠为 (...)，防止超长复制路径污染翻译 Prompt、撑爆终端行预算或引发大模型脑补展开
+const ABSOLUTE_LONG_PATH_REGEX = /(?:[a-zA-Z]:[\\\/](?:[^:\r\n\t\s<>"]+[\\\/])+[a-zA-Z0-9_\-\.]+\.[a-zA-Z0-9_]+|\/(?:[a-zA-Z0-9_\-\.]+[\\\/]){3,}[a-zA-Z0-9_\-\.]+\.[a-zA-Z0-9_]+)/gi;
+const UUID_OR_SESSION_REGEX = /(?:(?:session|id|uuid)[\s:=]*)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4,16}(?:\.jsonl)?/gi;
+
 // 堆栈跟踪特征正则
 const STACK_LINE_REGEX = /^\s*(?:at\s+(?:[\w$.<>]+|[^\s]+)\s*\(.*:\d+:\d+\)|at\s+.*:\d+:\d+|File\s+".*", line \d+, in\s+.*|goroutine \d+ \[.*\]:|Caused by:.*|^\s*\d+:\s+0x[0-9a-f]+)/;
 
@@ -61,11 +66,29 @@ export function sanitizePromptForTranslation(raw: string): SanitizedPromptResult
   
   // 提取夹带在行内或尾部的截图/临时状态路径，存入 rawPayload 供 AI 上下文使用，不污染自然语言切片
   const inlinePathMatches = text.match(TARGETED_CLIPBOARD_PATH_REGEX);
-  let trailingPathPayload: string | undefined;
+  const extraPayloads: string[] = [];
   if (inlinePathMatches && inlinePathMatches.length > 0) {
-    trailingPathPayload = inlinePathMatches.join("\n");
+    extraPayloads.push(...inlinePathMatches);
     text = text.replace(TARGETED_CLIPBOARD_PATH_REGEX, "").trim();
   }
+
+  // 1.1 识别复制的长绝对文件路径与 UUID 会话哈希，提取至 rawPayload 并用 (...) 占位折叠
+  const longPathMatches = text.match(ABSOLUTE_LONG_PATH_REGEX);
+  if (longPathMatches && longPathMatches.length > 0) {
+    extraPayloads.push(...longPathMatches);
+    text = text.replace(ABSOLUTE_LONG_PATH_REGEX, "(...)");
+  }
+
+  const uuidMatches = text.match(UUID_OR_SESSION_REGEX);
+  if (uuidMatches && uuidMatches.length > 0) {
+    extraPayloads.push(...uuidMatches);
+    text = text.replace(UUID_OR_SESSION_REGEX, "(...)");
+  }
+
+  // 折叠多余的连续 "(...) (...)"
+  text = text.replace(/(?:\(\.\.\.\)\s*){2,}/g, "(...) ").trim();
+
+  let trailingPathPayload: string | undefined = extraPayloads.length > 0 ? extraPayloads.join("\n") : undefined;
 
   if (!text) {
     return {
@@ -78,7 +101,7 @@ export function sanitizePromptForTranslation(raw: string): SanitizedPromptResult
   }
 
   // 2. 折叠 Markdown 封闭代码块 (```...```) 为 [...]
-  let hasCollapsed = false;
+  let hasCollapsed = Boolean(longPathMatches || uuidMatches);
   text = text.replace(/```[\w\-]*\r?\n([\s\S]*?)\r?\n```/g, (_match, codeContent) => {
     hasCollapsed = true;
     const codeLines = codeContent.trim().split(/\r?\n/);

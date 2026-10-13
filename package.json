@@ -1,6 +1,6 @@
 {
   "name": "pi-lingual",
-  "version": "0.5.4",
+  "version": "0.5.5",
   "description": "Bilingual developer companion & Prompt Optimizer for Pi — [1] 0ms Companion Cards (slots), [2] Dedicated 1-to-1 Logical Structuring (directSlots), [3] 3-Angle Engineering Candidates (promptSlots), and [0] Zero-Footprint Off Mode (off).",
   "type": "module",
   "main": "dist/index.js",

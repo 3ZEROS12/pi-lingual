@@ -35,3 +35,43 @@ test("shouldShieldBypass - does NOT bypass natural language prompts with tech te
   assert.equal(shouldShieldBypass("賛成です、進めましょう"), false);
   assert.equal(shouldShieldBypass("De acuerdo, empecemos"), false);
 });
+
+test("shouldShieldBypass - 0ms bypass for pure copied file paths, session UUIDs, and log URLs", () => {
+  // Pure Windows file path
+  assert.equal(
+    shouldShieldBypass("C:\\Users\\Jason\\.pi\\agent\\sessions\\2026-10-13_01a1354c-b212-70b2-94f5-1f0f2e4de168.jsonl"),
+    true,
+    "Pure Windows path must bypass translation 0ms"
+  );
+  // Pure Unix file path
+  assert.equal(
+    shouldShieldBypass("/var/log/pi-agent/sessions/session-01a1354c.jsonl"),
+    true,
+    "Pure Unix path must bypass translation 0ms"
+  );
+  // Pure UUID / Session ID
+  assert.equal(
+    shouldShieldBypass("01a1354c-b212-70b2-94f5-1f0f2e4de168"),
+    true,
+    "Pure UUID must bypass translation 0ms"
+  );
+  assert.equal(
+    shouldShieldBypass("ID: 01a1354c-b212-70b2-94f5-1f0f2e4de168"),
+    true,
+    "Pure ID: UUID must bypass translation 0ms"
+  );
+  // Pure URL
+  assert.equal(
+    shouldShieldBypass("https://github.com/3ZEROS12/pi-lingual/blob/main/src/extension.ts"),
+    true,
+    "Pure URL must bypass translation 0ms"
+  );
+
+  // But path WITH natural language question must NOT be bypassed
+  assert.equal(
+    shouldShieldBypass("C:\\path\\file.jsonl 帮我看看这个日志反映出什么问题？"),
+    false,
+    "Path accompanied by natural language question must NOT be bypassed"
+  );
+});
+

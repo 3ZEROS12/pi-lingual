@@ -986,12 +986,12 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
  * 遵循 Lesson 7: 英文中枢保底链 (English Pivot Fallback)
  */
 export function resolveLabelsForLang(
-  lang: string,
+  lang = "en",
   overrides?: Partial<LingualI18nLabels>,
   targetLang?: string
 ): LingualI18nLabels {
-  const norm = (lang || "zh").toLowerCase().split("-")[0];
-  const target = LANGUAGE_PRESETS[norm] || LANGUAGE_PRESETS.zh;
+  const norm = (lang || "en").toLowerCase().split("-")[0];
+  const target = LANGUAGE_PRESETS[norm] || LANGUAGE_PRESETS.en;
   const actualTarget = targetLang || (norm === "en" ? "ja" : "en");
   const pairTitle = `${norm} ⇄ ${actualTarget}`;
 

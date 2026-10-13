@@ -23,7 +23,7 @@ export class LingualLruCache<T> {
   /**
    * 生成标准化缓存键（结合源语言与目标语言）
    */
-  static buildKey(text: string, sourceLang = "zh", targetLang = "en", slotSignature?: string): string {
+  static buildKey(text: string, sourceLang = "en", targetLang = "ja", slotSignature?: string): string {
     const sig = slotSignature ? `[${slotSignature}]` : "";
     return `${sourceLang}➔${targetLang}${sig}:${text.trim()}`;
   }

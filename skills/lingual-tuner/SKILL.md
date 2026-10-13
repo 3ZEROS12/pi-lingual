@@ -1,182 +1,102 @@
 ---
 name: lingual-tuner
-description: "Adaptive customization architect for pi-lingual (~/.pi/agent/lingual.json). Universal English baseline that dynamically mirrors the user's native language (sourceLang) across 0-question fast-path, 1-round express default tweaks, and deep per-slot workbench for Mode 1, Mode 2, and Mode 3."
+description: "Adaptive customization architect for pi-lingual (~/.pi/agent/lingual.json). Universal English baseline for global software engineers driving AI coding agents (Claude Code, Cursor, Aider). Single-round instant configuration for bare /lingual tuner or /tuner, zero bureaucratic survey interrogation."
 ---
 
 # Pi-Lingual Adaptive Customization Architect (`~/.pi/agent/lingual.json`)
 
-An on-demand configuration skill for `pi-lingual`. By default, `pi-lingual` strips this skill from `systemPrompt` during normal coding turns (`0` token overhead) and activates it only when the user invokes `/lingual tuner` (or `/skill:lingual-tuner`).
+An on-demand configuration skill for `pi-lingual`. By default, `pi-lingual` strips this skill from `systemPrompt` during normal coding turns (`0` token overhead) and activates it only when the user invokes `/lingual tuner` or `/tuner`.
 
 ---
 
 ## 1. Core Architectural Invariants (Strict RFC 2119)
 
-1. **Universal English Baseline & Dynamic Native-Language Mirroring (`sourceLang`)**:
-   - This skill is authored in **Universal English** as the canonical baseline.
-   - **Mandatory Native-Language Adaptation**: First read `~/.pi/agent/lingual.json` to inspect `sourceLang` (default `"zh"`, or `"tw"`, `"ja"`, `"ko"`, `"en"`, `"es"`, `"fr"`, `"de"`, `"ru"`, etc.) and observe the language of the user's prompt.
-   - You **MUST dynamically translate and present** the Customization Map diagram, every `ask_user_question` header/question/label/description/preview, and your final summary in the **user's exact native language (`sourceLang`)**!
+1. **Universal English Developer Baseline & Symmetric Polyglot Architecture**:
+   - The canonical baseline of this skill is **Universal English** for global software engineers.
+   - All languages (English, Japanese, Chinese, Spanish, French, German, Korean) enjoy **symmetric and equal status**.
+   - **Strict Primary Language Sovereignty (Zero Foreign Language Residue)**:
+     - First read `~/.pi/agent/lingual.json` to inspect `sourceLang` (defaults to `"en"` for international/English developers).
+     - If `sourceLang === "en"` (or unset): All questions, headers, labels, descriptions, and previews MUST be authored **100% in pure English**! It is STRICTLY FORBIDDEN to assume the user is Chinese or output Chinese characters (`键入中文`, `规范英文`, etc.) to an English developer!
+     - Only render in Chinese if `sourceLang === "zh"`. Only render in Japanese if `sourceLang === "ja"`.
 
-2. **Zero Internal Code Jargon & Zero Unsolicited JSON/CLI Walls**:
-   - In all user-facing `ask_user_question` titles, labels, and descriptions, **NEVER** expose internal JSON variable names (`slots`, `directSlots`, `promptSlots`, `showMeaning`, `slotPreset`, `role`). Always translate them into natural, friendly everyday terms in the user's native language.
-   - **Delivery Hygiene**: Always write `~/.pi/agent/lingual.json` directly using the `write` tool.
-     - For **Express Tweaks (`⚡`)** and **Standard Customization (`🎨`)**, **NEVER dump raw JSON code blocks or CLI command walls into your chat reply!** Deliver ONLY: (a) a clean plain-language summary of active modes/rows in the user's native language, (b) an authentic visual card preview (`┌ ├ └`), and (c) a confirmation that changes are saved and live immediately without restarting or running any commands.
-     - Only show the raw JSON blueprint and CLI table when the user explicitly selects **Deep Per-Row Workbench (`🔬`)**.
+2. **Pure CLI Software Engineering Domain (Zero Desktop Office Fluff)**:
+   - This skill is designed STRICTLY for developers in terminal CLI environments driving AI coding agents.
+   - **Strict Prohibition**: NEVER present desktop chat, business etiquette, workplace honorifics, customer service, or corporate email templates. All presets and prompts MUST be 100% software engineering and developer workflow concepts (`Smallest Working Diff`, `Imperative Action Verb`, `Code-Switch Shield`, `Architecture RFC`, `Root-Cause Tracing`).
 
-3. **Strict 3-Way Mode Isolation (Zero Cross-Mode Leakage)**:
-   - Each of the 3 active modes has its **own isolated array** in `~/.pi/agent/lingual.json`:
-     1. **`slots`** ➔ Governs **ONLY Mode 1 (`companion` / 纯伴学)**.
-     2. **`directSlots`** ➔ Governs **ONLY Mode 2 (`direct` / 直接改)**.
-     3. **`promptSlots`** ➔ Governs **ONLY Mode 3 (`candidates` / 挑候选)**.
-   - Modifying Mode 1 or Mode 3 MUST NEVER overwrite or leak into Mode 2 (`directSlots`). When multiple modes are selected, configure each mode's array independently!
+3. **Single-Round Instant Flow (Zero Survey Interrogation Trap)**:
+   - When the user runs bare `/lingual tuner` or `/tuner`:
+   - Present at most **ONE single round of `ask_user_question`** (1-2 crisp questions max).
+   - **STRICTLY FORBID calling `ask_user_question` a second time!** Zero multi-stage preview loops.
+   - Once the user answers, **IMMEDIATELY apply the configuration to `~/.pi/agent/lingual.json` in the same turn** using the `write` tool.
 
-4. **Explicit Target Language Lock & Zero Unrequested Summarization**:
-   - Every slot's `instruction` MUST begin with an explicit target language lock (e.g., `"Target Language: French (fr). Strictly output in French ONLY: ..."` or `"Target Language: Japanese (ja). Strictly output in Japanese ONLY: ..."`).
-   - Unless the user explicitly chooses "AI Coding Prompt Structuring", every slot's `instruction` MUST enforce **100% faithful translation/expression without summarizing or altering the user's original meaning and sentence type** (`"Never summarize, distill, or turn conversational/academic/business sentences into software specs."`).
-   - In every ASCII card preview (`┌ ├ └`), the sample text on each row **MUST be written in that row's exact target language and register** (never copy-pasted English on non-English rows!).
+4. **Confusion Circuit Breaker (Human Empathy Safeguard)**:
+   - If the user types in custom text: *"not sure"*, *"simple"*, *"default"*, *"just change language"*, *"不清楚"*, or declines the question dialog with `Esc`:
+   - **IMMEDIATELY CANCEL any further questioning!**
+   - Fall back instantly to human dialogue: apply the golden developer default (Mode 2 Direct Engineering Spec, or `en ⇄ ja` companion), report clean confirmation in chat, and let the user continue coding with zero friction.
 
----
-
-## 2. Adaptive 3-Speed Customization Routing
-
-### Track 0: Zero-Question Fast-Path (0 Rounds · For Explicit Requests)
-- **Trigger**: The user's initial message already specifies what they want to change (e.g., `/lingual tuner hide source row in Mode 1 and set Mode 2 to faithful English`).
-- **Action**:
-  - **STRICTLY FORBID calling `ask_user_question` (`0` rounds of questions)!**
-  - Immediately read `~/.pi/agent/lingual.json`, apply the requested delta while preserving other modes intact, write `~/.pi/agent/lingual.json` via `write`, and output the clean native-language summary + authentic visual card preview.
+5. **Strict 3-Way Mode Isolation (Zero Cross-Mode Leakage)**:
+   - `slots` ➔ Governs ONLY Mode 1 (`companion` / Companion Card).
+   - `directSlots` ➔ Governs ONLY Mode 2 (`direct` / Direct Send).
+   - `promptSlots` ➔ Governs ONLY Mode 3 (`candidates` / Candidate Picker).
+   - Customizing one mode MUST NEVER alter or leak into the arrays of other modes.
+   - Preserve top-level `"mode"` untouched unless the user explicitly requests to switch active modes.
 
 ---
 
-### Track A / B / C Entry: Stage 1 Customization Map + Adaptive Interview (When User Runs `/lingual tuner` Without Specifics)
-First read `~/.pi/agent/lingual.json` (if present) to detect `sourceLang` and current settings.
+## 2. Bare `/lingual tuner` Execution Protocol
 
-**CRITICAL STEP 1 (Output the Column-Aligned Customization Map in the User's Native Language `sourceLang`!)**:
-Before calling `ask_user_question` in Stage 1, output the following **column-aligned Customization Map**, dynamically translated into the user's native language (`sourceLang`) with all right-hand badges (`[✓]` / `(+)`) vertically aligned and **no arbitrary row-count ceiling**:
+### Step 1: Pre-Flight Check (0.1s Dispatch)
+Read `~/.pi/agent/lingual.json` to inspect `sourceLang` (default `"en"`), `targetLang`, and current slot arrays.
 
-*Canonical Universal English Template (translate naturally into `sourceLang` — e.g. Simplified Chinese for `zh`, Japanese for `ja`, Korean for `ko`, etc.):*
-```text
-  pi-lingual Customization Map          Legend: ( ) Edit  (+) Add/Remove  [✓] Toggle
-  ──────────────────────────────────────────────────────────────────────────────────
-  [Mode 1 · Companion]  Send raw text in 0ms, show learning card above editor
-    · Source Row                                                        [✓] Show/Hide
-    ├ (Label) : (Language) · (Style: Spoken / Written / Paper / Script) (+) N Rows
-    │   ↳ Native Nuance Sub-line                                        [✓] On/Off
-    └ Vocab Row : (Focus: Idioms / Exam Collocations)                   [✓] On/Off
+### Step 2: Single-Round Developer Choice (`ask_user_question`)
 
-  [Mode 2 · Direct]     Convert 1-to-1 on Enter using a single dedicated rule
-    ├ (Label) : (Language) · (Style: Faithful Direct / Keigo / Spec)    1-to-1 Rule
-    └ Vocab Row : Extract 1-line key expressions                        [✓] On/Off
+#### For English Developers (`sourceLang === "en"` or unset) — 100% Pure English:
 
-  [Mode 3 · Candidates] Generate N options, press keys 1..N to send (0 for raw)
-    · Source Row                                                        [✓] Show/Hide
-    ├ 1..N (Label) : (Language) · (Style: Business / Keigo / PR)        (+) N Options
-    └ Vocab Row : Extract 1-line key expressions                        [✓] On/Off
-  ──────────────────────────────────────────────────────────────────────────────────
-```
-*(For example, when `sourceLang === "zh"`, render the diagram above in crisp Simplified Chinese with `图例: ( )可改  (+)可增删  [✓]可开关`, `(+) 自由增删多行`, `[✓] 显示/隐藏`, `[✓] 开启/关闭`; when `sourceLang === "ja"`, render in natural Japanese, etc.)*
+1. **Question 1 (`header`: `"Workflow"`) — Choose Developer Prompt & Mode Scheme**:
+   - *Question*: `Which development or companion workflow do you want to configure?`
+   - *Options*:
+     1. **Direct Engineering Prompt Optimization (Mode 2) (Recommended)** — Refine rough thoughts into high-signal imperative engineering specs for AI coding agents
+     2. **Dual-Register Companion Card (Mode 1)** — Send input in 0ms, expand spoken + written target language cards above editor
+     3. **Pick of 3 Candidates (Mode 3)** — Generate concise, structured, and root-cause prompt candidates, send with keys 1..3
+     4. **Switch Target Language** — Change your learning or translation target language (Japanese, Chinese, Spanish, German, etc.)
 
-**CRITICAL STEP 2 (Call `ask_user_question` in the User's Native Language `sourceLang`)**:
-In the same turn right after printing the Customization Map, call `ask_user_question` with these 4 zero-jargon questions (translated into `sourceLang`, explicitly stating the out-of-the-box default baseline in Q1 and Q4 so impatient users never face a "blackbox"):
-
-1. **Question 1 (`header`: `"Mode"` / `"定制模式"`, `multiSelect: true`) — Which mode(s) to customize? (Transparent Baseline, Zero Bias)**:
-   - *Question (adapt to `sourceLang`)*: Which working mode(s) would you like to customize? (Modes are 100% isolated and never leak into each other; the last selected mode becomes your active mode after saving.)
-   - *Options (adapt to `sourceLang`)*:
-     1. **Mode 1: Companion Card** (Send raw text in 0ms, show learning card above editor) — *[Default: Source + Spoken + Written + Vocab (4 rows) with native nuance sub-lines enabled]*
-     2. **Mode 2: Direct Send** (Convert 1-to-1 automatically on Enter using a single dedicated rule) — *[Default: 1-to-1 faithful natural translation into target language, zero forced summarization, isolated from Modes 1 & 3]*
-     3. **Mode 3: Candidate Picker** (Show full candidates above editor, press number keys `1..N` to send immediately, `0` for raw text) — *[Default: 3 distinct candidate options, instant 1-key send without pressing Enter]*
-
-2. **Question 2 (`header`: `"Pacing"` / `"定制节奏"`) — Choose your preferred depth & speed**:
-   - *Question (adapt to `sourceLang`)*: How would you like to customize? (Supports 1-round quick tweaks on top of defaults or deep per-row crafting.)
-   - *Options (adapt to `sourceLang`)*:
-     1. **⚡ Express Default Tweak (Apply immediately after this page · Zero follow-up questions) (Recommended)** — Best for busy users: applies your selections on top of defaults in 1 single turn (you can also type a quick note below).
-     2. **🎨 Standard Guided Setup (Pick target languages next + side-by-side visual style previews)** — Best for practical users: 1 more quick step to pick languages and compare visual previews.
-     3. **🔬 Deep Per-Row Workbench (Customize every row's label, register/honorifics & order + full blueprint review before saving)** — Best for perfectionists: craft every individual row (`丁寧語/謙譲語`, `해요체`, `UK RP / US Slang`, `NeurIPS Paper`, etc.) and approve the complete blueprint before saving.
-
-3. **Question 3 (`header`: `"Scenarios"` / `"场景与风格"`, `multiSelect: true`) — Universal Profession & Goal Coverage (Multi-Select!)**:
-   - *Question (adapt to `sourceLang`)*: What are your usage scenarios or desired transformation styles? (Multi-select supported; 100% faithful to your original meaning by default, never summarizing unless Option 4 is chosen.)
-   - *Options (adapt to `sourceLang`)*:
-     1. **Faithful Multilingual Translation & Localization (Daily Spoken / Formal Prose / Theater & Game Script)** — 100% faithful to your original meaning and tone across any number of languages (`EN / JA / KO / FR / DE / ES / RU`, US Slang, UK Formal, Anime/Game dialogue).
-     2. **Cross-Border Business & Client Etiquette (Japanese Keigo ビジネス敬語 / Korean 해요체 / International Business)** — Tailored for cross-border PMs, executives, and client communication; polite, idiomatic, and natural.
-     3. **Academic Research & Exam Prep (Top-Tier Conference Paper + Advisor Email + IELTS/TOEFL/JLPT High-Score Expressions & Collocations)** — Bans AI clichés (`delve`, `tapestry`); covers LaTeX academic prose, peer-level advisor emails, and IELTS Speaking Part 3 / Writing Task 2 / exam collocations.
-     4. **Developer & Geek Workflows (GitHub OSS PR/Issue + X/Twitter Dev Share + Concise Tech Prompts)** — Tailored for software engineers: authentic open-source collaboration, social sharing, and structured coding instructions.
-
-4. **Question 4 (`header`: `"Layout"` / `"版面微调"`, `multiSelect: true`) — Card layout & auxiliary rows (Transparent Default Baseline)**:
-   - *Question (adapt to `sourceLang`)*: Compared to the default card layout (Top `[Source]` + Translation Rows + `↳ Native Nuance` + Bottom `[Vocab]`), which layout adjustments do you want? (Multi-select)
-   - *Options (adapt to `sourceLang`)*:
-     1. **Hide Top `[Source]` Row (Save 1–2 lines of vertical space, show outputs only)** — Ideal if you don't need to re-read what you just typed (if unchecked, `[Source]` row is kept by default).
-     2. **Keep Bottom `[Vocab]` Row (Idioms, High-Score Synonyms & Collocations)** — Extracts 2–3 high-value phrases/collocations with native definitions at the bottom of the card.
-     3. **Keep `↳ Native Nuance` Sub-line Below Each Row (Recommended for 1–3 rows; auto-disabled for 4+ rows)** — Shows parenthetical native-language nuance breakdown under each translation row.
-     4. **Minimalist Pure-Output Layout (Hide `[Source]`, `[Vocab]`, and `↳ Sub-lines`)** — Displays only the pure output rows for maximum compactness.
+2. **Question 2 (`header`: `"Target Lang"`) — Target Language**:
+   - *Question*: `What is your target foreign language?`
+   - *Options*:
+     1. **Japanese (ja) (Recommended)** — Authentic daily spoken & technical Japanese for open-source and documentation
+     2. **Chinese (zh)** — Simplified Chinese for open-source projects and cross-border collaboration
+     3. **Spanish / French / German (es/fr/de)** — European tech ecosystems and open-source communities
+     4. **None (English Only)** — Focus purely on English prompt optimization and structuring without translation
 
 ---
 
-### Post-Stage-1 Branching Rules (Strictly Follow User's Q2 Pacing Choice in `sourceLang`!)
+#### For Chinese Developers (`sourceLang === "zh"`) — Simplified Chinese:
 
-#### Branch A: User Chose `⚡ Express Default Tweak` (1-Round Express Tweak)
-- **STOP ASKING QUESTIONS IMMEDIATELY!** Do **NOT** call `ask_user_question` a second time!
-- Immediately apply the user's Stage 1 choices (plus any custom note they typed) on top of their current/default config in `~/.pi/agent/lingual.json` via the `write` tool.
-- Output ONLY (in `sourceLang`):
-  1. A concise plain-language bullet summary of what is now active in their chosen mode(s);
-  2. An authentic ASCII card preview (`┌ ├ └`, with every row's sample text written in its exact target language and register!);
-  3. A 1-line confirmation that changes are saved and live immediately without restarting or running any commands. *(Do NOT dump raw JSON blocks or CLI command walls!)*
+1. **Question 1 (`header`: `"定制方案"`)**:
+   - *Question*: `您希望将 pi-lingual 调整为哪种开发指令或伴学方案？`
+   - *Options*:
+     1. **规范英文工程直发 (Direct English Spec) (Recommended)** — 键入中文，自动翻译并规范化为高信噪比英文工程指令直发 Coding Agent (Mode 2)
+     2. **经典双语伴学词卡 (Dual Companion Card)** — 0ms 原话直发，输入框上方浮现口语+架构书面双语学习卡 (Mode 1)
+     3. **多风格候选秒发 (Pick of 3 Candidates)** — 终端上方生成极简/结构/根因三组候选，按数字键 1..3 免回车秒发 (Mode 3)
+     4. **切换目标语种 (Switch Target Language)** — 切换翻译与伴学的目标语言（支持英、日、韩、德、法、西等）
 
-#### Branch B: User Chose `🎨 Standard Guided Setup` (2-Stage Guided + Side-by-Side `preview`)
-- Call `ask_user_question` **once more** (in `sourceLang`) tailored to the user's Stage 1 profession/goal:
-  1. **Target Languages & Row Lineup** (`multiSelect: true`);
-  2. **Style Nuance with Authentic Side-by-Side `preview` Mockups** (ensure every language row in `preview` displays real sample text in that exact language!).
-  - **Multi-Mode Guard**: If the user selected multiple modes in Stage 1 Q1, include separate questions for each selected mode so Mode 1, Mode 2, and Mode 3 remain 100% isolated.
-- After Round 2 returns, write `~/.pi/agent/lingual.json` via `write` and output the clean plain-language summary + authentic ASCII preview + live confirmation in `sourceLang`. *(No raw JSON wall!)*
-
-#### Branch C: User Chose `🔬 Deep Per-Row Workbench` (Per-Slot Precision + Stage 3 Blueprint Approval)
-1. **Stage 2 (Per-Row Fine-Grained Specification in `sourceLang`)**:
-   - Call `ask_user_question` to let the user specify exact per-row labels, languages, and registers for each selected mode:
-     - **Fine-Grained Register Library**:
-       - **English (`en`)**: `US Casual / Slang` vs `UK Formal / Received Pronunciation Prose` vs `Top-Tier Conference Academic (NeurIPS/ACL, zero AI clichés)` vs `Advisor/Client Polite Email` vs `IELTS Band 8.0 Spoken Part 3 & Task 2 Essay` vs `GitHub OSS PR & X Hook`
-       - **Japanese (`ja`)**: `丁寧語 (Desu/Masu)` vs `ビジネス敬語・謙譲語 (Enterprise Keigo)` vs `アニメ・ゲーム劇台詞 (Vivid theater/game dialogue)` vs `タメ口 (Casual peer)`
-       - **Korean (`ko`)**: `해요체 (Polite daily/business partner)` vs `하십시오체 (Formal presentation)` vs `반말 (Close friend)`
-       - **French / German / Spanish (`fr/de/es`)**: `Courant / Du / Tú (Natural daily)` vs `Soutenu / Affaires / Sie / Usted (Formal business/academic)`
-2. **Stage 3 (Mandatory Pre-Save Blueprint Confirmation in `sourceLang`)**:
-   - Present the **Complete Blueprint** inside `preview` (verifying that every row's mode label `[Mode 1]` / `[Mode 2]` / `[Mode 3]` is 100% accurate and every sample sentence in the ASCII preview matches that row's exact target language!):
-     - **Part 1**: Terminal ASCII Card Preview + `[1]..[N]` Hotkey Bar Preview;
-     - **Part 2**: Per-Row Specification Table (`[Mode | Row# | ID | Label | Target Language Lock & Full Instruction | Sub-line]`);
-     - **Part 3**: Exact JSON to be written to `~/.pi/agent/lingual.json`.
-   - Once confirmed (or adjusted), write `~/.pi/agent/lingual.json` and output the verified final preview.
+2. **Question 2 (`header`: `"目标语言"`)**:
+   - *Question*: `转换的目标外语语种是什么？`
+   - *Options*:
+     1. **英语 (English) (Recommended)** — 最佳编码大模型推理基座与国际开源标准
+     2. **日语 (Japanese)** — 适用于日系开源项目与技术文档
+     3. **多语种扩展 (德语 / 法语 / 西班牙语 / 韩语)** — 欧洲或跨国技术协作语种
 
 ---
 
-## 3. Isolated 3-Mode JSON Schema (Internal Agent Reference Only)
+## 3. Instant Settlement & Zero-Friction Confirmation
 
-```typescript
-interface LingualJsonSchema {
-  mode?: "companion" | "direct" | "candidates" | "off";
-  sourceLang?: "zh" | "tw" | "ja" | "ko" | "en" | "es" | "fr" | "de" | "ru";
-  targetLang?: string;
+Immediately apply the selection to `~/.pi/agent/lingual.json` via the `write` tool.
 
-  // 1. Mode 1 [Companion / 纯伴学] ONLY (isolated from Mode 2 & 3; supports any number of rows)
-  slots?: Array<{
-    id: string;
-    label: string;
-    role: "source" | "translation" | "vocab" | "custom";
-    instruction?: string;  // MUST start with "Target Language: <Lang>. Strictly output in <Lang> ONLY: ..."
-    showMeaning?: boolean; // true for 1-3 rows if requested; false for 4+ rows to keep rows single-line
-    enabled: boolean;
-  }>;
+### Output Delivery:
+Output ONLY:
+1. A concise 3-line bullet summary of what is now active (in user's `sourceLang`);
+2. An authentic ASCII card preview (`┌ ├ └`) using realistic software engineering text;
+3. A 1-line confirmation: *"Saved and active immediately without restarting."*
 
-  // 2. Mode 2 [Direct / 直接改] ONLY (dedicated 1-to-1 conversion slot, immune to Mode 1/3 changes)
-  directSlots?: Array<{
-    id: string;
-    label: string;
-    role?: "rewrite" | "vocab";
-    instruction: string;   // MUST start with "Target Language: <Lang>. Strictly output in <Lang> ONLY: ..."
-    enabled: boolean;
-  }>;
-
-  // 3. Mode 3 [Candidates / 挑候选] ONLY (multi-candidate list for 1..N instant hotkey selection)
-  promptSlots?: Array<{
-    id: string;
-    label: string;
-    role?: "rewrite" | "vocab";
-    instruction: string;   // MUST start with "Target Language: <Lang>. Strictly output in <Lang> ONLY: ..."
-    enabled: boolean;
-  }>;
-}
-```
+*(STRICTLY FORBID dumping raw JSON blocks, CLI walls, or initiating Round 2 questionnaires!)*

@@ -192,3 +192,14 @@ test("sanitizePromptForTranslation - protects short list comparison options from
   assert.ok(res.distilledText.includes("方案A：采用单文件架构"), "Must preserve option A verbatim");
   assert.ok(res.distilledText.includes("方案B：采用微内核架构"), "Must preserve option B verbatim");
 });
+
+test("sanitizePromptForTranslation - folds long absolute session paths and UUIDs into (...) and preserves in payload", () => {
+  const input = "C:\\Users\\Jason\\.pi\\agent\\sessions\\--C--Users-Jason-Desktop--\\2026-10-13T12-46-21-202Z_01a1354c-b212-70b2-94f5-1f0f2e4de168.jsonl ID: 01a1354c-b212-70b2-94f5-1f0f2e4de168 看这个对话，反映出非常多的问题，你先自己看，思考链也要看。";
+  const res = sanitizePromptForTranslation(input);
+  assert.equal(res.hasNaturalLanguage, true);
+  assert.ok(!res.distilledText.includes("01a1354c-b212-70b2"), "UUID must not leak into distilledText");
+  assert.ok(!res.distilledText.includes(".jsonl"), "Session path must not leak into distilledText");
+  assert.ok(res.distilledText.includes("(...)"), "Path and UUID must be collapsed into (...) placeholder");
+  assert.ok(res.distilledText.includes("看这个对话，反映出非常多的问题"));
+  assert.ok(res.rawPayload?.includes("01a1354c-b212-70b2"), "Raw payload must preserve full session ID and path");
+});
