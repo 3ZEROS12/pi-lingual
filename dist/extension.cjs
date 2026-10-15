@@ -60,8 +60,8 @@ var CANNOT_START_LINE_CHARS = /* @__PURE__ */ new Set([
   "\xBB"
 ]);
 function getEffectiveMaxCols(requested) {
-  const terminalCols = process.stdout?.columns;
-  const raw = typeof requested === "number" ? requested : typeof terminalCols === "number" && terminalCols > 0 ? terminalCols - 8 : 80;
+  const terminalCols = process.stdout?.columns || (process.env.COLUMNS ? parseInt(process.env.COLUMNS, 10) : void 0);
+  const raw = typeof requested === "number" ? requested : typeof terminalCols === "number" && terminalCols > 0 ? terminalCols - 8 : 120;
   return Math.max(25, raw);
 }
 var ANSI_ESCAPE_REGEX = /\x1b\[[0-9;?]*[a-zA-Z]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g;
@@ -519,12 +519,12 @@ function renderCardLayout(card, labels, options = {}) {
           );
           let branchBudget;
           if (isVocab) {
-            branchBudget = 1;
+            branchBudget = Math.max(1, Math.min(branchRendered.length, Math.min(2, remainingBudget)));
           } else {
             const branchesLeftAfterThis = numBranches - 1 - i;
             const maxPossible = Math.max(1, remainingBudget - branchesLeftAfterThis);
             const evenShare = Math.max(1, Math.floor(remainingBudget / Math.max(1, numBranches - i)));
-            branchBudget = Math.min(maxPossible, Math.min(branchRendered.length, evenShare));
+            branchBudget = Math.min(maxPossible, Math.min(branchRendered.length, Math.max(evenShare, 2)));
             transHandled++;
           }
           if (branchRendered.length <= branchBudget) {
@@ -3381,7 +3381,7 @@ function renderHudWidget(ctx, sourceText, spoken, written, vocab, spokenMeaning,
       state.labels,
       {
         maxCols,
-        maxLines: Math.min(9, Math.max(4, (slots?.length || state.slots?.length || 0) + 1)),
+        maxLines: 9,
         isCompact,
         slots: state.slots,
         pageTag,

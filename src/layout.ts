@@ -24,10 +24,15 @@ export const CANNOT_START_LINE_CHARS = new Set([
  * Calculates safe visual columns with SIGWINCH crash defense.
  */
 export function getEffectiveMaxCols(requested?: number): number {
-  const terminalCols = process.stdout?.columns;
-  const raw = typeof requested === "number"
-    ? requested
-    : (typeof terminalCols === "number" && terminalCols > 0 ? terminalCols - 8 : 80);
+  const terminalCols =
+    process.stdout?.columns ||
+    (process.env.COLUMNS ? parseInt(process.env.COLUMNS, 10) : undefined);
+  const raw =
+    typeof requested === "number"
+      ? requested
+      : typeof terminalCols === "number" && terminalCols > 0
+        ? terminalCols - 8
+        : 120;
   return Math.max(25, raw); // Physical minimum 25 columns to prevent negative width overflow
 }
 
@@ -778,12 +783,12 @@ export function renderCardLayout(
 
           let branchBudget: number;
           if (isVocab) {
-            branchBudget = 1;
+            branchBudget = Math.max(1, Math.min(branchRendered.length, Math.min(2, remainingBudget)));
           } else {
             const branchesLeftAfterThis = numBranches - 1 - i;
             const maxPossible = Math.max(1, remainingBudget - branchesLeftAfterThis);
             const evenShare = Math.max(1, Math.floor(remainingBudget / Math.max(1, numBranches - i)));
-            branchBudget = Math.min(maxPossible, Math.min(branchRendered.length, evenShare));
+            branchBudget = Math.min(maxPossible, Math.min(branchRendered.length, Math.max(evenShare, 2)));
             transHandled++;
           }
 

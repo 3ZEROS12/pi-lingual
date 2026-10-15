@@ -48,13 +48,18 @@ An on-demand configuration skill for `pi-lingual`. By default, `pi-lingual` stri
 
 ---
 
-## 2. Loadout Anatomy & Tactical Catalog
+## 2. Official Mode Archetypes & Tactical Loadouts
 
-Each mode is a **Tactical Loadout** structured into 4 decoupled components:
-- **`[Input]`**: What the developer types in the terminal.
-- **`[Transform]`**: Core prompt structuring rules for the target language (`${targetLang}`).
-- **`[Kill_List]`**: Explicitly blacklisted AI clichés (`delve`, `tapestry`, `seamless`, `robust`, `streamline`).
-- **`[HUD]`**: Ambient feedback card style (`preview`, `adaptive-takeaway`, `tree`, `none`).
+`pi-lingual` provides **4 Official Mode Archetypes** (numbered 1, 2, 3, 4 + 0 Off) and **4 Tactical Loadouts**:
+
+### The 4 Official Base Mode Archetypes:
+1. **`[1] Companion (纯伴学 · companion)`**: `flow: "translate"` · `action: "pass-through"` · `hud: "tree"`. Sends raw input to the AI Coding Agent in 0ms while displaying a rich Left-Rail bilingual companion card above the editor.
+2. **`[2] Logical Spec (规范直发 · direct / lazy)`**: `flow: "translate"` · `action: "transform"` · `hud: "preview"`. Transforms colloquial or fragmented thoughts into high-precision, imperative engineering specifications.
+3. **`[3] Candidates (挑候选 · candidates / select)`**: `flow: "translate"` · `action: "select"` · `hud: "tree"`. Generates multiple prompt variations (Concise, Structured, Deep) with an interactive 1..N hotkey bar.
+4. **`[4] Live Flow (实战狂飙 · live-flow / raw)`**: `flow: "proofread"` · `action: "transform"` · `hud: "adaptive-takeaway"`. Direct drafting in target language with surgical syntax/typo repair, 100% profanity/heat preserved, and native takeaway diffs.
+5. **`[0] Off (已关闭 · off)`**: Completely detached (0 tokens, 0 listeners, status hidden).
+
+*(Note: When helping users add, delete, or modify modes in `~/.pi/agent/lingual.json`, always distinguish between the user's currently installed modes on disk and these official base archetypes!)*
 
 ### Tactical Loadouts Reference Matrix:
 

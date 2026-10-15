@@ -295,7 +295,7 @@ function renderHudWidget(
       state.labels,
       {
         maxCols,
-        maxLines: Math.min(9, Math.max(4, (slots?.length || state.slots?.length || 0) + 1)),
+        maxLines: 9,
         isCompact,
         slots: state.slots,
         pageTag,
