@@ -295,7 +295,7 @@ function renderHudWidget(
       state.labels,
       {
         maxCols,
-        maxLines: Math.max(9, (slots?.length || state.slots?.length || 0) + 1),
+        maxLines: Math.min(9, Math.max(4, (slots?.length || state.slots?.length || 0) + 1)),
         isCompact,
         slots: state.slots,
         pageTag,
@@ -455,6 +455,7 @@ export default function (pi: ExtensionAPI) {
             sourceLang: state.sourceLang,
             targetLang: state.targetLang,
             explainLang: state.sourceLang,
+            modes: state.modes,
             configured: true,
           });
         }

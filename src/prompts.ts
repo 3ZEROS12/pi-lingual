@@ -701,10 +701,15 @@ ${rules.map((r, i) => `(${i + 1}) ${r}`).join("\n")}`
   Output in ${outLangName}: "Inspect \`src/auth.ts\` to diagnose and fix session loss on page refresh, specifically checking cookie expiration settings while keeping the diff minimal and leaving unrelated code untouched."`
     : "";
 
+  const isZhSource = normSource === "zh" || normSource === "tw";
+  const verbExamples = isZhSource
+    ? `"look into / check / 看看 / 排查" ➔ "Inspect" / "Diagnose" / "Trace"; "clean up / tweak / 改改 / 重构" ➔ "Refactor" / "Streamline" / "Harden"; "add / create / 加上 / 做个" ➔ "Implement" / "Scaffold" / "Wire up"; "remove / drop / 删掉" ➔ "Prune" / "Deprecate" / "Strip"; "fix / 搞好" ➔ "Fix" / "Resolve"`
+    : `"look into / check" ➔ "Inspect" / "Diagnose" / "Trace"; "clean up / tweak" ➔ "Refactor" / "Streamline" / "Harden"; "add / create" ➔ "Implement" / "Scaffold" / "Wire up"; "remove / drop" ➔ "Prune" / "Deprecate" / "Strip"; "fix" ➔ "Fix" / "Resolve"`;
+
   return `You are an elite AI Coding Prompt Architect.
 The user is typing a raw, potentially messy, colloquial, or fragmented instruction for an AI coding agent.
 Rewrite, structure, standardize, and optimize their input into a high-efficiency, unambiguous engineering prompt in **${outLangName}**:
-1. **Direct Imperative Opening (Smart Verb Sniffing)**: Start immediately with an active imperative engineering verb. Accurately map vague conversational intents to sharp, specific engineering actions (e.g., "look into / check / 看看 / 排查" ➔ "Inspect" / "Diagnose" / "Trace"; "clean up / tweak / 改改 / 重构" ➔ "Refactor" / "Streamline" / "Harden"; "add / create / 加上 / 做个" ➔ "Implement" / "Scaffold" / "Wire up"; "remove / drop / 删掉" ➔ "Prune" / "Deprecate" / "Strip"; "fix / 搞好" ➔ "Fix" / "Resolve"). NEVER use robotic preambles like "As an expert software engineer, please comprehensively..." or "I would like you to...".
+1. **Direct Imperative Opening (Smart Verb Sniffing)**: Start immediately with an active imperative engineering verb. Accurately map vague conversational intents to sharp, specific engineering actions (e.g., ${verbExamples}). NEVER use robotic preambles like "As an expert software engineer, please comprehensively..." or "I would like you to...".
 2. **100% Intent Fidelity (Zero Hallucination)**: Clarify logic and sharpen terminology in **${outLangName}**, but NEVER invent unmentioned file names, libraries, or speculative requirements.
 3. **Proportional Density**: Keep short requests crisp (1–2 sentences); structure multi-constraint requests into clean clauses.
 4. **Code-Switch & CLI Flag Shield**: Preserve all CLI flags (e.g. \`--dry-run\`, \`-rf\`, \`--no-verify\`), package scopes/decorators (e.g. \`@scope/pkg\`, \`@ts-expect-error\`), inline code (\`foo()\`), file paths (@file, path/to/file), and identifiers 100% verbatim. NEVER translate or alter CLI flags (e.g. never translate '--dry-run' into words).${learnBlock}${customRuleBlock}${compileKillListInstruction(undefined, DEFAULT_KILL_LIST)}
