@@ -17,6 +17,7 @@ import {
   getEffectiveMaxCols,
 } from "./layout.js";
 import type {
+  CustomModeConfig,
   LingualConfig,
   LingualMode,
   LingualRequest,
@@ -24,11 +25,20 @@ import type {
   LingualResult,
   PromptCandidate,
   PromptSlotConfig,
+  ReasoningEffort,
   SlotConfig,
   SlotResult,
   TranslationPayload,
 } from "./types.js";
-import { resolveLabelsForLang, resolveSlotsForPreset } from "./presets.js";
+export type { ReasoningEffort } from "./types.js";
+import {
+  resolveLabelsForLang,
+  resolveSlotsForPreset,
+  getDefaultFactoryModes,
+  PRESET_LOADOUTS,
+  getPresetLoadout,
+  listPresetLoadouts,
+} from "./presets.js";
 import {
   buildSystemPrompt,
   buildDirectRewriteSystemPrompt,
@@ -38,6 +48,10 @@ import {
   getDefaultDirectSlots,
   getDefaultPromptSlots,
   getDefaultModifySlots,
+  interpolatePromptVariables,
+  resolveLanguageName,
+  DEFAULT_KILL_LIST,
+  compileKillListInstruction,
 } from "./prompts.js";
 import { shouldShieldBypass, isNonEnglish } from "./shield.js";
 import { LingualLruCache, globalLingualCache } from "./cache.js";
@@ -61,6 +75,14 @@ export {
   buildDirectRewriteSystemPrompt,
   buildPromptCandidatesSystemPrompt,
   buildModifySystemPrompt,
+  interpolatePromptVariables,
+  resolveLanguageName,
+  getDefaultFactoryModes,
+  PRESET_LOADOUTS,
+  getPresetLoadout,
+  listPresetLoadouts,
+  DEFAULT_KILL_LIST,
+  compileKillListInstruction,
   getDefaultDirectSlots,
   getDefaultPromptSlots,
   getDefaultModifySlots,
@@ -83,6 +105,24 @@ export function isTestEnvironment(): boolean {
     process.argv.some((a) => a === "--test" || a.startsWith("--test=") || /\.(?:test|spec)\.[cm]?[jt]s$/i.test(a)) ||
     process.env.npm_lifecycle_event === "test"
   );
+}
+
+/**
+ * Check if user lingual config is already configured on disk
+ */
+export function isUserLingualConfigured(): boolean {
+  if (isTestEnvironment()) return true;
+  const agentDir = path.join(os.homedir(), ".pi", "agent");
+  const lingualFile = path.join(agentDir, "lingual.json");
+  if (!fs.existsSync(lingualFile)) return false;
+  try {
+    const raw = fs.readFileSync(lingualFile, "utf8");
+    const parsed = JSON.parse(raw);
+    const inner = parsed && (parsed["pi-lingual"] || parsed);
+    return Boolean(inner && (inner.configured || (inner.sourceLang && inner.targetLang)));
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -151,6 +191,13 @@ export function loadUserLingualConfig(): Partial<LingualConfig> {
       Array.isArray(arr)
         ? arr.filter((s: any) => s && typeof s === "object" && typeof s.id === "string" && typeof s.label === "string")
         : undefined;
+    const filterModes = (arr: any) =>
+      Array.isArray(arr)
+        ? arr.filter((m: any) => m && typeof m === "object" && typeof m.id === "string")
+        : undefined;
+    const modes = filterModes(target.modes);
+    const activeModeId = typeof target.activeModeId === "string" ? target.activeModeId : undefined;
+    const globalKillList = Array.isArray(target.globalKillList) ? target.globalKillList : undefined;
     const slots = filterSlots(target.slots);
     const directSlots = filterSlots(target.directSlots);
     const promptSlots = filterSlots(target.promptSlots);
@@ -166,6 +213,7 @@ export function loadUserLingualConfig(): Partial<LingualConfig> {
     const normalizedMode = typeof target.mode === "string" ? (normalizeLingualModeInput(target.mode) || target.mode) : undefined;
 
     cachedUserConfig = {
+      ...target,
       ...(endpoint ? { endpoint } : {}),
       ...(apiKey ? { apiKey } : {}),
       ...(model ? { model } : {}),
@@ -174,6 +222,9 @@ export function loadUserLingualConfig(): Partial<LingualConfig> {
       ...(modeLocked !== undefined ? { modeLocked } : {}),
       ...(compact !== undefined ? { compact: Boolean(compact) } : {}),
       ...(slotPreset ? { slotPreset } : {}),
+      ...(modes ? { modes } : {}),
+      ...(activeModeId ? { activeModeId } : {}),
+      ...(globalKillList ? { globalKillList } : {}),
       ...(slots ? { slots } : {}),
       ...(directSlots ? { directSlots } : {}),
       ...(promptSlots ? { promptSlots } : {}),
@@ -181,7 +232,7 @@ export function loadUserLingualConfig(): Partial<LingualConfig> {
       ...(lastSeenVersion ? { lastSeenVersion } : {}),
       ...(sourceLang ? { sourceLang } : {}),
       ...(targetLang ? { targetLang } : {}),
-      ...(reasoning ? { reasoning } : {}),
+      ...(reasoning ? { reasoning: reasoning as any } : {}),
       ...(timeoutMs ? { timeoutMs } : {}),
       ...(replyInSourceLang !== undefined ? { replyInSourceLang } : {}),
       labels,
@@ -225,8 +276,6 @@ export function saveUserLingualConfig(patch: Record<string, any>): void {
         v === "" ||
         isEmptyArray ||
         v === "auto" ||
-        v === "original" ||
-        v === "companion" ||
         (k === "compact" && v === false) ||
         (k === "modeLocked" && v === false)
       ) {
@@ -258,7 +307,7 @@ export const DEFAULT_CONFIG: LingualConfig = {
   apiKey: process.env.LINGUAL_API_KEY || "",
   model: process.env.LINGUAL_MODEL || "",
   selectedModel: "auto",
-  mode: "original",
+  mode: "direct",
   sourceLang: "en",
   targetLang: "ja",
   temperature: 0.2,
@@ -475,7 +524,7 @@ export async function translateCore(
         (slot.id === "spoken" ? parsed.spokenMeaning : slot.id === "written" ? parsed.writtenMeaning : undefined) ||
         undefined;
       if (content) {
-        slotResults.push({ id: slot.id, label: slot.label, role: slot.role, content, meaning });
+        slotResults.push({ id: slot.id, label: slot.label, role: slot.role || "translation", content, meaning });
       }
     }
   }
@@ -514,22 +563,26 @@ async function executeLlmCompletion(
 
   try {
     if (typeof cfg.complete === "function") {
-      return await cfg.complete(text, sysPrompt, controller.signal);
+      return await cfg.complete(text, sysPrompt, controller.signal, { reasoning: cfg.reasoning });
     }
     if (cfg.endpoint) {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (cfg.apiKey) headers["Authorization"] = `Bearer ${cfg.apiKey}`;
+      const requestBody: Record<string, any> = {
+        model: cfg.model || "gemini-3.8-flash",
+        messages: [
+          { role: "system", content: sysPrompt },
+          { role: "user", content: text },
+        ],
+        temperature: cfg.temperature,
+      };
+      if (cfg.reasoning) {
+        requestBody.reasoning = cfg.reasoning;
+      }
       const response = await fetch(cfg.endpoint, {
         method: "POST",
         headers,
-        body: JSON.stringify({
-          model: cfg.model || "gemini-3.8-flash",
-          messages: [
-            { role: "system", content: sysPrompt },
-            { role: "user", content: text },
-          ],
-          temperature: cfg.temperature,
-        }),
+        body: JSON.stringify(requestBody),
         signal: controller.signal,
       });
       if (!response.ok) return null;
@@ -766,8 +819,179 @@ export function resolveModifySlotsFromConfig(cfg: {
   return getDefaultModifySlots(cfg.sourceLang, cfg.explainLang);
 }
 
-export async function generatePromptCandidates(
+export function resolveModesFromConfig(cfg: Partial<LingualConfig>): CustomModeConfig[] {
+  if (Array.isArray(cfg.modes) && cfg.modes.length > 0) {
+    const valid = cfg.modes.filter(
+      (m) => m && typeof m.id === "string" && m.id.trim() && Array.isArray(m.slots)
+    );
+    if (valid.length > 0) return valid;
+  }
+
+  // Legacy fallback: If user has legacy slots on disk, map them seamlessly into modes
+  const hasLegacyCustomSlots =
+    Array.isArray(cfg.slots) ||
+    Array.isArray(cfg.directSlots) ||
+    Array.isArray(cfg.promptSlots) ||
+    Array.isArray(cfg.modifySlots);
+
+  if (hasLegacyCustomSlots) {
+    const sourceLang = cfg.sourceLang || "en";
+    const explainLang = cfg.explainLang;
+    const directSlots = resolveDirectSlotsFromConfig({ sourceLang, directSlots: cfg.directSlots });
+    const modifySlots = resolveModifySlotsFromConfig({ sourceLang, explainLang, modifySlots: cfg.modifySlots });
+    const promptSlots = resolveCandidateSlotsFromConfig({ sourceLang, promptSlots: cfg.promptSlots });
+    const companionSlots = (Array.isArray(cfg.slots) && cfg.slots.length > 0 ? cfg.slots : getDefaultSlots(sourceLang))
+      .map((s) => ({
+        id: s.id,
+        label: s.label,
+        role: (s.role === "vocab" ? "vocab" : "rewrite") as "vocab" | "rewrite",
+        instruction: s.instruction || "Natural expressions matching context",
+        enabled: s.enabled !== false,
+      }));
+
+    return [
+      {
+        id: "direct",
+        name: sourceLang === "zh" ? "规范直发" : sourceLang === "ja" ? "仕様直行" : "Logical Spec",
+        flow: "translate",
+        action: "transform",
+        hud: "preview",
+        slots: directSlots,
+        enabled: true,
+      },
+      {
+        id: "live-flow",
+        name: sourceLang === "zh" ? "实战狂飙" : sourceLang === "ja" ? "実戦疾走" : "Live Flow",
+        flow: "proofread",
+        action: "transform",
+        hud: "adaptive-takeaway",
+        slots: modifySlots,
+        enabled: true,
+      },
+      {
+        id: "companion",
+        name: sourceLang === "zh" ? "纯伴学" : sourceLang === "ja" ? "純伴走" : "Companion",
+        flow: "translate",
+        action: "pass-through",
+        hud: "tree",
+        slots: companionSlots,
+        enabled: true,
+      },
+      {
+        id: "candidates",
+        name: sourceLang === "zh" ? "挑候选" : sourceLang === "ja" ? "候補選択" : "Candidates",
+        flow: "translate",
+        action: "select",
+        hud: "tree",
+        slots: promptSlots,
+        enabled: true,
+      },
+    ];
+  }
+
+  // Brand-new install default: Return the 2 golden defaults!
+  return getDefaultFactoryModes(cfg.sourceLang, cfg.explainLang);
+}
+
+export function normalizeActiveModeId(cfg: Partial<LingualConfig>, modes: CustomModeConfig[]): string {
+  if (cfg.mode === "off") return "off";
+  const activeModes = modes.filter((m) => m.enabled !== false);
+  if (cfg.activeModeId && activeModes.some((m) => m.id === cfg.activeModeId)) {
+    return cfg.activeModeId;
+  }
+  // Legacy mode mapping
+  if (cfg.mode) {
+    const legacyMap: Record<string, string> = {
+      original: "companion",
+      companion: "companion",
+      english: "direct",
+      direct: "direct",
+      lazy: "direct",
+      select: "candidates",
+      candidates: "candidates",
+      modify: "live-flow",
+      "live-flow": "live-flow",
+      raw: "live-flow",
+    };
+    const mappedId = legacyMap[cfg.mode] || cfg.mode;
+    if (activeModes.some((m) => m.id === mappedId)) {
+      return mappedId;
+    }
+  }
+  return activeModes[0]?.id || "direct";
+}
+
+export function compileModeSystemPrompt(
+  mode: CustomModeConfig,
+  options: {
+    sourceLang?: string;
+    targetLang?: string;
+    explainLang?: string;
+    globalKillList?: string[];
+    context?: string;
+  }
+): string {
+  const sourceLang = mode.customInputLang || options.sourceLang || "en";
+  const targetLang = mode.customOutputLang || options.targetLang || "en";
+  const explainLang = options.explainLang || sourceLang;
+
+  const interpolatedSlots = mode.slots.map((s) => ({
+    ...s,
+    instruction: s.instruction
+      ? interpolatePromptVariables(s.instruction, {
+          sourceLang,
+          targetLang,
+          explainLang,
+        })
+      : "",
+  }));
+
+  const slotKillLists = (mode.slots || []).flatMap((s) => s.killList || []);
+  const combinedKillList = [...(mode.killList || []), ...slotKillLists];
+  const killListBlock = compileKillListInstruction(combinedKillList, options.globalKillList);
+
+  let systemHintBlock = "";
+  if (mode.systemHint) {
+    const rawHints = Array.isArray(mode.systemHint) ? mode.systemHint : [mode.systemHint];
+    const hints = rawHints
+      .map((h) => interpolatePromptVariables(h, { sourceLang, targetLang, explainLang }).trim())
+      .filter(Boolean);
+    if (hints.length > 0) {
+      systemHintBlock = `\n\n[USER SPECIFIED MODE RULES - MANDATORY]:\n${hints.map((h, i) => `(${i + 1}) ${h}`).join("\n")}`;
+    }
+  }
+
+  let codeSwitchingBlock = "";
+  if (mode.preserveCodeSwitching && mode.flow === "proofread") {
+    codeSwitchingBlock = `\n\n[CODE-SWITCHING PRESERVATION]:\nIf the user's input draft contains native ${sourceLang} words or expressions mixed in, seamlessly translate them into ${targetLang} in the fixed and native outputs, and explicitly record the translation in the takeaways ("fixes").`;
+  }
+
+  let contextBlock = "";
+  if (options.context && options.context.trim()) {
+    contextBlock = `\n\n[CONTEXT / RECENT GIT DIFF]:\n${options.context.trim().slice(0, 500)}`;
+  }
+
+  if (mode.flow === "proofread") {
+    const base = buildModifySystemPrompt({
+      sourceLang,
+      targetLang,
+      explainLang,
+      customSlots: interpolatedSlots,
+    });
+    return `${base}${codeSwitchingBlock}${systemHintBlock}${contextBlock}${killListBlock}`;
+  }
+
+  const base = buildPromptCandidatesSystemPrompt({
+    sourceLang,
+    targetLang,
+    promptSlots: interpolatedSlots,
+  });
+  return `${base}${codeSwitchingBlock}${systemHintBlock}${contextBlock}${killListBlock}`;
+}
+
+export async function executeModeRunner(
   text: string,
+  mode: CustomModeConfig,
   userConfig: Partial<LingualConfig> = {}
 ): Promise<PromptCandidate[] | null> {
   const trimmed = text.trim();
@@ -780,37 +1004,34 @@ export async function generatePromptCandidates(
     return null;
   }
 
-  const slots = resolveCandidateSlotsFromConfig({
-    sourceLang: cfg.sourceLang,
-    promptSlots: userConfig.promptSlots ?? diskConfig.promptSlots,
+  const resolvedReasoning = (mode.reasoning ?? cfg.reasoning ?? "low") as ReasoningEffort;
+  const effectiveCfg: LingualConfig = {
+    ...cfg,
+    reasoning: resolvedReasoning,
+  };
+
+  const sysPrompt = compileModeSystemPrompt(mode, {
+    sourceLang: effectiveCfg.sourceLang,
+    targetLang: effectiveCfg.targetLang,
+    explainLang: effectiveCfg.explainLang,
+    globalKillList: effectiveCfg.globalKillList,
+    context: (effectiveCfg as any).context || userConfig.context,
   });
 
-  const isModify = slots.some((s) => s.id === "fixed");
-  const sysPrompt = isModify
-    ? buildModifySystemPrompt({
-        sourceLang: cfg.sourceLang,
-        targetLang: cfg.targetLang,
-        explainLang: cfg.explainLang,
-      })
-    : buildPromptCandidatesSystemPrompt({
-        sourceLang: cfg.sourceLang,
-        targetLang: cfg.targetLang,
-        promptSlots: slots,
-      });
-
-  const raw = await executeLlmCompletion(trimmed, sysPrompt, cfg);
+  const raw = await executeLlmCompletion(trimmed, sysPrompt, effectiveCfg);
   if (typeof raw !== "string" || !raw.trim()) return null;
 
   const obj = repairAndParseJsonObject(raw);
   if (!obj) {
-    const fallbackSingle = extractCleanJsonField(raw, slots[0]?.id || "prompt");
+    const fallbackSingle = extractCleanJsonField(raw, mode.slots[0]?.id || "prompt");
     if (fallbackSingle) {
-      return [{ id: slots[0]?.id || "concise", label: slots[0]?.label || "Direct", content: fallbackSingle }];
+      return [{ id: mode.slots[0]?.id || "concise", label: mode.slots[0]?.label || "Direct", content: fallbackSingle }];
     }
     return null;
   }
 
-  const vocabSlot = slots.find((s) => s.role === "vocab");
+  const enabledSlots = mode.slots.filter((s) => s.enabled !== false);
+  const vocabSlot = enabledSlots.find((s) => s.role === "vocab" || s.id === "vocab" || s.id === "fixes");
   const extractedVocab =
     (vocabSlot && !BLOCKED_JSON_KEYS.has(vocabSlot.id) && typeof obj[vocabSlot.id] === "string" && obj[vocabSlot.id].trim())
       ? obj[vocabSlot.id].trim()
@@ -818,43 +1039,68 @@ export async function generatePromptCandidates(
         ? obj.fixes.trim()
         : (typeof obj.vocab === "string" && obj.vocab.trim() ? obj.vocab.trim() : undefined);
 
-  if (isModify && typeof obj.fixed === "string" && obj.fixed.trim()) {
-    const fixedVal = obj.fixed.trim();
-    const nativeVal = typeof obj.native === "string" ? obj.native.trim() : "";
-    const res: PromptCandidate[] = [
-      {
-        id: "fixed",
-        label: slots.find((s) => s.id === "fixed")?.label || "Fixed",
-        content: fixedVal,
-        ...(extractedVocab ? { vocab: extractedVocab } : {}),
-      },
-    ];
-    if (nativeVal && slots.some((s) => s.id === "native")) {
-      res.push({
-        id: "native",
-        label: slots.find((s) => s.id === "native")?.label || "Native",
-        content: nativeVal,
-        ...(extractedVocab ? { vocab: extractedVocab } : {}),
-      });
-    }
-    return res;
-  }
-
+  const rewriteSlots = enabledSlots.filter((s) => s.role !== "vocab" && s.id !== "source");
   const candidates: PromptCandidate[] = [];
-  for (const slot of slots) {
-    if (slot.role === "vocab" || BLOCKED_JSON_KEYS.has(slot.id)) continue;
-    const val = obj[slot.id] ?? (slots.length === 1 ? obj.prompt : undefined);
+
+  for (const slot of rewriteSlots) {
+    if (BLOCKED_JSON_KEYS.has(slot.id)) continue;
+    let val = obj[slot.id];
+    // Fallback when LLM returns legacy key
+    if (!val) {
+      if (slot.id === "fixed" && typeof obj.fixed === "string") val = obj.fixed;
+      else if (slot.id === "native" && typeof obj.native === "string") val = obj.native;
+      else if (rewriteSlots.length === 1) val = obj.prompt ?? obj.direct_spec ?? obj.fixed ?? obj.spoken;
+    }
+    const meaningVal = typeof obj[`${slot.id}_meaning`] === "string" ? obj[`${slot.id}_meaning`].trim() : undefined;
+
     if (typeof val === "string" && val.trim()) {
       candidates.push({
         id: slot.id,
         label: slot.label,
         content: val.trim(),
+        meaning: meaningVal,
         ...(extractedVocab ? { vocab: extractedVocab } : {}),
+        hideWhenLong: Boolean(slot.hideWhenLong),
       });
     }
   }
 
+  // Multi-slot transform resolution: sort primarySlotId to index 0 if specified
+  if (mode.primarySlotId && candidates.length > 1) {
+    const pIdx = candidates.findIndex((c) => c.id.toLowerCase() === mode.primarySlotId?.toLowerCase());
+    if (pIdx > 0) {
+      const [primary] = candidates.splice(pIdx, 1);
+      candidates.unshift(primary);
+    }
+  }
+
   return candidates.length > 0 ? candidates : null;
+}
+
+export async function generatePromptCandidates(
+  text: string,
+  userConfig: Partial<LingualConfig> = {}
+): Promise<PromptCandidate[] | null> {
+  const diskConfig = loadUserLingualConfig();
+  const cfg = { ...DEFAULT_CONFIG, ...diskConfig, ...userConfig };
+
+  const slots = resolveCandidateSlotsFromConfig({
+    sourceLang: cfg.sourceLang,
+    promptSlots: userConfig.promptSlots ?? diskConfig.promptSlots,
+  });
+
+  const isModify = slots.some((s) => s.id === "fixed");
+  const virtualMode: CustomModeConfig = {
+    id: isModify ? "live-flow" : "candidates",
+    name: isModify ? "实战狂飙" : "候选生成",
+    flow: isModify ? "proofread" : "translate",
+    action: isModify ? "transform" : "select",
+    hud: isModify ? "adaptive-takeaway" : "tree",
+    slots,
+    enabled: true,
+  };
+
+  return executeModeRunner(text, virtualMode, userConfig);
 }
 
 export async function rewritePromptDirect(
@@ -881,13 +1127,12 @@ export function stripLingualContextWhenOff(
   tunerArmed = false
 ): string {
   if (!systemPrompt) return systemPrompt;
-  if (tunerArmed || /(?:lingual-tuner|\/lingual\s+(?:tuner|tune|agent)|定制伴学|配置伴学)/i.test(lastUserText)) {
+  if (tunerArmed || /(?:lingual-tuner|\/lingual\s+(?:tuner|tune|agent)|(?:定制|配置|调整)伴学)/i.test(lastUserText)) {
     return systemPrompt;
   }
-  return systemPrompt.replace(
-    /\s*<skill>\s*<name>lingual-tuner<\/name>[\s\S]*?<\/skill>/gi,
-    ""
-  );
+  return systemPrompt
+    .replace(/\s*<skill>\s*<name>lingual-tuner<\/name>[\s\S]*?<\/skill>/gi, "")
+    .replace(/\s*<skill[^>]*>[\s\S]*?<name>lingual-tuner<\/name>[\s\S]*?<\/skill>/gi, "");
 }
 
 export interface ModeDisplaySpec {
@@ -940,66 +1185,6 @@ const MODE_DISPLAY_BY_LANG: Record<string, ModeDisplaySpec> = {
     notifyModify: (p, s1) => `[${p}] 【4 原文修正 (modify)】に切替：最小修正 [${s1}] 即時送信＋自然表現比較`,
     notifyOff: (p) => `[${p}] 【0 オフ (off)】：下部バー非表示・監視停止・0 Token 無負荷`,
   },
-  ko: {
-    companion: "동반",
-    direct: "직접수정",
-    candidates: "후보선택",
-    modify: "원문수정",
-    off: "꺼짐",
-    notifyCompanion: (p) => `[${p}] [1 동반 (companion)] 전환: 원문 0ms 전송 + 상단 학습 카드 표시`,
-    notifyDirect: (p, s1) => `[${p}] [2 직접수정 (direct)] 전환: 첫 슬롯 [${s1}] 기준으로 즉시 다듬어 전송`,
-    notifyCandidates: (p, s) => `[${p}] [3 후보선택 (candidates)] 전환: 후보 (${s}) 중 골라서 전송`,
-    notifyModify: (p, s1) => `[${p}] [4 원문수정 (modify)] 전환: 최소 수정 [${s1}] 즉시 전송 + 자연스러운 표현 대조`,
-    notifyOff: (p) => `[${p}] [0 꺼짐 (off)]: 하단바 숨김 · 감시 해제 · 0 Token 무부담`,
-  },
-  es: {
-    companion: "Estudio",
-    direct: "Directo",
-    candidates: "Opciones",
-    modify: "Corrección",
-    off: "Apagado",
-    notifyCompanion: (p) => `[${p}] Modo [1 Estudio (companion)]: Envío 0ms + tarjeta de aprendizaje arriba`,
-    notifyDirect: (p, s1) => `[${p}] Modo [2 Directo (direct)]: Reescritura 1a1 con ranura #1 [${s1}]`,
-    notifyCandidates: (p, s) => `[${p}] Modo [3 Opciones (candidates)]: Elige entre (${s})`,
-    notifyModify: (p, s1) => `[${p}] Modo [4 Corrección (modify)]: Arreglo mínimo [${s1}] + opción nativa arriba`,
-    notifyOff: (p) => `[${p}] Modo [0 Apagado (off)]: Barra oculta · 0 hooks · 0 tokens`,
-  },
-  fr: {
-    companion: "Étude",
-    direct: "Direct",
-    candidates: "Options",
-    modify: "Correction",
-    off: "Désactivé",
-    notifyCompanion: (p) => `[${p}] Mode [1 Étude (companion)] : Envoi 0ms + carte d'étude en haut`,
-    notifyDirect: (p, s1) => `[${p}] Mode [2 Direct (direct)] : Réécriture 1à1 via le slot #1 [${s1}]`,
-    notifyCandidates: (p, s) => `[${p}] Mode [3 Options (candidates)] : Choisissez parmi (${s})`,
-    notifyModify: (p, s1) => `[${p}] Mode [4 Correction (modify)] : Correction minimale [${s1}] + variante native`,
-    notifyOff: (p) => `[${p}] Mode [0 Désactivé (off)] : Barre masquée · 0 hook · 0 token`,
-  },
-  de: {
-    companion: "Lernen",
-    direct: "Direkt",
-    candidates: "Auswahl",
-    modify: "Korrektur",
-    off: "Aus",
-    notifyCompanion: (p) => `[${p}] Modus [1 Lernen (companion)]: 0ms Senden + Lernkarte oben`,
-    notifyDirect: (p, s1) => `[${p}] Modus [2 Direkt (direct)]: Direktes Umformulieren über Slot #1 [${s1}]`,
-    notifyCandidates: (p, s) => `[${p}] Modus [3 Auswahl (candidates)]: Auswahl aus (${s})`,
-    notifyModify: (p, s1) => `[${p}] Modus [4 Korrektur (modify)]: Minimale Reparatur [${s1}] + native Alternative`,
-    notifyOff: (p) => `[${p}] Modus [0 Aus (off)]: Leiste ausgeblendet · 0 Hooks · 0 Tokens`,
-  },
-  ru: {
-    companion: "Учеба",
-    direct: "Прямой",
-    candidates: "Выбор",
-    modify: "Правка",
-    off: "Выкл",
-    notifyCompanion: (p) => `[${p}] Режим [1 Учеба (companion)]: отправка 0мс + карточка сверху`,
-    notifyDirect: (p, s1) => `[${p}] Режим [2 Прямой (direct)]: прямая перезапись по слоту #1 [${s1}]`,
-    notifyCandidates: (p, s) => `[${p}] Режим [3 Выбор (candidates)]: выбор из вариантов (${s})`,
-    notifyModify: (p, s1) => `[${p}] Режим [4 Правка (modify)]: минимальная правка [${s1}] + нативный вариант`,
-    notifyOff: (p) => `[${p}] Режим [0 Выкл (off)]: строка скрыта · 0 хуков · 0 токенов`,
-  },
   en: {
     companion: "Companion",
     direct: "Direct",
@@ -1023,12 +1208,12 @@ const MODE_ALIAS_MAP: Record<string, LingualMode> = {
   "1": "original", companion: "original", learn: "original", study: "original", original: "original", orig: "original",
   "纯伴学": "original", "純伴學": "original", "伴学": "original", "伴走": "original", "동반": "original",
   estudio: "original", "étude": "original", etude: "original", lernen: "original", "учеба": "original",
-  "2": "english", direct: "english", rewrite: "english", refine: "english", english: "english", en: "english", eng: "english",
+  "2": "english", direct: "english", rewrite: "english", refine: "english", english: "english", en: "english", eng: "english", lazy: "english",
   "直接改": "english", "直改": "english", "直出": "english", "직접수정": "english", directo: "english", direkt: "english", "прямой": "english",
   "3": "select", candidates: "select", candidate: "select", select: "select", choices: "select", choice: "select", pick: "select",
   "挑候选": "select", "挑候選": "select", "候选": "select", "候補選": "select", "후보선택": "select",
   opciones: "select", options: "select", auswahl: "select", "выбор": "select",
-  "4": "modify", modify: "modify", polish: "modify", fix: "modify", proofread: "modify",
+  "4": "modify", modify: "modify", polish: "modify", fix: "modify", proofread: "modify", raw: "modify", "live-flow": "modify",
   "原句修补": "modify", "原句修補": "modify", "修补": "modify", "原文修正": "modify", "원문수정": "modify", corrección: "modify", correction: "modify", korrektur: "modify", "правка": "modify",
   "0": "off", off: "off", disable: "off", stop: "off",
   "已关闭": "off", "已關閉": "off", "关闭": "off", "オフ": "off", "꺼짐": "off",
@@ -1040,7 +1225,7 @@ export function normalizeLingualModeInput(raw?: string): LingualMode | null {
   return MODE_ALIAS_MAP[raw.trim().toLowerCase()] || null;
 }
 
-export const CURRENT_FEATURE_BANNER_VERSION = "0.5.5";
+export const CURRENT_FEATURE_BANNER_VERSION = "0.6.0";
 
 export function resolveReleaseBannerLang(explicitSourceLang?: string, sessionEntries?: any[]): string {
   const supported = new Set(["zh", "tw", "ja", "ko", "es", "fr", "de", "ru", "en"]);
@@ -1108,111 +1293,111 @@ export function formatReleaseBannerLines(
 
   const copyByLang: Record<string, BannerSpec> = {
     zh: {
-      title: "· [pi-lingual v0.5.5 更新说明] 实战狂飙上线与架构演进预告 (发消息自动收起)",
-      subtitle: "│ 粗口与情绪 100% 保留；错词句法自动修复直发；盲点复盘永久固化母语",
+      title: "· [pi-lingual v0.6.0] 极简双核模式上线 & Tuner 完全开放 (发消息自动收起)",
+      subtitle: "│ 一切模式与提示词皆可对话定制；出厂精简为两大核心；配置永久独立",
       rows: [
-        "┌ [4 实战狂飙 · modify]  直接飙外语；纠偏直发 Agent + 盲点复盘 (/lingual 4)",
-        "│   (粗口原汁原味放行；标点大小写零说教；短句带改版，长句聚焦盲点)",
-        "├ [三大习惯盲点修复]   覆盖句法嵌套、平台介词(on X)与单复数；绝不拔高",
-        "│   (explainLang: \"zh\" 认知母语固化，用大脑最轻松的语言讲透盲点)",
-        "├ [下一代演进预告]     即将上线「模式即配置 (Mode as Config)」架构：",
-        "└   (全模式增删改彻底下放给用户，出厂附赠双核黄金默认，终生免改版)",
+        "┌ [核心定制中心 · Tuner] 敲 /tuner 直接跟 AI 说话，随意增删改模式与提示词",
+        "│   (内置 4 大实战配装；想加发推、提交、对线等模式，一句话秒成)",
+        "├ [1 规范直发 · direct]  敲中文，0ms 转成专业规范英文直发 Agent (/lingual 1)",
+        "│   (保证代码和注释是纯英文；适合专注开发、不想费脑憋英语时使用)",
+        "├ [2 实战狂飙 · live]    直接打英文；只修语法错词，粗口与情绪 100% 保留",
+        "└   (想骂就骂，语法自动兜底；下方用中文讲透盲点，越用语感越强)",
       ],
     },
     tw: {
-      title: "· [pi-lingual v0.5.5 更新說明] 實戰狂飆上線與架構演進預告 (發訊息自動收起)",
-      subtitle: "│ 粗口與情緒 100% 保留；錯詞句法自動修復直發；盲點複盤永久固化母語",
+      title: "· [pi-lingual v0.6.0] 極簡雙核模式上線 & Tuner 完全開放 (發訊息自動收起)",
+      subtitle: "│ 一切模式與提示詞皆可對話定制；出廠精簡為兩大核心；設定永久獨立",
       rows: [
-        "┌ [4 實戰狂飆 · modify]  直接飆外語；糾偏直發 Agent + 盲點複盤 (/lingual 4)",
-        "│   (粗口原汁原味放行；標點大小寫零說教；短句帶改版，長句聚焦盲點)",
-        "├ [三大習慣盲點修復]   覆蓋句法嵌套、平台介詞(on X)與單複數；絕不拔高",
-        "│   (explainLang: \"zh\" 認知母語固化，用大腦最輕鬆的語言講透盲點)",
-        "├ [下一代演進預告]     即將上線「模式即配置 (Mode as Config)」架構：",
-        "└   (全模式增删改徹底下放給用戶，出廠附贈雙核黃金預設，終生免改版)",
+        "┌ [核心定制中心 · Tuner] 敲 /tuner 直接跟 AI 說話，隨意增刪改模式與提示詞",
+        "│   (內置 4 大實戰配裝；想加發推、提交、對線等模式，一句話秒成)",
+        "├ [1 規範直發 · direct]  敲中文，0ms 轉成專業規範英文直發 Agent (/lingual 1)",
+        "│   (保證代碼和註釋是純英文；適合專注開發、不想費腦憋英語時使用)",
+        "├ [2 實戰狂飆 · live]    直接打英文；只修語法錯詞，粗口與情緒 100% 保留",
+        "└   (想罵就罵，語法自動兜底；下方用中文講透盲點，越用語感越強)",
       ],
     },
     ja: {
-      title: "· [pi-lingual v0.5.5 更新案内] Live Flow 実装と次期設計予告 (送信で閉じる)",
-      subtitle: "│ 感情・スラング完全保持；文法・前置詞の即時補正；母語による盲点解説",
+      title: "· [pi-lingual v0.6.0] コア2モード刷新 & Tuner 全面開放 (送信で閉じる)",
+      subtitle: "│ 全モードとプロンプトを対話で自在に設計；設定は永久ローカル保持",
       rows: [
-        "┌ [4 実戦疾走 · modify]  英語で直接入力；自動補正送信＋母語解説 (/lingual 4)",
-        "│   (スラング完全保持・大文字や句読点への過剰指摘ゼロ・長文要点集約)",
-        "├ [習慣的盲点の改善]   構文ネスト・プラットフォーム前置詞(on X)・時制 (i+1)",
-        "│   (explainLang で母語による直感的な要点解説を恒久保存)",
-        "├ [次世代設計予告]     「Mode as Config (モード＝設定)」へ進化予定：",
-        "└   (全モード・プロンプトの完全カスタマイズ開放、コア2種デフォルト搭載)",
+        "┌ [対話設計 · Tuner]     /tuner でAIと対話し、新モードやプロンプトを即追加",
+        "│   (4大プリセット内蔵 · PRレビューやSNS投稿用モードも会話だけで完成)",
+        "├ [1 仕様直行 · direct]  母語入力、0msで規範的英語に整え即送信 (/lingual 1)",
+        "│   (コードとコメントの完全英語化を保証 · 集中して開発を進めたい時に)",
+        "├ [2 実戦疾走 · live]    英語で直接入力；スラング・感情を100%保持し補正",
+        "└   (感情のままに入力可能 · 下部に母語で文法盲点を直感的に解説)",
       ],
     },
     ko: {
-      title: "· [pi-lingual v0.5.5 업데이트] Live Flow 모드 및 차세대 예고 (입력 시 닫힘)",
-      subtitle: "│ 거친 표현 100% 유지·문법/전치사 즉시 교정 전송·모국어 맹점 복기 영구화",
+      title: "· [pi-lingual v0.6.0] 듀얼 코어 모드 & Tuner 전면 개방 (입력 시 닫힘)",
+      subtitle: "│ 모든 모드와 프롬프트를 대화로 맞춤 설정; 설정은 로컬에 영구 보존",
       rows: [
-        "┌ [4 실전질주 · modify] 영어로 직접 입력; 교정 전송 + 맹점 복기 (/lingual 4)",
-        "│   (거친 감정 원문 유지·대소문자/문장부호 지적 배제·장문 핵심 요약)",
-        "├ [3대 언어습관 교정]  문장 구조·플랫폼 전치사(on X)·시제/단복수 완벽 보정",
-        "│   (explainLang 설정으로 가장 편한 모국어로 맹점 원리 직관적 설명)",
-        "├ [차세대 아키텍처]    「Mode as Config (모드=설정)」 전면 개방 예정:",
-        "└   (사용자 정의 모드 완전 개방·듀얼 코어 기본탑재로 종신 업데이트 프리)",
+        "┌ [맞춤 설계 · Tuner]    /tuner 로 AI와 대화하며 모드와 프롬프트 자유 추가",
+        "│   (4대 프리셋 내장 · PR 검토나 SNS용 모드도 말 한마디로 즉시 생성)",
+        "├ [1 논리정제 · direct]  모국어 입력, 0ms 규격화된 기술 영어로 즉시 전송",
+        "│   (코드와 주석의 순수 영어 유지 · 개발에 집중하고 싶을 때 최적)",
+        "├ [2 실전질주 · live]    영어로 직접 작성; 거친 표현 100% 유지하며 교정 전송",
+        "└   (감정 그대로 입력 가능 · 하단에 모국어로 핵심 문법 맹점 복기)",
       ],
     },
     es: {
-      title: "· [pi-lingual v0.5.5] Live Flow y arquitectura futura (cierra al enviar)",
-      subtitle: "│ Pasión sin censura; corrección sintáctica; notas en lengua nativa",
+      title: "· [pi-lingual v0.6.0] Dúo esencial y Tuner abierto (cierra al enviar)",
+      subtitle: "│ Diseña modos y prompts conversando; configuración aislada en local",
       rows: [
-        "┌ [4 Live Flow · modify] Escribe en inglés; corrige y envía (/lingual 4)",
-        "│   (Sin censura de tono; sin fijación en mayúsculas; enfoque en fallos)",
-        "├ [Hábitos corregidos]   Sintaxis, preposiciones (on X) y tiempos (i+1)",
-        "│   (explainLang guarda tu idioma nativo para explicar el porqué en 0.1s)",
-        "├ [Próxima arquitectura] Viene 'Mode as Configuration' declarativo:",
-        "└   (Modos 100% personalizables; 2 preajustes de fábrica; cero fricción)",
+        "┌ [Centro Tuner]   Ejecuta /tuner para crear o cambiar modos con AI",
+        "│   (4 recetas listas; añade flujos de PR o Twitter en una frase)",
+        "├ [1 Directo]      Escribe en tu idioma, 0ms a inglés técnico",
+        "│   (Mantiene código y comentarios en inglés; avanza rápido)",
+        "├ [2 Live Flow]    Escribe directo en inglés; pasión y tacos intactos",
+        "└   (Pasa tu rabia sin censura; notas abajo para aprender el porqué)",
       ],
     },
     fr: {
-      title: "· [pi-lingual v0.5.5] Mode Live Flow & architecture future (fermé à l'envoi)",
-      subtitle: "│ Passion sans filtre ; correction syntaxique ; retours en langue nat.",
+      title: "· [pi-lingual v0.6.0] Duo essentiel et Tuner ouvert (fermé à l'envoi)",
+      subtitle: "│ Créez modes et prompts en dialoguant ; configuration locale isolée",
       rows: [
-        "┌ [4 Live Flow · modify] Rédigez en anglais ; corrigé et envoyé (/lingual 4)",
-        "│   (Ton préservé à 100% ; zéro pointilleux sur la casse ; focus erreurs)",
-        "├ [Habitudes corrigées]  Syntaxe, prépositions (on X) et temps verbaux (i+1)",
-        "│   (explainLang mémorise votre langue native pour comprendre en 0,1s)",
-        "├ [Prochaine étape]      Moteur déclaratif 'Mode as Configuration' à venir :",
-        "└   (Modes 100% libres ; 2 réglages d'usine essentiels ; stabilité totale)",
+        "┌ [Centre Tuner]   Tapez /tuner pour créer ou modifier des modes avec l'IA",
+        "│   (4 recettes intégrées ; ajoutez des modes PR en une phrase)",
+        "├ [1 Direct]       Saisie en langue native, 0ms vers l'anglais technique",
+        "│   (Code et commentaires en anglais pur ; idéal pour coder)",
+        "├ [2 Live Flow]    Saisie directe en anglais ; passion et jurons gardés",
+        "└   (Exprimez-vous sans filtre ; explications claires sous la saisie)",
       ],
     },
     de: {
-      title: "· [pi-lingual v0.5.5] Live Flow Modus & Roadmap (schließt bei Senden)",
-      subtitle: "│ Rohe Emotion 100% erhalten; Syntax-Korrektur; muttersprachliche Takeaways",
+      title: "· [pi-lingual v0.6.0] 2 Kern-Modi & Tuner offen (schließt bei Senden)",
+      subtitle: "│ Modi & Prompts per Chat anpassen; Konfiguration dauerhaft isoliert",
       rows: [
-        "┌ [4 Live Flow · modify] Auf Englisch tippen; korrigiert (/lingual 4)",
-        "│   (Null Zensur; kein Picken auf Großschreibung; Fokus auf Kernfehler)",
-        "├ [Grammatik-Reflexe]    Satzbau, Präpositionen (on X) und Zeiten (i+1)",
-        "│   (explainLang speichert Muttersprache für sofortige Regelerklärung)",
-        "├ [Kommende Architektur] 'Mode as Configuration' deklarative Engine:",
-        "└   (Voll anpassbare Modi; 2 schlanke Standardmodi; dauerhafte Stabilität)",
+        "┌ [Tuner-Zentrale]  /tuner starten, um Modi und Prompts anzupassen",
+        "│   (4 Rezepte an Bord; neue PR- oder Twitter-Modi mit einem Satz)",
+        "├ [1 Direkt]        Auf Deutsch tippen, 0ms als klares Englisch",
+        "│   (Hält Code & Kommentare auf Englisch; perfekt für Fokus)",
+        "├ [2 Live Flow]     Direkt auf Englisch tippen; Emotionen 100% erhalten",
+        "└   (Tippen ohne Zensur; kurze muttersprachliche Erklärungen unten)",
       ],
     },
     ru: {
-      title: "· [pi-lingual v0.5.5] Режим Live Flow и анонс архитектуры (автозакрытие)",
-      subtitle: "│ Эмоции без цензуры; точная правка синтаксиса; разбор на родном языке",
+      title: "· [pi-lingual v0.6.0] 2 главных режима и Tuner (закроется при вводе)",
+      subtitle: "│ Настройка режимов и промптов через AI; конфиг изолирован локально",
       rows: [
-        "┌ [4 Live Flow · modify] Пишите на английском; правка агенту (/lingual 4)",
-        "│   (Без цензуры сленга; без занудства о регистрах; фокус на слепых зонах)",
-        "├ [Исправление привычек] Синтаксис, предлоги (on X) и времена (принцип i+1)",
-        "│   (explainLang сохраняет родной язык для объяснения логики за 0.1с)",
-        "├ [Следующий шаг]        Скоро: декларативный 'Mode as Configuration':",
-        "└   (Полная кастомизация режимов; 2 золотых стандарта из коробки)",
+        "┌ [Центр Tuner]    Наберите /tuner для настройки режимов с AI",
+        "│   (4 готовых рецепта; режимы создаются в одну фразу)",
+        "├ [1 Прямой поток] Ввод на родном языке, 0мс в четкий тех-английский",
+        "│   (Чистый английский в коде и комментариях; для быстрой работы)",
+        "├ [2 Live Flow]    Пишите сразу на английском; сленг и эмоции сохранены",
+        "└   (Ввод без цензуры; внизу понятный разбор правил)",
       ],
     },
     en: {
-      title: "· [pi-lingual v0.5.5 Release Note] Live Flow Mode & Roadmap (auto-dismiss)",
-      subtitle: "│ Keep profanity & heat; surgical syntax repair; native cognitive memory",
+      title: "· [pi-lingual v0.6.0] Dual-Core Golden Defaults & Tuner (auto-dismiss)",
+      subtitle: "│ Pure declarative modes & slots; customize via natural language",
       rows: [
-        "┌ [4 Live Flow · modify] Direct English; surgical repair (/lingual 4)",
-        "│   (Profanity 100% kept; zero casing nitpicks; adaptive takeaway card)",
-        "├ [Core Habit Repairs]  Fixes syntax, prepositions (on X), and tenses",
-        "│   (explainLang preserves cognitive language for 0.1s instant takeaways)",
-        "├ [Next Leap Roadmap]   Coming soon: 'Mode as Configuration' engine",
-        "└   (Full custom mode pipelines; dual golden defaults; zero version churn)",
+        "┌ [Architect Tuner] Run /tuner to add or edit modes with AI",
+        "│   (4 tactical loadouts included: spec, commit, oss, yap)",
+        "├ [1 Logical Spec · direct]  Native input ➔ 0ms imperative spec",
+        "│   (Ensures clean English instructions while keeping code untouched)",
+        "├ [2 Live Flow · live]       Draft in English; grammar patched, passion kept",
+        "└   (Vent freely without censorship; takeaway diffs explain rules below)",
       ],
     },
   };

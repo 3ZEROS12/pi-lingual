@@ -281,3 +281,70 @@ test("Tuner Skill Guardrails - Zero desktop office fluff & zero Sino-centric ass
   assert.ok(content.includes("Strict Primary Language Sovereignty"), "SKILL.md must enforce language sovereignty");
 });
 
+test("English-Only Comments Gate - src/**/*.ts source code comments must be 100% in pure English", () => {
+  const srcDir = path.resolve("src");
+  const files: string[] = [];
+
+  function collectTsFiles(dir: string) {
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        collectTsFiles(fullPath);
+      } else if (entry.name.endsWith(".ts")) {
+        files.push(fullPath);
+      }
+    }
+  }
+
+  collectTsFiles(srcDir);
+  assert.ok(files.length > 0, "Must find source files in src/");
+
+  const chineseRegex = /[\u4e00-\u9fa5]/;
+
+  for (const file of files) {
+    const relativePath = path.relative(process.cwd(), file);
+    const content = fs.readFileSync(file, "utf8");
+    const lines = content.split("\n");
+    let inBlockComment = false;
+
+    lines.forEach((line, idx) => {
+      const trimmed = line.trim();
+
+      if (inBlockComment) {
+        if (trimmed.includes("*/")) {
+          const commentPart = trimmed.split("*/")[0];
+          assert.ok(
+            !chineseRegex.test(commentPart),
+            `Found Chinese in block comment at ${relativePath}:${idx + 1}: "${trimmed}"`
+          );
+          inBlockComment = false;
+        } else {
+          assert.ok(
+            !chineseRegex.test(trimmed),
+            `Found Chinese in block comment at ${relativePath}:${idx + 1}: "${trimmed}"`
+          );
+        }
+        return;
+      }
+
+      if (trimmed.startsWith("/*") && !trimmed.includes("*/")) {
+        inBlockComment = true;
+        assert.ok(
+          !chineseRegex.test(trimmed),
+          `Found Chinese in block comment start at ${relativePath}:${idx + 1}: "${trimmed}"`
+        );
+        return;
+      }
+
+      if (trimmed.startsWith("//")) {
+        assert.ok(
+          !chineseRegex.test(trimmed),
+          `Found Chinese in line comment at ${relativePath}:${idx + 1}: "${trimmed}"`
+        );
+      }
+    });
+  }
+});
+
+

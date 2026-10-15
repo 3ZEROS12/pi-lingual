@@ -1,18 +1,18 @@
 /**
- * Terminal Box Model & Layout Engine (终端盒模型与几何排版求解引擎)
+ * Terminal Box Model & Layout Engine.
  * 
- * 物理职责：
- * 1. 严格遵循 Unicode Standard Annex #11 (East Asian Width) 计算终端显示列宽；
- * 2. 具备标点行头禁则 (Kinsoku Shori) 的确定性断行算法，杜绝孤立标点；
- * 3. 严格有界的单行胶囊流 (1-Line Capsule) 求解器，绝对不溢出终端列宽；
- * 4. Trifecta 开放式左导轨树状分支 (· ┌ ├ └) 格式化生成；
- * 5. 9 行硬预算盒模型求解器 (renderCardLayout)，保证行数物理断言 <= 9。
+ * Responsibilities:
+ * 1. Strict adherence to Unicode Standard Annex #11 (East Asian Width) for terminal cell widths.
+ * 2. Deterministic Kinsoku Shori line-breaking algorithm preventing orphaned punctuation.
+ * 3. Strictly bounded 1-line capsule solver immune to terminal column overflow.
+ * 4. Trifecta open left-rail tree branch formatting (· ┌ ├ └).
+ * 5. Kinetic 9-line budget box model solver guaranteeing lines.length <= 9.
  */
 
 import type { LingualResult, LingualI18nLabels, SlotConfig } from "./types.js";
 
 /**
- * 禁则处理标点集合：绝对禁止出现在行首的标点符号
+ * Punctuation set strictly forbidden from starting a line (Kinsoku Shori).
  */
 export const CANNOT_START_LINE_CHARS = new Set([
   ",", ".", ";", "!", "?", ":",
@@ -21,24 +21,24 @@ export const CANNOT_START_LINE_CHARS = new Set([
 ]);
 
 /**
- * 终端窗口物理列宽安全计算 (带缩放 SIGWINCH 防崩溃保底)
+ * Calculates safe visual columns with SIGWINCH crash defense.
  */
 export function getEffectiveMaxCols(requested?: number): number {
   const terminalCols = process.stdout?.columns;
   const raw = typeof requested === "number"
     ? requested
     : (typeof terminalCols === "number" && terminalCols > 0 ? terminalCols - 8 : 80);
-  return Math.max(25, raw); // 无论终端如何缩放，物理保底 25 列，防止除零或负数溢出
+  return Math.max(25, raw); // Physical minimum 25 columns to prevent negative width overflow
 }
 
 const ANSI_ESCAPE_REGEX = /\x1b\[[0-9;?]*[a-zA-Z]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g;
 
 /**
- * Unicode Standard Annex #11 视觉单元格宽度测算:
- * - ANSI 转义序列 (CSI / OSC) = 0 单元格
- * - 零宽字符 (ZWJ / 变体选择符 / 组合音标) = 0 单元格
- * - CJK 宽字符、全角字符、Emoji = 2 单元格
- * - ASCII 西文字符 = 1 单元格
+ * Unicode Standard Annex #11 visual cell width calculation:
+ * - ANSI escape sequences (CSI / OSC) = 0 cells
+ * - Zero-width characters (ZWJ / variation selectors / combining marks) = 0 cells
+ * - CJK wide characters, full-width symbols, Emoji = 2 cells
+ * - ASCII Latin characters = 1 cell
  */
 export function getVisualWidth(str: string): number {
   let width = 0;
@@ -79,7 +79,7 @@ export function getVisualWidth(str: string): number {
 }
 
 /**
- * 基于视觉单元格与 ANSI 安全边界的无溢出截断 (截断后总宽度严格 <= maxVisualCols)
+ * Truncates text based on visual cell width and ANSI escape boundaries (strictly <= maxVisualCols).
  */
 export function truncateVisual(str: string, maxVisualCols: number): string {
   if (maxVisualCols <= 0) return "";
@@ -88,7 +88,7 @@ export function truncateVisual(str: string, maxVisualCols: number): string {
   if (fullWidth <= maxVisualCols) return singleLine;
   if (maxVisualCols <= 3) return ".".repeat(maxVisualCols);
 
-  // 必须提前扣除省略号 "..." 的 3 列物理预算，确保拼接后总宽度严格 <= maxVisualCols
+  // Reserve 3 visual columns for ellipsis "..." to ensure total width <= maxVisualCols
   const targetCols = Math.max(1, maxVisualCols - 3);
   let curWidth = 0;
   let result = "";
@@ -121,7 +121,7 @@ export function truncateVisual(str: string, maxVisualCols: number): string {
 }
 
 /**
- * 基于标点禁则与列宽边界的视觉折行算法
+ * Visual text wrapping algorithm bounded by punctuation Kinsoku Shori and max visual width.
  */
 export function wrapVisualText(text: string, maxWidth: number): string[] {
   if (maxWidth <= 0) return [text];
@@ -146,7 +146,7 @@ export function wrapVisualText(text: string, maxWidth: number): string[] {
       currentWidth += tokenWidth;
     } else {
       if (currentLine === "") {
-        // 单个超长无空格 Token (长 URL / 路径) 强制按列宽平滑切片分行
+        // Wrap single oversized unspaced tokens (long URLs / paths) smoothly by column width
         if (tokenWidth > maxWidth) {
           let curToken = token;
           while (getVisualWidth(curToken) > maxWidth) {
@@ -181,7 +181,7 @@ export function wrapVisualText(text: string, maxWidth: number): string[] {
     rawLines.push(currentLine.trimEnd());
   }
 
-  // 标点禁则后处理：若某一行以禁止行首标点开头，在不突破 maxWidth 的前提下将其吸附到上一行，否则将上一行末字下移
+  // Kinsoku Shori line-head punctuation constraint processing
   const lines: string[] = [];
   for (let i = 0; i < rawLines.length; i++) {
     let line = rawLines[i];
@@ -212,7 +212,7 @@ export function wrapVisualText(text: string, maxWidth: number): string[] {
 }
 
 /**
- * 格式化树状悬挂缩进分支 (· ┌ ├ └)
+ * Formats tree branches with hanging indent (· ┌ ├ └).
  */
 export function formatTreeBranch(
   branchChar: string,
@@ -247,7 +247,7 @@ export function formatTreeBranch(
 }
 
 /**
- * 格式化语感子导轨 (↳)
+ * Formats native nuance sub-rail (↳).
  */
 export function formatSubRail(
   contChar: string,
@@ -279,8 +279,8 @@ export function formatSubRail(
 }
 
 /**
- * 从 vocab 字符串中解析出纯净的目标短语列表 (由长到短排序)
- * 例如: "on board with (赞成/支持) · dive in (立刻着手/开搞)"
+ * Extracts clean target phrases from vocab string (sorted longest first).
+ * e.g.: "on board with (agree) · dive in (start right away)"
  * ➔ ["on board with", "dive in"]
  */
 export function extractVocabPhrases(vocab: string | undefined): string[] {
@@ -299,9 +299,9 @@ export function extractVocabPhrases(vocab: string | undefined): string[] {
 }
 
 /**
- * 对目标文本中的指定短语进行非破坏性 ANSI 下划线瞄准点亮 (Spotlight Highlighting)
- * 大小写不敏感匹配，保留原始文本的大小写与排版
- * 原生支持 CJK (日文/中文) 以及 ASCII 西文字符
+ * Highlights target phrases non-destructively using ANSI underline (Spotlight Highlighting).
+ * Case-insensitive match preserving original casing and formatting.
+ * Supports CJK ideographs and ASCII characters.
  */
 export function spotlightPhrases(text: string, phrases: string[]): string {
   if (!text || phrases.length === 0) return text;
@@ -319,7 +319,7 @@ export function spotlightPhrases(text: string, phrases: string[]): string {
 }
 
 /**
- * 按原子短语 (Item-level) 格式化重点词汇单行流，绝不把任何词汇项砍成半截或留下未闭合的 "(" (彻底解决 BUG-VOCAB-TRUNCATION)
+ * Formats vocabulary terms in a single line at item level without mid-word cuts or unclosed parentheses.
  */
 export function formatVocabItemsAtomic(
   vocab: string,
@@ -360,7 +360,7 @@ export function formatVocabItemsAtomic(
 }
 
 /**
- * 格式化终端树状全景输出 (formatTerminalAnnotation)
+ * Formats terminal panoramic tree branch output (formatTerminalAnnotation).
  */
 export function formatTerminalAnnotation(
   sourceText: string,
@@ -417,8 +417,8 @@ export function formatTerminalAnnotation(
 }
 
 /**
- * 格式化极端分屏下的单行高密度胶囊流 (Single-Line Capsule Layout)
- * 严格限制在 1 行内，按终端列宽动态均衡截断，绝不溢出单行
+ * Formats dense single-line capsule layout for narrow viewports.
+ * Strictly constrained to 1 line, dynamically balanced by column width.
  */
 export function formatCapsuleLine(
   hudTitle: string,
@@ -469,8 +469,8 @@ export function formatCapsuleLine(
 }
 
 /**
- * 盒模型布局求解器 (renderCardLayout)
- * 统一求解 9 行硬预算、树状全景与单行胶囊降级
+ * Box model layout solver (renderCardLayout).
+ * Solves 9-line kinetic budget, tree branch formatting, and compact capsule degradation.
  */
 export function renderCardLayout(
   card: LingualResult,
@@ -497,22 +497,21 @@ export function renderCardLayout(
   const decAccent = options.themeDecorators?.accent || ((s) => s);
   const decDim = options.themeDecorators?.dim || ((s) => s);
 
-  // 0. 解析全动态多槽位 (Universal Dynamic Slot Architecture)
-  // 如果调用方传入了 slots，以传入为准；否则根据 card 自行派生默认槽位
+  // 0. Parse dynamic multi-slots from card or options
   let effectiveSlots: SlotConfig[] = [];
   if (options.slots && options.slots.length > 0) {
     effectiveSlots = options.slots.filter((s) => s.enabled);
   } else {
-    // 默认回退槽位
+    // Fallback default slots
     effectiveSlots = [
-      { id: "source", label: labels.sourceLabel || "原文", role: "source", enabled: true },
+      { id: "source", label: labels.sourceLabel || "Source", role: "source", enabled: true },
       { id: "spoken", label: labels.slot1Label || "Spoken", role: "translation", enabled: true, showMeaning: true },
       ...(card.written ? [{ id: "written", label: labels.slot2Label || "Written", role: "translation", enabled: true, showMeaning: true } as SlotConfig] : []),
       ...(card.vocab ? [{ id: "vocab", label: labels.vocabLabel || "Vocab", role: "vocab", enabled: true } as SlotConfig] : []),
     ];
   }
 
-  // 提取各槽位的内容
+  // Resolve slot content
   const resolveSlotContent = (slot: SlotConfig): { content: string; meaning?: string } => {
     if (slot.role === "source") {
       return { content: card.sourceText || "" };
@@ -527,7 +526,7 @@ export function renderCardLayout(
         return { content: match.content || "", meaning: match.meaning };
       }
     }
-    // 后向兼容字段
+    // Backward compatibility fields
     if (slot.id === "spoken" || ((slot.role === "translation" || slot.role === "custom") && !card.slotOutputs)) {
       if (slot.id === "written") {
         return { content: card.written || "", meaning: card.writtenMeaning };
@@ -543,7 +542,7 @@ export function renderCardLayout(
     return { content: "" };
   };
 
-  // 筛选出有内容的非 source 槽位
+  // Filter non-source slots with content
   interface RenderBranch {
     id: string;
     label: string;
@@ -559,14 +558,14 @@ export function renderCardLayout(
       contentBranches.push({
         id: slot.id,
         label: slot.label,
-        role: slot.role,
+        role: slot.role || "translation",
         content: content.trim(),
         meaning: (slot.showMeaning !== false && meaning && meaning.trim()) ? meaning.trim() : undefined,
       });
     }
   }
 
-  // 1. 若显式请求胶囊模式，或列宽极端窄小 (< 35 列无法排版树状分支)，降级为单行胶囊流
+  // 1. Compact capsule fallback when requested or when viewport is < 35 columns
   if (isCompact || maxCols < 35) {
     const tagWidth = getVisualWidth(pageTag);
     const availCols = Math.max(20, maxCols - tagWidth);
@@ -585,12 +584,12 @@ export function renderCardLayout(
     return [truncateVisual(fullText, availCols) + pageTag];
   }
 
-  // 2. 检查是否有 source 原文槽位（支持用户完全删除/关闭原文行）
+  // 2. Render source text branch if present
   const sourceSlot = effectiveSlots.find((s) => s.role === "source");
   let sourceLines: string[] = [];
 
   if (sourceSlot && card.sourceText && card.sourceText.trim()) {
-    const sourceLabel = sourceSlot.label || labels.sourceLabel || "原文";
+    const sourceLabel = sourceSlot.label || labels.sourceLabel || "Source";
     const prefixRaw = `  · [${sourceLabel}] `;
     const prefixW = getVisualWidth(prefixRaw);
     const pageTagW = pageTag ? getVisualWidth(pageTag) : 0;
@@ -624,7 +623,7 @@ export function renderCardLayout(
 
   let lines: string[] = [...sourceLines];
 
-  // 3. 动态渲染非 source 槽位分支 (Trifecta Tree Rails)
+  // 3. Dynamically format non-source slot branches (Trifecta Tree Rails)
   const numBranches = contentBranches.length;
   for (let i = 0; i < numBranches; i++) {
     const branch = contentBranches[i];
@@ -668,9 +667,9 @@ export function renderCardLayout(
     }
   }
 
-  // 4. 行数守卫与盒模型约束求解 (Kinetic Line Budget Guard: lines.length <= maxLines)
+  // 4. Kinetic Line Budget Guard: lines.length <= maxLines constraint solver
   if (lines.length > maxLines) {
-    // 约束 Tier 1: 原文最多展示 2 行（若分支数 >= maxLines - 1，例如 7 行多语种壮举，则原文自动收敛为 1 行以完整容纳全部 7 个槽位！）
+    // Tier 1 constraint: clamp source text to at most 1-2 lines
     const maxSourceRows = numBranches >= maxLines - 1 ? 1 : 2;
     let clampedSourceLines = sourceLines;
     if (sourceLines.length > maxSourceRows) {
@@ -684,7 +683,7 @@ export function renderCardLayout(
       }
     }
 
-    // 约束 Tier 2: 将母语释义内联入括号，消除纵向子导轨
+    // Tier 2 constraint: inline native nuances into parentheses to eliminate sub-rails
     const inlineLines: string[] = [...clampedSourceLines];
     for (let i = 0; i < numBranches; i++) {
       const branch = contentBranches[i];
@@ -715,7 +714,7 @@ export function renderCardLayout(
     if (inlineLines.length <= maxLines) {
       lines = inlineLines;
     } else {
-      // 约束 Tier 3: 剥离母语微释义，保障目标语言内容的纯净与完整
+      // Tier 3 constraint: strip nuances to preserve target language sentence integrity
       const pureLines: string[] = [...clampedSourceLines];
       for (let i = 0; i < numBranches; i++) {
         const branch = contentBranches[i];
@@ -745,7 +744,7 @@ export function renderCardLayout(
       if (pureLines.length <= maxLines) {
         lines = pureLines;
       } else {
-        // 约束 Tier 4: 智能非对称行预算分配（优先保障核心译文完整度，压缩词汇至单行，绝不浪费行预算！）
+        // Tier 4 constraint: asymmetric slot budget clamping with clean visual ellipsis
         const availForBranches = Math.max(1, maxLines - clampedSourceLines.length);
         const vocabCount = contentBranches.filter((b) => b.role === "vocab").length;
         const transCount = Math.max(1, numBranches - vocabCount);

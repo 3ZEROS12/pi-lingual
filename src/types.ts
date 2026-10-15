@@ -1,30 +1,56 @@
-export type LingualMode = "original" | "english" | "select" | "modify" | "off";
+export type LingualMode = "original" | "english" | "select" | "modify" | "off" | string;
 export type LinguaMode = LingualMode;
 
-export type SlotRole = "source" | "translation" | "vocab" | "custom";
+export type ModeAction = "pass-through" | "transform" | "select";
+export type ModeFlow = "translate" | "proofread" | "custom";
+export type ModeHud = "tree" | "adaptive-takeaway" | "preview" | "none";
+export type ModeTarget = "agent" | "clipboard";
+export type ReasoningEffort = "low" | "medium" | "high";
+
+export type SlotRole = "source" | "rewrite" | "translation" | "vocab" | "custom";
 
 export interface PromptSlotConfig {
-  id: string;                 // Unique style identifier, e.g. "concise", "spec", "deep", "vocab"
-  label: string;              // Display label, e.g. "极简行动", "结构规范", "根因溯源", "重点词"
-  role?: "rewrite" | "vocab"; // Optional role: default "rewrite"; set "vocab" to extract a 1-line vocabulary takeaway row
-  instruction: string;        // Specific prompt optimization/structuring instruction (including output language & conditions)
-  enabled: boolean;
+  id: string;                 // Unique slot identifier, e.g. "source", "direct_spec", "fixed", "vocab"
+  label: string;              // Card display label, e.g. "Source", "Spec", "Fixed", "Takeaways"
+  role?: SlotRole;            // Slot role: "source" | "rewrite" | "translation" | "vocab" | "custom"
+  instruction?: string;       // Specific prompt optimization/structuring instruction
+  showMeaning?: boolean;      // When true, requests <id>_meaning in ${explainLang} and renders ↳ sub-rail
+  hideWhenLong?: boolean;     // When true, hides this slot in HUD if input is >120 chars or >=3 sentences
+  killList?: string[];        // Specific forbidden buzzwords for this slot
+  enabled: boolean;           // Whether this slot is active
+  [key: string]: any;         // Preserves arbitrary custom user fields without stripping
+}
+
+export type SlotConfig = PromptSlotConfig;
+
+export interface CustomModeConfig {
+  id: string;                      // Unique identifier, e.g. "lazy", "raw", "spec", "commit", "oss", "yap"
+  name: string;                    // Human-readable display label, e.g. "Logical Spec", "Live Flow", "Commit Dehydrator"
+  aliases?: string[];              // CLI/cycle aliases (e.g. ["lazy"] for direct, ["raw"] for live-flow)
+  flow: ModeFlow;                  // Language flow: "translate" (sourceLang -> targetLang), "proofread" (targetLang -> targetLang), "custom"
+  action: ModeAction;              // Action on input: "pass-through" (raw send), "transform" (replace and send), "select" (popup hotkey 1..N)
+  hud: ModeHud;                    // Visual card style: "tree" (full branch), "adaptive-takeaway" (short: fixed+takeaway, long: diffs only), "preview", "none"
+  target?: ModeTarget;             // Destination of transformed output: "agent" (default) or "clipboard" (copies to system clipboard)
+  reasoning?: ReasoningEffort;     // Model reasoning effort level: "low" | "medium" | "high"
+  primarySlotId?: string;          // Specifies which slot's output is used when action === "transform" and slots.length > 1
+  systemHint?: string | string[];  // Extra mode-level prompt rules interpolated with ${sourceLang}, ${targetLang}, ${explainLang}
+  preserveCodeSwitching?: boolean; // When true in flow: "proofread", translates native words mixed in drafts & adds to takeaways
+  contextAware?: boolean;          // When true, runs lightweight git diff/status inspection
+  killList?: string[];             // Forbidden AI buzzwords & phrases for this mode (e.g. delve, tapestry, robust)
+  slots: PromptSlotConfig[];       // The prompts & schema slots that power this mode
+  enabled?: boolean;               // Whether this mode is active in the /lingual cycle (default true)
+  customInputLang?: string;        // Optional override for custom flow
+  customOutputLang?: string;       // Optional override for custom flow
+  [key: string]: any;              // Preserves arbitrary custom user fields without stripping
 }
 
 export interface PromptCandidate {
   id: string;
   label: string;
   content: string;
+  meaning?: string;
   vocab?: string;
-}
-
-export interface SlotConfig {
-  id: string;               // Unique slot identifier, e.g. "source", "spoken", "written", "twitter", "grammar"
-  label: string;            // Card display label, e.g. "原文", "口语", "写作", "Tweet", "Grammar"
-  role: SlotRole;           // "source" | "translation" | "vocab" | "custom"
-  instruction?: string;     // Specific LLM translation/style prompt
-  showMeaning?: boolean;    // Whether to generate nuance back-translation in language A
-  enabled: boolean;
+  hideWhenLong?: boolean;
 }
 
 export interface SlotResult {
@@ -36,7 +62,7 @@ export interface SlotResult {
 }
 
 export interface SlotDefinition {
-  label: string;       // e.g. "Spoken" | "Hook" | "口語" | "Paper"
+  label: string;       // e.g. "Spoken" | "Hook" | "Keigo" | "Paper"
   name: string;        // e.g. "Silicon Valley Spoken" | "Twitter Hook" | "Business Keigo"
   instruction: string; // Specific tone & style instruction for this register
 }
@@ -70,10 +96,10 @@ export interface LingualResponse {
 }
 
 export interface LingualI18nLabels {
-  slot1Label: string;      // e.g. "Spoken" | "口語" | "Slack"
-  slot2Label: string;      // e.g. "Written" | "文面" | "RFC"
-  vocabLabel: string;      // e.g. "Vocab" | "単語"
-  sourceLabel: string;     // e.g. "Original" | "原文"
+  slot1Label: string;      // e.g. "Spoken" | "Slack"
+  slot2Label: string;      // e.g. "Written" | "RFC"
+  vocabLabel: string;      // e.g. "Vocab" | "Key Terms"
+  sourceLabel: string;     // e.g. "Original" | "Source"
   hudTitle: string;        // e.g. "zh ⇄ en" | "en ⇄ ja"
   statusOriginal: string;  // e.g. "zh ⇄ en"
   statusEnglish: string;   // e.g. "zh ⇄ en"
@@ -177,10 +203,13 @@ export interface LingualConfig {
   modeLocked?: boolean;            // When true, locks active mode to prevent cross-process or unrequested drift
   compact?: boolean;
   slotPreset?: string;
-  slots?: SlotConfig[];             // Mode 1 (Companion / 纯伴学) dedicated slots
-  directSlots?: PromptSlotConfig[]; // Mode 2 (Direct / 直接改) dedicated 1-to-1 slot (+ optional vocab slot)
-  promptSlots?: PromptSlotConfig[]; // Mode 3 (Candidates / 挑候选) dedicated multi-candidate slots
-  modifySlots?: PromptSlotConfig[]; // Mode 4 (Modify / 原句修正) dedicated minimal fix + native sibling + diff slots
+  modes?: CustomModeConfig[];       // Declarative user-defined or default modes pipeline (v0.6.0+)
+  activeModeId?: string;            // Currently active mode ID (e.g. "lazy", "raw", "direct", "live-flow")
+  globalKillList?: string[];        // Global anti-AI buzzword blacklist inherited across all modes
+  slots?: SlotConfig[];             // Mode 1 (Companion) dedicated slots (legacy compatibility)
+  directSlots?: PromptSlotConfig[]; // Mode 2 (Direct) dedicated 1-to-1 slot (legacy compatibility)
+  promptSlots?: PromptSlotConfig[]; // Mode 3 (Candidates) dedicated candidate slots (legacy compatibility)
+  modifySlots?: PromptSlotConfig[]; // Mode 4 (Modify) dedicated proofreading slots (legacy compatibility)
   explainLang?: string;             // Cognitive explanation language for Mode 4 takeaways (e.g. "zh", "en", "ja")
   lastSeenVersion?: string;         // Tracks the last major feature release banner shown above editor
   sourceLang?: string;
@@ -188,12 +217,14 @@ export interface LingualConfig {
   replyInSourceLang?: boolean;
   labels?: Partial<LingualI18nLabels>;
   temperature?: number;
-  reasoning?: string;
+  reasoning?: ReasoningEffort | string;
   timeoutMs?: number;
-  complete?: (text: string, systemPrompt: string, signal?: AbortSignal) => Promise<string | null>;
+  complete?: (text: string, systemPrompt: string, signal?: AbortSignal, options?: { reasoning?: string }) => Promise<string | null>;
   signal?: AbortSignal;
+  [key: string]: any;
 }
 export type LinguaConfig = LingualConfig;
+export type UserLingualConfig = LingualConfig;
 
 export interface LingualResult {
   spoken: string;

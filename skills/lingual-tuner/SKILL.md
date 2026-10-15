@@ -1,9 +1,9 @@
 ---
 name: lingual-tuner
-description: "Adaptive customization architect for pi-lingual (~/.pi/agent/lingual.json). Universal English baseline for global software engineers driving AI coding agents (Claude Code, Cursor, Aider). Single-round instant configuration for bare /lingual tuner or /tuner, zero bureaucratic survey interrogation."
+description: "Bilingual Prompt Architect & Tactical Loadouts Workshop for pi-lingual (~/.pi/agent/lingual.json). Adapts modes, slots, and prompt loadouts dynamically for engineers driving AI coding agents (Claude Code, Cursor, Aider) using semantic variables (${sourceLang}, ${targetLang}, ${explainLang}). Zero survey interrogation; single-round instant flow."
 ---
 
-# Pi-Lingual Adaptive Customization Architect (`~/.pi/agent/lingual.json`)
+# Pi-Lingual Bilingual Prompt Architect & Tactical Loadouts Workshop
 
 An on-demand configuration skill for `pi-lingual`. By default, `pi-lingual` strips this skill from `systemPrompt` during normal coding turns (`0` token overhead) and activates it only when the user invokes `/lingual tuner` or `/tuner`.
 
@@ -11,92 +11,183 @@ An on-demand configuration skill for `pi-lingual`. By default, `pi-lingual` stri
 
 ## 1. Core Architectural Invariants (Strict RFC 2119)
 
-1. **Universal English Developer Baseline & Symmetric Polyglot Architecture**:
-   - The canonical baseline of this skill is **Universal English** for global software engineers.
-   - All languages (English, Japanese, Chinese, Spanish, French, German, Korean) enjoy **symmetric and equal status**.
+1. **Universal English Baseline & Symmetric Polyglot Parity (Invariant 18)**:
+   - The international baseline is **Universal English**.
+   - All languages (English, Japanese, Chinese, Spanish, French, German, Korean) enjoy **100% symmetric, first-class status**.
    - **Strict Primary Language Sovereignty (Zero Foreign Language Residue)**:
-     - First read `~/.pi/agent/lingual.json` to inspect `sourceLang` (defaults to `"en"` for international/English developers).
-     - If `sourceLang === "en"` (or unset): All questions, headers, labels, descriptions, and previews MUST be authored **100% in pure English**! It is STRICTLY FORBIDDEN to assume the user is Chinese or output Chinese characters (`键入中文`, `规范英文`, etc.) to an English developer!
+     - First read `~/.pi/agent/lingual.json` to inspect `sourceLang` (default `"en"`).
+     - If `sourceLang === "en"` (or unset): All questions, headers, labels, descriptions, and previews MUST be authored **100% in pure English**! Never output Chinese characters (`键入中文`, `规范英文`) to an English developer!
      - Only render in Chinese if `sourceLang === "zh"`. Only render in Japanese if `sourceLang === "ja"`.
 
-2. **Pure CLI Software Engineering Domain (Zero Desktop Office Fluff)**:
-   - This skill is designed STRICTLY for developers in terminal CLI environments driving AI coding agents.
-   - **Strict Prohibition**: NEVER present desktop chat, business etiquette, workplace honorifics, customer service, or corporate email templates. All presets and prompts MUST be 100% software engineering and developer workflow concepts (`Smallest Working Diff`, `Imperative Action Verb`, `Code-Switch Shield`, `Architecture RFC`, `Root-Cause Tracing`).
+2. **Declarative Semantic Variables (`${sourceLang}`, `${targetLang}`, `${explainLang}`)**:
+   - In all generated loadouts and prompt instructions, **STRICTLY FORBID hardcoding static language names** (e.g. hardcoding `English` or `Chinese`).
+   - Use dynamic semantic variables:
+     - `${sourceLang}` ➔ User's native/input language (e.g. `Chinese`, `Japanese`, `English`).
+     - `${targetLang}` ➔ Target foreign/AI language (e.g. `English`, `Japanese`, `Spanish`).
+     - `${explainLang}` ➔ Preferred cognitive explanation language for takeaways.
 
-3. **Single-Round Instant Flow (Zero Survey Interrogation Trap)**:
-   - When the user runs bare `/lingual tuner` or `/tuner`:
-   - Present at most **ONE single round of `ask_user_question`** (1-2 crisp questions max).
+3. **Pure CLI Software Engineering Domain (Zero Desktop Office Fluff)**:
+   - Strictly for developers driving AI coding agents in terminal environments.
+   - **Strict Prohibition**: NEVER output desktop chat, business etiquette, workplace honorifics, or corporate non-coding templates. All prompts must reflect real software engineering workflows (`Smallest Working Diff`, `Imperative Action Verbs`, `Code Shielding`, `Root-Cause Tracing`, `Live Flow Heat`).
+
+4. **HUD "3-Second Glanceability" Rule**:
+   - Never output multi-paragraph grammar essays in terminal HUDs.
+   - Left side: concise diff (`before ➔ after`).
+   - Right side: short, grounded intuition in native tongue (`<= 10` characters/words).
+
+5. **Single-Round Instant Flow (Zero Survey Interrogation Trap)**:
+   - When user runs `/lingual tuner` or `/tuner`:
+   - Present at most **ONE single round of `ask_user_question`** (or apply direct text intent in 1 turn).
    - **STRICTLY FORBID calling `ask_user_question` a second time!** Zero multi-stage preview loops.
-   - Once the user answers, **IMMEDIATELY apply the configuration to `~/.pi/agent/lingual.json` in the same turn** using the `write` tool.
+   - Once confirmed, **IMMEDIATELY persist to `~/.pi/agent/lingual.json` in the same turn** using the `write` tool.
 
-4. **Confusion Circuit Breaker (Human Empathy Safeguard)**:
-   - If the user types in custom text: *"not sure"*, *"simple"*, *"default"*, *"just change language"*, *"不清楚"*, or declines the question dialog with `Esc`:
+6. **Confusion Circuit Breaker (Human Empathy Safeguard)**:
+   - If user types: *"not sure"*, *"simple"*, *"default"*, *"不清楚"*, or cancels with `Esc`:
    - **IMMEDIATELY CANCEL any further questioning!**
-   - Fall back instantly to human dialogue: apply the golden developer default (Mode 2 Direct Engineering Spec, or `en ⇄ ja` companion), report clean confirmation in chat, and let the user continue coding with zero friction.
-
-5. **Strict 3-Way Mode Isolation (Zero Cross-Mode Leakage)**:
-   - `slots` ➔ Governs ONLY Mode 1 (`companion` / Companion Card).
-   - `directSlots` ➔ Governs ONLY Mode 2 (`direct` / Direct Send).
-   - `promptSlots` ➔ Governs ONLY Mode 3 (`candidates` / Candidate Picker).
-   - Customizing one mode MUST NEVER alter or leak into the arrays of other modes.
-   - Preserve top-level `"mode"` untouched unless the user explicitly requests to switch active modes.
+   - Fall back instantly: apply the dual-core golden defaults (`lazy` / `direct` + `raw` / `live-flow`), report clean confirmation, and return immediately.
 
 ---
 
-## 2. Bare `/lingual tuner` Execution Protocol
+## 2. Loadout Anatomy & Tactical Catalog
 
-### Step 1: Pre-Flight Check (0.1s Dispatch)
-Read `~/.pi/agent/lingual.json` to inspect `sourceLang` (default `"en"`), `targetLang`, and current slot arrays.
+Each mode is a **Tactical Loadout** structured into 4 decoupled components:
+- **`[Input]`**: What the developer types in the terminal.
+- **`[Transform]`**: Core prompt structuring rules for the target language (`${targetLang}`).
+- **`[Kill_List]`**: Explicitly blacklisted AI clichés (`delve`, `tapestry`, `seamless`, `robust`, `streamline`).
+- **`[HUD]`**: Ambient feedback card style (`preview`, `adaptive-takeaway`, `tree`, `none`).
 
-### Step 2: Single-Round Developer Choice (`ask_user_question`)
+### Tactical Loadouts Reference Matrix:
 
-#### For English Developers (`sourceLang === "en"` or unset) — 100% Pure English:
-
-1. **Question 1 (`header`: `"Workflow"`) — Choose Developer Prompt & Mode Scheme**:
-   - *Question*: `Which development or companion workflow do you want to configure?`
-   - *Options*:
-     1. **Direct Engineering Prompt Optimization (Mode 2) (Recommended)** — Refine rough thoughts into high-signal imperative engineering specs for AI coding agents
-     2. **Dual-Register Companion Card (Mode 1)** — Send input in 0ms, expand spoken + written target language cards above editor
-     3. **Pick of 3 Candidates (Mode 3)** — Generate concise, structured, and root-cause prompt candidates, send with keys 1..3
-     4. **Switch Target Language** — Change your learning or translation target language (Japanese, Chinese, Spanish, German, etc.)
-
-2. **Question 2 (`header`: `"Target Lang"`) — Target Language**:
-   - *Question*: `What is your target foreign language?`
-   - *Options*:
-     1. **Japanese (ja) (Recommended)** — Authentic daily spoken & technical Japanese for open-source and documentation
-     2. **Chinese (zh)** — Simplified Chinese for open-source projects and cross-border collaboration
-     3. **Spanish / French / German (es/fr/de)** — European tech ecosystems and open-source communities
-     4. **None (English Only)** — Focus purely on English prompt optimization and structuring without translation
+| Loadout ID | Name | Target | Flow | Action | HUD | Value & Intent |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **`lazy`** *(Default)* | **Logical Spec (规范直发)** | `agent` | `translate` | `transform` | `preview` | Restructures raw thoughts into imperative engineering specs with active verbs (`Inspect`, `Refactor`, `Trace`). |
+| **`raw`** *(Default)* | **Live Flow (实战狂飙)** | `agent` | `proofread` | `transform` | `adaptive-takeaway` | Direct typing in `${targetLang}`. 100% profanity/heat kept, i+1 anti-level-leap, zero casing nitpicks, native takeaway diffs. |
+| **`spec`** | **Brain-Dump to Spec (脑暴压铸)** | `agent` | `translate` | `transform` | `preview` | Casts messy thoughts into strict Objective, Constraints, Edge Cases, and Do Not Touch modules for agent plan mode. |
+| **`commit`** | **Commit Dehydrator (提交脱水)** | `clipboard` | `translate` | `transform` | `preview` | Generates strict Conventional Commits (first line <=50 chars, imperative verb, Root Cause & Impact body). Copies to clipboard. |
+| **`oss`** | **OSS Peer Comms (开源对线)** | `clipboard` | `translate` | `transform` | `tree` | Transforms blunt critiques into objective, peer-level GitHub comments (`nit:`, `under contention`, `repro:`). Copies to clipboard. |
+| **`yap`** | **Indie Shipper (极客发推)** | `clipboard` | `translate` | `transform` | `tree` | Cold, high-density Indie Hacker tech post (<280 chars) with 0 emojis, 0 corporate marketing hype. Copies to clipboard. |
 
 ---
 
-#### For Chinese Developers (`sourceLang === "zh"`) — Simplified Chinese:
+## 3. Physical Persistence Contract (`~/.pi/agent/lingual.json`)
 
-1. **Question 1 (`header`: `"定制方案"`)**:
-   - *Question*: `您希望将 pi-lingual 调整为哪种开发指令或伴学方案？`
-   - *Options*:
-     1. **规范英文工程直发 (Direct English Spec) (Recommended)** — 键入中文，自动翻译并规范化为高信噪比英文工程指令直发 Coding Agent (Mode 2)
-     2. **经典双语伴学词卡 (Dual Companion Card)** — 0ms 原话直发，输入框上方浮现口语+架构书面双语学习卡 (Mode 1)
-     3. **多风格候选秒发 (Pick of 3 Candidates)** — 终端上方生成极简/结构/根因三组候选，按数字键 1..3 免回车秒发 (Mode 3)
-     4. **切换目标语种 (Switch Target Language)** — 切换翻译与伴学的目标语言（支持英、日、韩、德、法、西等）
+To configure or create modes, write directly to `~/.pi/agent/lingual.json`:
 
-2. **Question 2 (`header`: `"目标语言"`)**:
-   - *Question*: `转换的目标外语语种是什么？`
-   - *Options*:
-     1. **英语 (English) (Recommended)** — 最佳编码大模型推理基座与国际开源标准
-     2. **日语 (Japanese)** — 适用于日系开源项目与技术文档
-     3. **多语种扩展 (德语 / 法语 / 西班牙语 / 韩语)** — 欧洲或跨国技术协作语种
+```jsonc
+// Default factory configuration with symmetric dual-core loadouts:
+{
+  "sourceLang": "en",
+  "targetLang": "ja",
+  "explainLang": "en",
+  "activeModeId": "direct",
+  "modes": [
+    {
+      "id": "direct",
+      "name": "Logical Spec",
+      "flow": "translate",
+      "action": "transform",
+      "hud": "preview",
+      "target": "agent",
+      "killList": ["delve", "tapestry", "seamless", "robust"],
+      "slots": [
+        {
+          "id": "direct_spec",
+          "label": "Logical Spec",
+          "role": "rewrite",
+          "instruction": "Target Language: ${targetLang}. Strictly output in ${targetLang} ONLY: Translate and restructure user thoughts from ${sourceLang} into a clear, imperative engineering instruction for an AI coding agent. Start directly with an active verb.",
+          "enabled": true
+        },
+        {
+          "id": "vocab",
+          "label": "Key Terms",
+          "role": "vocab",
+          "instruction": "Extract 2-3 high-value idiomatic ${targetLang} technical expressions relevant to this instruction.",
+          "enabled": true
+        }
+      ],
+      "enabled": true
+    },
+    {
+      "id": "live-flow",
+      "name": "Live Flow",
+      "flow": "proofread",
+      "action": "transform",
+      "hud": "adaptive-takeaway",
+      "target": "agent",
+      "slots": [
+        {
+          "id": "fixed",
+          "label": "Fixed",
+          "role": "rewrite",
+          "instruction": "Target Language: ${targetLang}. Strictly output in ${targetLang} ONLY: Surgically correct errors in user's ${targetLang} sentence. Zero level leap, 100% preserve emotion and profanity, zero casing nitpicks.",
+          "enabled": true
+        },
+        {
+          "id": "fixes",
+          "label": "Takeaways",
+          "role": "vocab",
+          "instruction": "Extract 1-3 essential takeaways covering syntax structure, collocations, and grammar slips in ${explainLang}.",
+          "enabled": true
+        }
+      ],
+      "enabled": true
+    }
+  ]
+}
+```
+
+### Symmetric Polyglot Example: Native English Founder to Chinese Clients (`en ⇄ zh`)
+```jsonc
+// Scenario: Native English founder/PM reaching out to Chinese clients for product feedback (en ⇄ zh)
+{
+  "sourceLang": "en",
+  "targetLang": "zh",
+  "explainLang": "en",
+  "modes": [
+    {
+      "id": "client-outreach",
+      "name": "Client Discovery",
+      "flow": "translate",
+      "action": "select",
+      "hud": "tree",
+      "enabled": true,
+      "slots": [
+        {
+          "id": "wechat-casual",
+          "label": "WeChat",
+          "role": "translation",
+          "instruction": "Translate into warm, natural, conversational Mandarin (${targetLang}) suitable for asking customers about their product experience on WeChat or Feishu. Avoid stiff translationese.",
+          "showMeaning": true,
+          "enabled": true
+        },
+        {
+          "id": "enterprise-formal",
+          "label": "Formal",
+          "role": "translation",
+          "instruction": "Translate into respectful, professional business Mandarin (${targetLang}) for enterprise client feedback inquiries, using appropriate honorifics (e.g., 您, 贵团队) without sounding overly bureaucratic.",
+          "showMeaning": true,
+          "enabled": true
+        }
+      ]
+    }
+  ]
+}
+```
 
 ---
 
-## 3. Instant Settlement & Zero-Friction Confirmation
+## 4. Execution Protocols
 
-Immediately apply the selection to `~/.pi/agent/lingual.json` via the `write` tool.
+### Scenario A: Natural Language Directive (e.g. `/lingual tuner I want a commit dehydrator mode`)
+1. Read `~/.pi/agent/lingual.json`.
+2. Match against Tactical Loadouts (`spec`, `commit`, `oss`, `yap`) or synthesize requested custom mode.
+3. Add the mode to `modes` array in `~/.pi/agent/lingual.json`.
+4. Deliver a 2-line confirmation with ASCII preview in user's `sourceLang`. Zero questions asked!
 
-### Output Delivery:
-Output ONLY:
-1. A concise 3-line bullet summary of what is now active (in user's `sourceLang`);
-2. An authentic ASCII card preview (`┌ ├ └`) using realistic software engineering text;
-3. A 1-line confirmation: *"Saved and active immediately without restarting."*
-
-*(STRICTLY FORBID dumping raw JSON blocks, CLI walls, or initiating Round 2 questionnaires!)*
+### Scenario B: Bare `/lingual tuner` or `/tuner`
+1. Read `~/.pi/agent/lingual.json` to detect `sourceLang`.
+2. Present **ONE single round of `ask_user_question`**:
+   - Question 1 (`header`: `"Loadout"` / `"战术配装"`): Ask which loadout or adjustment is desired.
+   - Question 2 (`header`: `"Target Lang"` / `"目标语言"`): Ask foreign target language.
+3. Upon answer: immediately apply to `~/.pi/agent/lingual.json`.
+4. Output concise summary + ASCII card. Done!

@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
+import { spawn, execFileSync } from "node:child_process";
 import type {
   ExtensionAPI,
   ExtensionContext,
@@ -8,11 +9,13 @@ import type {
   InputEventResult,
 } from "@earendil-works/pi-coding-agent";
 import type {
+  CustomModeConfig,
   LingualMode,
   LingualI18nLabels,
   LingualResult,
   PromptCandidate,
   PromptSlotConfig,
+  ReasoningEffort,
   SlotConfig,
   SlotResult,
 } from "./types.js";
@@ -49,6 +52,10 @@ import {
   isTestEnvironment,
   loadUserLingualConfig,
   saveUserLingualConfig,
+  isUserLingualConfigured,
+  resolveModesFromConfig,
+  normalizeActiveModeId,
+  executeModeRunner,
   shouldInjectNativeReplyGuard,
   formatNativeReplyGuardHint,
 } from "./engine.js";
@@ -62,6 +69,15 @@ import {
   addSlotToList,
   removeSlotFromList,
   toggleSlotInList,
+  addCustomMode,
+  removeCustomMode,
+  updateCustomMode,
+  toggleCustomMode,
+  addSlotToMode,
+  removeSlotFromMode,
+  getDefaultFactoryModes,
+  getPresetLoadout,
+  listPresetLoadouts,
   SLOT_PRESETS,
   LANGUAGE_PRESETS,
 } from "./presets.js";
@@ -82,6 +98,8 @@ interface ExtensionState {
   directSlots: PromptSlotConfig[];
   promptSlots: PromptSlotConfig[];
   modifySlots: PromptSlotConfig[];
+  modes: CustomModeConfig[];
+  activeModeId?: string;
   labels: LingualI18nLabels;
 }
 
@@ -101,6 +119,7 @@ const initialPromptSlots = Array.isArray(initialDiskConfig.promptSlots) && initi
 const initialModifySlots = Array.isArray(initialDiskConfig.modifySlots) && initialDiskConfig.modifySlots.length > 0
   ? initialDiskConfig.modifySlots
   : getDefaultModifySlots(initialSourceLang);
+const initialModes = resolveModesFromConfig(initialDiskConfig);
 const initialLabels = resolveLabelsForLang(initialSourceLang, initialDiskConfig.labels, initialTargetLang);
 
 const state: ExtensionState = {
@@ -115,10 +134,11 @@ const state: ExtensionState = {
   directSlots: initialDirectSlots,
   promptSlots: initialPromptSlots,
   modifySlots: initialModifySlots,
+  modes: initialModes,
   labels: initialLabels,
 };
 
-// 单调递增会话 FSM 控制器，彻底根除连续输入并发竞态与幽灵卡片，物理协同掐断上游 Socket
+// Monotonic FSM session controller, eliminating concurrent input races and ghost cards, aborting upstream sockets.
 const session = new LingualSessionController();
 let lastContext: ExtensionContext | null = null;
 
@@ -126,6 +146,44 @@ function hasActiveUI(ctx: ExtensionContext | null | undefined): ctx is Extension
   if (!ctx) return false;
   try {
     return Boolean(ctx.hasUI && ctx.ui);
+  } catch {
+    return false;
+  }
+}
+
+function copyToClipboard(text: string): boolean {
+  if (!text) return false;
+  // Emit ANSI OSC 52 sequence for SSH / tmux / modern terminal clipboard sync
+  try {
+    const base64 = Buffer.from(text, "utf8").toString("base64");
+    process.stdout.write(`\x1b]52;c;${base64}\x07`);
+  } catch {}
+
+  try {
+    if (process.platform === "win32") {
+      const proc = spawn("clip.exe", { stdio: ["pipe", "ignore", "ignore"] });
+      proc.stdin.write(text, "utf8");
+      proc.stdin.end();
+      return true;
+    } else if (process.platform === "darwin") {
+      const proc = spawn("pbcopy", { stdio: ["pipe", "ignore", "ignore"] });
+      proc.stdin.write(text, "utf8");
+      proc.stdin.end();
+      return true;
+    } else {
+      // Linux: try wl-copy then fallback to xclip
+      const proc = spawn("wl-copy", { stdio: ["pipe", "ignore", "ignore"] });
+      proc.on("error", () => {
+        try {
+          const procX = spawn("xclip", ["-selection", "clipboard"], { stdio: ["pipe", "ignore", "ignore"] });
+          procX.stdin.write(text, "utf8");
+          procX.stdin.end();
+        } catch {}
+      });
+      proc.stdin.write(text, "utf8");
+      proc.stdin.end();
+      return true;
+    }
   } catch {
     return false;
   }
@@ -145,7 +203,7 @@ function safeClearWidget(ctx: ExtensionContext | null | undefined) {
 function updateFooter(ctx: ExtensionContext | null | undefined) {
   if (!hasActiveUI(ctx)) return;
   try {
-    // 标准化底栏标签为纯净极简的 A ⇄ B (例如 zh ⇄ en)
+    // Normalize status bar badge to clean minimal A ⇄ B (e.g. en ⇄ ja)
     let pair = `${state.sourceLang} ⇄ ${state.targetLang}`;
     const enabledSlots = (state.slots || []).filter((s) => s.enabled);
     const hasSource = enabledSlots.some((s) => s.role === "source");
@@ -164,21 +222,34 @@ function updateFooter(ctx: ExtensionContext | null | undefined) {
 
     switch (state.mode) {
       case "original":
+      case "companion":
         ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", `${pair} · ${modeSpec.companion}`));
         break;
       case "english":
+      case "direct":
+      case "lazy":
         ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", `${pair} · ${modeSpec.direct}`));
         break;
       case "select":
+      case "candidates":
         ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", `${pair} · ${modeSpec.candidates}`));
         break;
       case "modify":
+      case "live-flow":
+      case "raw":
         ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", `${pair} · ${modeSpec.modify}`));
         break;
       case "off":
-        // 彻底隐身：处于 off 关闭状态时，完全移除底栏徽标 (0 像素视觉占用)
+        // Stealth off mode: completely remove status bar badge (0 visual pixels)
         ctx.ui.setStatus("lingual", undefined as any);
         break;
+      default: {
+        const disk = loadUserLingualConfig();
+        const modes = resolveModesFromConfig(disk);
+        const custom = modes.find((m) => m.id === state.mode);
+        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", `${pair} · ${custom ? custom.name : state.mode}`));
+        break;
+      }
     }
   } catch {
     // Gracefully ignore stale context during session replacement or teardown
@@ -186,9 +257,8 @@ function updateFooter(ctx: ExtensionContext | null | undefined) {
 }
 
 /**
- * 渲染极简开放式左导轨树状视窗（Trifecta Minimalist Left-Rail Tree Branch）
- * 包含：原文锚点、动态多语域槽位译文及针对母语 A 的精确语感释义、核心短语点睛
- * 0 封闭框线，0 截断假线，100% 免疫 CJK 字符对齐鬼影。
+ * Renders minimal open left-rail tree branch (UAX #11 cell widths, 0 clipping, immune to CJK ghosting).
+ * Displays source anchor, dynamic translation slots, native nuance sublines, and vocabulary spotlight.
  */
 function renderHudWidget(
   ctx: ExtensionContext,
@@ -230,9 +300,9 @@ function renderHudWidget(
         slots: state.slots,
         pageTag,
         themeDecorators: {
-          muted: (s) => ctx.ui.theme.fg("muted", s),
-          accent: (s) => ctx.ui.theme.fg("accent", s),
-          dim: (s) => ctx.ui.theme.fg("dim", s),
+          muted: (s: string) => ctx.ui.theme.fg("muted", s),
+          accent: (s: string) => ctx.ui.theme.fg("accent", s),
+          dim: (s: string) => ctx.ui.theme.fg("dim", s),
         },
       }
     );
@@ -246,7 +316,7 @@ function renderHudWidget(
 function renderActiveCard(ctx: ExtensionContext) {
   if (!hasActiveUI(ctx)) return;
   try {
-    // 只统计实际已经被翻译就绪的有效卡片，彻底杜绝未就绪切片导致的虚假总页数与跳页
+    // Only count pages ready with translations, preventing ghost pagination.
     const readyList = session.getReadyPages();
     if (readyList.length === 0) return;
     const snapshot = session.getPaginationSnapshot();
@@ -337,8 +407,72 @@ export default function (pi: ExtensionAPI) {
     lastContext = ctx;
     showingReleaseBanner = false;
     const diskCfg = loadUserLingualConfig();
+
+    // First-Run Language Handshake: interactive setup on cold boot when unconfigured
+    if (
+      !isUserLingualConfigured() &&
+      hasActiveUI(ctx) &&
+      !isTestEnvironment() &&
+      event?.reason !== "resume" &&
+      typeof (ctx.ui as any).input === "function"
+    ) {
+      const detected = resolveReleaseBannerLang();
+      const defaultPair =
+        detected === "zh" || detected === "tw"
+          ? "zh en"
+          : detected === "ja"
+            ? "ja en"
+            : detected === "ko"
+              ? "ko en"
+              : detected === "es"
+                ? "es en"
+                : detected === "fr"
+                  ? "fr en"
+                  : detected === "de"
+                    ? "de en"
+                    : detected === "ru"
+                      ? "ru en"
+                      : "en ja";
+
+      try {
+        const userInput = await (ctx.ui as any).input(
+          `✦ [pi-lingual Setup] Native ⇄ Target language (detected: ${detected}):`,
+          defaultPair
+        );
+        safeClearWidget(ctx);
+        const chosen = (typeof userInput === "string" ? userInput.trim() : "") || defaultPair;
+        const [sLang, tLang] = chosen.split(/\s+/);
+        if (sLang) {
+          state.sourceLang = sLang.toLowerCase();
+          state.targetLang = (tLang || (sLang === "en" ? "ja" : "en")).toLowerCase();
+          state.labels = resolveLabelsForLang(state.sourceLang, diskCfg.labels, state.targetLang);
+          state.modes = getDefaultFactoryModes(state.sourceLang, state.sourceLang);
+          state.slots = getDefaultSlots(state.sourceLang);
+          state.directSlots = getDefaultDirectSlots(state.sourceLang);
+          state.promptSlots = getDefaultPromptSlots(state.sourceLang);
+          state.modifySlots = getDefaultModifySlots(state.sourceLang, state.sourceLang);
+          saveUserLingualConfig({
+            sourceLang: state.sourceLang,
+            targetLang: state.targetLang,
+            explainLang: state.sourceLang,
+            configured: true,
+          });
+        }
+      } catch {
+        safeClearWidget(ctx);
+      }
+    }
+
     if (diskCfg.mode) {
       state.mode = diskCfg.mode;
+    }
+    if (Array.isArray(diskCfg.modes) && diskCfg.modes.length > 0) {
+      state.modes = diskCfg.modes;
+    } else {
+      state.modes = resolveModesFromConfig(diskCfg);
+    }
+    if (diskCfg.activeModeId && !state.modeLocked) {
+      state.activeModeId = diskCfg.activeModeId;
     }
     if (diskCfg.slots && Array.isArray(diskCfg.slots) && diskCfg.slots.length > 0) {
       state.slots = diskCfg.slots;
@@ -352,7 +486,7 @@ export default function (pi: ExtensionAPI) {
     syncResizeListener();
     if (hasActiveUI(ctx)) {
       safeClearWidget(ctx);
-      // 重大功能升级速览卡片：仅在未处于 off 隐身模式且首次升级时展示一次，发消息后自动收起
+      // Release feature banner: rendered once on major version upgrade above editor
       if (
         state.mode !== "off" &&
         !isTestEnvironment() &&
@@ -363,7 +497,7 @@ export default function (pi: ExtensionAPI) {
         saveUserLingualConfig({ lastSeenVersion: CURRENT_FEATURE_BANNER_VERSION });
       }
     }
-    // 0 侵扰冷启动：若处于 off 则底栏彻底为空 (undefined)
+    // Non-intrusive cold boot: hide footer badge if off mode
     updateFooter(ctx);
   });
 
@@ -376,9 +510,9 @@ export default function (pi: ExtensionAPI) {
     }
   });
 
-  // 【按需激活 Tuner 零上下文护盾 (On-Demand Tuner Skill Gate)】：
-  // 默认在所有模式 (1/2/3/0) 下自动从 System Prompt 中剥离 lingual-tuner 技能块（0 字节开销）；
-  // 仅当用户显式敲下 `/lingual tuner` (tunerArmed === true) 或主动提及定制伴学时才按需放行该技能。
+  // On-demand tuner context shield:
+  // Strip lingual-tuner skill block from systemPrompt by default (0 token overhead),
+  // allowing it through only when user types `/lingual tuner` (tunerArmed === true).
   pi.on("before_agent_start" as any, async (event: any) => {
     const armedForTurn = tunerArmed;
     tunerArmed = false;
@@ -404,49 +538,79 @@ export default function (pi: ExtensionAPI) {
   const setModeHandler = async (args: string, ctx: ExtensionContext) => {
     session.abortActive();
     const trimmed = args?.trim() || "";
-    const explicitMode = normalizeLingualModeInput(trimmed);
-    let nextMode: LingualMode;
+    const pair = state.labels.hudTitle || `${state.sourceLang} ⇄ ${state.targetLang}`;
+    const modeSpec = resolveModeDisplaySpec(state.sourceLang);
+    const diskForMode = loadUserLingualConfig();
+    const modes = Array.isArray(state.modes) && state.modes.length > 0
+      ? state.modes
+      : resolveModesFromConfig(diskForMode);
+    const activeModes = modes.filter((m) => m.enabled !== false);
+    const hasCustomModesOnDisk = Array.isArray(diskForMode.modes) && diskForMode.modes.length > 0;
 
-    if (explicitMode) {
-      nextMode = explicitMode;
+    let nextMode: string;
+    const explicitLegacy = normalizeLingualModeInput(trimmed);
+
+    if (trimmed) {
+      const lower = trimmed.toLowerCase();
+      const matched = activeModes.find(
+        (m) =>
+          m.id.toLowerCase() === lower ||
+          m.name.toLowerCase() === lower ||
+          (Array.isArray(m.aliases) && m.aliases.some((a) => a.toLowerCase() === lower))
+      );
+      const numIdx = parseInt(trimmed, 10);
+      const isNum = !isNaN(numIdx) && String(numIdx) === trimmed;
+      if (matched) {
+        nextMode = matched.id;
+      } else if (hasCustomModesOnDisk && isNum && numIdx >= 1 && numIdx <= activeModes.length) {
+        nextMode = activeModes[numIdx - 1].id;
+      } else if (explicitLegacy) {
+        nextMode = explicitLegacy;
+      } else {
+        nextMode = activeModes[0]?.id || "direct";
+      }
     } else {
-      // 检查当前模式是否已被锁定
+      // Check if active mode is locked
       if (state.modeLocked) {
-        const pair = state.labels.hudTitle || `${state.sourceLang} ⇄ ${state.targetLang}`;
-        const modeSpec = resolveModeDisplaySpec(state.sourceLang);
-        const currentName =
-          state.mode === "original"
-            ? modeSpec.companion
-            : state.mode === "english"
-              ? modeSpec.direct
-              : state.mode === "select"
-                ? modeSpec.candidates
-                : modeSpec.off;
+        const currentModeObj = activeModes.find((m) => m.id === state.mode);
+        const currentName = currentModeObj
+          ? currentModeObj.name
+          : state.mode === "off"
+            ? modeSpec.off
+            : state.mode;
+        const isZh = state.sourceLang === "zh" || state.sourceLang === "tw";
+        const lockWarning = isZh
+          ? `[${pair}] 当前模式已锁定在 [${currentName}]。如需轮转，请先输入 /lingual unlock 解锁，或使用 /lingual 1|2|3|0 显式指定。`
+          : `[${pair}] Mode is locked to [${currentName}]. Run /lingual unlock to cycle modes or specify mode directly.`;
         try {
-          ctx.ui.notify(
-            `[${pair}] 当前模式已锁定在 [${currentName}]。如需轮转，请先输入 /lingual unlock 解锁，或使用 /lingual 1|2|3|0 显式指定。`,
-            "warning"
-          );
+          ctx.ui.notify(lockWarning, "warning");
         } catch {}
         return;
       }
 
-      // 缺省或无参数时，平滑五态模式循环轮转 (1.纯伴学 ➔ 2.直接改 ➔ 3.挑候选 ➔ 4.原句修补 ➔ 0.已关闭)
-      nextMode =
-        state.mode === "original"
-          ? "english"
-          : state.mode === "english"
-            ? "select"
-            : state.mode === "select"
-              ? "modify"
-              : state.mode === "modify"
-                ? "off"
-                : "original";
+      if (hasCustomModesOnDisk) {
+        const cycleList = [...activeModes.map((m) => m.id), "off"];
+        const currentIdx = cycleList.indexOf(state.mode);
+        nextMode = cycleList[(currentIdx + 1) % cycleList.length] || activeModes[0]?.id || "direct";
+      } else {
+        // Default mode cycle: companion -> direct -> candidates -> modify -> off
+        nextMode =
+          state.mode === "original" || state.mode === "companion"
+            ? "english"
+            : state.mode === "english" || state.mode === "direct"
+              ? "select"
+              : state.mode === "select" || state.mode === "candidates"
+                ? "modify"
+                : state.mode === "modify" || state.mode === "live-flow"
+                  ? "off"
+                  : "original";
+      }
     }
 
-    state.mode = nextMode;
-    // 【核心根治 1 · 状态持久化落盘】：每次切换模式立即物理持久化到 lingual.json，彻底杜绝重载时回退！
-    saveUserLingualConfig({ mode: nextMode });
+    state.mode = nextMode as LingualMode;
+    state.activeModeId = nextMode;
+    // Persist mode immediately to ~/.pi/agent/lingual.json on each mode switch
+    saveUserLingualConfig({ mode: nextMode as LingualMode, activeModeId: nextMode });
     syncResizeListener();
     if (nextMode === "off") {
       clearPendingTimers();
@@ -456,9 +620,6 @@ export default function (pi: ExtensionAPI) {
     }
     updateFooter(ctx);
 
-    const modeSpec = resolveModeDisplaySpec(state.sourceLang);
-    const pair = state.labels.hudTitle || `${state.sourceLang} ⇄ ${state.targetLang}`;
-    const diskForMode = loadUserLingualConfig();
     const activeDirectSlots = resolveDirectSlotsFromConfig({
       sourceLang: state.sourceLang,
       directSlots: diskForMode.directSlots ?? state.directSlots,
@@ -467,33 +628,42 @@ export default function (pi: ExtensionAPI) {
       sourceLang: state.sourceLang,
       promptSlots: diskForMode.promptSlots ?? state.promptSlots,
     }).filter((s) => s.enabled !== false && s.role !== "vocab");
+    const activeModifySlots = resolveModifySlotsFromConfig({
+      sourceLang: state.sourceLang,
+      explainLang: diskForMode.explainLang,
+      modifySlots: diskForMode.modifySlots ?? state.modifySlots,
+    }).filter((s) => s.enabled !== false && s.role !== "vocab");
 
-    if (nextMode === "english") {
-      const firstLabel = activeDirectSlots[0]?.label || "Direct";
+    const targetMode = activeModes.find((m) => m.id === nextMode);
+
+    if (nextMode === "english" || nextMode === "direct") {
+      const firstLabel = targetMode?.slots[0]?.label || activeDirectSlots[0]?.label || "Direct";
       try {
         ctx.ui.notify(modeSpec.notifyDirect(pair, firstLabel), "info");
       } catch {}
-    } else if (nextMode === "select") {
-      const slotLabels = activeCandidateSlots.map((s) => s.label).join(" / ");
+    } else if (nextMode === "select" || nextMode === "candidates") {
+      const slotLabels = targetMode?.slots.filter(s => s.role !== "vocab").map(s => s.label).join(" / ") || activeCandidateSlots.map((s) => s.label).join(" / ");
       try {
         ctx.ui.notify(modeSpec.notifyCandidates(pair, slotLabels), "info");
       } catch {}
-    } else if (nextMode === "modify") {
-      const activeModifySlots = resolveModifySlotsFromConfig({
-        sourceLang: state.sourceLang,
-        modifySlots: diskForMode.modifySlots ?? state.modifySlots,
-      }).filter((s) => s.enabled !== false && s.role !== "vocab");
-      const firstLabel = activeModifySlots[0]?.label || "Fixed";
+    } else if (nextMode === "modify" || nextMode === "live-flow") {
+      const firstLabel = targetMode?.slots[0]?.label || activeModifySlots[0]?.label || "Fixed";
       try {
         ctx.ui.notify(modeSpec.notifyModify(pair, firstLabel), "info");
+      } catch {}
+    } else if (nextMode === "original" || nextMode === "companion") {
+      try {
+        ctx.ui.notify(modeSpec.notifyCompanion(pair), "info");
       } catch {}
     } else if (nextMode === "off") {
       try {
         ctx.ui.notify(modeSpec.notifyOff(pair), "info");
       } catch {}
-    } else {
+    } else if (targetMode) {
+      const modeNum = activeModes.indexOf(targetMode) + 1;
+      const firstSlotLabel = targetMode.slots.find((s) => s.role !== "vocab")?.label || targetMode.slots[0]?.label || targetMode.name;
       try {
-        ctx.ui.notify(modeSpec.notifyCompanion(pair), "info");
+        ctx.ui.notify(`[${pair}] [${modeNum}. ${targetMode.name}] (${firstSlotLabel})`, "info");
       } catch {}
     }
   };
@@ -539,11 +709,12 @@ export default function (pi: ExtensionAPI) {
   const switchLangHandler = async (args: string, ctx: ExtensionContext) => {
     const trimmed = args.trim().toLowerCase();
     if (!trimmed || trimmed === "list" || trimmed === "help" || trimmed === "?") {
+      const isZh = state.sourceLang === "zh" || state.sourceLang === "tw";
       const flowText = `${state.sourceLang} ➔ ${state.targetLang}`;
-      ctx.ui.notify(
-        `[当前伴学语言: ${flowText}]\n• 常用切换: /lang ja (切换目标为日语) · /lang en (切换目标为英语)\n• 双向切换: /lang zh ja · /lang ja en · /lang en zh\n• 支持语种: zh (中文), ja (日语), ko (韩语), en (英语), es (西语), fr (法语), de (德语), ru (俄语)`,
-        "info"
-      );
+      const helpMsg = isZh
+        ? `[当前伴学语言: ${flowText}]\n• 常用切换: /lang ja (切换目标为日语) · /lang en (切换目标为英语)\n• 双向切换: /lang zh ja · /lang ja en · /lang en zh\n• 支持语种: zh (中文), ja (日语), ko (韩语), en (英语), es (西语), fr (法语), de (德语), ru (俄语)`
+        : `[Companion Language: ${flowText}]\n• Quick switch: /lang ja (target Japanese) · /lang en (target English)\n• Pair switch: /lang en ja · /lang ja en · /lang es en\n• Supported codes: zh, ja, ko, en, es, fr, de, ru`;
+      ctx.ui.notify(helpMsg, "info");
       return;
     }
 
@@ -563,7 +734,7 @@ export default function (pi: ExtensionAPI) {
       if (code === state.sourceLang) {
         newTarget = code === "en" ? "ja" : "en";
       } else {
-        // 开发者最常见意图：保持当前母语不变，直接切换学习/翻译的目标语（如 /lang ja）！
+        // Direct target language switch without changing source language (e.g. /lang ja)
         newTarget = code;
       }
     } else {
@@ -630,7 +801,7 @@ export default function (pi: ExtensionAPI) {
       : (state.labels.notifyCompactOff || `[${state.labels.hudTitle}] Full tree layout restored`);
     ctx.ui.notify(msg, "info");
 
-    // 若当前有活动卡片，立即就地刷新重绘
+    // Re-render active card if present
     if (session.getReadyPages().length > 0) {
       renderActiveCard(ctx);
     } else if (session.getLastResult()) {
@@ -675,283 +846,189 @@ export default function (pi: ExtensionAPI) {
     const parts = rawArgs.split(/\s+/).filter(Boolean);
     const subCmd = (parts[0] || "").toLowerCase();
     const lbl = state.labels;
+    const disk = loadUserLingualConfig();
+    const currentModes = Array.isArray(state.modes) && state.modes.length > 0
+      ? state.modes
+      : resolveModesFromConfig(disk);
+    const activeModeId = normalizeActiveModeId(
+      { mode: state.mode, activeModeId: (state as any).activeModeId || disk.activeModeId },
+      currentModes
+    );
+    const activeMode = currentModes.find((m) => m.id === activeModeId) || currentModes[0];
+    const pair = lbl.hudTitle || `${state.sourceLang} ⇄ ${state.targetLang}`;
 
-    // 1. 无参数或 "list": 查看当前所有槽位状态与管理帮助（清晰隔离展示 Mode 1 slots、Mode 2 directSlots、Mode 3 promptSlots）
+    // 1. No args or "list": inspect active slots of current mode
     if (!subCmd || subCmd === "list" || subCmd === "ls") {
-      const slots = state.slots || [];
-      const lines = slots.map((s, idx) => {
-        const status = s.enabled
-          ? (lbl.slotsStatusEnabled || "enabled")
-          : (lbl.slotsStatusDisabled || "disabled");
-        const meaning = s.showMeaning ? (lbl.slotsWithNuance || " +nuance") : "";
-        const inst = s.instruction ? ` // ${s.instruction.slice(0, 45)}...` : "";
-        return `  ${idx + 1}. [${s.id}] "${s.label}" (${s.role}, ${status}${meaning})${inst}`;
-      });
-
-      const dSlots = state.directSlots || getDefaultDirectSlots(state.sourceLang);
-      const dLines = dSlots.map((s, idx) => {
+      const modeSlots = activeMode.slots || [];
+      const lines = modeSlots.map((s, idx) => {
         const status = s.enabled !== false
           ? (lbl.slotsStatusEnabled || "enabled")
           : (lbl.slotsStatusDisabled || "disabled");
-        const roleTag = s.role === "vocab" ? "vocab" : "direct 1-to-1";
-        const inst = s.instruction ? ` // ${s.instruction.slice(0, 45)}...` : "";
-        return `  ${idx + 1}. [${s.id}] "${s.label}" (${roleTag}, ${status})${inst}`;
+        const inst = s.instruction ? ` // ${s.instruction.slice(0, 50)}...` : "";
+        return `  ${idx + 1}. [${s.id}] "${s.label}" (${s.role || "rewrite"}, ${status})${inst}`;
       });
 
-      const pSlots = state.promptSlots || getDefaultPromptSlots(state.sourceLang);
-      const pLines = pSlots.map((s, idx) => {
-        const status = s.enabled !== false
-          ? (lbl.slotsStatusEnabled || "enabled")
-          : (lbl.slotsStatusDisabled || "disabled");
-        const roleTag = s.role === "vocab" ? "vocab" : `candidate #${idx + 1}`;
-        const inst = s.instruction ? ` // ${s.instruction.slice(0, 45)}...` : "";
-        return `  ${idx + 1}. [${s.id}] "${s.label}" (${roleTag}, ${status})${inst}`;
-      });
-
-      const enabledCount = slots.filter((s) => s.enabled).length;
-      const modeSpec = resolveModeDisplaySpec(state.sourceLang);
-      const header = `⇄ [${lbl.hudTitle}] ${lbl.slotsHeader || "Dynamic Slots"} [1 ${modeSpec.companion} · slots] (${enabledCount}/${slots.length} ${lbl.slotsActiveTag || "active"}):\n`;
+      const header = `✦ [${activeMode.name}] Dynamic Slots (${modeSlots.filter((s) => s.enabled !== false).length}/${modeSlots.length} active):\n`;
       const body = lines.length > 0 ? lines.join("\n") : `  (${lbl.slotsNone || "No slots configured"})`;
-      const dHeader = `\n\n⚡ [2 ${modeSpec.direct} · directSlots]:\n`;
-      const dBody = dLines.join("\n");
-      const pHeader = `\n\n✦ [3 ${modeSpec.candidates} · promptSlots]:\n`;
-      const pBody = pLines.join("\n");
-      const nlTitle = lbl.slotsNlTitle ? `\n\n${lbl.slotsNlTitle}\n` : "";
-      const nlExamples = (lbl.slotsNlExamples || []).map((ex) => `  ${ex}`).join("\n");
-      const cliTitle = lbl.slotsCliTitle ? `\n\n${lbl.slotsCliTitle}\n` : "";
-      const cliHelp = (lbl.slotsCliHelp || []).map((cmd) => `  ${cmd}`).join("\n");
-
-      const help = `${header}${body}${dHeader}${dBody}${pHeader}${pBody}${nlTitle}${nlExamples}${cliTitle}${cliHelp}`;
-      ctx.ui.notify(help, "info");
+      const cliHelp =
+        `\n\nUsage:\n` +
+        `  /slots add <id> <label> [instruction...]  Add or update slot in active mode\n` +
+        `  /slots rm <id>                            Remove slot by ID\n` +
+        `  /slots toggle <id>                        Toggle enabled state\n` +
+        `  /slots reset                              Reset active mode slots to defaults`;
+      ctx.ui.notify(`${header}${body}${cliHelp}`, "info");
       return;
     }
 
-    // 2. "/slots reset": 恢复开箱即用默认初始槽位 (同时清理三套独立模式槽位)
+    // 2. "/slots reset": restore factory default initial slots for active mode
     if (subCmd === "reset") {
-      state.slots = getDefaultSlots(state.sourceLang);
-      state.directSlots = getDefaultDirectSlots(state.sourceLang);
-      state.promptSlots = getDefaultPromptSlots(state.sourceLang);
-      state.slotPreset = "";
-      saveUserLingualConfig({ slots: undefined, directSlots: undefined, promptSlots: undefined, slotPreset: undefined });
+      const factoryDefaults = getDefaultFactoryModes(state.sourceLang, disk.explainLang);
+      const matchDefault = factoryDefaults.find((m) => m.id === activeMode.id);
+      if (matchDefault) {
+        activeMode.slots = [...matchDefault.slots];
+      } else if (activeMode.flow === "proofread") {
+        activeMode.slots = getDefaultModifySlots(state.sourceLang, disk.explainLang);
+      } else {
+        activeMode.slots = getDefaultDirectSlots(state.sourceLang);
+      }
+      state.modes = currentModes;
+      saveUserLingualConfig({ modes: currentModes });
       globalLingualCache.clear();
-      const resetMsg = (lbl.slotsResetSuccess || "⇄ [{pair}] Reset slots to clean defaults").replace("{pair}", lbl.hudTitle);
-      ctx.ui.notify(resetMsg, "info");
+      ctx.ui.notify(`[${pair}] Reset slots for mode [${activeMode.name}] to clean defaults.`, "info");
       updateFooter(ctx);
       refreshActiveView(ctx);
       return;
     }
 
-    // 2.1 "/slots hide-source" & "/slots show-source": 架构师极速开关原文行快捷指令
+    // 2.1 Fast shortcuts to toggle source row
     if (subCmd === "hide-source" || subCmd === "no-source") {
-      state.slots = removeSlotFromList(state.slots || [], "source");
-      state.slotPreset = "";
-      saveUserLingualConfig({ slots: state.slots, slotPreset: undefined });
+      activeMode.slots = activeMode.slots.filter((s) => s.id !== "source");
+      state.modes = currentModes;
+      saveUserLingualConfig({ modes: currentModes });
       globalLingualCache.clear();
-      ctx.ui.notify(`[${lbl.hudTitle}] Hidden [source] row on companion cards`, "info");
+      ctx.ui.notify(`[${pair}] Hidden [source] row in mode [${activeMode.name}].`, "info");
       updateFooter(ctx);
       refreshActiveView(ctx);
       return;
     }
     if (subCmd === "show-source" || subCmd === "with-source") {
-      const hasSource = (state.slots || []).some((s) => s.role === "source");
+      const hasSource = (activeMode.slots || []).some((s) => s.id === "source");
       if (!hasSource) {
-        const defaultSource = getDefaultSlots(state.sourceLang).find((s) => s.role === "source") || {
-          id: "source",
-          label: lbl.sourceLabel || "Original",
-          role: "source" as const,
-          enabled: true,
-        };
-        state.slots = [{ ...defaultSource, enabled: true }, ...(state.slots || [])];
+        activeMode.slots = [
+          { id: "source", label: lbl.sourceLabel || "Original", role: "rewrite", instruction: "Source text", enabled: true },
+          ...(activeMode.slots || []),
+        ];
       } else {
-        state.slots = (state.slots || []).map((s) => (s.role === "source" ? { ...s, enabled: true } : s));
+        activeMode.slots = (activeMode.slots || []).map((s) => (s.id === "source" ? { ...s, enabled: true } : s));
       }
-      state.slotPreset = "";
-      saveUserLingualConfig({ slots: state.slots, slotPreset: undefined });
+      state.modes = currentModes;
+      saveUserLingualConfig({ modes: currentModes });
       globalLingualCache.clear();
-      ctx.ui.notify(`[${lbl.hudTitle}] Restored [source] row on companion cards`, "info");
+      ctx.ui.notify(`[${pair}] Restored [source] row in mode [${activeMode.name}].`, "info");
       updateFooter(ctx);
       refreshActiveView(ctx);
       return;
     }
 
-    const parseModeScope = (token = ""): "companion" | "direct" | "candidates" | null => {
-      const t = token.toLowerCase();
-      if (t === "1" || t === "companion" || t === "slots") return "companion";
-      if (t === "2" || t === "direct" || t === "directslots") return "direct";
-      if (t === "3" || t === "candidates" || t === "prompt" || t === "promptslots" || t === "select") return "candidates";
-      return null;
-    };
-
-    const PROMPT_SCOPE_SPEC = {
-      direct: {
-        stateKey: "directSlots" as const,
-        tag: "Mode 2 directSlots",
-        getList: () => state.directSlots || getDefaultDirectSlots(state.sourceLang),
-        setList: (next: PromptSlotConfig[]) => {
-          state.directSlots = next;
-          saveUserLingualConfig({ directSlots: next });
-          globalLingualCache.clear();
-        },
-      },
-      candidates: {
-        stateKey: "promptSlots" as const,
-        tag: "Mode 3 promptSlots",
-        getList: () => state.promptSlots || getDefaultPromptSlots(state.sourceLang),
-        setList: (next: PromptSlotConfig[]) => {
-          state.promptSlots = next;
-          saveUserLingualConfig({ promptSlots: next });
-          globalLingualCache.clear();
-        },
-      },
-    };
-
-    // 3. "/slots rm [mode] <id>": 彻底删除指定模式的槽位（三模式严格物理隔离）
+    // 3. "/slots rm <id>": remove slot from active mode
     if (subCmd === "rm" || subCmd === "remove" || subCmd === "del") {
-      const maybeScope = parseModeScope(parts[1]);
-      const scope = maybeScope || "companion";
-      const targetId = (maybeScope ? parts[2] || "" : parts[1] || "").toLowerCase();
+      const targetId = (parts[1] || "").toLowerCase();
       if (!targetId) {
-        ctx.ui.notify(lbl.slotsUsageRm || "Usage: /slots rm [1|2|3|direct|candidates] <slot-id>", "warning");
+        ctx.ui.notify(lbl.slotsUsageRm || "Usage: /slots rm <slot-id>", "warning");
         return;
       }
-      if (scope === "direct" || scope === "candidates") {
-        const spec = PROMPT_SCOPE_SPEC[scope];
-        const list = spec.getList();
-        const existing = list.find((s) => s.id.toLowerCase() === targetId);
-        if (!existing) {
-          ctx.ui.notify((lbl.slotsNotFound || "Slot [{id}] not found").replace("{pair}", lbl.hudTitle).replace("{id}", targetId), "warning");
-          return;
-        }
-        spec.setList(list.filter((s) => s.id.toLowerCase() !== targetId));
-        ctx.ui.notify(`[${lbl.hudTitle}] [${spec.tag}] Removed slot [${targetId}] ("${existing.label}")`, "info");
-        return;
-      }
-      const existing = (state.slots || []).find((s) => s.id.toLowerCase() === targetId);
+      const existing = (activeMode.slots || []).find((s) => s.id.toLowerCase() === targetId);
       if (!existing) {
-        const notFoundMsg = (lbl.slotsNotFound || "Slot [{id}] not found").replace("{pair}", lbl.hudTitle).replace("{id}", targetId);
+        const notFoundMsg = (lbl.slotsNotFound || "Slot [{id}] not found").replace("{pair}", pair).replace("{id}", targetId);
         ctx.ui.notify(notFoundMsg, "warning");
         return;
       }
-      state.slots = removeSlotFromList(state.slots || [], targetId);
-      state.slotPreset = "";
-      saveUserLingualConfig({ slots: state.slots, slotPreset: undefined });
+      activeMode.slots = activeMode.slots.filter((s) => s.id.toLowerCase() !== targetId);
+      state.modes = currentModes;
+      saveUserLingualConfig({ modes: currentModes });
       globalLingualCache.clear();
-
-      const extraHint = targetId === "source" ? (lbl.slotsRemovedSourceNote || " (Source line will no longer appear on cards)") : "";
-      const removedTpl = lbl.slotsRemovedSuccess || "[{pair}] Removed slot [{id}] (\"{label}\")";
-      const notifyMsg = removedTpl
-        .replace("{pair}", lbl.hudTitle)
-        .replace("{id}", targetId)
-        .replace("{label}", existing.label) + extraHint;
-      ctx.ui.notify(notifyMsg, "info");
+      ctx.ui.notify(`[${pair}] Removed slot [${targetId}] ("${existing.label}") from mode [${activeMode.name}].`, "info");
       updateFooter(ctx);
       refreshActiveView(ctx);
       return;
     }
 
-    // 4. "/slots toggle [mode] <id>": 一键开关指定模式的槽位（三模式严格物理隔离）
+    // 4. "/slots toggle <id>": toggle slot enabled state in active mode
     if (subCmd === "toggle") {
-      const maybeScope = parseModeScope(parts[1]);
-      const scope = maybeScope || "companion";
-      const targetId = (maybeScope ? parts[2] || "" : parts[1] || "").toLowerCase();
+      const targetId = (parts[1] || "").toLowerCase();
       if (!targetId) {
-        ctx.ui.notify(lbl.slotsUsageToggle || "Usage: /slots toggle [1|2|3|direct|candidates] <slot-id>", "warning");
+        ctx.ui.notify(lbl.slotsUsageToggle || "Usage: /slots toggle <slot-id>", "warning");
         return;
       }
-      if (scope === "direct" || scope === "candidates") {
-        const spec = PROMPT_SCOPE_SPEC[scope];
-        const list = spec.getList();
-        const existing = list.find((s) => s.id.toLowerCase() === targetId);
-        if (!existing) {
-          ctx.ui.notify((lbl.slotsNotFound || "Slot [{id}] not found").replace("{pair}", lbl.hudTitle).replace("{id}", targetId), "warning");
-          return;
-        }
-        const updatedList = list.map((s) => (s.id.toLowerCase() === targetId ? { ...s, enabled: s.enabled === false } : s));
-        spec.setList(updatedList);
-        const updated = updatedList.find((s) => s.id.toLowerCase() === targetId);
-        const statusText = updated?.enabled !== false
-          ? (lbl.slotsStatusEnabled || "enabled")
-          : (lbl.slotsStatusDisabled || "disabled");
-        ctx.ui.notify(`[${lbl.hudTitle}] [${scope}] Slot [${targetId}] is now ${statusText}`, "info");
-        return;
-      }
-      const existing = (state.slots || []).find((s) => s.id.toLowerCase() === targetId);
+      const existing = (activeMode.slots || []).find((s) => s.id.toLowerCase() === targetId);
       if (!existing) {
-        const notFoundMsg = (lbl.slotsNotFound || "Slot [{id}] not found").replace("{pair}", lbl.hudTitle).replace("{id}", targetId);
+        const notFoundMsg = (lbl.slotsNotFound || "Slot [{id}] not found").replace("{pair}", pair).replace("{id}", targetId);
         ctx.ui.notify(notFoundMsg, "warning");
         return;
       }
-      state.slots = toggleSlotInList(state.slots || [], targetId);
-      state.slotPreset = "";
-      saveUserLingualConfig({ slots: state.slots, slotPreset: undefined });
+      activeMode.slots = activeMode.slots.map((s) =>
+        s.id.toLowerCase() === targetId ? { ...s, enabled: s.enabled === false } : s
+      );
+      state.modes = currentModes;
+      saveUserLingualConfig({ modes: currentModes });
       globalLingualCache.clear();
-      const updated = state.slots.find((s) => s.id.toLowerCase() === targetId);
-      const statusText = updated?.enabled
+      const updated = activeMode.slots.find((s) => s.id.toLowerCase() === targetId);
+      const statusText = updated?.enabled !== false
         ? (lbl.slotsStatusEnabled || "enabled")
         : (lbl.slotsStatusDisabled || "disabled");
-      const toggledTpl = lbl.slotsToggled || "[{pair}] Slot [{id}] is now {status}";
-      const notifyMsg = toggledTpl
-        .replace("{pair}", lbl.hudTitle)
-        .replace("{id}", targetId)
-        .replace("{status}", statusText);
-      ctx.ui.notify(notifyMsg, "info");
+      ctx.ui.notify(`[${pair}] Slot [${targetId}] is now ${statusText} in mode [${activeMode.name}].`, "info");
       updateFooter(ctx);
       refreshActiveView(ctx);
       return;
     }
 
-    // 5. "/slots add [mode] <id> <label> [instruction...]": 动态添加或修改指定模式的槽位（三模式严格物理隔离）
+    // 5. "/slots add <id> <label> [instruction...]": add or update slot in active mode
     if (subCmd === "add") {
-      const maybeScope = parseModeScope(parts[1]);
-      const scope = maybeScope || "companion";
-      const offset = maybeScope ? 1 : 0;
-      const id = (parts[1 + offset] || "").toLowerCase();
-      const label = parts[2 + offset];
-      const instruction = parts.slice(3 + offset).join(" ");
+      const id = (parts[1] || "").toLowerCase();
+      const label = parts[2];
+      const instruction = parts.slice(3).join(" ");
       if (!id || !label) {
-        ctx.ui.notify(lbl.slotsUsageAdd || "Usage: /slots add [1|2|3|direct|candidates] <id> <label> [instruction...]", "warning");
+        ctx.ui.notify(lbl.slotsUsageAdd || "Usage: /slots add <id> <label> [instruction...]", "warning");
         return;
       }
-      if (scope === "direct" || scope === "candidates") {
-        const spec = PROMPT_SCOPE_SPEC[scope];
-        const list = spec.getList();
-        const newPromptSlot: PromptSlotConfig = {
-          id,
-          label,
-          role: id === "vocab" ? "vocab" : "rewrite",
-          instruction: instruction || `Translate 100% faithfully and naturally matching "${label}" style without summarizing.`,
-          enabled: true,
-        };
-        const idx = list.findIndex((s) => s.id.toLowerCase() === id);
-        const nextList = idx >= 0
-          ? list.map((s, i) => (i === idx ? newPromptSlot : s))
-          : (scope === "direct" ? [newPromptSlot, ...list.filter((s) => s.role === "vocab")] : [...list, newPromptSlot]);
-        spec.setList(nextList);
-        const verb = scope === "direct" ? "Updated dedicated direct" : "Added/updated candidate";
-        ctx.ui.notify(`[${lbl.hudTitle}] [${spec.tag}] ${verb} slot [${id}] "${label}"`, "info");
-        return;
-      }
-      const newSlot = createCustomSlot({
+      const newPromptSlot: PromptSlotConfig = {
         id,
         label,
-        instruction: instruction || undefined,
-      });
-      state.slots = addSlotToList(state.slots || [], newSlot);
-      state.slotPreset = "";
-      saveUserLingualConfig({ slots: state.slots, slotPreset: undefined });
+        role: id === "vocab" || id === "fixes" ? "vocab" : "rewrite",
+        instruction:
+          instruction ||
+          `Target Language: \${targetLang}. Output in \${targetLang} ONLY: Generate output matching "${label}" style without summarizing.`,
+        enabled: true,
+      };
+      const existingIdx = activeMode.slots.findIndex((s) => s.id.toLowerCase() === id);
+      if (existingIdx >= 0) {
+        activeMode.slots[existingIdx] = newPromptSlot;
+      } else {
+        activeMode.slots.push(newPromptSlot);
+      }
+
+      // Automatically upgrade HUD to "tree" if mode.hud was "preview" and enabled translation slots > 1
+      let hudUpgraded = false;
+      const enabledTranslationCount = activeMode.slots.filter(
+        (s) => s.enabled !== false && s.role !== "vocab" && s.id !== "source"
+      ).length;
+      if (activeMode.hud === "preview" && enabledTranslationCount > 1) {
+        activeMode.hud = "tree";
+        hudUpgraded = true;
+      }
+
+      state.modes = currentModes;
+      saveUserLingualConfig({ modes: currentModes });
       globalLingualCache.clear();
-      const addedTpl = lbl.slotsAdded || "[{pair}] Added/updated slot [{id}] \"{label}\"";
-      const notifyMsg = addedTpl
-        .replace("{pair}", lbl.hudTitle)
-        .replace("{id}", id)
-        .replace("{label}", label);
-      ctx.ui.notify(notifyMsg, "info");
+
+      const upgradeHint = hudUpgraded ? ` (HUD layout auto-upgraded to "tree" for multi-slot visibility)` : "";
+      ctx.ui.notify(`[${pair}] Added/updated slot [${id}] "${label}" in mode [${activeMode.name}]${upgradeHint}.`, "info");
       updateFooter(ctx);
       refreshActiveView(ctx);
       return;
     }
 
-    // 6. 兼容历史预设关键词 (e.g. /slots compact2, /slots social, /slots developer)
+    // 6. Legacy preset keywords support (e.g. /slots compact2, /slots social, /slots developer)
     const matchedPreset = SLOT_PRESETS[subCmd];
     if (matchedPreset) {
       state.slotPreset = subCmd;
@@ -969,7 +1046,7 @@ export default function (pi: ExtensionAPI) {
       return;
     }
 
-    // 7. 未知指令提示
+    // 7. Unknown slot command fallback
     const unknownTpl = lbl.slotsUnknown || "Unknown slot command or preset \"{cmd}\".";
     ctx.ui.notify(unknownTpl.replace("{pair}", lbl.hudTitle).replace("{cmd}", subCmd), "warning");
   };
@@ -980,14 +1057,16 @@ export default function (pi: ExtensionAPI) {
       ? (ctx.model ? `auto (${followDesc}: ${ctx.model.provider}/${ctx.model.id})` : "auto")
       : (state.selectedModel || "auto");
 
-    const directSlotNames = (state.directSlots || getDefaultDirectSlots(state.sourceLang))
-      .filter((s) => s.enabled !== false)
-      .map((s) => s.label)
-      .join(" / ");
-    const promptSlotNames = (state.promptSlots || getDefaultPromptSlots(state.sourceLang))
-      .filter((s) => s.enabled !== false)
-      .map((s) => s.label)
-      .join(" / ");
+    const currentModes = Array.isArray(state.modes) && state.modes.length > 0
+      ? state.modes
+      : resolveModesFromConfig(loadUserLingualConfig());
+    const activeModeId = normalizeActiveModeId(
+      { mode: state.mode, activeModeId: (state as any).activeModeId },
+      currentModes
+    );
+    const activeMode = currentModes.find((m) => m.id === activeModeId) || currentModes[0];
+    const diskCfg = loadUserLingualConfig();
+    const activeEffort = activeMode.reasoning || diskCfg.reasoning || "low";
 
     const statusMsg = formatStatusReport(state.labels, {
       mode: state.mode,
@@ -997,9 +1076,9 @@ export default function (pi: ExtensionAPI) {
       layout: state.compact ? "capsule" : "tree",
       cacheStats: globalLingualCache.getStats(),
     }) +
-      `\n• Mode 1 Companion Slots (slots): [${state.slotPreset || "custom"}] (${(state.slots || []).filter(s => s.enabled).map(s => s.label).join(", ")})` +
-      `\n• Mode 2 Direct Slot (directSlots): [${directSlotNames}]` +
-      `\n• Mode 3 Candidate Slots (promptSlots): [${promptSlotNames}]`;
+      `\n• Active Mode: [${activeMode.name}] (${activeMode.id}) · flow: ${activeMode.flow} · action: ${activeMode.action}` +
+      `\n• Dynamic Slots: [${(activeMode.slots || []).filter(s => s.enabled !== false).map(s => s.label).join(", ")}]` +
+      `\n• Reasoning Effort: ${activeEffort} (mode: ${activeMode.reasoning || "default"}, global: ${diskCfg.reasoning || "low"})`;
 
     ctx.ui.notify(statusMsg, "info");
   };
@@ -1030,6 +1109,168 @@ export default function (pi: ExtensionAPI) {
     ctx.ui.notify(state.labels.notifyHistoryRestored || `[${state.labels.hudTitle}] Restored previous companion card`, "info");
   };
 
+  // Manage mode registry CRUD subcommands (/lingual mode [list|add|rm|toggle|reset])
+  const manageModesHandler = async (args: string, ctx: ExtensionContext) => {
+    const trimmed = args.trim();
+    const disk = loadUserLingualConfig();
+    const currentModes = Array.isArray(state.modes) && state.modes.length > 0
+      ? state.modes
+      : resolveModesFromConfig(disk);
+    const pair = state.labels.hudTitle || `${state.sourceLang} ⇄ ${state.targetLang}`;
+
+    if (!trimmed || trimmed === "list") {
+      const modeLines = currentModes.map((m, idx) => {
+        const status = m.enabled !== false ? "[✓]" : "[x]";
+        const isCurrent = (m.id === state.mode || m.id === (state as any).activeModeId) ? " ▸" : "  ";
+        const reasoningTag = `[${m.reasoning || "low"}]`;
+        return `${isCurrent} [${idx + 1}] ${m.id} (${m.name}) ${reasoningTag} · flow: ${m.flow} · action: ${m.action} · hud: ${m.hud} · ${m.slots?.length || 0} slots ${status}`;
+      });
+      const report =
+        `✦ [pi-lingual Modes Registry] (Current: ${state.mode})\n` +
+        modeLines.join("\n") +
+        `\n\nUsage: /lingual mode [list | add <id> <name> [flow] [action] [hud] | rm <id> | toggle <id> | reset]`;
+      ctx.ui.notify(report, "info");
+      return;
+    }
+
+    const parts = trimmed.split(/\s+/);
+    const subCmd = parts[0].toLowerCase();
+    const id = parts[1]?.toLowerCase();
+
+    if (subCmd === "reset") {
+      const defaults = getDefaultFactoryModes(state.sourceLang, disk.explainLang);
+      state.modes = defaults;
+      saveUserLingualConfig({ modes: defaults });
+      ctx.ui.notify(`[${pair}] Reset modes registry to factory golden defaults (${defaults.map((m) => m.name).join(" & ")})`, "info");
+      updateFooter(ctx);
+      return;
+    }
+
+    if (subCmd === "rm" || subCmd === "remove" || subCmd === "del" || subCmd === "delete") {
+      if (!id) {
+        ctx.ui.notify(`[${pair}] Missing mode ID. Usage: /lingual mode rm <id>`, "warning");
+        return;
+      }
+      const updated = removeCustomMode(currentModes, id);
+      if (updated.length === currentModes.length) {
+        ctx.ui.notify(`[${pair}] Mode [${id}] not found in modes registry.`, "warning");
+        return;
+      }
+      state.modes = updated;
+      saveUserLingualConfig({ modes: updated });
+      ctx.ui.notify(`[${pair}] Removed custom mode [${id}] from registry.`, "info");
+      updateFooter(ctx);
+      return;
+    }
+
+    if (subCmd === "toggle") {
+      if (!id) {
+        ctx.ui.notify(`[${pair}] Missing mode ID. Usage: /lingual mode toggle <id>`, "warning");
+        return;
+      }
+      const updated = toggleCustomMode(currentModes, id);
+      const target = updated.find((m) => m.id === id);
+      if (!target) {
+        ctx.ui.notify(`[${pair}] Mode [${id}] not found in modes registry.`, "warning");
+        return;
+      }
+      state.modes = updated;
+      saveUserLingualConfig({ modes: updated });
+      ctx.ui.notify(`[${pair}] Mode [${id}] is now ${target.enabled ? "enabled [✓]" : "disabled [x]"}.`, "info");
+      updateFooter(ctx);
+      return;
+    }
+
+    if (subCmd === "add") {
+      if (!id || !parts[2]) {
+        ctx.ui.notify(`[${pair}] Missing arguments. Usage: /lingual mode add <id> <name> [flow] [action] [hud]`, "warning");
+        return;
+      }
+      const name = parts[2];
+      const flow = (parts[3] as any) || "translate";
+      const action = (parts[4] as any) || "transform";
+      const hud = (parts[5] as any) || "preview";
+      const customInstruction = parts.slice(6).join(" ").trim();
+      const newMode: CustomModeConfig = {
+        id,
+        name,
+        flow: flow === "proofread" || flow === "custom" ? flow : "translate",
+        action: action === "pass-through" || action === "select" ? action : "transform",
+        hud: hud === "tree" || hud === "adaptive-takeaway" || hud === "none" ? hud : "preview",
+        slots: [
+          {
+            id: `${id}_slot`,
+            label: name,
+            role: "rewrite",
+            instruction: customInstruction || `Translate and polish from \${sourceLang} into \${targetLang} matching ${name} style.`,
+            enabled: true,
+          },
+        ],
+        enabled: true,
+      };
+      const updated = addCustomMode(currentModes, newMode);
+      state.modes = updated;
+      saveUserLingualConfig({ modes: updated });
+      ctx.ui.notify(`[${pair}] Added custom mode [${id}] "${name}" to registry.`, "info");
+      updateFooter(ctx);
+      return;
+    }
+
+    ctx.ui.notify(`[${pair}] Unknown mode subcommand "${subCmd}". Usage: /lingual mode [list|add|rm|toggle|reset]`, "warning");
+  };
+
+  // Manage tactical loadouts (/lingual loadout [list | apply <id>])
+  const manageLoadoutsHandler = async (args: string, ctx: ExtensionContext) => {
+    const trimmed = args.trim();
+    const disk = loadUserLingualConfig();
+    const currentModes = Array.isArray(state.modes) && state.modes.length > 0
+      ? state.modes
+      : resolveModesFromConfig(disk);
+    const pair = state.labels.hudTitle || `${state.sourceLang} ⇄ ${state.targetLang}`;
+    const loadouts = listPresetLoadouts();
+
+    if (!trimmed || trimmed === "list" || trimmed === "ls") {
+      const lines = loadouts.map((l, idx) => {
+        const isInstalled = currentModes.some((m) => m.id === l.id);
+        const status = isInstalled ? "[installed ✓]" : "[available]";
+        return `  ${idx + 1}. [${l.id}] ${l.name} - ${l.description} ${status}`;
+      });
+      const report =
+        `✦ [pi-lingual Tactical Loadouts]\n` +
+        lines.join("\n") +
+        `\n\nUsage: /lingual loadout [list | apply <id>] (e.g. /lingual loadout apply spec)`;
+      ctx.ui.notify(report, "info");
+      return;
+    }
+
+    const parts = trimmed.split(/\s+/);
+    const subCmd = parts[0].toLowerCase();
+    const targetId = (subCmd === "apply" || subCmd === "add" ? parts[1] : subCmd)?.toLowerCase();
+
+    if (!targetId) {
+      ctx.ui.notify(`[${pair}] Missing loadout ID. Usage: /lingual loadout apply <spec|commit|oss|yap>`, "warning");
+      return;
+    }
+
+    const loadoutConfig = getPresetLoadout(targetId, state.sourceLang, disk.explainLang);
+    if (!loadoutConfig) {
+      ctx.ui.notify(
+        `[${pair}] Loadout [${targetId}] not found. Available: ${loadouts.map((l) => l.id).join(", ")}`,
+        "warning"
+      );
+      return;
+    }
+
+    const updated = addCustomMode(currentModes, loadoutConfig);
+    state.modes = updated;
+    saveUserLingualConfig({ modes: updated });
+    ctx.ui.notify(
+      `[${pair}] Applied tactical loadout [${loadoutConfig.id}] "${loadoutConfig.name}" to active modes! Run /lingual ${loadoutConfig.id} to activate.`,
+      "info"
+    );
+    updateFooter(ctx);
+  };
+
   // Universal English baseline guide (when sendUserMessage is unavailable in headless/test mocks)
   const showAgentGuideHandler = async (_args: string, ctx: ExtensionContext) => {
     const guide =
@@ -1052,11 +1293,56 @@ export default function (pi: ExtensionAPI) {
     ctx.ui.notify(guide, "info");
   };
 
-  // 核心主命令总线调度器：处理 /lingual 下的子命令路由与平滑轮转
+  // Manage model reasoning effort level (/lingual reasoning [low|medium|high])
+  const setReasoningHandler = async (args: string, ctx: ExtensionContext) => {
+    const trimmed = args.trim().toLowerCase();
+    const disk = loadUserLingualConfig();
+    const currentModes = Array.isArray(state.modes) && state.modes.length > 0
+      ? state.modes
+      : resolveModesFromConfig(disk);
+    const activeModeId = normalizeActiveModeId(
+      { mode: state.mode, activeModeId: (state as any).activeModeId || disk.activeModeId },
+      currentModes
+    );
+    const activeMode = currentModes.find((m) => m.id === activeModeId) || currentModes[0];
+    const pair = state.labels.hudTitle || `${state.sourceLang} ⇄ ${state.targetLang}`;
+
+    if (!trimmed) {
+      const activeEffort = activeMode.reasoning || disk.reasoning || "low";
+      const globalEffort = disk.reasoning || "low";
+      ctx.ui.notify(
+        `[${pair}] Reasoning effort: mode [${activeMode.name}] = "${activeEffort}" · global = "${globalEffort}". Usage: /lingual reasoning <low|medium|high>`,
+        "info"
+      );
+      return;
+    }
+
+    if (trimmed !== "low" && trimmed !== "medium" && trimmed !== "high") {
+      ctx.ui.notify(
+        `[${pair}] Invalid reasoning effort "${trimmed}". Available options: low, medium, high.`,
+        "warning"
+      );
+      return;
+    }
+
+    const newEffort = trimmed as ReasoningEffort;
+    const updatedModes = currentModes.map((m) =>
+      m.id === activeMode.id ? { ...m, reasoning: newEffort } : m
+    );
+    state.modes = updatedModes;
+    saveUserLingualConfig({ modes: updatedModes, reasoning: newEffort });
+    ctx.ui.notify(
+      `[${pair}] Reasoning effort for mode [${activeMode.name}] set to "${newEffort}".`,
+      "info"
+    );
+    updateFooter(ctx);
+  };
+
+  // Master command bus: handles subcommands and mode cycling
   const masterCommandHandler = async (args: string, ctx: ExtensionContext) => {
     const trimmed = args?.trim();
     if (!trimmed) {
-      // 无参数时：平滑三态模式循环轮转 (original ➔ english ➔ off ➔ original)
+      // No args: cycle through active modes and off
       await setModeHandler("", ctx);
       return;
     }
@@ -1066,56 +1352,74 @@ export default function (pi: ExtensionAPI) {
     const sub = spaceIndex === -1 ? lower : lower.slice(0, spaceIndex);
     const subArgs = spaceIndex === -1 ? "" : trimmed.slice(spaceIndex + 1).trim();
 
-    // 1. 子命令路由: 语言切换 (/lingual lang [code])
+    // 0. Subcommand: reasoning effort level (/lingual reasoning [low|medium|high])
+    if (sub === "reasoning" || sub === "effort") {
+      await setReasoningHandler(subArgs, ctx);
+      return;
+    }
+
+    // 1.0 Subcommand: mode registry management (/lingual mode [args...])
+    if (sub === "mode" || sub === "modes") {
+      await manageModesHandler(subArgs, ctx);
+      return;
+    }
+
+    // 1.01 Subcommand: tactical loadouts (/lingual loadout [list | apply <id>])
+    if (sub === "loadout" || sub === "loadouts" || sub === "preset" || sub === "presets") {
+      await manageLoadoutsHandler(subArgs, ctx);
+      return;
+    }
+
+    // 1. Subcommand: language switching (/lingual lang [code])
     if (sub === "lang" || sub === "language") {
       await switchLangHandler(subArgs, ctx);
       return;
     }
 
-    // 1.1 子命令路由: 槽位架构切换 (/lingual slots [args...])
+    // 1.1 Subcommand: slot management (/lingual slots [args...])
     if (sub === "slots" || sub === "slot" || sub === "preset") {
       await switchSlotsHandler(subArgs, ctx);
       return;
     }
 
-    // 1.2 子命令路由: 架构师极速开关原文行 (/lingual hide-source | /lingual show-source)
+    // 1.2 Subcommand: fast toggle for source row
     if (sub === "hide-source" || sub === "no-source" || sub === "show-source" || sub === "with-source") {
       await switchSlotsHandler(sub, ctx);
       return;
     }
 
-    // 2. 子命令路由: 模型查看与切换 (/lingual model [id])
+    // 2. Subcommand: model inspection and switching (/lingual model [id])
     if (sub === "model") {
       await setModelHandler(subArgs, ctx);
       return;
     }
 
-    // 3. 子命令路由: 胶囊/树状布局切换 (/lingual compact)
+    // 3. Subcommand: compact capsule / tree toggle (/lingual compact)
     if (sub === "compact" || sub === "capsule" || sub === "layout") {
       await toggleCompactHandler(subArgs, ctx);
       return;
     }
 
-    // 4. 子命令路由: 状态报告 (/lingual status)
+    // 4. Subcommand: status report (/lingual status)
     if (sub === "status" || sub === "info" || sub === "report") {
       await showStatusHandler(subArgs, ctx);
       return;
     }
 
-    // 5. 子命令路由: 回看上一条卡片 (/lingual last)
+    // 5. Subcommand: replay last card (/lingual last)
     if (sub === "last" || sub === "prev" || sub === "history") {
       await showLastHandler(subArgs, ctx);
       return;
     }
 
-    // 6. 子命令路由: 按需唤醒 Tuner 定制技能 (/lingual tuner [需求] 或 /lingual agent)
+    // 6. Subcommand: on-demand tuner activation (/lingual tuner [request])
     if (sub === "tuner" || sub === "tune" || sub === "agent" || sub === "help" || sub === "?") {
       tunerArmed = true;
       const promptBody = subArgs
         ? `[lingual-tuner] Load the lingual-tuner skill and update ~/.pi/agent/lingual.json (user native language sourceLang="${state.sourceLang}"). Communicate strictly in the user's native language (${state.sourceLang}) and apply: ${subArgs}`
         : `[lingual-tuner] Load the lingual-tuner skill and launch the interactive customization wizard (user native language sourceLang="${state.sourceLang}"). Render the Customization Map and all questions/options strictly in the user's native language (${state.sourceLang}).`;
       if ((sub === "tuner" || sub === "tune" || subArgs) && typeof (pi as any).sendMessage === "function") {
-        // 使用 display: false 发送完全隐形的唤醒指令，聊天窗口零提示词刷屏污染！
+        // Send invisible activation prompt with display: false to prevent chat clutter
         (pi as any).sendMessage(
           { customType: "lingual-tuner", content: promptBody, display: false },
           { triggerTurn: true }
@@ -1130,32 +1434,27 @@ export default function (pi: ExtensionAPI) {
       return;
     }
 
-    // 6.1 子命令路由: 查看本版本新特性速览卡片 (/lingual news 或 /lingual whatsnew)
+    // 6.1 Subcommand: show release notes banner (/lingual news)
     if (sub === "news" || sub === "whatsnew" || sub === "changelog") {
       const diskCfg = loadUserLingualConfig();
       renderReleaseBanner(ctx, diskCfg.sourceLang || state.sourceLang);
       return;
     }
 
-    // 6.2 子命令路由: 模式锁定与防漂移保护 (/lingual lock | /lingual unlock)
+    // 6.2 Subcommand: mode locking & anti-drift protection (/lingual lock | /lingual unlock)
     if (sub === "lock") {
       state.modeLocked = true;
       saveUserLingualConfig({ modeLocked: true });
       const pair = state.labels.hudTitle || `${state.sourceLang} ⇄ ${state.targetLang}`;
       const modeSpec = resolveModeDisplaySpec(state.sourceLang);
-      const currentName =
-        state.mode === "original"
-          ? modeSpec.companion
-          : state.mode === "english"
-            ? modeSpec.direct
-            : state.mode === "select"
-              ? modeSpec.candidates
-              : modeSpec.off;
+      const activeObj = state.modes.find((m) => m.id === state.mode);
+      const currentName = activeObj ? activeObj.name : (state.mode === "off" ? modeSpec.off : state.mode);
+      const isZh = state.sourceLang === "zh" || state.sourceLang === "tw";
+      const lockMsg = isZh
+        ? `[${pair}] 会话模式已锁定在 [${currentName}]。防止外部进程覆盖与无意轮转，输入 /lingual unlock 可解锁。`
+        : `[${pair}] Session mode locked to [${currentName}]. Mode cycling is blocked. Run /lingual unlock to release.`;
       try {
-        ctx.ui.notify(
-          `[${pair}] 会话模式已锁定在 [${currentName}]。防止外部进程覆盖与无意轮转，输入 /lingual unlock 可解锁。`,
-          "info"
-        );
+        ctx.ui.notify(lockMsg, "info");
       } catch {}
       updateFooter(ctx);
       return;
@@ -1165,37 +1464,59 @@ export default function (pi: ExtensionAPI) {
       state.modeLocked = false;
       saveUserLingualConfig({ modeLocked: false });
       const pair = state.labels.hudTitle || `${state.sourceLang} ⇄ ${state.targetLang}`;
+      const isZh = state.sourceLang === "zh" || state.sourceLang === "tw";
+      const unlockMsg = isZh
+        ? `[${pair}] 模式锁定已解除（已解锁），恢复自由轮转与外部配置同步。`
+        : `[${pair}] Mode lock released. Free mode cycling and configuration sync restored.`;
       try {
-        ctx.ui.notify(`[${pair}] 模式锁定已解除（已解锁），恢复自由轮转与外部配置同步。`, "info");
+        ctx.ui.notify(unlockMsg, "info");
       } catch {}
       updateFooter(ctx);
       return;
     }
 
-    // 7. 模式切换优先: 显式模式关键词或数字直达 (/lingual 1|2|3|0|companion|direct|candidates|off)
-    if (sub === "mode" || normalizeLingualModeInput(sub) !== null) {
+    // 7. Mode jump by number, keyword, or registered custom mode ID (/lingual 1|2|3|0|commit|spec|...)
+    const currentModes = Array.isArray(state.modes) && state.modes.length > 0
+      ? state.modes
+      : resolveModesFromConfig(loadUserLingualConfig());
+    const isMatchedMode = currentModes.some(
+      (m) =>
+        m.id.toLowerCase() === sub ||
+        m.name.toLowerCase() === sub ||
+        (Array.isArray(m.aliases) && m.aliases.some((a) => a.toLowerCase() === sub))
+    );
+    const numIdx = parseInt(sub, 10);
+    const isNum = !isNaN(numIdx) && String(numIdx) === sub;
+    const isKnownMode =
+      sub === "mode" ||
+      isMatchedMode ||
+      (isNum && numIdx >= 0 && numIdx <= currentModes.length) ||
+      normalizeLingualModeInput(sub) !== null;
+
+    if (isKnownMode) {
       await setModeHandler(sub === "mode" ? subArgs : trimmed, ctx);
       return;
     }
 
-    // 8. 直接输入语言代码 (/lingual ja 或 /lingual zh ja)
+    // 8. Direct language code input (/lingual ja | /lingual zh ja)
     const possibleLang = normalizeLangCode(sub);
     if (LANGUAGE_PRESETS[possibleLang]) {
       await switchLangHandler(trimmed, ctx);
       return;
     }
 
-    // 9. 未识别子命令安全防线：严禁穿透到模式轮转，避免用户打错单词意外篡改工作模式！
+    // 9. Unrecognized subcommand safety guardrail: do NOT cycle mode on mistyped words
     const pair = state.labels.hudTitle || `${state.sourceLang} ⇄ ${state.targetLang}`;
+    const isZh = state.sourceLang === "zh" || state.sourceLang === "tw";
+    const unrecMsg = isZh
+      ? `[${pair}] 未识别的子命令: "${trimmed}"。当前模式保持不变。可用命令: /lingual [1|2|3|0|lock|unlock|tuner|lang|slots|compact|status]`
+      : `[${pair}] Unrecognized subcommand: "${trimmed}". Current mode unchanged. Available: /lingual [1|2|3|0|lock|unlock|tuner|lang|slots|compact|status]`;
     try {
-      ctx.ui.notify(
-        `[${pair}] 未识别的子命令: "${trimmed}"。当前模式保持不变。可用命令: /lingual [1|2|3|0|lock|unlock|tuner|lang|slots|compact|status]`,
-        "warning"
-      );
+      ctx.ui.notify(unrecMsg, "warning");
     } catch {}
   };
 
-  // 核心命令矩阵：注册直觉第一公民命令 (/lingual, /lang, /tuner, /lingual-mode, /slots, /last)
+  // Core command matrix: register first-class commands (/lingual, /lang, /tuner, /lingual-mode, /slots, /last)
   pi.registerCommand("lingual", {
     description:
       state.labels.cmdDescMode ||
@@ -1206,16 +1527,6 @@ export default function (pi: ExtensionAPI) {
   pi.registerCommand("lang", {
     description: state.labels.cmdDescLang || "Switch companion language: /lang <zh|ja|ko|en|es|fr|de|ru> [target]",
     handler: switchLangHandler,
-  });
-
-  pi.registerCommand("tuner", {
-    description: "Launch lingual tuner wizard: /tuner",
-    handler: (args, ctx) => masterCommandHandler(`tuner ${args}`, ctx),
-  });
-
-  pi.registerCommand("lingual-mode", {
-    description: state.labels.cmdDescMode || "Set companion mode directly: /lingual-mode <1|2|3|0|companion|direct|candidates|off>",
-    handler: setModeHandler,
   });
 
   pi.registerCommand("slots", {
@@ -1229,7 +1540,7 @@ export default function (pi: ExtensionAPI) {
   });
 
   if (typeof pi.registerShortcut === "function") {
-    // 快捷键支持：使用 Alt+. 与 Alt+,（处于 off 时直接静默返回）
+    // Keyboard shortcuts: Alt+. and Alt+, (silent return in off mode)
     pi.registerShortcut("alt+.", {
       description: state.labels.shortcutNextPage || "Switch to next companion segment",
       handler: async (ctx) => {
@@ -1251,13 +1562,18 @@ export default function (pi: ExtensionAPI) {
     });
   }
 
-  // 创建 Pi 宿主原生模型驱动器：0 配置开箱即用，优先复用 Pi 已授权的会话凭据，拒绝泄露本地私有 Token
-  const createModelCompleter = (ctx: ExtensionContext) => {
-    return async (text: string, systemPrompt: string, signal?: AbortSignal): Promise<string | null> => {
+  // Host-native model completer: zero-config in-process model execution
+  const createModelCompleter = (ctx: ExtensionContext, defaultOpts?: { reasoning?: string }) => {
+    return async (
+      text: string,
+      systemPrompt: string,
+      signal?: AbortSignal,
+      callOpts?: { reasoning?: string }
+    ): Promise<string | null> => {
       try {
         if (!ctx.modelRegistry) return null;
 
-        // 1. 解析目标模型：支持 auto 跟随主会话，或用户通过 /lingual-model 自选的模型
+        // 1. Resolve target model: follow active session or user-configured model
         let targetModel = ctx.model;
         if (state.selectedModel && state.selectedModel !== "auto") {
           const available = ctx.modelRegistry.getAvailable?.() || [];
@@ -1272,15 +1588,19 @@ export default function (pi: ExtensionAPI) {
 
         if (!targetModel) return null;
 
-        // 2. 调用 Pi 原生无缝流式推理 (streamSimple)，不走硬编码外网代理，完全由 Pi 托管凭证与认证
-        // 弹性参数配置：扩容 maxTokens 至 1500，杜绝长输入多槽位 JSON 截断；绝不盲目硬编码 reasoning 导致 400 报错
+        // 2. Invoke Pi native streamSimple with credentials managed by host
+        // Max tokens expanded to 1500 to prevent multi-slot JSON truncation
         const diskConfig = loadUserLingualConfig();
+        const effectiveReasoning =
+          callOpts?.reasoning ||
+          defaultOpts?.reasoning ||
+          diskConfig.reasoning ||
+          "low";
+
         const requestOptions: Record<string, any> = {
           maxTokens: 1500,
+          reasoning: effectiveReasoning,
         };
-        if (diskConfig.reasoning) {
-          requestOptions.reasoning = diskConfig.reasoning;
-        }
 
         const stream = ctx.modelRegistry.streamSimple(
           targetModel,
@@ -1297,7 +1617,7 @@ export default function (pi: ExtensionAPI) {
           requestOptions as any
         );
 
-        // 【超时熔断】：默认 15s 充裕超时（支持 lingual.json 配置 timeoutMs），杜绝 30s 终端输入假死，同时无缝协同中断信号
+        // Timeout fuse: default 15s timeout with abort signal cooperation
         const timeoutMs = diskConfig.timeoutMs || 15000;
         let timeoutHandle: NodeJS.Timeout | undefined;
         const timeoutPromise = new Promise<null>((_, reject) => {
@@ -1326,7 +1646,7 @@ export default function (pi: ExtensionAPI) {
     };
   };
 
-  // 核心拦截层：绝不把双模标注硬塞入用户的消息历史与 Prompt！
+  // Core input interceptor: transform prompt or pass through
   pi.on("input", async (event: InputEvent, ctx: ExtensionContext): Promise<InputEventResult> => {
     lastRawInputText = event?.text || "";
     if (showingReleaseBanner) {
@@ -1356,7 +1676,7 @@ export default function (pi: ExtensionAPI) {
     }
     if (latestDisk.mode && latestDisk.mode !== state.mode) {
       if (state.modeLocked) {
-        // 当前模式已被锁定，物理拒绝外部磁盘修改覆盖！保持会话模式严格稳定！
+        // Active mode is locked: refuse external disk override
       } else {
         state.mode = latestDisk.mode;
         syncResizeListener();
@@ -1375,6 +1695,14 @@ export default function (pi: ExtensionAPI) {
     if (latestDisk.promptSlots && Array.isArray(latestDisk.promptSlots)) {
       state.promptSlots = latestDisk.promptSlots;
     }
+    if (Array.isArray(latestDisk.modes) && latestDisk.modes.length > 0) {
+      state.modes = latestDisk.modes;
+    } else if (!state.modes || state.modes.length === 0) {
+      state.modes = resolveModesFromConfig(latestDisk);
+    }
+    if (latestDisk.activeModeId && !state.modeLocked) {
+      state.activeModeId = latestDisk.activeModeId;
+    }
 
     if (state.mode === "off") return { action: "continue" };
 
@@ -1391,18 +1719,24 @@ export default function (pi: ExtensionAPI) {
       return { action: "continue" };
     }
 
-    // 智能审查与意图萃取：剥离剪贴板图片、折叠多行堆栈追踪与代码块为 [...]，提炼真实自然语言核心
+    // Sanitize prompt: fold long traces, code blocks, and absolute paths
     const sanitized = sanitizePromptForTranslation(raw);
     const promptToTranslate = sanitized.distilledText;
-    const isPromptOptMode = state.mode === "english" || state.mode === "select" || state.mode === "modify";
+    const latestModes = state.modes;
+    const activeModeId = normalizeActiveModeId(
+      { mode: state.mode, activeModeId: state.activeModeId || latestDisk.activeModeId },
+      latestModes
+    );
+    const currentMode = latestModes.find((m) => m.id === activeModeId) || latestModes[0];
+    const isPromptOptMode = currentMode ? currentMode.action !== "pass-through" : (state.mode !== "original" && state.mode !== "off");
 
-    // 判定 1：若整段输入经过审查后，发现毫无自然语言意图 (纯堆栈/纯代码/纯命令)
-    // 判定 2：或命中底层代码与 CLI 盾牌及字符长度防护 (由 shouldTriggerTranslation 统一管控)
+    // Condition 1: Pure code/stack traces with no natural language intent
+    // Condition 2: CLI shield bypass or below character threshold
     if (
       !sanitized.hasNaturalLanguage ||
       !shouldTriggerTranslation(promptToTranslate, state.sourceLang, isPromptOptMode)
     ) {
-      // 【关键体验防线 1 · 绝无僵尸残留与幽灵复活】：当前输入不触发翻译时，立刻中止在途请求、物理销毁旧卡片，并彻底清空分页池！
+      // Abort in-flight requests and clear pagination pool if prompt should not translate
       clearPendingTimers();
       session.abortActive();
       session.clearPagination();
@@ -1415,16 +1749,18 @@ export default function (pi: ExtensionAPI) {
 
     lastContext = ctx;
     const { generation, signal } = session.beginRequest();
-    const completer = createModelCompleter(ctx);
+    const resolvedReasoning = currentMode.reasoning ?? latestDisk.reasoning ?? "low";
+    const completer = createModelCompleter(ctx, { reasoning: resolvedReasoning });
 
-    // 【单卡高密度意图凝练流】：短句常规直译，长句由模型自动注入 Condensation 提炼为精悍单卡，彻底消除多切片轮询复杂性
+    // Single-card high-density intent condensation flow
     session.initPagination(1);
 
     // =========================================================================
-    // 模式 1：【伴学模式】(original · 默认)
-    // 彻底非阻塞 (0ms 立即放行原始输入)，后台异步渲染语感伴学卡片 (slots)
+    // Mode 1: Companion (original/companion) - 0ms non-blocking raw send + async HUD card
     // =========================================================================
-    if (state.mode === "original") {
+    const isOriginalMode = state.mode === "original" || state.mode === "companion" || currentMode?.action === "pass-through";
+
+    if (isOriginalMode) {
       if (hasActiveUI(ctx)) {
         try {
           ctx.ui.setWidget("lingual_hud", undefined);
@@ -1435,21 +1771,38 @@ export default function (pi: ExtensionAPI) {
       clearTimeout(polishTimer);
       polishTimer = setTimeout(() => {
         polishTimer = undefined;
-        if (!session.isLatest(generation) || state.mode !== "original" || signal.aborted) {
+        if (!session.isLatest(generation) || (!isOriginalMode && signal.aborted)) {
           return;
         }
+
+        const passThroughSlots: SlotConfig[] =
+          currentMode && Array.isArray(currentMode.slots) && currentMode.slots.length > 0 && currentMode.id !== "companion"
+            ? currentMode.slots.map((s) => ({
+                id: s.id,
+                label: s.label,
+                role: s.role === "vocab" ? "vocab" : s.id === "source" ? "source" : "translation",
+                instruction: s.instruction,
+                showMeaning: true,
+                enabled: s.enabled !== false,
+              }))
+            : state.slots;
 
         translatePrompt(promptToTranslate, {
           sourceLang: state.sourceLang,
           targetLang: state.targetLang,
           labels: state.labels,
-          slots: state.slots,
+          slots: passThroughSlots,
           slotPreset: state.slotPreset,
           complete: completer,
           signal,
         })
           .then((result) => {
-            if (!session.isLatest(generation) || state.mode !== "original" || signal.aborted) {
+            if (!session.isLatest(generation) || signal.aborted) {
+              return;
+            }
+            if (currentMode.hud === "none") {
+              const activeCtx = hasActiveUI(ctx) ? ctx : hasActiveUI(lastContext) ? lastContext : null;
+              safeClearWidget(activeCtx);
               return;
             }
             if (result) {
@@ -1486,13 +1839,12 @@ export default function (pi: ExtensionAPI) {
     }
 
     // =========================================================================
-    // 模式 2 & 3 & 4 严格隔离引擎（零跨模式串味/泄露）：
-    // - 模式 2 【直接改 (direct)】：严格只读取 `directSlots`
-    // - 模式 3 【挑候选 (candidates)】：严格只读取 `promptSlots`
-    // - 模式 4 【原句修补 (modify)】：严格只读取 `modifySlots`（Smallest Working Diff 极简原句修正）
+    // Modes 2, 3, 4 declarative execution with strict slot isolation
     // =========================================================================
-    const isModifyMode = state.mode === "modify";
-    const isDirectMode = state.mode === "english";
+    const isSelectMode = state.mode === "select" || state.mode === "candidates" || currentMode.action === "select";
+    const isModifyMode = !isSelectMode && (state.mode === "modify" || state.mode === "live-flow" || currentMode.flow === "proofread");
+    const isDirectMode = !isSelectMode && !isModifyMode && (state.mode === "english" || state.mode === "direct" || currentMode.action === "transform");
+
     const isolatedModeSlots = isModifyMode
       ? resolveModifySlotsFromConfig({
           sourceLang: state.sourceLang,
@@ -1514,13 +1866,27 @@ export default function (pi: ExtensionAPI) {
     const fallbackFirst = isModifyMode
       ? getDefaultModifySlots(state.sourceLang, latestDisk.explainLang)[0]
       : getDefaultDirectSlots(state.sourceLang)[0];
-    const slotsToRun = isModifyMode
-      ? (isolatedModeSlots.length > 0 ? isolatedModeSlots : getDefaultModifySlots(state.sourceLang, latestDisk.explainLang))
+    const hasExplicitLegacySlots = isModifyMode
+      ? Array.isArray(latestDisk.modifySlots) && latestDisk.modifySlots.length > 0
       : isDirectMode
-        ? [rewriteSlots[0] || fallbackFirst, ...vocabSlots]
-        : [...(rewriteSlots.length > 0 ? rewriteSlots : getDefaultPromptSlots(state.sourceLang)), ...vocabSlots];
+        ? Array.isArray(latestDisk.directSlots) && latestDisk.directSlots.length > 0
+        : Array.isArray(latestDisk.promptSlots) && latestDisk.promptSlots.length > 0;
 
-    if (hasActiveUI(ctx)) {
+    const slotsToRun = isSelectMode
+      ? (currentMode.action === "select" && currentMode.slots && currentMode.slots.length > 0
+          ? currentMode.slots
+          : [...(rewriteSlots.length > 0 ? rewriteSlots : getDefaultPromptSlots(state.sourceLang)), ...vocabSlots])
+      : isModifyMode
+        ? (currentMode.flow === "proofread" && currentMode.slots && currentMode.slots.length > 0
+            ? currentMode.slots
+            : (isolatedModeSlots.length > 0 ? isolatedModeSlots : getDefaultModifySlots(state.sourceLang, latestDisk.explainLang)))
+        : isDirectMode
+          ? (currentMode.action === "transform" && currentMode.flow === "translate" && currentMode.slots && currentMode.slots.length > 0
+              ? currentMode.slots
+              : [rewriteSlots[0] || fallbackFirst, ...vocabSlots])
+          : (currentMode.slots && currentMode.slots.length > 0 ? currentMode.slots : getDefaultPromptSlots(state.sourceLang));
+
+    if (hasActiveUI(ctx) && currentMode.hud !== "none") {
       try {
         const loadingMsg = isModifyMode
           ? "  ⋯ ⚡ [lingual] fixing syntax & typos..."
@@ -1528,16 +1894,57 @@ export default function (pi: ExtensionAPI) {
             ? "  ⋯ ⚡ [lingual] optimizing prompt..."
             : "  ⋯ ✦ [lingual] generating prompt candidates...";
         ctx.ui.setWidget("lingual_hud", [ctx.ui.theme.fg("muted", loadingMsg)], { placement: "aboveEditor" });
-        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", isModifyMode ? "⚡ [lingual] fixing..." : isDirectMode ? "⚡ [lingual] optimizing..." : "✦ [lingual] generating candidates..."));
+        ctx.ui.setStatus(
+          "lingual",
+          ctx.ui.theme.fg(
+            "accent",
+            isModifyMode
+              ? "⚡ [lingual] fixing..."
+              : isDirectMode
+                ? "⚡ [lingual] optimizing..."
+                : "✦ [lingual] generating candidates..."
+          )
+        );
       } catch {}
+    } else if (hasActiveUI(ctx) && currentMode.hud === "none") {
+      safeClearWidget(ctx);
     }
 
     try {
-      const candidates = await generatePromptCandidates(promptToTranslate, {
+      let gitDiffContext = "";
+      if (currentMode.id === "commit" || (currentMode as any).contextAware === true) {
+        try {
+          const diffOutput = execFileSync("git", ["diff", "--stat", "HEAD"], {
+            encoding: "utf8",
+            timeout: 250,
+            stdio: ["ignore", "pipe", "ignore"],
+          });
+          if (diffOutput && diffOutput.trim()) {
+            gitDiffContext = diffOutput.trim().slice(0, 300);
+          } else {
+            const statusOutput = execFileSync("git", ["status", "--short"], {
+              encoding: "utf8",
+              timeout: 250,
+              stdio: ["ignore", "pipe", "ignore"],
+            });
+            if (statusOutput && statusOutput.trim()) {
+              gitDiffContext = statusOutput.trim().slice(0, 300);
+            }
+          }
+        } catch {}
+      }
+
+      const modeToRun: CustomModeConfig = {
+        ...currentMode,
+        action: isSelectMode ? "select" : isDirectMode || isModifyMode ? "transform" : currentMode.action,
+        flow: isModifyMode ? "proofread" : currentMode.flow,
+        slots: slotsToRun,
+      };
+      const candidates = await executeModeRunner(promptToTranslate, modeToRun, {
         sourceLang: state.sourceLang,
         targetLang: state.targetLang,
         explainLang: latestDisk.explainLang,
-        promptSlots: slotsToRun,
+        context: gitDiffContext,
         complete: completer,
         signal,
       });
@@ -1549,7 +1956,7 @@ export default function (pi: ExtensionAPI) {
       if (!candidates || candidates.length === 0) {
         if (hasActiveUI(ctx)) {
           safeClearWidget(ctx);
-          if (isDirectMode) {
+          if (currentMode.action === "transform") {
             try {
               const timeoutTemplate = state.labels.notifyTimeout || "[{pair}] Prompt rewrite timed out or not ready; original prompt passed";
               ctx.ui.notify(timeoutTemplate.replace("{pair}", state.labels.hudTitle), "warning");
@@ -1562,16 +1969,14 @@ export default function (pi: ExtensionAPI) {
       const maxCols = getEffectiveMaxCols();
       const singleLineSource = promptToTranslate.replace(/\s*\r?\n\s*/g, " ↵ ");
       const candidateVocab = candidates[0]?.vocab;
-      const isLongModifyInput = isModifyMode && (promptToTranslate.length > 120 || (promptToTranslate.match(/[.!?。！？\n]/g) || []).length >= 3);
-      const keepSourceRow = !isModifyMode && (state.slots || []).some((s) => s.role === "source" && s.enabled !== false);
-      const takeawayLabel = isModifyMode
+      const isProofreadFlow = currentMode.flow === "proofread";
+      const isAdaptiveTakeaway = currentMode.hud === "adaptive-takeaway" || isProofreadFlow;
+      const isLongModifyInput = isAdaptiveTakeaway && (promptToTranslate.length > 120 || (promptToTranslate.match(/[.!?。！？\n]/g) || []).length >= 3);
+      const keepSourceRow = !isProofreadFlow && (currentMode.slots || []).some((s) => s.id === "source" && s.enabled !== false);
+      const takeawayLabel = isProofreadFlow
         ? (slotsToRun.find((s) => s.role === "vocab")?.label || "Takeaway")
         : (state.labels.vocabLabel || "Vocab");
 
-      // Mode 4 体验物理学：
-      // 1. 原文行彻底不显示（用户刚刚敲完，绝不占高复读）
-      // 2. 长句/段落：自适应折叠改版全文（已直发 Agent），HUD 仅显示 100% 绝对保留的 Takeaway 核心盲点复盘！
-      // 3. 短句：呈现 [Fixed] 改版 + [Takeaway] 核心盲点！
       const candidateSlotResults: SlotResult[] = [
         ...(keepSourceRow
           ? [{ id: "source", label: state.labels.sourceLabel || "Original", role: "source" as const, content: singleLineSource }]
@@ -1579,7 +1984,7 @@ export default function (pi: ExtensionAPI) {
         ...(!isLongModifyInput
           ? candidates.map((c, idx) => ({
               id: c.id,
-              label: isModifyMode ? c.label : isDirectMode ? `⚡${c.label}` : `${idx + 1}:${c.label}`,
+              label: isProofreadFlow ? c.label : currentMode.action === "transform" ? `⚡${c.label}` : `${idx + 1}:${c.label}`,
               role: "translation" as const,
               content: c.content.replace(/\s*\r?\n\s*/g, " ↵ "),
             }))
@@ -1603,51 +2008,68 @@ export default function (pi: ExtensionAPI) {
       );
 
       if (hasActiveUI(ctx)) {
-        // 使用完整 9 行盒模型排版引擎渲染上方卡片（支持自动悬挂缩进折行，拒绝单行粗暴截断！）
-        const layoutSlots: SlotConfig[] = candidateSlotResults.map((sr) => ({
-          id: sr.id,
-          label: sr.label,
-          role: sr.role,
-          showMeaning: false,
-          enabled: true,
-        }));
-        const cardLines = renderCardLayout(
-          {
-            sourceText: singleLineSource,
-            spoken: candidates[0].content.replace(/\s*\r?\n\s*/g, " ↵ "),
-            written: candidates[1]?.content.replace(/\s*\r?\n\s*/g, " ↵ ") || "",
-            vocab: candidateVocab,
-            annotated: "",
-            slots: candidateSlotResults,
-          },
-          state.labels,
-          {
-            maxCols,
-            maxLines: Math.max(9, candidateSlotResults.length + 1),
-            isCompact: state.compact,
-            slots: layoutSlots,
-            themeDecorators: {
-              muted: (s: string) => ctx.ui.theme.fg("muted", s),
-              accent: (s: string) => ctx.ui.theme.fg("accent", s),
-              dim: (s: string) => ctx.ui.theme.fg("dim", s),
-            },
-          }
-        );
-        try {
-          ctx.ui.setWidget("lingual_hud", cardLines, { placement: "aboveEditor" });
-        } catch {}
-      }
+        if (currentMode.hud === "none") {
+          safeClearWidget(ctx);
+        } else {
+          const hasMultipleTranslationSlots = candidateSlotResults.filter(
+            (s) => s.role !== "vocab" && s.id !== "source"
+          ).length > 1;
+          const isPreviewHud = currentMode.hud === "preview" && !hasMultipleTranslationSlots;
+          const effectiveMaxLines = isPreviewHud ? 4 : 9;
+          const displaySlotResults = isPreviewHud
+            ? candidateSlotResults.filter((s, idx) => s.role === "vocab" || idx === 0)
+            : candidateSlotResults;
 
-      const isDirectOrModify = isDirectMode || isModifyMode;
-      let chosenText = candidates[0].content;
-      if (isModifyMode) {
-        const fixedCandidate = candidates.find((c) => c.id === "fixed");
-        if (fixedCandidate) {
-          chosenText = fixedCandidate.content;
+          // Render card layout with 9-line UAX #11 box model and hanging indent wrapping
+          const layoutSlots: SlotConfig[] = displaySlotResults.map((sr) => ({
+            id: sr.id,
+            label: sr.label,
+            role: sr.role,
+            showMeaning: false,
+            enabled: true,
+          }));
+          const cardLines = renderCardLayout(
+            {
+              sourceText: singleLineSource,
+              spoken: candidates[0].content.replace(/\s*\r?\n\s*/g, " ↵ "),
+              written: candidates[1]?.content.replace(/\s*\r?\n\s*/g, " ↵ ") || "",
+              vocab: candidateVocab,
+              annotated: "",
+              slots: displaySlotResults,
+            },
+            state.labels,
+            {
+              maxCols,
+              maxLines: effectiveMaxLines,
+              isCompact: state.compact,
+              slots: layoutSlots,
+              themeDecorators: {
+                muted: (s: string) => ctx.ui.theme.fg("muted", s),
+                accent: (s: string) => ctx.ui.theme.fg("accent", s),
+                dim: (s: string) => ctx.ui.theme.fg("dim", s),
+              },
+            }
+          );
+          try {
+            ctx.ui.setWidget("lingual_hud", cardLines, { placement: "aboveEditor" });
+          } catch {}
         }
       }
 
-      if (!isDirectOrModify && hasActiveUI(ctx)) {
+      // Resolve chosen text for transform action using primarySlotId or first rewrite slot
+      let chosenText = candidates[0].content;
+      if (currentMode.primarySlotId) {
+        const match = candidates.find((c) => c.id.toLowerCase() === currentMode.primarySlotId?.toLowerCase());
+        if (match) chosenText = match.content;
+      } else if (isProofreadFlow) {
+        const fixedCandidate = candidates.find((c) => c.id === "fixed");
+        if (fixedCandidate) chosenText = fixedCandidate.content;
+      } else {
+        const firstRewrite = candidates.find((c) => c.id !== "source" && c.id !== "vocab");
+        if (firstRewrite) chosenText = firstRewrite.content;
+      }
+
+      if (isSelectMode && hasActiveUI(ctx)) {
         const langCode = (state.sourceLang || "en").toLowerCase().split("-")[0];
         const selectPrompts: Record<string, { title: string; keepOrig: string; hint: string }> = {
           zh: {
@@ -1699,7 +2121,7 @@ export default function (pi: ExtensionAPI) {
         const sp = selectPrompts[langCode] || selectPrompts.en;
 
         if (typeof (ctx.ui as any).custom === "function") {
-          // 极简零重复胶囊快捷键栏：上方卡片已完整展示各槽位内容，下方仅渲染紧凑标签并支持按 1..N 0ms 直接打出去！
+          // Compact capsule hotkey bar: press number keys 1..N to send candidate in 0ms without Enter
           const items = [
             ...candidates.map((c, idx) => ({ key: String(idx + 1), label: `[${idx + 1}] ${c.label}`, value: c.content })),
             { key: "0", label: `[0] ${sp.keepOrig}`, value: "__ORIGINAL__" },
@@ -1714,7 +2136,7 @@ export default function (pi: ExtensionAPI) {
                   theme.fg("accent", theme.bold(sp.title)) +
                   "  " +
                   theme.fg("dim", `(${sp.hint})`);
-                // 胶囊流式自动折行（Wrap Pills）：确保窄屏或 4~8 个候选时，[1]..[N] 和 [0] 100% 完整可见、绝不截断丢失！
+                // Wrap pills to ensure [1]..[N] and [0] remain fully visible on narrow viewports
                 const maxLineCols = Math.max(20, width - 2);
                 const pillLines: string[] = [];
                 let currentLine = " ";
@@ -1748,7 +2170,7 @@ export default function (pi: ExtensionAPI) {
                 ];
               },
               handleInput(keyData: string) {
-                // 1. 数字键 1..9 直接 0ms 选中并发出，无需再按回车！
+                // 1. Number keys 1..9 send immediately without pressing Enter
                 if (/^[1-9]$/.test(keyData)) {
                   const num = parseInt(keyData, 10);
                   if (num >= 1 && num <= candidates.length) {
@@ -1756,7 +2178,7 @@ export default function (pi: ExtensionAPI) {
                     return;
                   }
                 }
-                // 2. 数字键 0 或 Esc / Ctrl+C 直接 0ms 发原话！
+                // 2. Key '0' or Esc / Ctrl+C passes through original raw text
                 if (
                   keyData === "0" ||
                   keyData === "\x1b" ||
@@ -1766,7 +2188,7 @@ export default function (pi: ExtensionAPI) {
                   done("__ORIGINAL__");
                   return;
                 }
-                // 3. 方向键 / hjkl 切换胶囊高亮
+                // 3. Arrow keys / hjkl cycle capsule selection
                 if (
                   keyData === "h" ||
                   keyData === "k" ||
@@ -1790,7 +2212,7 @@ export default function (pi: ExtensionAPI) {
                   tui?.requestRender?.();
                   return;
                 }
-                // 4. Enter / Space 确认当前高亮项
+                // 4. Enter / Space confirms currently highlighted candidate
                 if (
                   keyData === "\r" ||
                   keyData === "\n" ||
@@ -1811,7 +2233,7 @@ export default function (pi: ExtensionAPI) {
           }
           chosenText = pickedVal;
         } else if (typeof (ctx.ui as any).select === "function") {
-          // 单元测试或无 custom 环境下的紧凑回退（不重复长句子，仅展示槽位标签）
+          // Fallback select picker when ctx.ui.custom is unavailable
           const optionLabels = [
             ...candidates.map((c, idx) => `[${idx + 1}] ${c.label}`),
             `[0] ${sp.keepOrig}`,
@@ -1832,13 +2254,28 @@ export default function (pi: ExtensionAPI) {
         }
       }
 
+      // 100% untruncated payload preserved for Coding Agent or clipboard
       let finalText = sanitized.rawPayload
         ? `${chosenText}\n\n${sanitized.rawPayload}`
         : chosenText;
 
       const diskConfig = loadUserLingualConfig();
-      if (shouldInjectNativeReplyGuard(event.text, state.sourceLang, diskConfig.replyInSourceLang)) {
+      if (
+        currentMode.target !== "clipboard" &&
+        shouldInjectNativeReplyGuard(event.text, state.sourceLang, diskConfig.replyInSourceLang)
+      ) {
         finalText += formatNativeReplyGuardHint(state.sourceLang);
+      }
+
+      if (currentMode.target === "clipboard") {
+        copyToClipboard(finalText);
+        if (hasActiveUI(ctx)) {
+          ctx.ui.notify(
+            `[${state.labels.hudTitle}] 📋 Copied to clipboard! Ready to paste into GitHub, PR, or X. (Prompt intercepted - not sent to agent)`,
+            "info"
+          );
+        }
+        return { action: "handled" };
       }
 
       return {
@@ -1849,7 +2286,7 @@ export default function (pi: ExtensionAPI) {
     } catch {
       if (hasActiveUI(ctx)) {
         safeClearWidget(ctx);
-        if (isDirectMode) {
+        if (currentMode.action === "transform") {
           try {
             const errTemplate = state.labels.notifyError || "[{pair}] Prompt rewrite error; original prompt passed";
             ctx.ui.notify(errTemplate.replace("{pair}", state.labels.hudTitle), "warning");

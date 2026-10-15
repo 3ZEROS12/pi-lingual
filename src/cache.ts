@@ -1,9 +1,9 @@
 /**
- * In-Memory LRU Cache for Lingual Translations (会话级 0 依赖极速缓存)
+ * In-Memory LRU Cache for Lingual Translations (Zero-Dependency In-Process Cache)
  * 
- * 开发者在与 AI 对话时存在大量高频短语（如“继续”、“可以”、“同意”、“开始吧”、“继续推进”）。
- * 基于 ES6 Map 实现轻量高效的 LRU 缓存（默认容量 50 条）。
- * 命中缓存后 0ms 瞬间直出，零外部调用，零 Token 损耗。
+ * High-frequency developer phrases ("continue", "agree", "proceed", "sounds good")
+ * are served with 0ms latency from an in-memory LRU cache (default capacity: 50 entries).
+ * Cache hits consume zero network round-trips and zero model tokens.
  */
 
 export interface CacheStats {
@@ -21,7 +21,7 @@ export class LingualLruCache<T> {
   constructor(public readonly capacity: number = 50) {}
 
   /**
-   * 生成标准化缓存键（结合源语言与目标语言）
+   * Generates a normalized cache key incorporating language pairs and slot signature.
    */
   static buildKey(text: string, sourceLang = "en", targetLang = "ja", slotSignature?: string): string {
     const sig = slotSignature ? `[${slotSignature}]` : "";
@@ -35,18 +35,18 @@ export class LingualLruCache<T> {
     }
     this.hits++;
     const val = this.cache.get(key)!;
-    // 刷新热度：删除后重新插入末尾
+    // Refresh LRU recency: re-insert at end of Map
     this.cache.delete(key);
     this.cache.set(key, val);
     return val;
   }
 
   set(key: string, val: T): void {
-    // 内存安全防护：超长键 (如粘入整篇论文 > 256 字符) 不做缓存，防止内存膨胀
+    // Memory safety guard: do not cache excessively long keys (> 256 chars)
     if (!key || key.length > 256) {
       return;
     }
-    // 内存安全防护：超大载荷 (> 2048 字符) 不做缓存
+    // Memory safety guard: do not cache oversized payloads (> 2048 chars)
     if (typeof val === "string" && val.length > 2048) {
       return;
     }
@@ -54,7 +54,7 @@ export class LingualLruCache<T> {
     if (this.cache.has(key)) {
       this.cache.delete(key);
     } else if (this.cache.size >= this.capacity) {
-      // 淘汰最久未访问的首个键
+      // Evict least recently accessed key
       const oldestKey = this.cache.keys().next().value;
       if (oldestKey !== undefined) {
         this.cache.delete(oldestKey);

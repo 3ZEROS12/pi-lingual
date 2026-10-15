@@ -29,8 +29,8 @@ test("extension command matrix - registers 4 core commands without menu clutter"
   // Register core developer commands in Pi's / menu
   assert.deepEqual(
     Object.keys(registeredCommands).sort(),
-    ["lang", "last", "lingual", "lingual-mode", "slots", "tuner"],
-    "Must register strictly the core developer commands (/lingual, /lang, /tuner, /lingual-mode, /slots, /last)"
+    ["lang", "last", "lingual", "slots"],
+    "Must register strictly the 4 core developer commands (/lingual, /lang, /slots, /last)"
   );
   assert.equal(registeredCommands["compact"], undefined, "Must NOT occupy Pi core /compact command");
   assert.equal(registeredCommands["status"], undefined, "Must NOT hijack generic /status command");
@@ -480,7 +480,7 @@ test("v0.4.1 Mode 4 Active 0-Token Context Shield in off mode & /lingual select 
   const zhBanner = formatReleaseBannerLines("zh", 80);
   assert.equal(zhBanner.length, 8);
   assert.ok(zhBanner.some((l) => l.includes("实战狂飙") || l.includes("粗口与情绪")));
-  assert.ok(zhBanner.some((l) => l.includes("4 实战狂飙")));
+  assert.ok(zhBanner.some((l) => l.includes("实战狂飙")));
   assert.ok(zhBanner.every((l) => !l.endsWith("...")), "No line should be truncated on an 80-col terminal");
   assert.ok(
     zhBanner.every((l) => bannedApologyWords.every((w) => !l.includes(w))),
@@ -490,7 +490,7 @@ test("v0.4.1 Mode 4 Active 0-Token Context Shield in off mode & /lingual select 
   const enBanner = formatReleaseBannerLines("en", 80);
   assert.equal(enBanner.length, 8);
   assert.ok(enBanner.some((l) => l.includes("Live Flow") || l.includes("profanity")));
-  assert.ok(enBanner.some((l) => l.includes("4 Live Flow")));
+  assert.ok(enBanner.some((l) => l.includes("Live Flow")));
   assert.ok(enBanner.every((l) => !l.endsWith("...")), "No English line should be truncated on an 80-col terminal");
   assert.ok(
     enBanner.every((l) => bannedApologyWords.every((w) => !l.includes(w))),

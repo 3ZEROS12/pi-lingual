@@ -1,162 +1,97 @@
 # SYSTEM CONTEXT & OPERATIONAL PROFILE: PI-LINGUAL
 
 ## 1. Domain & Runtime Environment (RFC 2119)
-- **Package / Target**: `pi-lingual` (v0.3.10)
-- **Primary Domain**: Zero-friction developer translator & dual-register language companion (Spoken vs Written) for AI coding agents.
-- **Runtime & Toolchain**: Node.js v20+ / TypeScript Strict / tsup (dual ESM+CJS+DTS) / native Node test runner.
+- **Package / Target**: `pi-lingual` (v0.6.0)
+- **Primary Domain**: Universal bilingual developer companion & declarative prompt optimizer for AI coding agents (Claude Code, Cursor, Aider, Pi).
+- **Runtime & Toolchain**: Node.js `>=22.19.0` / TypeScript Strict / tsup (dual ESM+CJS+DTS) / native Node test runner.
 - **Extension Entry**: `dist/extension.js` (authored in `src/extension.ts`).
-- **Configuration Path**: `~/.pi/agent/settings.json` under `"pi-lingual"` block.
+- **Configuration Path**: Single Source of Truth at `~/.pi/agent/lingual.json` (legacy `settings.json` is strictly read-only migration fallback).
 
 ---
 
-## 2. Core Operational Invariants (RFC 2119)
+## 2. Core Operational Invariants (Strict RFC 2119)
 
-### Invariant 1: Primary Language Sovereignty (Zero Chinese Residue)
-- When the user selects native language A (`sourceLang`, e.g. English, Japanese, Spanish, German, French), Language A MUST completely replace all Chinese text in the UI chrome.
-- All user-facing strings (notifications, status badges, command descriptions, diagnostic reports) MUST be dynamically derived from `resolveLabelsForLang(sourceLang)` in `src/presets.ts`. Hardcoding static English or Chinese fallback strings in runtime code is STRICTLY FORBIDDEN.
+### Invariant 1: Universal English Baseline & Symmetric Polyglot Parity (Zero Chinese Residue)
+- All generic source files, type definitions, system prompts, error messages, and documentation defaults MUST strictly default to **Universal English**.
+- All supported languages (English, Japanese, Chinese, Spanish, French, German, Korean) enjoy **100% symmetric, first-class status**.
+- Generic code, default parameter fallbacks, and prompt templates MUST NEVER assume the user speaks Chinese, types Chinese, or is translating into English.
+- When `sourceLang !== "zh"` (e.g. `en ⇄ zh`, `en ⇄ ja`, `es ⇄ en`):
+  - UI chrome, status badges, prompts, and notifications MUST contain **ZERO Chinese characters (`[\u4e00-\u9fa5]`)**.
+  - All developer-facing comments across `src/**/*.ts` MUST be authored 100% in pure English.
 
-### Invariant 2: Zero-Source-Mutation Configuration
-- Standard language switching (`zh`, `ja`, `en`, `es`, `fr`, `de`) MUST take effect immediately and in-place without editing source files or restarting the host terminal, writing preferences directly to `~/.pi/agent/settings.json`.
-- Modifying project source files merely to switch runtime languages is STRICTLY PROHIBITED.
+### Invariant 2: Mode as Configuration (Declarative State Machine Architecture)
+- The entire extension operates on a declarative `modes: CustomModeConfig[]` pipeline stored in `~/.pi/agent/lingual.json`.
+- Hardcoding mode behavior (`if (mode === "original")`) is STRICTLY PROHIBITED in core engines. All runtime behavior MUST be derived from mode properties:
+  - `flow`: `"translate"` (input `${sourceLang}` ➔ output `${targetLang}`), `"proofread"` (input `${targetLang}` ➔ output `${targetLang}`), or `"custom"`.
+  - `action`: `"transform"` (in-place prompt rewrite), `"pass-through"` (0ms raw send to agent), or `"select"` (1..N interactive hotkey picker).
+  - `hud`: `"preview"` (compact single-line preview), `"adaptive-takeaway"` (short: fixed+takeaway, long: diffs only), `"tree"` (Trifecta left-rail tree branch), or `"none"`.
+  - `target`: `"agent"` (sent directly to coding agent) or `"clipboard"` (copied to system clipboard with 0 prompt mutation).
+  - `killList`: string array of blacklisted AI clichés (`delve`, `tapestry`, `seamless`, `robust`, etc.).
 
-### Invariant 3: Duality Schema & Native Nuance Anchoring
-- The translation engine MUST enforce strict JSON formatting containing:
-  - `spoken`: Colloquial oral target language B.
-  - `spoken_meaning`: Exact colloquial nuance in native language A.
-  - `written`: Formal architecture-grade written target language B.
-  - `written_meaning`: Exact formal technical nuance in native language A.
-  - `vocab`: Inline horizontal stream of extracted terms and collocations.
-- The `[CODE & SYMBOL SHIELD]` rule MUST bypass pure shell commands, Markdown code blocks, and data structures with 0ms latency and 0 token burn.
+### Invariant 3: Dual-Core Factory Golden Defaults
+Out of the box, `pi-lingual` ships with exactly two golden baselines (with `0 Off`):
+1. **`[1] Logical Spec` (`direct` / `lazy`)**: Transforms raw thoughts from `${sourceLang}` into imperative, unambiguous `${targetLang}` engineering specifications for AI coding agents.
+2. **`[2] Live Flow` (`live-flow` / `raw`)**: Direct foreign language drafting in `${targetLang}`. Surgically patches typos, prepositions, and syntax; 100% preserves passion and profanity (`fuck`, `suck`, `shit`); provides `${explainLang}` takeaway diffs.
+3. **`[0] Off` (`off`)**: 0 pixels, 0 listeners, 0 tokens (completely detached).
 
-### Invariant 4: Proficiency-Adaptive Vocabulary & Single-Line Clamping
-- The translation system prompt MUST adapt vocabulary depth to the user's proficiency tier (extracting tricky phrasal verbs for intermediate tiers, and high-register idioms for advanced tiers).
-- To preserve vertical terminal space, vocabulary terms MUST be clamped to a single horizontal inline stream (`term (definition) · term2 (definition)`). Multi-line vertical expansions for vocabulary are FORBIDDEN.
+### Invariant 4: Dynamic Semantic Variable Interpolation (`${sourceLang}`, `${targetLang}`, `${explainLang}`)
+- All mode instructions, slot descriptions, and prompt templates MUST use semantic variables rather than hardcoded language names:
+  - `${sourceLang}`: User's input/native language (e.g. `Chinese`, `Japanese`, `English`).
+  - `${targetLang}`: Target foreign/AI language (e.g. `English`, `Japanese`, `Spanish`).
+  - `${explainLang}`: Cognitive explanation language for takeaway diffs.
+- These variables MUST be interpolated dynamically on-the-fly during prompt compilation.
 
-### Invariant 5: Command Bus Ergonomics & Master Dispatcher
-- Natural short commands MUST register as first-class standalone commands: `/lang`, `/compact`, `/last`, `/status`.
-- The master command (`/lingual`) MUST implement secondary routing (`masterCommandHandler`). Subcommands (`lang`, `model`, `compact`, `status`, `last`, `slots`) MUST NEVER fall through into the default mode-cycling branch.
-- Language normalization MUST accept natural language aliases (`japanese`/`jp`/`日语` ➔ `ja`, `chinese`/`cn`/`中文` ➔ `zh`) and language pair syntax (`/lang zh ja`).
+### Invariant 5: Target-Language Linguistic Profiles (Decoupled Pragmatics)
+- Prompt rules MUST NOT assume English grammar quirks when the target language is not English.
+- The prompt compiler MUST dynamically attach target language profiles:
+  - If `targetLang === "en"`: focus on prepositions (`on X`), articles, tense consistency, and casual casing tolerance (`l vs L`).
+  - If `targetLang === "zh"`: eliminate English-style stacked relative clauses, trim redundant pronouns (他/它/这), fix measure words, and distinguish client honorifics (您/贵团队).
+  - If `targetLang === "ja"`: fix particles (`は/が/を/に/で`), and maintain consistency between plain and polite forms (`です・ます / 敬語`).
 
-### Invariant 6: Deterministic UI Feedback & Concurrency Micro-Staggering
-- On new user input in `original` mode, the previous HUD widget MUST be dismissed immediately (`ctx.ui.setWidget("lingual_hud", undefined)`) and status updated to `polishing...`.
-- In `original` mode, background translation calls MUST be staggered by 80ms (`setTimeout(..., 80)`) to allow the host session's primary prompt to complete socket handshakes first.
-- Model completers MUST specify `reasoning: "low"`, constraining background generation to tight ~100-token bursts completed in 200–300ms.
+### Invariant 6: Anti-AI Buzzword Blacklist (`DEFAULT_KILL_LIST`)
+- All prompt compiler targets MUST automatically inject the Kill List to ban empty AI clichés:
+  `delve, tapestry, seamless, seamlessly, robust, enhance, streamline, comprehensive, in summary, game-changer, revolutionize, unleash, thrilled to announce, pivotal, holistic, multifaceted`.
+- Transformed outputs must sound like authentic, grounded, human software engineers.
 
-### Invariant 7: Multi-Probe Test Isolation Sandbox
-- Configuration loaders (`loadUserLingualConfig`) and writers (`saveUserLingualConfig`) MUST detect test environments via multi-probe inspection (`NODE_TEST_CONTEXT`, `process.execArgv`, npm lifecycle events) and strictly avoid touching user settings files during tests.
+### Invariant 7: First-Run Language Handshake (Cold-Boot Zero Residue)
+- When installed on a fresh machine without an existing `lingual.json`, `session_start` sniffs the native OS locale and presents an ephemeral pre-filled input (e.g. `zh en` or `ja en`).
+- Upon pressing Enter, the handshake immediately unmounts, restoring a pristine terminal screen with **0 visual residue**, writes to `~/.pi/agent/lingual.json`, and permanently freezes so it never prompts again.
 
-### Invariant 8: Sincere, High-Desire Documentation Standard (RFC 2119)
-- **10-Second Desire Funnel**: Screen 1 MUST display a 1-sentence punchy tagline, clean visual asset, and 1-line installation command (`pi install npm:pi-lingual`).
-- **Short, Punchy Sentences**: Sentences in `README.md` and `README_zh.md` MUST be concise and sincere. Compound run-on sentences with convoluted academic clauses are STRICTLY FORBIDDEN.
-- **The 4-Row Action Matrix**: Modes and workflows MUST be summarized in a crisp table:
-  $$\text{Mode / Action} \mid \text{What You Input} \mid \text{What the Engine Does} \mid \text{What You See} \mid \text{When to Use}$$
-- **Friction Breakers**: Preemptively explain why code/stack traces remain untouched (`Hybrid Intent Grafting`), why no extra tokens pollute chat history, and why latency is zero.
-- **Zero Terminology Inflation**: Never brand ordinary 20-line functions as capitalized buzzwords ("Shield", "FSM", "Sovereignty"). Use real, standard engineering terms (Input Event Hook, UAX #11 Box Model, AbortController, LRU Cache).
-- **Zero Volatile Model/Tech Name-Dropping**: Never sprinkle specific, fast-changing external model tags (e.g. Claude 3.5 Sonnet, GPT-4) without up-to-the-minute research. Prefer functional categories ("high-tier reasoning models vs. lightweight models") and generic command placeholders (`<model-id>`). Evergreen docs age gracefully.
-- **Rich, Self-Contained Storefront over Hollow Fragmentation**: The main README MUST be rich, substantive, and high-desire. Never hollow out the main page into a bare-bones skeleton by scattering core user values and engineering designs into sub-files. Exhaustive proofs belong in `docs/architecture.md`, but the main page must stand completely self-contained.
+### Invariant 8: Streamlined Command Matrix & Tactical Loadout CLI
+- Registered first-class commands:
+  - `/lingual`: Cycle modes, jump directly by ID/number, or route subcommands (`/lingual reasoning`, `/lingual tuner`, `/lingual mode`, `/lingual loadout`, `/lingual lock`).
+  - `/lang`: Switch language pair (`/lang <code|pair>`).
+  - `/slots`: Inspect or customize companion & prompt slots (`/slots [add|rm|toggle|reset]`).
+  - `/last`: Replay last companion/takeaway card.
+- Direct mode & loadout management commands:
+  - `/lingual reasoning [low | medium | high]` (and alias `/lingual effort`)
+  - `/lingual mode [list | add <id> <name> | rm <id> | toggle <id> | reset]`
+  - `/lingual loadout [list | apply <spec|commit|oss|yap>]`
+  - `/lingual lock` / `/lingual unlock`
 
-### Invariant 9: Universal Dynamic Slot Pipeline & Agent Clarification Mandate (RFC 2119)
-- **Universal English Baseline & Dynamic Language Mirroring**:
-  - The default international baseline for prompts, templates, and Agent clarification questions MUST be in universal English.
-  - When communicating with the user, the Agent MUST dynamically mirror the user's active session language:
-    - If the user interacts in English (or indeterminate default), the Agent MUST query in English;
-    - If the user interacts in Chinese (e.g. `zh ⇄ en`), the Agent MUST mirror in Chinese;
-    - If the user interacts in Japanese, the Agent MUST mirror in Japanese.
-- **All Slots Are First-Class & Fully Movable (Including `source`)**:
-  - The `source` (original text) slot is NOT a permanent immutable header.
-  - If a user prefers not to display the source text row (to conserve terminal height or focus purely on translations), the Agent MUST respect that choice. The slot can be removed via `/slots rm source`, `removeSlotFromList(slots, "source")`, or by omitting the `{ role: "source" }` entry from `~/.pi/agent/lingual.json`. The layout engine MUST gracefully render translation branches without any orphan source line.
-- **Zero Rigid Preset Dogma**:
-  - Forcing hardcoded templates (`developer`, `social`, `compact2`) onto users is STRICTLY FORBIDDEN. All slot definitions (`id`, `label`, `role`, `instruction`, `showMeaning`) MUST be customizable and extensible.
-- **Mandatory Agent Active Confirmation Protocol**:
-  - Whenever a user asks to configure, customize, or set up `pi-lingual`, the Agent MUST actively query and confirm 3 dimensions:
-    1. **Desired Slot Count**: How many output slots or lines does the user prefer (e.g. 1-slot minimal translation, 2-slot dual register, 3-slot with twitter/deep)?
-    2. **Desired Function & Tone per Slot**: What specific style or role is needed for each slot (e.g. casual Slack, formal RFC/PR, viral tweet, technical insight, vocab)?
-    3. **Source Text Row Retention**: Crucially ask: **"Do you want to keep the original source text row, or remove it entirely to save terminal vertical space?"**
-  - Agents MUST NOT silently inject arbitrary fixed presets without this interactive confirmation.
-- **Zero-Friction Agent Execution SOP (Direct Configuration Modification)**:
-  - Once the user answers the clarification questions, the Agent MUST directly apply the configuration in a single turn without requiring the user to type manual CLI commands or edit files themselves.
-  - The Agent MUST write the customized `slots` array directly to `~/.pi/agent/lingual.json` (Single Source of Truth).
-  - **Slot Configuration Interface**:
-    ```typescript
-    interface SlotConfig {
-      id: string;            // Unique identifier, e.g. "source", "spoken", "written", "twitter", "deep"
-      label: string;         // Card display label, e.g. "Source", "Spoken", "Written", "Tweet", "Deep"
-      role: "source" | "translation" | "vocab" | "custom";
-      instruction?: string;  // Explicit LLM translation/style prompt for this slot
-      showMeaning?: boolean; // Whether to generate nuance back-translation in user's native language
-      enabled: boolean;
-    }
-    ```
-  - **Universal English Template (`~/.pi/agent/lingual.json`)**:
-    ```json
-    {
-      "slots": [
-        {
-          "id": "source",
-          "label": "Source",
-          "role": "source",
-          "enabled": true
-        },
-        {
-          "id": "spoken",
-          "label": "Spoken",
-          "role": "translation",
-          "instruction": "Natural, fluent spoken flow (daily standup, Slack, agile collaboration). Authentic Silicon Valley flow, natural contractions, idioms.",
-          "showMeaning": true,
-          "enabled": true
-        },
-        {
-          "id": "written",
-          "label": "Written",
-          "role": "translation",
-          "instruction": "Clear, precise, modern technical written prose (PR descriptions, RFCs, documentation). Plain, active, professional.",
-          "showMeaning": true,
-          "enabled": true
-        }
-      ]
-    }
-    ```
-  - **Example: Suppressing Source Text & Customizing Social Tones**:
-    If the user chooses to suppress the original text and have Twitter Hook + Technical Insight:
-    ```json
-    {
-      "slots": [
-        {
-          "id": "twitter",
-          "label": "Tweet",
-          "role": "translation",
-          "instruction": "Punchy opening hook and viral developer tweet under 280 chars with authentic dev slang.",
-          "showMeaning": true,
-          "enabled": true
-        },
-        {
-          "id": "deep",
-          "label": "Deep",
-          "role": "translation",
-          "instruction": "High-signal architecture reasoning and nuanced technical value.",
-          "showMeaning": true,
-          "enabled": true
-        }
-      ]
-    }
-    ```
-    *(Note: omitting `{ role: "source" }` physically eliminates the source line from HUD rendering).*
+### Invariant 9: 3-Second Glanceability & Kinetic Budget Guard
+- HUD feedback cards MUST follow the 3-second glanceability rule:
+  - Left side: concise diff (`before ➔ after`).
+  - Right side: short, grounded intuition in native tongue (`<= 10` words/characters).
+- Card layouts MUST NOT exceed 9 lines under any terminal column width (mathematically immune to host widget truncation warnings).
 
-### Invariant 10: One-Time Localized `aboveEditor` Release Banner for Major Feature Upgrades (RFC 2119)
-- Whenever a release introduces substantive user-facing feature upgrades (not minor bugfixes or internal refactoring), the extension MUST bump `CURRENT_FEATURE_BANNER_VERSION` and update `formatReleaseBannerLines` in `src/engine.ts` tailored specifically to the new capabilities.
-- **Style & Structure**:
-  - **Zero Emojis**: Use clean open-tree branches (`· / ┌ / │ / ├ / └`) with zero decorative emojis.
-  - **Voice (`D:/College/docs/notes/` Reference)**: Calm, plain-spoken, candid prose emphasizing human agency and workflow balance.
-  - **Parenthetical Mechanism Proof**: Each item MUST include a parenthetical sub-line (`│ (...)`) explaining the exact trigger command and physical implementation mechanism so the user knows how to use it and why it is trustworthy.
-- **4-Stage Native Language Detection (`resolveReleaseBannerLang`)**:
-  Resolves language via: (1) explicit `lingual.json -> sourceLang`, (2) recent user message scripts in `ctx.sessionManager.getEntries()` / `rpiv-i18n`, (3) OS locale (`Intl`), and (4) universal English (`"en"`) fallback.
-- On `session_start` (`event?.reason !== "resume"`), if `diskConfig.lastSeenVersion !== CURRENT_FEATURE_BANNER_VERSION`, the extension renders the banner above the editor (`aboveEditor`), records `lastSeenVersion` in `~/.pi/agent/lingual.json`, and auto-dismisses it on the first user input.
+### Invariant 10: Multi-Probe Test Isolation Sandbox
+- All configuration loaders and writers MUST detect test environments via multi-probe inspection (`NODE_TEST_CONTEXT`, `process.execArgv`, npm lifecycle events) and strictly avoid reading from or writing to the user's real host files (`~/.pi/agent/lingual.json`, `settings.json`).
 
-### Invariant 11: Strict Working Mode Lock & Zero-Drift Guardrail (RFC 2119)
-- **Active Mode Sovereignty**: The active working mode (`companion` [1] / `direct` [2] / `candidates` [3] / `off` [0]) of `pi-lingual` is user-sovereign.
-- **Zero-Drift Prohibition**: Coding Agents are STRICTLY FORBIDDEN from mutating the top-level `"mode"` key in `~/.pi/agent/lingual.json` or executing mode-switching commands in response to general conversational requests (e.g. "be direct", "switch style", "summarize", "simplify").
-- **Tuner Scope Isolation**: When customizing prompt slots for Mode 2 (`directSlots`) or Mode 3 (`promptSlots`), Agents MUST preserve the top-level `"mode"` untouched, modifying ONLY the respective slot array.
-- **Mode Lock Protection (`/lingual lock`)**: When `modeLocked: true` is configured in `lingual.json` or activated via `/lingual lock`, `pi-lingual` physically blocks unparameterized mode cycling and refuses external disk mode overrides on input events, guaranteeing 100% session mode stability.
+### Invariant 11: Concurrency Micro-Staggering & Adaptive Reasoning Effort
+- In `pass-through` mode, background companion calls MUST be staggered by `80ms` (`setTimeout(..., 80)`) so the host session's primary prompt completes socket handshakes first.
+- Model completers MUST default to `reasoning: "low"` for baseline daily utility (~200-300ms latency) while allowing `"medium"` (or user-configured `reasoning`) for complex structural loadouts like `spec` (Brain-Dump to Spec).
+- Reasoning effort is dynamically resolved per mode (`activeMode.reasoning ?? config.reasoning ?? "low"`) and customizable on the fly via `/lingual reasoning <low|medium|high>`.
+
+### Invariant 12: Strict Working Mode Lock & Zero-Drift Guardrail (`/lingual lock`)
+- The active mode in `lingual.json` is strictly user-sovereign.
+- Coding Agents are STRICTLY FORBIDDEN from mutating the active `"mode"` or `"activeModeId"` in `~/.pi/agent/lingual.json` in response to conversational requests (e.g. "be direct", "simplify", "rewrite this").
+- When `modeLocked: true` is enabled via `/lingual lock`, unparameterized mode cycling is blocked and external processes cannot override the developer's chosen mode.
+
+### Invariant 13: One-Time Localized `aboveEditor` Release Banner
+- Substantive feature upgrades surface a one-time localized release banner (`aboveEditor`) on `session_start` tracking `CURRENT_FEATURE_BANNER_VERSION` ("0.6.0").
+- Aesthetics follow `notes/` style: clean open-tree typography (`· / ┌ / │ / ├ / └`), single uniform color (`fg("muted", line)` across all lines), zero emojis, and zero apologies.
+- Dismisses automatically on the user's first input turn and persists `lastSeenVersion` to `lingual.json` to prevent repeated prompts.
 
 ---
 
@@ -167,7 +102,7 @@
   npm test
   # or from workspace root: node .scripts/fleet.mjs test pi-lingual
   ```
-  *Executes 89 test suites verifying cache, chunker, commands, engine, layout, prompts, sanitizer, shield, slots, and sovereignty (100% green).*
+  *Executes 111 test suites verifying cache, chunker, commands, engine, layout, modes, prompts, sanitizer, shield, slots, and sovereignty (100% green).*
 
 - **Build Distribution Bundles**:
   ```bash
@@ -184,10 +119,3 @@
   ```bash
   node ../.scripts/fleet.mjs docs pi-lingual
   ```
-
----
-
-## 4. Architectural Boundaries & Quality Gates
-
-- **Kinetic Line Budget Guard**: Card layouts MUST NOT exceed 9 lines under any column width, mathematically guaranteeing zero host widget truncation warnings.
-- **Documentation Linting**: Documentation MUST pass `node .scripts/fleet.mjs docs pi-lingual` with 0 corporate buzzwords, 0 pseudo-contrasts, and 1:1 verified 89/89 test metrics.

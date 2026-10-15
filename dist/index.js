@@ -1,252 +1,56 @@
 // src/prompts.ts
 function getDefaultDirectSlots(sourceLang = "en") {
   const norm = (sourceLang || "en").toLowerCase().split("-")[0];
-  if (norm === "zh") {
-    return [
-      {
-        id: "en_direct",
-        label: "\u89C4\u8303\u82F1\u6587",
-        role: "rewrite",
-        instruction: "Target Language: English. Strictly output in English ONLY: \u5C06\u7528\u6237\u53E3\u8BED\u5316\u3001\u96F6\u6563\u7684\u60F3\u6CD5\u7FFB\u8BD1\u5E76\u91CD\u7EC4\u4E3A\u903B\u8F91\u4E25\u5BC6\u3001\u6E05\u6670\u660E\u786E\u7684\u9AD8\u8D28\u91CF\u82F1\u6587\u5DE5\u7A0B\u6307\u4EE4\u3002\u667A\u80FD\u55C5\u63A2\u5E76\u6620\u5C04\u7CBE\u51C6\u5DE5\u7A0B\u52A8\u8BCD\uFF08\u5982'\u6392\u67E5/\u770B\u770B/\u67E5\u67E5' \u2794 Inspect/Diagnose/Trace\uFF0C'\u91CD\u6784/\u6539\u6539/\u7CBE\u7B80' \u2794 Refactor/Streamline/Harden\uFF0C'\u52A0\u4E0A/\u505A\u4E2A' \u2794 Implement/Scaffold\uFF0C'\u5220\u6389/\u53BB\u6389' \u2794 Prune/Deprecate\uFF09\uFF0C\u4EE5\u52A8\u8BCD\u539F\u5F62\u76F4\u63A5\u5F00\u7BC7\uFF0C\u6D88\u9664\u53E3\u8BED\u5197\u4F59\u4E0E\u5BD2\u6684\u3002\u4E25\u7981\u7FFB\u8BD1\u547D\u4EE4\u884C\u53C2\u6570\uFF08\u5982 --dry-run, -rf \u7B49 flags\uFF09\u3001\u88C5\u9970\u5668\u4E0E\u5305\u540D\uFF08\u5982 @scope/pkg, @ts-expect-error\uFF09\uFF0C\u4FDD\u7559\u6240\u6709\u4EE3\u7801\u6807\u8BC6\u7B26\u3001\u8DEF\u5F84\u4E0E\u7B26\u53F7 100% \u539F\u578B\uFF0C\u675C\u7EDD\u5E7B\u89C9\u3002",
-        enabled: true
-      },
-      {
-        id: "vocab",
-        label: "\u91CD\u70B9\u8BCD\u6C47",
-        role: "vocab",
-        instruction: "\u81EA\u9002\u5E94\u8403\u53D6 2-3 \u4E2A\u4E0E\u672C\u82F1\u6587\u6307\u4EE4\u76F8\u5173\u7684\u5730\u9053\u6280\u672F\u8BCD\u6C47\u6216\u8BCD\u7EC4\u642D\u914D\uFF0C\u683C\u5F0F\u4E3A 'term (\u4E2D\u6587\u91CA\u4E49) \xB7 term2 (\u4E2D\u6587\u91CA\u4E49)'\u3002",
-        enabled: true
-      }
-    ];
-  }
-  if (norm === "tw") {
-    return [
-      {
-        id: "en_direct",
-        label: "\u898F\u7BC4\u82F1\u6587",
-        role: "rewrite",
-        instruction: "Target Language: English. Strictly output in English ONLY: \u5C07\u4F7F\u7528\u8005\u53E3\u8A9E\u5316\u3001\u96F6\u6563\u7684\u60F3\u6CD5\u7FFB\u8B6F\u4E26\u91CD\u7D44\u70BA\u908F\u8F2F\u56B4\u5BC6\u3001\u6E05\u6670\u660E\u78BA\u7684\u9AD8\u54C1\u8CEA\u82F1\u6587\u5DE5\u7A0B\u6307\u4EE4\u3002\u4EE5\u7948\u4F7F\u52D5\u8A5E\u539F\u5F62\u76F4\u63A5\u958B\u7BC7\uFF0C\u660E\u78BA\u6838\u5FC3\u76EE\u6A19\u3001\u57F7\u884C\u52D5\u4F5C\u8207\u7D04\u675F\u908A\u754C\uFF0C\u4FDD\u7559\u6240\u6709\u7A0B\u5F0F\u78BC\u6A19\u8B58\u7B26\u8207\u8DEF\u5F91\u3002",
-        enabled: true
-      },
-      {
-        id: "vocab",
-        label: "\u91CD\u9EDE\u8A5E\u5F59",
-        role: "vocab",
-        instruction: "\u81EA\u9069\u61C9\u8403\u53D6 2-3 \u500B\u8207\u672C\u82F1\u6587\u6307\u4EE4\u76F8\u95DC\u7684\u9053\u5730\u6280\u8853\u8A5E\u5F59\u6216\u8A5E\u7D44\u642D\u914D\uFF0C\u683C\u5F0F\u70BA 'term (\u4E2D\u6587\u91CB\u7FA9) \xB7 term2 (\u4E2D\u6587\u91CB\u7FA9)'\u3002",
-        enabled: true
-      }
-    ];
-  }
-  if (norm === "ja") {
-    return [
-      {
-        id: "en_direct",
-        label: "\u6A19\u6E96\u82F1\u8A9E",
-        role: "rewrite",
-        instruction: "Target Language: English. Strictly output in English ONLY: \u53E3\u8A9E\u7684\u30FB\u65AD\u7247\u7684\u306A\u5165\u529B\u3092\u3001\u8AD6\u7406\u7684\u3067\u660E\u78BA\u306A\u9AD8\u54C1\u8CEA\u82F1\u8A9E\u30A8\u30F3\u30B8\u30CB\u30A2\u30EA\u30F3\u30B0\u6307\u793A\u6587\u306B\u7FFB\u8A33\u30FB\u518D\u69CB\u6210\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u547D\u4EE4\u52D5\u8A5E\uFF08Inspect, Fix, Implement\u7B49\uFF09\u304B\u3089\u76F4\u63A5\u958B\u59CB\u3057\u3001\u30B3\u30FC\u30C9\u8B58\u5225\u5B50\u3084\u30D1\u30B9\u306F100%\u7DAD\u6301\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
-        enabled: true
-      },
-      {
-        id: "vocab",
-        label: "\u91CD\u8981\u8A9E\u5F59",
-        role: "vocab",
-        instruction: "\u3053\u306E\u6307\u793A\u306B\u95A2\u9023\u3059\u308B\u5B9F\u7528\u7684\u306A\u82F1\u8A9E\u6280\u8853\u8868\u73FE\u3092 2\u301C3 \u500B\u62BD\u51FA\u3057\u3001'term (\u65E5\u672C\u8A9E\u306E\u610F\u5473) \xB7 term2 (\u610F\u5473)' \u306E\u5F62\u5F0F\u3067\u51FA\u529B\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
-        enabled: true
-      }
-    ];
-  }
-  if (norm === "ko") {
-    return [
-      {
-        id: "en_direct",
-        label: "\uD45C\uC900 \uC601\uBB38",
-        role: "rewrite",
-        instruction: "Target Language: English. Strictly output in English ONLY: \uB2E8\uD3B8\uC801\uC778 \uD55C\uAD6D\uC5B4 \uC785\uB825\uC744 \uB17C\uB9AC\uC801\uC774\uACE0 \uBA85\uD655\uD55C \uACE0\uD488\uC9C8 \uC601\uBB38 \uC5D4\uC9C0\uB2C8\uC5B4\uB9C1 \uC9C0\uC2DC\uBB38\uC73C\uB85C \uBC88\uC5ED \uBC0F \uC7AC\uAD6C\uC131\uD558\uC2ED\uC2DC\uC624. \uB3D9\uC0AC \uC6D0\uD615\uC73C\uB85C \uC9C1\uC811 \uC2DC\uC791\uD558\uACE0 \uCF54\uB4DC \uC2DD\uBCC4\uC790\uC640 \uD30C\uC77C \uACBD\uB85C\uB97C 100% \uBCF4\uC874\uD558\uC2ED\uC2DC\uC624.",
-        enabled: true
-      },
-      {
-        id: "vocab",
-        label: "\uD575\uC2EC \uC5B4\uD718",
-        role: "vocab",
-        instruction: "\uC774 \uC9C0\uC2DC\uBB38\uACFC \uAD00\uB828\uB41C \uC2E4\uC6A9\uC801\uC778 \uC601\uC5B4 \uAE30\uC220 \uD45C\uD604 2~3\uAC1C\uB97C 'term (\uD55C\uAD6D\uC5B4 \uB73B) \xB7 term2 (\uB73B)' \uD615\uC2DD\uC73C\uB85C \uCD94\uCD9C\uD558\uC2ED\uC2DC\uC624.",
-        enabled: true
-      }
-    ];
-  }
+  const isZh = norm === "zh" || norm === "tw";
+  const isJa = norm === "ja";
   return [
     {
-      id: "en_refine",
-      label: "Logical Spec",
+      id: "en_direct",
+      label: isZh ? "\u89C4\u8303\u82F1\u6587" : isJa ? "\u6A19\u6E96\u82F1\u8A9E" : "Logical Spec",
       role: "rewrite",
-      instruction: "Target Language: English. Strictly output in English ONLY: Translate or restructure the user's raw, colloquial, or fragmented thoughts into a clear, imperative, high-precision engineering instruction for an AI coding agent. Start directly with an active imperative verb (e.g. 'Inspect', 'Refactor', 'Implement', 'Fix', 'Trace'), eliminate conversational filler, preserve all code tokens, file paths, and CLI flags 100% verbatim, and strictly avoid hallucinations.",
+      instruction: "Target Language: ${targetLang}. Strictly output in ${targetLang} ONLY: Translate and restructure user's raw, colloquial, or fragmented thoughts from ${sourceLang} into a clear, imperative, high-precision engineering instruction for an AI coding agent. Start directly with an active imperative verb (e.g. 'Inspect', 'Refactor', 'Implement', 'Fix', 'Trace'), eliminate conversational filler, preserve all code tokens, file paths, and CLI flags 100% verbatim, and strictly avoid hallucinations.",
       enabled: true
     },
     {
       id: "vocab",
-      label: "Key Terms",
+      label: isZh ? "\u6838\u5FC3\u8868\u8FBE" : isJa ? "\u91CD\u8981\u8A9E\u5F59" : "Key Terms",
       role: "vocab",
-      instruction: "Extract 2-3 high-value idiomatic technical expressions relevant to this instruction.",
+      instruction: "Extract 2-3 high-value idiomatic ${targetLang} technical expressions relevant to this instruction following the 3-Second Glanceability Rule: 'term (${explainLang} meaning) \xB7 term2 (...)'.",
       enabled: true
     }
   ];
 }
 function getDefaultPromptSlots(sourceLang = "en") {
   const norm = (sourceLang || "en").toLowerCase().split("-")[0];
-  if (norm === "zh") {
-    return [
-      {
-        id: "concise",
-        label: "\u6781\u7B80\u884C\u52A8",
-        role: "rewrite",
-        instruction: "Target Language: Chinese (Simplified). Strictly output in Chinese (Simplified) ONLY: \u53BB\u9664\u5197\u4F59\u53E3\u8BED\u5BD2\u6684\uFF0C\u7CBE\u70BC\u4E3A\u76F4\u5954\u6838\u5FC3\u52A8\u4F5C\u7684\u6781\u7B80\u4E2D\u6587\u6307\u4EE4\uFF0C\u805A\u7126\u6700\u5C0F\u5DE5\u4F5C\u6539\u52A8\u9762\uFF08Smallest Working Diff\uFF09\u3002",
-        enabled: true
-      },
-      {
-        id: "spec",
-        label: "\u7ED3\u6784\u89C4\u8303",
-        role: "rewrite",
-        instruction: "Target Language: Chinese (Simplified). Strictly output in Chinese (Simplified) ONLY: \u7ED3\u6784\u5316\u6574\u7406\u4E3A\u300C\u76EE\u6807 + \u7EA6\u675F\u8FB9\u754C + \u4EA4\u4ED8\u6807\u51C6\u300D\u6E05\u6670\u4E09\u8981\u7D20\u7684\u4E2D\u6587\u89C4\u8303\uFF0C\u4E0D\u81C6\u6D4B\u672A\u63D0\u53CA\u7684\u9700\u6C42\u3002",
-        enabled: true
-      },
-      {
-        id: "deep",
-        label: "\u6839\u56E0\u6EAF\u6E90",
-        role: "rewrite",
-        instruction: "Target Language: Chinese (Simplified). Strictly output in Chinese (Simplified) ONLY: \u63D0\u70BC\u4E3A\u8981\u6C42\u5168\u94FE\u8DEF\u6EAF\u6E90\u3001\u5B9A\u4F4D\u5171\u4EAB\u6839\u56E0\u4E0E\u8FB9\u754C\u7528\u4F8B\u7269\u7406\u9A8C\u8BC1\u7684\u4E25\u8C28\u6392\u67E5\u6307\u4EE4\uFF0C\u62D2\u7EDD\u6CBB\u6807\u4E0D\u6CBB\u672C\u3002",
-        enabled: true
-      },
-      {
-        id: "vocab",
-        label: "\u91CD\u70B9\u8BCD",
-        role: "vocab",
-        instruction: "\u63D0\u53D6 2-3 \u4E2A\u4E0E\u672C\u63D0\u793A\u8BCD\u76F8\u5173\u7684\u5730\u9053\u82F1\u6587\u6280\u672F\u8BCD\u6C47\uFF0C\u683C\u5F0F\u4E3A 'term (\u4E2D\u6587\u91CA\u4E49) \xB7 term2 (\u4E2D\u6587\u91CA\u4E49)'\u3002",
-        enabled: true
-      }
-    ];
-  }
-  if (norm === "tw") {
-    return [
-      {
-        id: "concise",
-        label: "\u6975\u7C21\u884C\u52D5",
-        role: "rewrite",
-        instruction: "Target Language: Chinese (Traditional). Strictly output in Chinese (Traditional) ONLY: \u53BB\u9664\u5197\u9918\u53E3\u8A9E\u5BD2\u6684\uFF0C\u7CBE\u7149\u70BA\u76F4\u5954\u6838\u5FC3\u52D5\u4F5C\u7684\u6975\u7C21\u7E41\u9AD4\u4E2D\u6587\u6307\u4EE4\uFF0C\u805A\u7126\u6700\u5C0F\u5DE5\u4F5C\u6539\u52D5\u9762\uFF08Smallest Working Diff\uFF09\u3002",
-        enabled: true
-      },
-      {
-        id: "spec",
-        label: "\u7D50\u69CB\u898F\u7BC4",
-        role: "rewrite",
-        instruction: "Target Language: Chinese (Traditional). Strictly output in Chinese (Traditional) ONLY: \u7D50\u69CB\u5316\u6574\u7406\u70BA\u300C\u76EE\u6A19 + \u7D04\u675F\u908A\u754C + \u4EA4\u4ED8\u6A19\u6E96\u300D\u6E05\u6670\u4E09\u8981\u7D20\u7684\u7E41\u9AD4\u4E2D\u6587\u898F\u7BC4\uFF0C\u4E0D\u81C6\u6E2C\u672A\u63D0\u53CA\u7684\u9700\u6C42\u3002",
-        enabled: true
-      },
-      {
-        id: "deep",
-        label: "\u6839\u56E0\u6EAF\u6E90",
-        role: "rewrite",
-        instruction: "Target Language: Chinese (Traditional). Strictly output in Chinese (Traditional) ONLY: \u63D0\u7149\u70BA\u8981\u6C42\u5168\u93C8\u8DEF\u6EAF\u6E90\u3001\u5B9A\u4F4D\u5171\u4EAB\u6839\u56E0\u8207\u908A\u754C\u7528\u4F8B\u7269\u7406\u9A57\u8B49\u7684\u56B4\u8B39\u6392\u67E5\u6307\u4EE4\uFF0C\u62D2\u7D55\u6CBB\u6A19\u4E0D\u6CBB\u672C\u3002",
-        enabled: true
-      },
-      {
-        id: "vocab",
-        label: "\u91CD\u9EDE\u8A5E",
-        role: "vocab",
-        instruction: "\u63D0\u53D6 2-3 \u500B\u8207\u672C\u63D0\u793A\u8A5E\u76F8\u95DC\u7684\u9053\u5730\u82F1\u6587\u6280\u8853\u8A5E\u5F59\uFF0C\u683C\u5F0F\u70BA 'term (\u4E2D\u6587\u91CB\u7FA9) \xB7 term2 (\u4E2D\u6587\u91CB\u7FA9)'\u3002",
-        enabled: true
-      }
-    ];
-  }
-  if (norm === "ja") {
-    return [
-      {
-        id: "concise",
-        label: "\u7C21\u6F54\u30FB\u9AD8\u52B9\u7387",
-        role: "rewrite",
-        instruction: "Target Language: Japanese. Strictly output in Japanese ONLY: \u7121\u99C4\u3092\u7701\u3044\u305F\u9AD8\u52B9\u7387\u306A\u6307\u793A\uFF1A\u6838\u5FC3\u306E\u30A2\u30AF\u30B7\u30E7\u30F3\u3068\u6700\u5C0F\u9650\u306E\u5909\u66F4\u5DEE\u5206\uFF08Smallest Working Diff\uFF09\u3092\u76F4\u63A5\u6307\u793A\u3002",
-        enabled: true
-      },
-      {
-        id: "spec",
-        label: "\u69CB\u9020\u5316\u4ED5\u69D8",
-        role: "rewrite",
-        instruction: "Target Language: Japanese. Strictly output in Japanese ONLY: \u69CB\u9020\u5316\u3055\u308C\u305F\u6280\u8853\u4ED5\u69D8\uFF1A\u66D6\u6627\u306A\u8868\u73FE\u3092\u300C\u76EE\u7684\u30FB\u5236\u7D04\u6761\u4EF6\u30FB\u671F\u5F85\u3055\u308C\u308B\u7D50\u679C\u300D\u306B\u6574\u7406\u3057\u3001\u660E\u78BA\u5316\u3002",
-        enabled: true
-      },
-      {
-        id: "deep",
-        label: "\u6839\u672C\u539F\u56E0\u30FB\u53B3\u5BC6",
-        role: "rewrite",
-        instruction: "Target Language: Japanese. Strictly output in Japanese ONLY: \u6839\u672C\u539F\u56E0\u306E\u7279\u5B9A\u3068\u53B3\u5BC6\u306A\u691C\u8A3C\uFF1A\u8868\u9762\u7684\u306A\u5BFE\u51E6\u3067\u306F\u306A\u304F\u30A8\u30F3\u30C9\u30C4\u30FC\u30A8\u30F3\u30C9\u306E\u539F\u56E0\u8FFD\u8DE1\u3068\u5883\u754C\u5024\u691C\u8A3C\u3092\u8981\u6C42\u3002",
-        enabled: true
-      },
-      {
-        id: "vocab",
-        label: "\u91CD\u8981\u8A9E\u5F59",
-        role: "vocab",
-        instruction: "\u95A2\u9023\u3059\u308B\u5B9F\u7528\u7684\u306A\u82F1\u8A9E\u6280\u8853\u8868\u73FE\u3092 2\u301C3 \u500B\u62BD\u51FA\u3057\u3001'term (\u610F\u5473) \xB7 term2 (\u610F\u5473)' \u5F62\u5F0F\u3067\u51FA\u529B\u3002",
-        enabled: true
-      }
-    ];
-  }
-  if (norm === "ko") {
-    return [
-      {
-        id: "concise",
-        label: "\uAC04\uACB0\xB7\uC989\uC2DC\uC2E4\uD589",
-        role: "rewrite",
-        instruction: "Target Language: Korean. Strictly output in Korean ONLY: \uBD88\uD544\uC694\uD55C \uC778\uC0AC\uB9D0\uC744 \uC81C\uAC70\uD558\uACE0 \uD575\uC2EC \uB3D9\uC791\uACFC \uCD5C\uC18C \uBCC0\uACBD \uBC94\uC704(Smallest Working Diff)\uB97C \uC9C0\uC2DC\uD558\uB294 \uAC04\uACB0\uD55C \uD55C\uAD6D\uC5B4 \uBA85\uB839\uBB38.",
-        enabled: true
-      },
-      {
-        id: "spec",
-        label: "\uAD6C\uC870\uD654 \uBA85\uC138",
-        role: "rewrite",
-        instruction: "Target Language: Korean. Strictly output in Korean ONLY: \uBAA8\uD638\uD55C \uD45C\uD604\uC744 '\uBAA9\uD45C + \uC81C\uC57D \uC870\uAC74 + \uC0B0\uCD9C\uBB3C \uAE30\uC900'\uC758 \uBA85\uD655\uD55C 3\uC694\uC18C \uD55C\uAD6D\uC5B4 \uBA85\uC138\uB85C \uAD6C\uC870\uD654.",
-        enabled: true
-      },
-      {
-        id: "deep",
-        label: "\uADFC\uBCF8\uC6D0\uC778 \uCD94\uC801",
-        role: "rewrite",
-        instruction: "Target Language: Korean. Strictly output in Korean ONLY: \uC784\uC2DC\uBC29\uD3B8 \uD328\uCE58\uAC00 \uC544\uB2CC \uC5D4\uB4DC\uD22C\uC5D4\uB4DC \uC2E4\uD589 \uD750\uB984 \uCD94\uC801, \uADFC\uBCF8 \uC6D0\uC778 \uD574\uACB0 \uBC0F \uACBD\uACC4 \uC870\uAC74 \uBB3C\uB9AC\uC801 \uAC80\uC99D\uC744 \uC694\uAD6C\uD558\uB294 \uC5C4\uBC00\uD55C \uC9C0\uC2DC\uBB38.",
-        enabled: true
-      },
-      {
-        id: "vocab",
-        label: "\uD575\uC2EC \uC5B4\uD718",
-        role: "vocab",
-        instruction: "\uAD00\uB828\uB41C \uC2E4\uC6A9\uC801\uC778 \uC601\uC5B4 \uAE30\uC220 \uD45C\uD604 2~3\uAC1C\uB97C 'term (\uD55C\uAD6D\uC5B4 \uB73B) \xB7 term2 (\uB73B)' \uD615\uC2DD\uC73C\uB85C \uCD94\uCD9C.",
-        enabled: true
-      }
-    ];
-  }
+  const isZh = norm === "zh" || norm === "tw";
+  const isJa = norm === "ja";
   return [
     {
       id: "concise",
-      label: "Concise",
+      label: isZh ? "\u6781\u7B80\u884C\u52A8" : isJa ? "\u7C21\u6F54\u30FB\u9AD8\u52B9\u7387" : "Concise",
       role: "rewrite",
-      instruction: "Target Language: English. Strictly output in English ONLY: High-efficiency, zero-fluff imperative instruction targeting the exact action and smallest working diff.",
+      instruction: "Target Language: ${targetLang}. Strictly output in ${targetLang} ONLY: High-efficiency, zero-fluff imperative instruction targeting the exact action and smallest working diff.",
       enabled: true
     },
     {
       id: "spec",
-      label: "Structured",
+      label: isZh ? "\u7ED3\u6784\u89C4\u8303" : isJa ? "\u69CB\u9020\u5316\u4ED5\u69D8" : "Structured",
       role: "rewrite",
-      instruction: "Target Language: English. Strictly output in English ONLY: Structured engineering specification: distill messy thoughts into clear Objective, Constraints, and Deliverable without inventing unrequested features.",
+      instruction: "Target Language: ${targetLang}. Strictly output in ${targetLang} ONLY: Structured engineering specification: distill messy thoughts into clear Objective, Constraints, and Deliverable without inventing unrequested features.",
       enabled: true
     },
     {
       id: "deep",
-      label: "Deep Rigor",
+      label: isZh ? "\u6839\u56E0\u6EAF\u6E90" : isJa ? "\u6839\u672C\u539F\u56E0\u30FB\u53B3\u5BC6" : "Deep Rigor",
       role: "rewrite",
-      instruction: "Target Language: English. Strictly output in English ONLY: Root-cause & architectural rigor: trace end-to-end execution flow, fix shared root causes rather than symptom patches, and verify edge cases.",
+      instruction: "Target Language: ${targetLang}. Strictly output in ${targetLang} ONLY: Root-cause & architectural rigor: trace end-to-end execution flow, fix shared root causes rather than symptom patches, and verify edge cases.",
       enabled: true
     },
     {
       id: "vocab",
-      label: "Vocab",
+      label: isZh ? "\u6838\u5FC3\u8868\u8FBE" : isJa ? "\u91CD\u8981\u8A9E\u5F59" : "Vocab",
       role: "vocab",
-      instruction: "Extract 2-3 high-value idiomatic English technical expressions relevant to this prompt.",
+      instruction: "Extract 2-3 high-value idiomatic ${targetLang} technical expressions relevant to this prompt in ${explainLang}.",
       enabled: true
     }
   ];
@@ -254,123 +58,67 @@ function getDefaultPromptSlots(sourceLang = "en") {
 function getDefaultModifySlots(sourceLang = "en", explainLang) {
   const norm = (sourceLang || "en").toLowerCase().split("-")[0];
   const expNorm = (explainLang || norm).toLowerCase().split("-")[0];
-  const labels = {
-    en: { fixed: "Fixed", native: "Native", fixes: "Takeaway" },
-    zh: { fixed: "\u539F\u53E5\u4FEE\u8865", native: "\u5730\u9053\u8868\u8FBE", fixes: "\u6536\u83B7\u590D\u76D8" },
-    tw: { fixed: "\u539F\u53E5\u4FEE\u88DC", native: "\u9053\u5730\u8868\u9054", fixes: "\u6536\u7A6B\u8907\u76E4" },
-    ja: { fixed: "\u539F\u6587\u4FEE\u6B63", native: "\u81EA\u7136\u8868\u73FE", fixes: "\u91CD\u8981\u30DD\u30A4\u30F3\u30C8" },
-    ko: { fixed: "\uC6D0\uBB38\uC218\uC815", native: "\uC790\uC5F0\uC2A4\uB7EC\uC6B4\uD45C\uD604", fixes: "\uD575\uC2EC\uD3EC\uC778\uD2B8" }
-  };
-  const l = labels[norm] || labels.en;
-  const explainLangDesc = expNorm === "zh" ? "Explain the intuition/rule briefly in Chinese (\u4E2D\u6587)." : expNorm === "ja" ? "Explain the intuition/rule briefly in Japanese (\u65E5\u672C\u8A9E)." : expNorm === "ko" ? "Explain the intuition/rule briefly in Korean (\uD55C\uAD6D\uC5B4)." : "Explain the intuition/rule briefly in simple, clear English.";
-  const fixedInstruction = "Target Language: English. Strictly output in English ONLY: Surgically correct ONLY spelling mistakes, fast typos, syntax structure (e.g. 'want that you can' \u2794 'want you to'), wrong prepositions/articles (e.g. 'in X' \u2794 'on X', 'as I\\'m' \u2794 'as if I\\'m'), and grammatical slips in the user's sentence. CRITICAL RULES: (1) Zero Level Leap (\u6C34\u5E73\u7EDD\u4E0D\u8DC3\u8FC1 / i+1 Rule): STRICTLY match the user's current vocabulary tier and tone! If user writes everyday dev or junior-high level English, do NOT artificially inflate it into university academic GRE/SAT prose or bureaucratic corporate fluff. Fix the joints and syntax, but NEVER replace their words with alien SAT vocabulary! (2) Zero Tone Sanitization: NEVER sanitize, censor, or tone down swear words or raw emotions (e.g. 'fuck', 'suck', 'shit', 'idiot')\u2014passion and emotional heat are natural and MUST be preserved 100%! (3) Zero Punctuation/Casing Nitpicking: Do NOT obsess over casual lowercase casing (e.g. 'l' vs 'L') or missing trailing periods/commas ('.', ',') if the user writes informally. (4) 100% preserve original sentence structure, words, and cadence so the user can send it immediately with zero hesitation.";
-  const nativeInstruction = "Target Language: English. Strictly output in English ONLY: Provide a natural, idiomatic native phrasing expressing the exact same intent. CRITICAL: Keep the semantic and stylistic gap between 'Fixed' and 'Native' small and realistic\u2014do NOT over-complicate, do NOT jump vocabulary tiers, and do NOT turn it into an essay.";
-  const fixesInstruction = `Extract 1-3 essential takeaways covering syntax structure, word choice & collocations, and grammar slips in the format: 'typo \u2794 fix \xB7 in X \u2794 on X (concise takeaway)'. ${explainLangDesc}`;
+  const isZh = norm === "zh" || norm === "tw";
+  const isJa = norm === "ja";
+  const expName = resolveLanguageName(expNorm);
   return [
     {
       id: "fixed",
-      label: l.fixed,
+      label: isZh ? "\u539F\u53E5\u4FEE\u8865" : isJa ? "\u539F\u6587\u4FEE\u6B63" : "Fixed",
       role: "rewrite",
-      instruction: fixedInstruction,
+      instruction: "Target Language: ${targetLang}. Strictly output in ${targetLang} ONLY: Surgically correct ONLY spelling mistakes, fast typos, syntax structure (e.g. 'want that you can' \u2794 'want you to'), wrong prepositions/articles (e.g. 'in X' \u2794 'on X'), and grammatical slips in the user's sentence. CRITICAL RULES: (1) Zero Level Leap (i+1 Rule): Match user's natural vocabulary tier; do NOT artificially inflate everyday dev text into academic prose. (2) Zero Tone Sanitization: NEVER censor swear words or raw emotions (e.g. 'fuck', 'suck', 'shit')\u2014passion and emotional heat are natural and MUST be preserved 100%! (3) Zero Punctuation/Casing Nitpicking. (4) 100% preserve original words and cadence.",
+      hideWhenLong: true,
       enabled: true
     },
     {
       id: "native",
-      label: l.native,
+      label: isZh ? "\u5730\u9053\u8868\u8FBE" : isJa ? "\u81EA\u7136\u8868\u73FE" : "Native",
       role: "rewrite",
-      instruction: nativeInstruction,
+      instruction: "Target Language: ${targetLang}. Strictly output in ${targetLang} ONLY: Provide a natural, idiomatic native phrasing expressing the exact same intent without level-leaping.",
+      hideWhenLong: true,
       enabled: true
     },
     {
       id: "fixes",
-      label: l.fixes,
+      label: isZh ? "\u6536\u83B7\u590D\u76D8" : isJa ? "\u91CD\u8981\u30DD\u30A4\u30F3\u30C8" : "Takeaway",
       role: "vocab",
-      instruction: fixesInstruction,
+      instruction: `Extract 1-3 essential takeaways in the format: 'before \u2794 after (<= 10 words/chars grounded intuition in ${expName})'.`,
       enabled: true
     }
   ];
 }
 function getDefaultSlots(sourceLang = "en") {
   const norm = (sourceLang || "en").toLowerCase().split("-")[0];
-  const labels = {
-    en: { source: "Original", spoken: "Spoken", written: "Written", vocab: "Vocab" },
-    zh: { source: "\u539F\u6587", spoken: "\u53E3\u8BED", written: "\u5199\u4F5C", vocab: "\u91CD\u70B9" },
-    tw: { source: "\u539F\u6587", spoken: "\u53E3\u8A9E", written: "\u66F8\u9762", vocab: "\u91CD\u9EDE" },
-    ja: { source: "\u539F\u6587", spoken: "\u53E3\u8A9E", written: "\u6587\u9762", vocab: "\u5358\u8A9E" },
-    ko: { source: "\uC6D0\uBB38", spoken: "\uAD6C\uC5B4", written: "\uBB38\uC5B4", vocab: "\uD575\uC2EC" },
-    ru: { source: "\u041E\u0440\u0438\u0433\u0438\u043D\u0430\u043B", spoken: "\u0420\u0430\u0437\u0433\u043E\u0432\u043E\u0440\u043D\u044B\u0439", written: "\u041F\u0438\u0441\u044C\u043C\u0435\u043D\u043D\u044B\u0439", vocab: "\u041B\u0435\u043A\u0441\u0438\u043A\u0430" },
-    pt: { source: "Original", spoken: "Falado", written: "Escrito", vocab: "Vocab" },
-    es: { source: "Original", spoken: "Hablado", written: "Escrito", vocab: "Vocab" },
-    vi: { source: "Nguy\xEAn b\u1EA3n", spoken: "Kh\u1EA9u ng\u1EEF", written: "V\u0103n b\u1EA3n", vocab: "T\u1EEB v\u1EF1ng" },
-    tr: { source: "Orijinal", spoken: "Konu\u015Fma", written: "Yaz\u0131l\u0131", vocab: "Kelime" },
-    ar: { source: "\u0627\u0644\u0623\u0635\u0644", spoken: "\u0645\u062D\u0627\u062F\u062B\u0629", written: "\u0643\u062A\u0627\u0628\u0629", vocab: "\u0645\u0641\u0631\u062F\u0627\u062A" },
-    my: { source: "Asal", spoken: "Pertuturan", written: "Penulisan", vocab: "Kosa kata" },
-    ms: { source: "Asal", spoken: "Pertuturan", written: "Penulisan", vocab: "Kosa kata" },
-    fr: { source: "Original", spoken: "Parl\xE9", written: "\xC9crit", vocab: "Vocab" },
-    de: { source: "Original", spoken: "Gesprochen", written: "Schriftlich", vocab: "Wortschatz" }
-  };
-  const l = labels[norm] || labels.en;
-  const instructions = {
-    zh: {
-      spoken: "\u81EA\u7136\u5730\u9053\u7684\u7F8E\u5F0F\u53E3\u8BED\u6D41\uFF08\u6BCF\u65E5\u7AD9\u4F1A\u3001Slack\u6C9F\u901A\u3001\u7ED3\u5BF9\u7F16\u7A0B\u3001\u654F\u6377\u534F\u4F5C\uFF09\u3002\u5730\u9053\u7845\u8C37\u53E3\u543B\u3001\u81EA\u7136\u7F29\u8BFB\u3001\u9C9C\u6D3B\u52A8\u8BCD\u77ED\u8BED\u4E0E\u6BCD\u8BED\u4E60\u8BED\u3002",
-      written: "\u4E25\u8C28\u73B0\u4EE3\u7684\u67B6\u6784\u89C4\u8303\u4E66\u9762\u8BED\uFF08PR\u63CF\u8FF0\u3001RFC\u6587\u6863\u3001\u95EE\u9898\u5355\u3001\u67B6\u6784\u8BF4\u660E\uFF09\u3002\u6E05\u6670\u7CBE\u70BC\u7684\u9AD8\u9636\u5E73\u5B9E\u82F1\u6587\uFF0C\u7CBE\u51C6\u52A8\u8BCD\u4E0E\u5730\u9053\u642D\u914D\uFF0C\u675C\u7EDD\u9648\u65E7\u7EF4\u591A\u5229\u4E9A\u5F0F\u5957\u8BDD\u4E0EAI\u6C34\u8BCD\u3002",
-      vocab: "\u81EA\u9002\u5E94\u8403\u53D6\u5173\u952E\u5730\u9053\u8BCD\u4F19\u642D\u914D\uFF08Collocations\uFF09\u3001\u52A8\u8BCD\u8BCD\u7EC4\u3001\u6280\u672F\u6210\u8BED\u6216\u9AD8\u9636\u8868\u8FBE\uFF0C\u52A9\u529B\u638C\u63E1\u5730\u9053\u6BCD\u8BED\u7EA7\u8BED\u611F\u3002"
-    },
-    tw: {
-      spoken: "\u81EA\u7136\u9053\u5730\u7684\u7F8E\u5F0F\u53E3\u8A9E\u6D41\uFF08\u6BCF\u65E5\u7AD9\u6703\u3001Slack\u6E9D\u901A\u3001\u7D50\u5C0D\u7DE8\u7A0B\u3001\u654F\u6377\u5354\u4F5C\uFF09\u3002\u9053\u5730\u77FD\u8C37\u8A9E\u611F\u3001\u81EA\u7136\u7E2E\u8B80\u3001\u9BAE\u6D3B\u52D5\u8A5E\u7247\u8A9E\u8207\u6BCD\u8A9E\u6163\u7528\u8A9E\u3002",
-      written: "\u56B4\u8B39\u73FE\u4EE3\u7684\u67B6\u69CB\u898F\u7BC4\u66F8\u9762\u8A9E\uFF08PR\u63CF\u8FF0\u3001RFC\u6587\u6A94\u3001\u554F\u984C\u55AE\u3001\u67B6\u69CB\u8AAA\u660E\uFF09\u3002\u6E05\u6670\u7CBE\u7149\u7684\u9AD8\u968E\u5E73\u5BE6\u82F1\u6587\uFF0C\u7CBE\u6E96\u52D5\u8A5E\u8207\u9053\u5730\u642D\u914D\uFF0C\u675C\u7D55\u9673\u820A\u5957\u8A71\u8207AI\u6D6E\u8A87\u8A5E\u5F59\u3002",
-      vocab: "\u81EA\u9069\u61C9\u8403\u53D6\u95DC\u9375\u9053\u5730\u8A5E\u5925\u642D\u914D\uFF08Collocations\uFF09\u3001\u52D5\u8A5E\u7247\u8A9E\u3001\u6280\u8853\u6210\u8A9E\u6216\u9AD8\u968E\u8868\u9054\uFF0C\u52A9\u529B\u638C\u63E1\u9053\u5730\u6BCD\u8A9E\u7D1A\u8A9E\u611F\u3002"
-    },
-    ja: {
-      spoken: "\u89AA\u3057\u3044\u540C\u50DA\u3084\u30C1\u30FC\u30E0\u3068\u306E\u81EA\u7136\u306A\u53E3\u8A9E\u8868\u73FE\uFF08\u671D\u4F1A\u3001Slack\u30CF\u30C9\u30EB\u3001\u30DA\u30A2\u30D7\u30ED\u30B0\u30E9\u30DF\u30F3\u30B0\u3001\u30AB\u30B8\u30E5\u30A2\u30EB\u30C1\u30E3\u30C3\u30C8\uFF09\u3002\u81EA\u7136\u306A\u77ED\u7E2E\u5F62\u3084\u30A4\u30C7\u30A3\u30AA\u30E0\u3002",
-      written: "\u660E\u78BA\u3067\u6D17\u7DF4\u3055\u308C\u305F\u73FE\u4EE3\u7684\u6280\u8853\u6587\u66F8\u8868\u73FE\uFF08PR\u6982\u8981\u3001RFC\u3001Issue\u3001\u6280\u8853\u8A2D\u8A08\u66F8\uFF09\u3002\u80FD\u52D5\u7684\u3067\u7C21\u6F54\u30FB\u8AD6\u7406\u7684\u306A\u30D7\u30ED\u30D5\u30A7\u30C3\u30B7\u30E7\u30CA\u30EB\u6587\u7AE0\u3002",
-      vocab: "\u91CD\u8981\u306A\u9023\u8A9E\u3001\u53E5\u52D5\u8A5E\u3001\u6280\u8853\u8868\u73FE\u3092\u81EA\u5F8B\u7684\u306B\u62BD\u51FA\u3057\u3001\u6BCD\u8A9E\u8A71\u8005\u30EC\u30D9\u30EB\u306E\u8A9E\u5F59\u904B\u7528\u3092\u652F\u63F4\u3002"
-    },
-    ko: {
-      spoken: "\uC77C\uC0C1\uC801\uC778 \uD300 \uD611\uC5C5 \uBC0F \uAD6C\uC5B4\uCCB4 \uD45C\uD604 (\uB370\uC77C\uB9AC \uC2A4\uD0E0\uB4DC\uC5C5, Slack, \uD398\uC5B4 \uD504\uB85C\uADF8\uB798\uBC0D). \uC790\uC5F0\uC2A4\uB7EC\uC6B4 \uCD95\uC57D\uD615\uACFC \uAD6C\uB3D9\uC0AC.",
-      written: "\uBA85\uD655\uD558\uACE0 \uC815\uAD50\uD55C \uD604\uB300 \uAE30\uC220 \uBB38\uC11C \uD45C\uD604 (PR \uC124\uBA85, RFC, \uC774\uC288, \uC544\uD0A4\uD14D\uCC98 \uBB38\uC11C). \uAC04\uACB0\uD558\uACE0 \uC804\uBB38\uC801\uC778 \uBB38\uC7A5.",
-      vocab: "\uD575\uC2EC \uC5F0\uC5B4, \uAD6C\uB3D9\uC0AC \uBC0F \uACE0\uAE09 \uAE30\uC220 \uAD00\uC6A9\uAD6C\uB97C \uCD94\uCD9C\uD558\uC5EC \uC6D0\uC5B4\uBBFC \uC218\uC900\uC758 \uC5B4\uAC10 \uC2B5\uB4DD \uC9C0\uC6D0."
-    },
-    ru: {
-      spoken: "\u0415\u0441\u0442\u0435\u0441\u0442\u0432\u0435\u043D\u043D\u0430\u044F \u0440\u0430\u0437\u0433\u043E\u0432\u043E\u0440\u043D\u0430\u044F \u0440\u0435\u0447\u044C \u0434\u043B\u044F \u043A\u043E\u043C\u0430\u043D\u0434\u043D\u043E\u0439 \u0440\u0430\u0431\u043E\u0442\u044B (\u0441\u0442\u0435\u043D\u0434\u0430\u043F\u044B, Slack, \u043A\u043E\u0434-\u0440\u0435\u0432\u044C\u044E). \u0416\u0438\u0432\u044B\u0435 \u0438\u0434\u0438\u043E\u043C\u044B \u0438 \u0441\u043E\u043A\u0440\u0430\u0449\u0435\u043D\u0438\u044F.",
-      written: "\u0427\u0435\u0442\u043A\u0438\u0439 \u0441\u043E\u0432\u0440\u0435\u043C\u0435\u043D\u043D\u044B\u0439 \u0442\u0435\u0445\u043D\u0438\u0447\u0435\u0441\u043A\u0438\u0439 \u043F\u0438\u0441\u044C\u043C\u0435\u043D\u043D\u044B\u0439 \u0441\u0442\u0438\u043B\u044C (\u043E\u043F\u0438\u0441\u0430\u043D\u0438\u044F PR, RFC, \u0434\u043E\u043A\u0443\u043C\u0435\u043D\u0442\u0430\u0446\u0438\u044F). \u041F\u0440\u043E\u0444\u0435\u0441\u0441\u0438\u043E\u043D\u0430\u043B\u044C\u043D\u043E \u0438 \u043B\u0430\u043A\u043E\u043D\u0438\u0447\u043D\u043E.",
-      vocab: "\u041A\u043B\u044E\u0447\u0435\u0432\u044B\u0435 \u0441\u043B\u043E\u0432\u043E\u0441\u043E\u0447\u0435\u0442\u0430\u043D\u0438\u044F, \u0444\u0440\u0430\u0437\u043E\u0432\u044B\u0435 \u0433\u043B\u0430\u0433\u043E\u043B\u044B \u0438 \u0442\u0435\u0445\u043D\u0438\u0447\u0435\u0441\u043A\u0438\u0435 \u0438\u0434\u0438\u043E\u043C\u044B \u0441 \u043F\u0435\u0440\u0435\u0432\u043E\u0434\u043E\u043C."
-    },
-    en: {
-      spoken: "Natural, fluent spoken flow (daily standup, Slack, pair programming, agile collaboration). Authentic Silicon Valley flow, natural contractions, native phrasal verbs, idioms.",
-      written: "Clear, precise, modern technical written prose (PR descriptions, RFCs, issues, architecture docs). High-level Plain prose: active, concise, professional. STRICTLY AVOID archaic Victorian fluff and AI-slop buzzwords.",
-      vocab: "Adaptively extract key idiomatic collocations, phrasal verbs, technical idioms, or advanced expressions bridging the user to high-level/native fluency."
-    }
-  };
-  const inst = instructions[norm] || instructions.en;
+  const isZh = norm === "zh" || norm === "tw";
+  const isJa = norm === "ja";
   return [
     {
       id: "source",
-      label: l.source,
+      label: isZh ? "\u539F\u6587" : isJa ? "\u539F\u6587" : "Original",
       role: "source",
       enabled: true
     },
     {
       id: "spoken",
-      label: l.spoken,
+      label: isZh ? "\u53E3\u8BED" : isJa ? "\u53E3\u8A9E" : "Spoken",
       role: "translation",
-      instruction: inst.spoken,
+      instruction: "Natural, idiomatic spoken ${targetLang} suitable for real-time team collaboration, peer discussions, and daily communication.",
       showMeaning: true,
       enabled: true
     },
     {
       id: "written",
-      label: l.written,
+      label: isZh ? "\u5199\u4F5C" : isJa ? "\u6587\u9762" : "Written",
       role: "translation",
-      instruction: inst.written,
+      instruction: "Clear, precise, well-structured written ${targetLang} suitable for technical documentation, proposals, architecture reviews, and client communications. Active, concise, professional. STRICTLY AVOID archaic filler and AI-slop buzzwords.",
       showMeaning: true,
       enabled: true
     },
     {
       id: "vocab",
-      label: l.vocab,
+      label: isZh ? "\u91CD\u70B9" : isJa ? "\u5358\u8A9E" : "Vocab",
       role: "vocab",
-      instruction: inst.vocab,
+      instruction: "Extract key idiomatic collocations, phrasal expressions, technical idioms, or nuanced terms in ${explainLang}.",
       enabled: true
     }
   ];
@@ -380,31 +128,31 @@ var LEGACY_SLOT_PRESETS = {
     slot1: {
       label: "Spoken",
       name: "Agile Spoken",
-      instruction: "Natural, fluent spoken flow (daily standup, Slack, pair programming, agile collaboration, code reviews). Authentic Silicon Valley flow, natural contractions, native phrasal verbs, idioms."
+      instruction: "Natural, fluent spoken flow (daily standup, Slack, pair programming, agile collaboration). Contractions, native phrasal verbs, idioms."
     },
     slot2: {
       label: "Written",
       name: "RFC Technical Written",
-      instruction: "Clear, precise, modern technical written prose (PR descriptions, RFCs, issues, architecture docs). High-level Plain prose: active, concise, professional. STRICTLY AVOID archaic Victorian fluff (e.g. 'we may now proceed') and AI-slop buzzwords (e.g. 'delve', 'testament')."
+      instruction: "Clear, precise, modern technical written prose (PR descriptions, RFCs, issues, architecture docs). High-level Plain prose: active, concise, professional."
     }
   },
   social: {
     slot1: {
       label: "Hook",
       name: "Twitter/X Viral Hook",
-      instruction: "High-impact, punchy opening hook with authentic Silicon Valley dev slang, rhetorical appeal, or conversational banter for Twitter/X and Reddit. Sharp, memorable, and human."
+      instruction: "High-impact, punchy opening hook with authentic Silicon Valley dev slang, rhetorical appeal, or conversational banter for Twitter/X and Reddit."
     },
     slot2: {
       label: "Deep",
       name: "Technical Insight",
-      instruction: "High-signal, structured technical insight for technical threads, Substack, and long-form posts. Concise, authoritative, and direct without corporate marketing fluff."
+      instruction: "High-signal, structured technical insight for technical threads and long-form posts. Direct without corporate marketing fluff."
     }
   },
   japanese: {
     slot1: {
       label: "\u53E3\u8A9E",
       name: "\u65E5\u5E38\u30BF\u30E1\u53E3 (Casual Spoken)",
-      instruction: "\u89AA\u3057\u3044\u540C\u50DA\u3084\u53CB\u4EBA\u3068\u306E\u65E5\u5E38\u4F1A\u8A71\u30FBSlack\u30CF\u30C9\u30EB\u30FB\u30AB\u30B8\u30E5\u30A2\u30EB\u306A\u3084\u308A\u53D6\u308A\u306B\u6700\u9069\u306A\u81EA\u7136\u306A\u53E3\u8A9E\u8868\u73FE\u3002\u30BF\u30E1\u53E3\u30FB\u89AA\u3057\u307F\u3084\u3059\u3044\u30C8\u30FC\u30F3\u3002"
+      instruction: "\u89AA\u3057\u3044\u540C\u50DA\u3084\u30C1\u30FC\u30E0\u3068\u306E\u65E5\u5E38\u4F1A\u8A71\u30FBSlack\u30CF\u30C9\u30EB\u30FB\u30AB\u30B8\u30E5\u30A2\u30EB\u306A\u3084\u308A\u53D6\u308A\u306B\u6700\u9069\u306A\u81EA\u7136\u306A\u53E3\u8A9E\u8868\u73FE\u3002"
     },
     slot2: {
       label: "\u656C\u8A9E",
@@ -421,7 +169,7 @@ var LEGACY_SLOT_PRESETS = {
     slot2: {
       label: "Paper",
       name: "Peer-Reviewed Paper Prose",
-      instruction: "Rigorous, objective, passive/active balanced academic prose meeting IEEE, ACM, and Nature journal standards. Precise vocabulary, rigorous methodology descriptions."
+      instruction: "Rigorous, objective, passive/active balanced academic prose meeting IEEE and ACM journal standards. Precise vocabulary."
     }
   }
 };
@@ -466,6 +214,13 @@ var LANGUAGE_SPECS = {
       }
     ]
   },
+  tw: {
+    name: "Chinese",
+    nativeName: "\u7E41\u9AD4\u4E2D\u6587",
+    meaningInstruction: "in native Chinese",
+    vocabInstruction: 'in Chinese in parentheses separated by " \xB7 "',
+    anchors: []
+  },
   ja: {
     name: "Japanese",
     nativeName: "\u65E5\u672C\u8A9E",
@@ -495,14 +250,6 @@ var LANGUAGE_SPECS = {
         written: "The proposed approach introduces unnecessary complexity. Leveraging native standard library implementations is preferred.",
         written_meaning: "\u63D0\u6848\u3055\u308C\u305F\u69CB\u6210\u306F\u4E0D\u8981\u306A\u8907\u96D1\u3055\u3092\u3082\u305F\u3089\u3057\u307E\u3059\u3002\u6A19\u6E96\u30E9\u30A4\u30D6\u30E9\u30EA\u306E\u5229\u7528\u3092\u63A8\u5968\u3057\u307E\u3059",
         vocab: "over-engineered (\u904E\u5270\u8A2D\u8A08) \xB7 be better off (\u301C\u3057\u305F\u307B\u3046\u304C\u3088\u3044) \xB7 stick with (\u301C\u3092\u4F7F\u3044\u7D9A\u3051\u308B) \xB7 leverage (\u6D3B\u7528\u3059\u308B)"
-      },
-      {
-        input: "\u80A5\u5927\u5316\u3057\u305F\u30D5\u30EC\u30FC\u30E0\u30EF\u30FC\u30AF\u3092\u6368\u3066\u3066\u4F9D\u5B58\u30BC\u30ED\u306E\u5358\u4E00\u30D5\u30A1\u30A4\u30EB\u306B\u79FB\u884C\u3057\u305F\u3089\u3001\u30B3\u30FC\u30EB\u30C9\u30B9\u30BF\u30FC\u30C8\u304C10\u500D\u901F\u304F\u306A\u308A\u307E\u3057\u305F",
-        spoken: "Ditched the bloated framework for a zero-dep single file \u2014 cold starts are 10x faster now!",
-        spoken_meaning: "\u91CD\u3044\u30D5\u30EC\u30FC\u30E0\u30EF\u30FC\u30AF\u3092\u3084\u3081\u3066\u4F9D\u5B58\u30BC\u30ED\u306E\u5358\u4E00\u30D5\u30A1\u30A4\u30EB\u306B\u3057\u305F\u3089\u3001\u8D77\u52D5\u304C10\u500D\u901F\u304F\u306A\u308A\u307E\u3057\u305F\uFF01",
-        written: "Replaced the monolithic framework with a zero-dependency architecture, yielding a 10x improvement in cold-start latency.",
-        written_meaning: "\u4E00\u679A\u5CA9\u306E\u30D5\u30EC\u30FC\u30E0\u30EF\u30FC\u30AF\u304B\u3089\u4F9D\u5B58\u95A2\u4FC2\u30BC\u30ED\u306E\u30A2\u30FC\u30AD\u30C6\u30AF\u30C1\u30E3\u3078\u79FB\u884C\u3057\u3001\u30B3\u30FC\u30EB\u30C9\u30B9\u30BF\u30FC\u30C8\u9045\u5EF6\u309210\u500D\u6539\u5584\u3057\u307E\u3057\u305F\u3002",
-        vocab: "ditch ... for ... (\u301C\u3092\u624B\u653E\u3057\u3066\u301C\u306B\u4E57\u308A\u63DB\u3048\u308B) \xB7 zero-dep (\u5916\u90E8\u4F9D\u5B58\u30BC\u30ED) \xB7 cold start (\u30B3\u30FC\u30EB\u30C9\u30B9\u30BF\u30FC\u30C8) \xB7 yield (\u3082\u305F\u3089\u3059)"
       }
     ]
   },
@@ -510,7 +257,7 @@ var LANGUAGE_SPECS = {
     name: "English",
     nativeName: "English",
     meaningInstruction: "in native English",
-    vocabInstruction: 'in English in parentheses separated by " \xB7 " (e.g. "term1 (English definition) \xB7 term2 (definition) \xB7 ...")',
+    vocabInstruction: 'in English in parentheses separated by " \xB7 " (e.g. "term1 (English definition) \xB7 term2 (...) \xB7 ...")',
     anchors: [
       {
         input: "Sounds good, let's ship it.",
@@ -527,22 +274,6 @@ var LANGUAGE_SPECS = {
         written: "Proceed with the subsequent implementation steps.",
         written_meaning: "Formal instruction to execute subsequent phase.",
         vocab: "keep going (continue implementation) \xB7 subsequent (following/next)"
-      },
-      {
-        input: "This feels over-engineered; let's stick to the built-in standard library.",
-        spoken: "This feels a bit over-complicated; let's stick with the native standard library.",
-        spoken_meaning: "Suggestion to reduce complexity by leveraging built-in standard libraries.",
-        written: "The proposed approach introduces unnecessary complexity. Utilizing native standard library implementations is preferred.",
-        written_meaning: "Architectural recommendation to minimize dependencies in favor of standard libraries.",
-        vocab: "over-engineered (unnecessarily complex) \xB7 stick with (continue using) \xB7 utilize (leverage effectively)"
-      },
-      {
-        input: "Ditched the bloated framework for a zero-dep single file \u2014 cold starts are 10x faster now!",
-        spoken: "Ditched the heavy framework for a zero-dep single file \u2014 cold starts are 10x faster now!",
-        spoken_meaning: "Informal celebration of moving to zero-dependency single-file design with massive speedup.",
-        written: "Replaced the monolithic framework with a zero-dependency architecture, yielding a 10x improvement in cold-start latency.",
-        written_meaning: "Technical summary of architectural migration and latency metrics.",
-        vocab: "ditch ... for (replace with lighter alternative) \xB7 zero-dep (zero external dependencies) \xB7 cold start (initial boot latency)"
       }
     ]
   },
@@ -550,7 +281,7 @@ var LANGUAGE_SPECS = {
     name: "Spanish",
     nativeName: "Espa\xF1ol",
     meaningInstruction: "in native Spanish",
-    vocabInstruction: 'in Spanish in parentheses separated by " \xB7 " (e.g. "term1 (significado en espa\xF1ol) \xB7 term2 (...) \xB7 ...")',
+    vocabInstruction: 'in Spanish in parentheses separated by " \xB7 "',
     anchors: [
       {
         input: "De acuerdo, empecemos",
@@ -567,14 +298,6 @@ var LANGUAGE_SPECS = {
         written: "Proceed with the next steps.",
         written_meaning: "Continuar con los siguientes pasos",
         vocab: "keep going (seguir adelante) \xB7 proceed with (proceder con)"
-      },
-      {
-        input: "Esta propuesta est\xE1 sobrecargada, mejor usar la biblioteca est\xE1ndar",
-        spoken: "This feels a bit over-engineered; we'd be much better off just sticking with the standard library.",
-        spoken_meaning: "Parece demasiado complicado; nos ir\xEDa mucho mejor con la librer\xEDa est\xE1ndar",
-        written: "The proposed approach introduces unnecessary complexity. Leveraging native standard library implementations is preferred.",
-        written_meaning: "La soluci\xF3n propuesta introduce complejidad innecesaria. Se prefiere la biblioteca est\xE1ndar nativa",
-        vocab: "over-engineered (sobreingenier\xEDa) \xB7 be better off (estar mejor con) \xB7 stick with (quedarse con) \xB7 leverage (aprovechar)"
       }
     ]
   },
@@ -582,154 +305,127 @@ var LANGUAGE_SPECS = {
     name: "French",
     nativeName: "Fran\xE7ais",
     meaningInstruction: "in native French",
-    vocabInstruction: 'in French in parentheses separated by " \xB7 " (e.g. "term1 (d\xE9finition en fran\xE7ais) \xB7 term2 (...) \xB7 ...")',
-    anchors: [
-      {
-        input: "D'accord, commen\xE7ons",
-        spoken: "Totally on board with that \u2014 let's dive right in.",
-        spoken_meaning: "Tout \xE0 fait d'accord, allons-y",
-        written: "Acknowledged. Let's proceed with the implementation.",
-        written_meaning: "D'accord. Proc\xE9dons \xE0 l'impl\xE9mentation",
-        vocab: "on board with (\xEAtre d'accord) \xB7 dive in (s'y mettre directement)"
-      },
-      {
-        input: "Continuer",
-        spoken: "Let's keep going.",
-        spoken_meaning: "Continuons",
-        written: "Proceed with the next steps.",
-        written_meaning: "Passer aux \xE9tapes suivantes",
-        vocab: "keep going (continuer) \xB7 proceed with (proc\xE9der \xE0)"
-      },
-      {
-        input: "Cette approche est trop complexe, autant utiliser la biblioth\xE8que standard",
-        spoken: "This feels a bit over-engineered; we'd be much better off just sticking with the standard library.",
-        spoken_meaning: "\xC7a semble surdimensionn\xE9 ; on ferait bien mieux de rester sur la biblioth\xE8que standard",
-        written: "The proposed approach introduces unnecessary complexity. Leveraging native standard library implementations is preferred.",
-        written_meaning: "L'approche propos\xE9e introduit une complexit\xE9 superflue. L'utilisation de la biblioth\xE8que standard est recommand\xE9e",
-        vocab: "over-engineered (surdimensionn\xE9) \xB7 be better off (avoir tout int\xE9r\xEAt \xE0) \xB7 stick with (s'en tenir \xE0) \xB7 leverage (exploiter)"
-      }
-    ]
+    vocabInstruction: 'in French in parentheses separated by " \xB7 "',
+    anchors: []
   },
   de: {
     name: "German",
     nativeName: "Deutsch",
     meaningInstruction: "in native German",
-    vocabInstruction: 'in German in parentheses separated by " \xB7 " (e.g. "term1 (deutsche Definition) \xB7 term2 (...) \xB7 ...")',
-    anchors: [
-      {
-        input: "Einverstanden, fangen wir an",
-        spoken: "Totally on board with that \u2014 let's dive right in.",
-        spoken_meaning: "Voll einverstanden, packen wir es an",
-        written: "Acknowledged. Let's proceed with the implementation.",
-        written_meaning: "Best\xE4tigt. Wir fahren mit der Implementierung fort",
-        vocab: "on board with (einverstanden sein) \xB7 dive in (direkt loslegen)"
-      },
-      {
-        input: "Weiter",
-        spoken: "Let's keep going.",
-        spoken_meaning: "Machen wir weiter",
-        written: "Proceed with the next steps.",
-        written_meaning: "Mit den n\xE4chsten Schritten fortfahren",
-        vocab: "keep going (weitermachen) \xB7 proceed with (fortfahren mit)"
-      },
-      {
-        input: "Dieser Ansatz ist \xFCberdimensioniert, nutzen wir lieber die Standardbibliothek",
-        spoken: "This feels a bit over-engineered; we'd be much better off just sticking with the standard library.",
-        spoken_meaning: "Das wirkt etwas \xFCberdimensioniert; mit der Standardbibliothek fahren wir deutlich besser",
-        written: "The proposed approach introduces unnecessary complexity. Leveraging native standard library implementations is preferred.",
-        written_meaning: "Der vorgeschlagene Ansatz bringt unn\xF6tige Komplexit\xE4t mit sich. Die native Standardbibliothek wird empfohlen",
-        vocab: "over-engineered (\xFCberdimensioniert) \xB7 be better off (besser dran sein mit) \xB7 stick with (bleiben bei) \xB7 leverage (nutzen/einsetzen)"
-      }
-    ]
+    vocabInstruction: 'in German in parentheses separated by " \xB7 "',
+    anchors: []
   },
   ko: {
     name: "Korean",
     nativeName: "\uD55C\uAD6D\uC5B4",
     meaningInstruction: "in native Korean",
-    vocabInstruction: 'in Korean in parentheses separated by " \xB7 " (e.g. "term1 (\uD55C\uAD6D\uC5B4 \uB73B) \xB7 term2 (...) \xB7 ...")',
-    anchors: [
-      {
-        input: "\uC88B\uC544\uC694, \uC2DC\uC791\uD569\uC2DC\uB2E4",
-        spoken: "Totally on board with that \u2014 let's dive right in.",
-        spoken_meaning: "\uC644\uC804 \uCC2C\uC131\uC774\uC5D0\uC694, \uBC14\uB85C \uC2DC\uC791\uD574 \uBCF4\uC8E0",
-        written: "Acknowledged. Let's proceed with the implementation.",
-        written_meaning: "\uD655\uC778\uD588\uC2B5\uB2C8\uB2E4. \uAD6C\uD604\uC744 \uC9C4\uD589\uD558\uACA0\uC2B5\uB2C8\uB2E4",
-        vocab: "on board with (\uCC2C\uC131\uD558\uB2E4/\uB3D9\uC758\uD558\uB2E4) \xB7 dive in (\uBC14\uB85C \uCC29\uC218\uD558\uB2E4)"
-      },
-      {
-        input: "\uACC4\uC18D \uC9C4\uD589\uD574\uC918",
-        spoken: "Let's keep going.",
-        spoken_meaning: "\uACC4\uC18D \uC9C4\uD589\uD558\uC8E0",
-        written: "Proceed with the next steps.",
-        written_meaning: "\uB2E4\uC74C \uB2E8\uACC4\uB97C \uC9C4\uD589\uD574 \uC8FC\uC2ED\uC2DC\uC624",
-        vocab: "keep going (\uACC4\uC18D \uAC00\uB2E4) \xB7 proceed with (~\uC744 \uC9C4\uD589\uD558\uB2E4)"
-      },
-      {
-        input: "\uC774 \uBC29\uC2DD\uC740 \uB108\uBB34 \uBCF5\uC7A1\uD55C \uAC83 \uAC19\uC544\uC694, \uD45C\uC900 \uB77C\uC774\uBE0C\uB7EC\uB9AC\uB97C \uC4F0\uB294 \uAC8C \uB0AB\uACA0\uC5B4\uC694",
-        spoken: "This feels a bit over-engineered; we'd be much better off just sticking with the standard library.",
-        spoken_meaning: "\uC870\uAE08 \uACFC\uD558\uAC8C \uC124\uACC4\uB41C \uB290\uB08C\uC774\uC5D0\uC694. \uADF8\uB0E5 \uD45C\uC900 \uB77C\uC774\uBE0C\uB7EC\uB9AC\uB97C \uC4F0\uB294 \uAC8C \uD6E8\uC52C \uB0AB\uACA0\uC5B4\uC694",
-        written: "The proposed approach introduces unnecessary complexity. Leveraging native standard library implementations is preferred.",
-        written_meaning: "\uC81C\uC548\uB41C \uBC29\uC2DD\uC740 \uBD88\uD544\uC694\uD55C \uBCF5\uC7A1\uC131\uC744 \uCD08\uB798\uD558\uBBC0\uB85C \uD45C\uC900 \uB77C\uC774\uBE0C\uB7EC\uB9AC \uD65C\uC6A9\uC744 \uAD8C\uC7A5\uD569\uB2C8\uB2E4",
-        vocab: "over-engineered (\uACFC\uB3C4\uD558\uAC8C \uC124\uACC4\uB41C) \xB7 be better off (~\uD558\uB294 \uD3B8\uC774 \uB354 \uB0AB\uB2E4) \xB7 stick with (~\uC744 \uACE0\uC218\uD558\uB2E4) \xB7 leverage (\uD65C\uC6A9\uD558\uB2E4)"
-      }
-    ]
+    vocabInstruction: 'in Korean in parentheses separated by " \xB7 "',
+    anchors: []
   },
   ru: {
     name: "Russian",
     nativeName: "\u0420\u0443\u0441\u0441\u043A\u0438\u0439",
     meaningInstruction: "in native Russian",
-    vocabInstruction: 'in Russian in parentheses separated by " \xB7 " (e.g. "term1 (\u0440\u0443\u0441\u0441\u043A\u043E\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435) \xB7 term2 (...) \xB7 ...")',
-    anchors: [
-      {
-        input: "\u0421\u043E\u0433\u043B\u0430\u0441\u0435\u043D, \u0434\u0430\u0432\u0430\u0439 \u043D\u0430\u0447\u0438\u043D\u0430\u0442\u044C",
-        spoken: "Totally on board with that \u2014 let's dive right in.",
-        spoken_meaning: "\u041F\u043E\u043B\u043D\u043E\u0441\u0442\u044C\u044E \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u044E \u2014 \u0434\u0430\u0432\u0430\u0439 \u0441\u0440\u0430\u0437\u0443 \u043F\u0440\u0438\u0441\u0442\u0443\u043F\u0438\u043C",
-        written: "Acknowledged. Let's proceed with the implementation.",
-        written_meaning: "\u041F\u0440\u0438\u043D\u044F\u0442\u043E. \u041F\u0435\u0440\u0435\u0445\u043E\u0434\u0438\u043C \u043A \u0440\u0435\u0430\u043B\u0438\u0437\u0430\u0446\u0438\u0438",
-        vocab: "on board with (\u0431\u044B\u0442\u044C \u0441\u043E\u0433\u043B\u0430\u0441\u043D\u044B\u043C) \xB7 dive in (\u0441\u0440\u0430\u0437\u0443 \u043F\u0440\u0438\u0441\u0442\u0443\u043F\u0438\u0442\u044C \u043A \u0434\u0435\u043B\u0443)"
-      },
-      {
-        input: "\u041F\u0440\u043E\u0434\u043E\u043B\u0436\u0430\u0439",
-        spoken: "Let's keep going.",
-        spoken_meaning: "\u0414\u0430\u0432\u0430\u0439 \u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0430\u0442\u044C",
-        written: "Proceed with the next steps.",
-        written_meaning: "\u041F\u0435\u0440\u0435\u0445\u043E\u0434\u0438\u0442\u0435 \u043A \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u043C \u0448\u0430\u0433\u0430\u043C",
-        vocab: "keep going (\u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0430\u0442\u044C) \xB7 proceed with (\u043F\u0440\u0438\u0441\u0442\u0443\u043F\u0438\u0442\u044C \u043A)"
-      },
-      {
-        input: "\u042D\u0442\u043E \u0440\u0435\u0448\u0435\u043D\u0438\u0435 \u043A\u0430\u0436\u0435\u0442\u0441\u044F \u0441\u043B\u0438\u0448\u043A\u043E\u043C \u0441\u043B\u043E\u0436\u043D\u044B\u043C, \u043B\u0443\u0447\u0448\u0435 \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u044C \u0441\u0442\u0430\u043D\u0434\u0430\u0440\u0442\u043D\u0443\u044E \u0431\u0438\u0431\u043B\u0438\u043E\u0442\u0435\u043A\u0443",
-        spoken: "This feels a bit over-engineered; we'd be much better off just sticking with the standard library.",
-        spoken_meaning: "\u0412\u044B\u0433\u043B\u044F\u0434\u0438\u0442 \u043F\u0435\u0440\u0435\u0443\u0441\u043B\u043E\u0436\u043D\u0435\u043D\u043D\u044B\u043C; \u043D\u0430\u043C \u0433\u043E\u0440\u0430\u0437\u0434\u043E \u043F\u0440\u043E\u0449\u0435 \u0434\u0435\u0440\u0436\u0430\u0442\u044C\u0441\u044F \u0441\u0442\u0430\u043D\u0434\u0430\u0440\u0442\u043D\u043E\u0439 \u0431\u0438\u0431\u043B\u0438\u043E\u0442\u0435\u043A\u0438",
-        written: "The proposed approach introduces unnecessary complexity. Leveraging native standard library implementations is preferred.",
-        written_meaning: "\u041F\u0440\u0435\u0434\u043B\u043E\u0436\u0435\u043D\u043D\u044B\u0439 \u043F\u043E\u0434\u0445\u043E\u0434 \u0432\u043D\u043E\u0441\u0438\u0442 \u0438\u0437\u043B\u0438\u0448\u043D\u044E\u044E \u0441\u043B\u043E\u0436\u043D\u043E\u0441\u0442\u044C. \u041F\u0440\u0435\u0434\u043F\u043E\u0447\u0442\u0438\u0442\u0435\u043B\u044C\u043D\u043E \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u044C \u0441\u0442\u0430\u043D\u0434\u0430\u0440\u0442\u043D\u0443\u044E \u0431\u0438\u0431\u043B\u0438\u043E\u0442\u0435\u043A\u0443",
-        vocab: "over-engineered (\u043F\u0435\u0440\u0435\u0443\u0441\u043B\u043E\u0436\u043D\u0435\u043D\u043D\u044B\u0439) \xB7 be better off (\u0431\u044B\u0442\u044C \u0432 \u0432\u044B\u0438\u0433\u0440\u044B\u0448\u0435) \xB7 stick with (\u043F\u0440\u0438\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0442\u044C\u0441\u044F) \xB7 leverage (\u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u044C)"
-      }
-    ]
+    vocabInstruction: 'in Russian in parentheses separated by " \xB7 "',
+    anchors: []
   }
 };
+var PROMPT_TARGET_LANGUAGE_NAMES = {
+  en: "English",
+  zh: "Chinese (Simplified)",
+  tw: "Chinese (Traditional)",
+  ja: "Japanese",
+  ko: "Korean",
+  es: "Spanish",
+  fr: "French",
+  de: "German",
+  ru: "Russian",
+  pt: "Portuguese",
+  it: "Italian",
+  vi: "Vietnamese",
+  tr: "Turkish",
+  ar: "Arabic",
+  ms: "Malay"
+};
+function resolveLanguageName(code = "en") {
+  const norm = (code || "en").toLowerCase().split("-")[0];
+  return PROMPT_TARGET_LANGUAGE_NAMES[norm] || code.toUpperCase();
+}
+function interpolatePromptVariables(template, vars) {
+  if (!template || typeof template !== "string") return template;
+  const sCode = (vars.sourceLang || "en").toLowerCase().split("-")[0];
+  const tCode = (vars.targetLang || "en").toLowerCase().split("-")[0];
+  const eCode = (vars.explainLang || sCode).toLowerCase().split("-")[0];
+  const sName = resolveLanguageName(sCode);
+  const tName = resolveLanguageName(tCode);
+  const eName = resolveLanguageName(eCode);
+  return template.replace(/\$\{sourceLang\}/g, sName).replace(/\$\{targetLang\}/g, tName).replace(/\$\{explainLang\}/g, eName).replace(/\$\{sourceLangCode\}/g, sCode).replace(/\$\{targetLangCode\}/g, tCode).replace(/\$\{explainLangCode\}/g, eCode);
+}
+function resolvePromptTargetLangName(sourceLang = "en", targetLang = "ja", promptLang) {
+  if (promptLang && promptLang.trim()) {
+    const clean = promptLang.trim().toLowerCase().split("-")[0];
+    return { code: clean, name: resolveLanguageName(clean) };
+  }
+  const s = (sourceLang || "en").toLowerCase().split("-")[0];
+  const t = (targetLang || "en").toLowerCase().split("-")[0];
+  const outCode = s === "en" ? t : "en";
+  return { code: outCode, name: resolveLanguageName(outCode) };
+}
+var PROMPT_RULE_PRESETS = {
+  concise: "Keep output strictly concise, minimal, and action-oriented. Eliminate all fluff.",
+  spec: "Format output with explicit sections: Objective, Constraints, Edge Cases, and Deliverable.",
+  deep: "Prioritize root-cause tracing, end-to-end flow inspection, and regression boundary checks."
+};
+var DEFAULT_KILL_LIST = [
+  "delve",
+  "tapestry",
+  "seamless",
+  "seamlessly",
+  "robust",
+  "enhance",
+  "streamline",
+  "comprehensive",
+  "in summary",
+  "game-changer",
+  "revolutionize",
+  "unleash",
+  "thrilled to announce",
+  "pivotal",
+  "holistic",
+  "multifaceted"
+];
+function compileKillListInstruction(killList, globalKillList) {
+  const baseGlobal = globalKillList !== void 0 ? globalKillList : DEFAULT_KILL_LIST;
+  const merged = Array.from(
+    new Set([...baseGlobal, ...killList || []].map((w) => w.trim().toLowerCase()).filter(Boolean))
+  );
+  if (merged.length === 0) return "";
+  return `
+
+[KILL LIST - FORBIDDEN AI BUZZWORDS - ZERO TOLERANCE]:
+Strictly forbid using any of the following clich\xE9, artificial, or corporate AI filler words/phrases:
+${merged.map((w) => `\u2022 "${w}"`).join(", ")}.
+Use plain, grounded, authentic developer language instead.`;
+}
+function resolvePromptRulePreset(input) {
+  const key = input.trim().toLowerCase();
+  return PROMPT_RULE_PRESETS[key] || input.trim();
+}
+function normalizePromptRules(rule) {
+  if (!rule) return [];
+  if (Array.isArray(rule)) {
+    return rule.map((r) => resolvePromptRulePreset(String(r || ""))).filter(Boolean);
+  }
+  const s = resolvePromptRulePreset(String(rule));
+  return s ? [s] : [];
+}
 function buildSystemPrompt(sourceLang = "en", targetLang = "ja", isLongInput = false, context, tone = "general", customSlots) {
   const normSource = (sourceLang || "en").toLowerCase().split("-")[0];
   const normTarget = (targetLang || "ja").toLowerCase().split("-")[0];
   const spec = LANGUAGE_SPECS[normSource] || LANGUAGE_SPECS.en;
-  const TARGET_LANGUAGE_NAMES = {
-    en: "English",
-    zh: "Chinese (Simplified)",
-    tw: "Chinese (Traditional)",
-    ja: "Japanese",
-    ko: "Korean",
-    es: "Spanish",
-    fr: "French",
-    de: "German",
-    ru: "Russian",
-    pt: "Portuguese",
-    it: "Italian",
-    vi: "Vietnamese",
-    tr: "Turkish",
-    ar: "Arabic",
-    ms: "Malay"
-  };
-  const targetName = TARGET_LANGUAGE_NAMES[normTarget] || "English";
-  const anchorText = spec.anchors.map(
+  const targetName = resolveLanguageName(normTarget);
+  const shouldInjectAnchors = (normTarget === "en" || normSource === "en") && spec.anchors && spec.anchors.length > 0;
+  const anchorText = shouldInjectAnchors ? spec.anchors.map(
     (a) => `Input: ${JSON.stringify(a.input)}
 Output: ${JSON.stringify({
       spoken: a.spoken,
@@ -738,21 +434,24 @@ Output: ${JSON.stringify({
       written_meaning: a.written_meaning,
       vocab: a.vocab
     })}`
-  ).join("\n\n");
+  ).join("\n\n") : "";
+  const anchorBlock = anchorText ? `
+
+[GOLDEN FEW-SHOT ANCHORS]:
+${anchorText}` : "";
   const condensationDirective = isLongInput ? `
 
 [LONG INPUT CONDENSATION DIRECTIVE]:
 The user's input text has multiple clauses or sentences.
-CRITICAL: You MUST preserve and translate EVERY clause and question from start to finish (both in "summary" and in "spoken"/"written") \u2014 NEVER omit the second half or final question of the user's message!
-Express all points tightly and concisely (under 22 words each) so the complete meaning fits cleanly within 2 lines without truncation.` : "";
+CRITICAL: You MUST preserve and translate EVERY clause and question from start to finish \u2014 NEVER omit any details!
+Express all points concisely so the complete meaning fits cleanly within the HUD without truncation.` : "";
   const contextDirective = context && context.trim() ? `
 
 [CONVERSATION & THREAD CONTEXT]:
-The user's message is a reply to or continuation of the following context (e.g. tweet, thread, issue):
+The user's message is a reply to or continuation of the following context:
 """
 ${context.trim().slice(0, 500)}
-"""
-Ensure the generated spoken and written translations fit naturally as a responsive reply to this specific context, using authentic conversational grounding.` : "";
+"""` : "";
   let toneDirective = "";
   if (tone === "social") {
     toneDirective = `
@@ -784,10 +483,12 @@ Prioritize RFC, Pull Request, and architectural documentation precision:
     const defaultWrittenInst = defaultLocSlots.find((s) => s.id === "written")?.instruction;
     const isCustomSpoken = spokenSlot?.instruction && spokenSlot.instruction !== defaultSpokenInst;
     const isCustomWritten = writtenSlot?.instruction && writtenSlot.instruction !== defaultWrittenInst;
-    const slot1Name = isCustomSpoken ? spokenSlot.label : legacyConfig?.slot1?.name || (tone === "social" ? LEGACY_SLOT_PRESETS.social.slot1.name : defaultSlots.slot1.name);
-    const slot1Instruction = isCustomSpoken ? spokenSlot.instruction : legacyConfig?.slot1?.instruction || (tone === "social" ? LEGACY_SLOT_PRESETS.social.slot1.instruction : defaultSlots.slot1.instruction);
-    const slot2Name = isCustomWritten ? writtenSlot.label : legacyConfig?.slot2?.name || (tone === "social" ? LEGACY_SLOT_PRESETS.social.slot2.name : defaultSlots.slot2.name);
-    const slot2Instruction = isCustomWritten ? writtenSlot.instruction : legacyConfig?.slot2?.instruction || (tone === "social" ? LEGACY_SLOT_PRESETS.social.slot2.instruction : defaultSlots.slot2.instruction);
+    const slot1Name = isCustomSpoken ? spokenSlot.label : legacyConfig?.slot1?.name || defaultSlots.slot1.name;
+    const rawSlot1Instruction = isCustomSpoken ? spokenSlot.instruction : legacyConfig?.slot1?.instruction || defaultSlots.slot1.instruction;
+    const slot1Instruction = interpolatePromptVariables(rawSlot1Instruction, { sourceLang, targetLang, explainLang: sourceLang });
+    const slot2Name = isCustomWritten ? writtenSlot.label : legacyConfig?.slot2?.name || defaultSlots.slot2.name;
+    const rawSlot2Instruction = isCustomWritten ? writtenSlot.instruction : legacyConfig?.slot2?.instruction || defaultSlots.slot2.instruction;
+    const slot2Instruction = interpolatePromptVariables(rawSlot2Instruction, { sourceLang, targetLang, explainLang: sourceLang });
     const jsonFormatHint = isLongInput ? `Strict JSON format:
 {
   "summary": "Concise core intent/question in native ${spec.name} (under 20 words)",
@@ -811,27 +512,25 @@ Translate the user's message from native ${spec.name} (language A) into TWO dist
 2. "spoken_meaning": The exact nuance and meaning of Slot 1 ${spec.meaningInstruction}.
 3. "written" (Slot 2: ${slot2Name}): ${slot2Instruction}
 4. "written_meaning": The exact nuance and meaning of Slot 2 ${spec.meaningInstruction}.
-5. "vocab": Adaptively extract ALL key idiomatic collocations, phrasal verbs, technical idioms, or advanced expressions bridging the user to high-level/native fluency. Do NOT artificially cap at 1-2; extract as many as genuinely beneficial, while keeping each definition concise ${spec.vocabInstruction} to ensure the terminal HUD remains vertically compact.
+5. "vocab": Adaptively extract ALL key idiomatic collocations, phrasal verbs, technical idioms, or advanced expressions bridging the user to high-level/native fluency. Keep definitions concise ${spec.vocabInstruction}.
 
 [CODE & SYMBOL SHIELD - STRICT RULE]:
 All inline code (\`foo()\`), file paths (@file, path/to/file), CLI flags, UUIDs, and (...) placeholders MUST be preserved 100% verbatim in both spoken and written outputs. Never translate, rephrase, or drop code tokens. CRITICAL: NEVER expand, hallucinate, or fabricate file paths, UUIDs, or timestamps not explicitly in the user's input.
-${condensationDirective}${contextDirective}${toneDirective}
-
-[GOLDEN FEW-SHOT ANCHORS]:
-${anchorText}
+${condensationDirective}${contextDirective}${toneDirective}${anchorBlock}${compileKillListInstruction(void 0, DEFAULT_KILL_LIST)}
 
 ${jsonFormatHint}
 Output valid JSON ONLY. Never output markdown code fences, backticks, quotes, or explanations.`;
   }
   const enabledSlots = customSlots.filter((s) => s.enabled && s.role !== "source");
-  let taskLines = [];
-  let jsonProps = [];
+  const taskLines = [];
+  const jsonProps = [];
   if (isLongInput) {
     jsonProps.push(`  "summary": "Concise core intent/question in native ${spec.name} (under 20 words)"`);
   }
   enabledSlots.forEach((slot, idx) => {
     const num = idx + 1;
-    const instruction = slot.instruction || `Express the message in ${slot.label} style in authentic ${targetName}.`;
+    const rawInstruction = slot.instruction || `Express the message in ${slot.label} style in authentic ${targetName}.`;
+    const instruction = interpolatePromptVariables(rawInstruction, { sourceLang, targetLang, explainLang: sourceLang });
     taskLines.push(`${num}. "${slot.id}" (${slot.label}): ${instruction}`);
     jsonProps.push(`  "${slot.id}": "..."`);
     if (slot.showMeaning && slot.role !== "vocab") {
@@ -850,55 +549,11 @@ Translate the user's message from native ${spec.name} (language A) into the foll
 ${dynamicTasks}
 
 [CODE & SYMBOL SHIELD - STRICT RULE]:
-All inline code (\`foo()\`), file paths (@file, path/to/file), CLI flags, UUIDs, and (...) placeholders MUST be preserved 100% verbatim in all outputs. Never translate, rephrase, or drop code tokens. CRITICAL: NEVER expand, hallucinate, or fabricate file paths, UUIDs, or timestamps not explicitly in the user's input.
-${condensationDirective}${contextDirective}${toneDirective}
-
-[GOLDEN FEW-SHOT ANCHORS]:
-${anchorText}
+All inline code (\`foo()\`), file paths (@file, path/to/file), CLI flags, UUIDs, and (...) placeholders MUST be preserved 100% verbatim in all outputs. Never translate, rephrase, or drop code tokens.
+${condensationDirective}${contextDirective}${toneDirective}${anchorBlock}${compileKillListInstruction(void 0, DEFAULT_KILL_LIST)}
 
 ${dynamicJsonHint}
 Output valid JSON ONLY. Never output markdown code fences, backticks, quotes, or explanations.`;
-}
-var PROMPT_TARGET_LANGUAGE_NAMES = {
-  en: "English",
-  zh: "Chinese (Simplified)",
-  tw: "Chinese (Traditional)",
-  ja: "Japanese",
-  ko: "Korean",
-  es: "Spanish",
-  fr: "French",
-  de: "German",
-  ru: "Russian",
-  pt: "Portuguese",
-  it: "Italian"
-};
-function resolvePromptTargetLangName(sourceLang = "en", targetLang = "ja", promptLang) {
-  const normSource = (sourceLang || "en").toLowerCase().split("-")[0];
-  const normTarget = (targetLang || "ja").toLowerCase().split("-")[0];
-  const raw = (promptLang || "").trim().toLowerCase();
-  const code = !raw || raw === "default" || raw === "auto" ? normTarget : raw === "native" || raw === "source" || raw === "\u6BCD\u8BED" ? normSource : raw.split("-")[0];
-  return {
-    code,
-    name: PROMPT_TARGET_LANGUAGE_NAMES[code] || "English"
-  };
-}
-var PROMPT_RULE_PRESETS = {
-  minimal: "Follow the Smallest Working Diff principle; never refactor or touch unrelated code.",
-  "root-cause": "Trace the end-to-end execution flow to fix the shared root cause rather than applying surface symptom patches.",
-  tdd: "Verify boundary edge cases and run physical tests before declaring completion.",
-  "explain-zh": "Keep code and identifiers exact, and provide all explanations and analysis in Chinese."
-};
-function resolvePromptRulePreset(input) {
-  const key = input.trim().toLowerCase();
-  return PROMPT_RULE_PRESETS[key] || input.trim();
-}
-function normalizePromptRules(rule) {
-  if (!rule) return [];
-  if (Array.isArray(rule)) {
-    return rule.map((r) => resolvePromptRulePreset(String(r || ""))).filter(Boolean);
-  }
-  const s = resolvePromptRulePreset(String(rule));
-  return s ? [s] : [];
 }
 function buildDirectRewriteSystemPrompt(options) {
   const normSource = (options.sourceLang || "en").toLowerCase().split("-")[0];
@@ -922,21 +577,19 @@ ${rules.map((r, i) => `(${i + 1}) ${r}`).join("\n")}` : "";
 }` : `{
   "prompt": "..."
 }`;
-  const anchorBlock = normSource === "zh" || normSource === "tw" ? `[GOLDEN FEW-SHOT ANCHORS (Target: ${outLangName})]:
-- Input: "\u90A3\u4E2A\u767B\u5F55\u5237\u65B0\u4E00\u4E0B\u5C31\u6389\u7EBF\uFF0C\u5E2E\u6211\u770B\u770B\u662F\u4E0D\u662F src/auth.ts \u91CC cookie \u8FC7\u671F\u65F6\u95F4\u5199\u9519\u4E86\uFF0C\u522B\u4E71\u6539\u522B\u7684\u5730\u65B9"
-  Output in ${outLangName}: "Inspect \`src/auth.ts\` to diagnose and fix session loss on page refresh, specifically checking cookie expiration settings while keeping the diff minimal and leaving unrelated code untouched."` : `[GOLDEN FEW-SHOT ANCHORS (Target: ${outLangName})]:
+  const anchorBlock = outLangName === "English" ? `[GOLDEN FEW-SHOT ANCHORS (Target: ${outLangName})]:
 - Input: "The login session drops on page refresh, check if cookie expiration in src/auth.ts is wrong, keep diff minimal"
-  Output in ${outLangName}: "Inspect \`src/auth.ts\` to diagnose and fix session loss on page refresh, specifically checking cookie expiration settings while keeping the diff minimal and leaving unrelated code untouched."`;
+  Output in ${outLangName}: "Inspect \`src/auth.ts\` to diagnose and fix session loss on page refresh, specifically checking cookie expiration settings while keeping the diff minimal and leaving unrelated code untouched."` : "";
   return `You are an elite AI Coding Prompt Architect.
 The user is typing a raw, potentially messy, colloquial, or fragmented instruction for an AI coding agent.
 Rewrite, structure, standardize, and optimize their input into a high-efficiency, unambiguous engineering prompt in **${outLangName}**:
 1. **Direct Imperative Opening (Smart Verb Sniffing)**: Start immediately with an active imperative engineering verb. Accurately map vague conversational intents to sharp, specific engineering actions (e.g., "look into / check / \u770B\u770B / \u6392\u67E5" \u2794 "Inspect" / "Diagnose" / "Trace"; "clean up / tweak / \u6539\u6539 / \u91CD\u6784" \u2794 "Refactor" / "Streamline" / "Harden"; "add / create / \u52A0\u4E0A / \u505A\u4E2A" \u2794 "Implement" / "Scaffold" / "Wire up"; "remove / drop / \u5220\u6389" \u2794 "Prune" / "Deprecate" / "Strip"; "fix / \u641E\u597D" \u2794 "Fix" / "Resolve"). NEVER use robotic preambles like "As an expert software engineer, please comprehensively..." or "I would like you to...".
 2. **100% Intent Fidelity (Zero Hallucination)**: Clarify logic and sharpen terminology in **${outLangName}**, but NEVER invent unmentioned file names, libraries, or speculative requirements.
 3. **Proportional Density**: Keep short requests crisp (1\u20132 sentences); structure multi-constraint requests into clean clauses.
-4. **Code-Switch & CLI Flag Shield**: Preserve all CLI flags (e.g. \`--dry-run\`, \`-rf\`, \`--no-verify\`), package scopes/decorators (e.g. \`@scope/pkg\`, \`@ts-expect-error\`), inline code (\`foo()\`), file paths (@file, path/to/file), and identifiers 100% verbatim. NEVER translate or alter CLI flags (e.g. never translate '--dry-run' into words).${learnBlock}${customRuleBlock}
-
+4. **Code-Switch & CLI Flag Shield**: Preserve all CLI flags (e.g. \`--dry-run\`, \`-rf\`, \`--no-verify\`), package scopes/decorators (e.g. \`@scope/pkg\`, \`@ts-expect-error\`), inline code (\`foo()\`), file paths (@file, path/to/file), and identifiers 100% verbatim. NEVER translate or alter CLI flags (e.g. never translate '--dry-run' into words).${learnBlock}${customRuleBlock}${compileKillListInstruction(void 0, DEFAULT_KILL_LIST)}
+${anchorBlock ? `
 ${anchorBlock}
-
+` : ""}
 Strict JSON format:
 ${jsonSchema}
 Output valid JSON ONLY. Never output markdown code fences or explanations.`;
@@ -949,9 +602,8 @@ function buildPromptCandidatesSystemPrompt(options) {
     options.promptLang
   );
   const spec = LANGUAGE_SPECS[normSource] || LANGUAGE_SPECS.en;
-  const slots = (Array.isArray(options.promptSlots) && options.promptSlots.length > 0 ? options.promptSlots : getDefaultPromptSlots(normSource)).filter((s) => s.enabled !== false);
-  const activeSlots = slots.length > 0 ? slots : getDefaultPromptSlots(normSource);
-  const taskLines = activeSlots.map((s, idx) => {
+  const slots = (Array.isArray(options.promptSlots) && options.promptSlots.length > 0 ? options.promptSlots : getDefaultPromptSlots(normSource)).filter((s) => s.enabled !== false && s.role !== "source");
+  const taskLines = slots.map((s, idx) => {
     if (s.role === "vocab") {
       return `${idx + 1}. "${s.id}" (${s.label}): ${s.instruction || "Extract 2-3 high-value authentic technical expressions or collocations relevant to the input."} ${spec.vocabInstruction}`;
     }
@@ -959,10 +611,16 @@ function buildPromptCandidatesSystemPrompt(options) {
     const langSuffix = hasCustomLangDirective ? "" : ` (Default language: **${outLangName}** unless instruction specifies otherwise)`;
     return `${idx + 1}. "${s.id}" (${s.label}): ${s.instruction}${langSuffix}`;
   });
-  const jsonProps = activeSlots.map((s) => `  "${s.id}": "..."`);
-  if (options.learnInRewrite && !activeSlots.some((s) => s.role === "vocab")) {
+  const jsonProps = [];
+  slots.forEach((s) => {
+    jsonProps.push(`  "${s.id}": "..."`);
+    if (s.showMeaning && s.role !== "vocab") {
+      jsonProps.push(`  "${s.id}_meaning": "..."`);
+    }
+  });
+  if (options.learnInRewrite && !slots.some((s) => s.role === "vocab")) {
     taskLines.push(
-      `${activeSlots.length + 1}. "vocab": Extract 2\u20133 high-value authentic English technical expressions or collocations relevant to this prompt as a single inline string \`term (meaning) \xB7 term2 (meaning)\` ${spec.vocabInstruction}.`
+      `${slots.length + 1}. "vocab": Extract 2\u20133 high-value authentic technical expressions or collocations relevant to this prompt as a single inline string \`term (meaning) \xB7 term2 (meaning)\` ${spec.vocabInstruction}.`
     );
     jsonProps.push(`  "vocab": "term1 (...) \xB7 term2 (...)"`);
   }
@@ -973,14 +631,14 @@ function buildPromptCandidatesSystemPrompt(options) {
 Ensure every generated candidate incorporates the following user-specified condition(s):
 ${rules.map((r, i) => `(${i + 1}) ${r}`).join("\n")}` : "";
   return `You are an elite Bilingual Translation & Prompt Architect.
-Transform the user's raw input into ${activeSlots.length} distinct output slots strictly following each slot's specific instruction and target language:
+Transform the user's raw input into ${slots.length} distinct output slots strictly following each slot's specific instruction and target language:
 ${taskLines.join("\n")}
 
 [STRICT QUALITY GUARDRAILS]:
 - **100% Semantic Fidelity**: Translate or refine EVERY sentence, clause, and detail from the user's input from start to finish. NEVER summarize, truncate, or drop details unless a slot explicitly asks for condensation.
-- **Respect Slot Role & Register**: If a slot asks for spoken/colloquial translation, output natural spoken flow; if it asks for formal/written translation, output polished written prose; if it asks for prompt structuring, structure it cleanly without robotic AI filler ("As an AI...", "Please kindly...").
+- **Respect Slot Role & Register**: If a slot asks for spoken/colloquial translation, output natural spoken flow; if it asks for formal/written translation, output polished written prose; if it asks for prompt structuring, structure it cleanly without robotic AI filler.
 - **Zero Hallucination**: Never invent unmentioned files, bug reports, or speculative features.
-- **Code & Symbol Shield**: Preserve all CLI flags (e.g. \`--dry-run\`, \`-rf\`, \`--no-verify\`), package scopes/decorators (e.g. \`@scope/pkg\`, \`@ts-expect-error\`), inline code (\`foo()\`), file paths (@file, path/to/file), and technical identifiers 100% verbatim in every slot. NEVER translate or drop flags.${customRuleBlock}
+- **Code & Symbol Shield**: Preserve all CLI flags (e.g. \`--dry-run\`, \`-rf\`, \`--no-verify\`), package scopes/decorators, inline code, file paths, and technical identifiers 100% verbatim in every slot.${customRuleBlock}
 
 Strict JSON format:
 {
@@ -991,61 +649,289 @@ Output valid JSON ONLY. Never output markdown code fences or explanations.`;
 function buildModifySystemPrompt(options) {
   const normSource = (options.sourceLang || "en").toLowerCase().split("-")[0];
   const expNorm = (options.explainLang || normSource).toLowerCase().split("-")[0];
-  const { name: outLangName } = resolvePromptTargetLangName(
+  const { code: outLangCode, name: outLangName } = resolvePromptTargetLangName(
     options.sourceLang || "en",
     options.targetLang || "en",
     options.promptLang
   );
-  const explainLangDesc = expNorm === "zh" ? "Explain the takeaway in concise Chinese (e.g. 'in X \u2794 on X: \u7F51\u7EDC\u5E73\u53F0\u4E00\u5F8B\u7528 on \xB7 want that you \u2794 want you to: \u4E60\u60EF\u7528 want [sb] to')." : expNorm === "ja" ? "Explain the takeaway in concise Japanese (e.g. 'in X \u2794 on X: \u30D7\u30E9\u30C3\u30C8\u30D5\u30A9\u30FC\u30E0\u306F\u5E38\u306B on \xB7 want that you \u2794 want you to: want [\u4EBA] to \u306E\u69CB\u6587')." : expNorm === "ko" ? "Explain the takeaway in concise Korean." : "Explain the takeaway in concise, simple English.";
-  return `You are an elite Developer Language Editor and Real-Time Proofreader.
-The user is writing directly in ${outLangName}, but their draft may contain fast typing slips, grammatical errors, wrong prepositions, or non-native phrasing.
-Perform two distinct tiers of proofreading:
-
-1. "fixed": **Smallest Working Diff (Surgical Repair)**.
-   Surgically fix ONLY typos, misspellings, syntax structure (e.g. clause connectors like 'want that you can' \u2794 'want you to'), wrong prepositions/articles (e.g. 'in X' \u2794 'on X', 'as I'm' \u2794 'as if I'm'), and grammatical slips that hinder clarity.
-   CRITICAL RULES:
-   - **Zero Level Leap (\u6C34\u5E73\u7EDD\u4E0D\u8DC3\u8FC1 / i+1 Rule)**: STRICTLY match the user's current vocabulary tier and tone! If user writes everyday dev or junior-high level English, do NOT artificially inflate it into university academic GRE/SAT prose or bureaucratic corporate fluff. Fix the joints and syntax, but NEVER replace their words with alien SAT vocabulary!
-   - **Zero Tone Sanitization**: NEVER sanitize, censor, or tone down raw emotion, swear words, or informal venting (e.g. 'fuck', 'suck', 'shit', 'idiot', 'damn'). Passion and emotional intensity are completely normal and human\u2014preserve them 100%!
-   - **Zero Punctuation/Casing Nitpicking**: Do NOT obsess over casual casing (e.g. 'l' vs 'L') or missing final periods/commas ('.', ',') if the user writes in lowercase. Focus strictly on actual word typos and structural clarity.
-   - 100% preserve the user's original word choices, sentence structure, and cadence! The user must immediately recognize it as their own sentence and be able to send it with zero hesitation. Do NOT turn it into an alien sentence.
-
-2. "native": **Idiomatic Native Sibling**.
-   Provide a natural, idiomatic native phrasing expressing the exact same intent.
-   CRITICAL: Keep the gap between "fixed" and "native" small and realistic\u2014do NOT jump vocabulary tiers, do NOT write an alien essay, and do NOT delete their personality and emotion.
-
-3. "fixes": Extract 1-3 essential takeaways covering: (1) Syntax structure (\u53E5\u6CD5), (2) Word choice & collocations (\u7528\u8BCD\u642D\u914D), and (3) Grammar slips.
-   ${explainLangDesc}
-
-[GOLDEN FEW-SHOT ANCHORS (Target: ${outLangName})]:
+  const explainName = resolveLanguageName(expNorm);
+  const explainLangDesc = `Explain each takeaway following the 3-Second Glanceability Rule strictly in the format: 'before \u2794 after (<= 10 words/chars grounded intuition in ${explainName})'.`;
+  let linguisticProfile = "";
+  if (outLangCode === "zh" || outLangCode === "tw") {
+    linguisticProfile = `
+[TARGET-LANGUAGE LINGUISTIC PROFILE: CHINESE]:
+- Eliminate awkward English-style stacked relative clauses.
+- Trim redundant pronouns and restore natural Chinese subject-omission flow.
+- Fix measure words and verb-object collocations.
+- Distinguish pragmatic distance: use respectful honorifics vs natural peer flow.`;
+  } else if (outLangCode === "ja") {
+    linguisticProfile = `
+[TARGET-LANGUAGE LINGUISTIC PROFILE: JAPANESE]:
+- Fix particles (\u52A9\u8A5E: \u306F, \u304C, \u3092, \u306B, \u3067) and natural verb-predicate dependencies.
+- Maintain pragmatic consistency between casual team conversation and polite business context.`;
+  } else {
+    linguisticProfile = `
+[TARGET-LANGUAGE LINGUISTIC PROFILE: ENGLISH]:
+- Fix prepositions (websites/platforms take 'on': 'on X', 'on GitHub', 'on Slack'), articles ('a' vs 'an'), and verb tenses.
+- Zero casing/punctuation nitpicking: do NOT obsess over casual lowercase letters ('l' vs 'L') or missing trailing periods.`;
+  }
+  const rawSlots = options.promptSlots || options.customSlots;
+  const slots = (Array.isArray(rawSlots) && rawSlots.length > 0 ? rawSlots : getDefaultModifySlots(options.sourceLang, options.explainLang)).filter((s) => s.enabled !== false && s.role !== "source");
+  const taskLines = slots.map((s, idx) => {
+    const num = idx + 1;
+    if (s.role === "vocab" || s.id === "fixes") {
+      return `${num}. "${s.id}" (${s.label}): ${s.instruction || explainLangDesc}`;
+    }
+    return `${num}. "${s.id}" (${s.label}): ${s.instruction}`;
+  });
+  const jsonProps = [];
+  slots.forEach((s) => {
+    jsonProps.push(`  "${s.id}": "..."`);
+    if (s.showMeaning && s.role !== "vocab") {
+      jsonProps.push(`  "${s.id}_meaning": "..."`);
+    }
+  });
+  const anchorBlock = outLangCode === "en" ? `[GOLDEN FEW-SHOT ANCHORS (Target: ${outLangName})]:
 - Input: "this fucking bug happan again in X, it just suck so hard"
   Output: {
     "fixed": "this fucking bug happen again on X, it just sucks so hard",
     "native": "this fucking bug happened again on X, it honestly sucks so bad",
-    "fixes": "happan \u2794 happen \xB7 in X \u2794 on X \xB7 suck \u2794 sucks"
-  }
-- Input: "test more. I don't want it happan again"
-  Output: {
-    "fixed": "Add more tests. I don't want it to happen again.",
-    "native": "Add more tests. I want to make sure this never happens again.",
-    "fixes": "happan \u2794 happen \xB7 test more \u2794 add more tests"
-  }
-- Input: "what I meant is that you have to work as I'm a amercian dev, because I want to market my projects in X in english. and I want that you can treat other language including chinese fairely. so? can you feel me"
-  Output: {
-    "fixed": "What I meant is that you have to work as if I'm an American dev, because I want to market my projects on X in English. And I want that you can treat other languages including Chinese fairly. So? Can you feel me?",
-    "native": "What I mean is, you need to work as if I'm an American dev, because I want to market my projects on X in English. And I want you to treat other languages including Chinese fairly. So, do you get me?",
-    "fixes": "as I'm \u2794 as if I'm \xB7 in X \u2794 on X \xB7 other language \u2794 other languages \xB7 amercian \u2794 American"
-  }
+    "fixes": "happan \u2794 happen \xB7 in X \u2794 on X (platforms take on) \xB7 suck \u2794 sucks"
+  }` : "";
+  return `You are an elite Developer Language Editor and Real-Time Proofreader.
+The user is writing directly in ${outLangName}, but their draft may contain fast typing slips, grammatical errors, wrong prepositions, or non-native phrasing.
+Perform proofreading according to the following tasks:
+${taskLines.join("\n")}
 
+[CRITICAL PROOFREADING RULES]:
+- **Zero Level Leap (i+1 Rule)**: Match user's natural vocabulary tier; do NOT artificially inflate everyday dev text into academic prose.
+- **Zero Tone Sanitization**: NEVER censor swear words or raw emotions (e.g. 'fuck', 'suck', 'shit')\u2014passion and emotional heat are natural and MUST be preserved 100%!
+- **Zero Punctuation/Casing Nitpicking**: Do NOT obsess over casual casing or missing periods.
+- 100% preserve user's original words, rhythm, and cadence!${linguisticProfile}
+${anchorBlock ? `
+${anchorBlock}
+` : ""}
 Strict JSON format:
 {
-  "fixed": "...",
-  "native": "...",
-  "fixes": "..."
+${jsonProps.join(",\n")}
 }
 Output valid JSON ONLY. Never output markdown code fences or explanations.`;
 }
 
 // src/presets.ts
+function getDefaultFactoryModes(sourceLang = "en", explainLang) {
+  const norm = (sourceLang || "en").toLowerCase().split("-")[0];
+  const isZh = norm === "zh" || norm === "tw";
+  const isJa = norm === "ja";
+  const directName = isZh ? "\u89C4\u8303\u76F4\u53D1" : isJa ? "\u4ED5\u69D8\u76F4\u884C" : "Logical Spec";
+  const liveFlowName = isZh ? "\u5B9E\u6218\u72C2\u98D9" : isJa ? "\u5B9F\u6226\u75BE\u8D70" : "Live Flow";
+  const vocabName = isZh ? "\u6838\u5FC3\u8868\u8FBE" : isJa ? "\u91CD\u8981\u8868\u73FE" : "Key Terms";
+  const fixedName = isZh ? "\u539F\u53E5\u4FEE\u8865" : isJa ? "\u539F\u6587\u4FEE\u6B63" : "Fixed";
+  const nativeName = isZh ? "\u5730\u9053\u8868\u8FBE" : isJa ? "\u81EA\u7136\u8868\u73FE" : "Native";
+  const takeawayName = isZh ? "\u6536\u83B7\u590D\u76D8" : isJa ? "\u91CD\u8981\u30DD\u30A4\u30F3\u30C8" : "Takeaways";
+  return [
+    {
+      id: "direct",
+      name: directName,
+      aliases: ["lazy"],
+      flow: "translate",
+      action: "transform",
+      hud: "preview",
+      reasoning: "low",
+      slots: [
+        {
+          id: "direct_spec",
+          label: directName,
+          role: "rewrite",
+          instruction: "Target Language: ${targetLang}. Strictly output in ${targetLang} ONLY: Translate and restructure user's raw, colloquial, or fragmented thoughts from ${sourceLang} into a clear, imperative, high-precision engineering instruction for an AI coding agent. Start directly with an active imperative verb (e.g. 'Inspect', 'Refactor', 'Implement', 'Fix', 'Trace'), eliminate conversational filler, preserve all code tokens, file paths, and CLI flags 100% verbatim, and strictly avoid hallucinations.",
+          enabled: true
+        },
+        {
+          id: "vocab",
+          label: vocabName,
+          role: "vocab",
+          instruction: "Extract 2-3 high-value idiomatic ${targetLang} technical expressions relevant to this instruction following the 3-Second Glanceability Rule: 'term (${explainLang} meaning) \xB7 term2 (...)'.",
+          enabled: true
+        }
+      ],
+      enabled: true
+    },
+    {
+      id: "live-flow",
+      name: liveFlowName,
+      aliases: ["raw"],
+      flow: "proofread",
+      action: "transform",
+      hud: "adaptive-takeaway",
+      reasoning: "low",
+      slots: [
+        {
+          id: "fixed",
+          label: fixedName,
+          role: "rewrite",
+          instruction: "Target Language: ${targetLang}. Strictly output in ${targetLang} ONLY: Surgically correct ONLY spelling mistakes, fast typos, syntax structure (e.g. 'want that you can' \u2794 'want you to'), wrong prepositions/articles, and grammatical slips in the user's ${targetLang} sentence. CRITICAL RULES: (1) Zero Level Leap (i+1 Rule): Match user's natural vocabulary tier; do NOT artificially inflate everyday dev text into academic prose. (2) Zero Tone Sanitization: NEVER censor swear words or raw emotions (e.g. 'fuck', 'suck', 'shit')\u2014passion and emotional heat are natural and MUST be preserved 100%! (3) Zero Punctuation/Casing Nitpicking. (4) 100% preserve original words and cadence.",
+          hideWhenLong: true,
+          enabled: true
+        },
+        {
+          id: "native",
+          label: nativeName,
+          role: "rewrite",
+          instruction: "Target Language: ${targetLang}. Strictly output in ${targetLang} ONLY: Provide a natural, idiomatic native phrasing expressing the exact same intent without level-leaping.",
+          hideWhenLong: true,
+          enabled: true
+        },
+        {
+          id: "fixes",
+          label: takeawayName,
+          role: "vocab",
+          instruction: "Extract 1-3 essential takeaways in the format: 'before \u2794 after (<= 10 words/chars grounded intuition in ${explainLang})'.",
+          enabled: true
+        }
+      ],
+      enabled: true
+    }
+  ];
+}
+var PRESET_LOADOUTS = {
+  spec: {
+    id: "spec",
+    name: "Brain-Dump to Spec",
+    description: "Transforms unstructured thoughts into clear Objective, Constraints, Edge Cases, and Do Not Touch clauses for agent plan mode",
+    loadout: (sourceLang = "en", _explainLang) => ({
+      id: "spec",
+      name: sourceLang === "zh" ? "\u8111\u66B4\u538B\u94F8" : sourceLang === "ja" ? "\u4ED5\u69D8\u92F3\u9020" : "Brain-Dump Spec",
+      flow: "translate",
+      action: "transform",
+      hud: "preview",
+      target: "agent",
+      reasoning: "medium",
+      killList: ["make it fast", "handle errors properly", "delve", "seamless", "robust"],
+      slots: [
+        {
+          id: "spec",
+          label: "Spec",
+          role: "rewrite",
+          instruction: "Target Language: ${targetLang}. Strictly output in ${targetLang} ONLY: Restructure user's raw thoughts from ${sourceLang} into structured engineering specification for an AI coding agent with explicit sections: Objective, Constraints, Edge Cases, and Do Not Touch modules. Use rigorous system architecture terms (e.g. idempotency, dead-letter queue, exponential backoff, rollback). NEVER invent unmentioned architectural features.",
+          enabled: true
+        },
+        {
+          id: "vocab",
+          label: "Arch Terms",
+          role: "vocab",
+          instruction: "Extract 2-3 key architectural term mappings with explanations in ${explainLang}.",
+          enabled: true
+        }
+      ],
+      enabled: true
+    })
+  },
+  commit: {
+    id: "commit",
+    name: "Commit Dehydrator",
+    description: "Extracts git diff and intent into conventional commits format (first line <=50 chars, imperative verb, Root Cause & Impact body)",
+    loadout: (sourceLang = "en", _explainLang) => ({
+      id: "commit",
+      name: sourceLang === "zh" ? "\u63D0\u4EA4\u8131\u6C34" : sourceLang === "ja" ? "\u30B3\u30DF\u30C3\u30C8\u8131\u6C34" : "Commit Dehydrator",
+      flow: "translate",
+      action: "transform",
+      hud: "preview",
+      target: "clipboard",
+      reasoning: "low",
+      contextAware: true,
+      killList: ["enhance", "robust", "seamless", "streamline", "comprehensive", "This PR aims to", "in summary"],
+      slots: [
+        {
+          id: "commit",
+          label: "Commit",
+          role: "rewrite",
+          instruction: "Target Language: ${targetLang}. Strictly output in ${targetLang} ONLY: Generate strict Conventional Commits format (e.g. 'fix(scope): ...' or 'feat(scope): ...'). First line MUST be <= 50 characters starting directly with an imperative active verb (e.g. 'Prevent', 'Clear', 'Guard against', 'Handle'). Body must state strictly Root Cause and Impact without AI filler.",
+          enabled: true
+        },
+        {
+          id: "vocab",
+          label: "Git Verbs",
+          role: "vocab",
+          instruction: "Highlight the imperative Git verb replacement and rationale in ${explainLang}.",
+          enabled: true
+        }
+      ],
+      enabled: true
+    })
+  },
+  oss: {
+    id: "oss",
+    name: "OSS Peer Comms",
+    description: "Transforms blunt feedback or bug reports into peer-level, objective, non-defensive GitHub issue/PR comments (nit, blocker, repro)",
+    loadout: (sourceLang = "en", _explainLang) => ({
+      id: "oss",
+      name: sourceLang === "zh" ? "\u5F00\u6E90\u5BF9\u7EBF" : sourceLang === "ja" ? "OSS\u5BFE\u8A71" : "OSS Peer Comms",
+      flow: "translate",
+      action: "transform",
+      hud: "tree",
+      target: "clipboard",
+      reasoning: "low",
+      killList: ["Sorry for my bad English", "Thank you so much for your kind review", "I would really appreciate it if", "delve"],
+      slots: [
+        {
+          id: "peer_review",
+          label: "Peer Comms",
+          role: "rewrite",
+          instruction: "Target Language: ${targetLang}. Strictly output in ${targetLang} ONLY: Transform user's technical argument or critique from ${sourceLang} into objective, peer-level engineering communication. Erase self-deprecation (never say 'sorry for poor english') and personal blame. Inject natural GitHub maintainer idioms (e.g. 'nit:', 'under contention', 'race condition', 'idiomatic', 'repro:').",
+          enabled: true
+        },
+        {
+          id: "vocab",
+          label: "Peer Idioms",
+          role: "vocab",
+          instruction: "Extract 1-2 diplomatic peer engineering expressions in ${explainLang}.",
+          enabled: true
+        }
+      ],
+      enabled: true
+    })
+  },
+  yap: {
+    id: "yap",
+    name: "Indie Hacker Shipper",
+    description: "Distills technical builds into cold, high-density Indie Hacker tech posts (<280 chars) for X and HN with 0 emojis and 0 corporate hype",
+    loadout: (sourceLang = "en", _explainLang) => ({
+      id: "yap",
+      name: sourceLang === "zh" ? "\u6781\u5BA2\u53D1\u63A8" : sourceLang === "ja" ? "\u767A\u4FE1\u6295\u7A3F" : "Indie Shipper",
+      flow: "translate",
+      action: "transform",
+      hud: "tree",
+      target: "clipboard",
+      reasoning: "low",
+      killList: ["\u{1F680}", "\u{1F525}", "\u2728", "\u{1F9F5}", "Excited to announce", "Game-changer", "Revolutionize", "Unleash", "delve", "tapestry"],
+      slots: [
+        {
+          id: "tweet",
+          label: "Post",
+          role: "rewrite",
+          instruction: "Target Language: ${targetLang}. Strictly output in ${targetLang} ONLY: Generate cold, high-density developer post under 280 characters. Structure: Pain (what sucked before) \u2794 What was built (one-line solution) \u2794 Under the hood (concrete technical mechanism). Zero emoji spam, zero marketing hype, direct developer voice.",
+          enabled: true
+        },
+        {
+          id: "vocab",
+          label: "Dev Slang",
+          role: "vocab",
+          instruction: "Extract 1-2 authentic developer phrasing alternatives in ${explainLang}.",
+          enabled: true
+        }
+      ],
+      enabled: true
+    })
+  }
+};
+function getPresetLoadout(id, sourceLang = "en", explainLang) {
+  const normId = id.trim().toLowerCase();
+  const found = PRESET_LOADOUTS[normId];
+  return found ? found.loadout(sourceLang, explainLang) : null;
+}
+function listPresetLoadouts() {
+  return Object.values(PRESET_LOADOUTS);
+}
 function createCustomSlot(params) {
   const normId = params.id.trim().toLowerCase();
   const role = params.role || (normId === "source" ? "source" : normId === "vocab" ? "vocab" : "translation");
@@ -1053,8 +939,9 @@ function createCustomSlot(params) {
     id: normId,
     label: params.label.trim(),
     role,
-    instruction: params.instruction?.trim() || (role === "source" ? void 0 : "Natural, authentic expressions matching requested context."),
+    instruction: params.instruction?.trim() || (role === "source" ? void 0 : "Natural expressions matching context."),
     showMeaning: params.showMeaning !== void 0 ? params.showMeaning : role !== "source" && role !== "vocab",
+    hideWhenLong: Boolean(params.hideWhenLong),
     enabled: params.enabled !== void 0 ? params.enabled : true
   };
 }
@@ -1091,74 +978,107 @@ function moveSlotInList(slots, slotId, targetIndex) {
   copy.splice(targetIndex, 0, removed);
   return copy;
 }
+function addCustomMode(modes, newMode) {
+  const normId = newMode.id.trim().toLowerCase();
+  const existingIndex = modes.findIndex((m) => m.id.toLowerCase() === normId);
+  const modeNormalized = {
+    ...newMode,
+    id: normId,
+    name: newMode.name?.trim() || normId,
+    flow: newMode.flow || "translate",
+    action: newMode.action || "transform",
+    hud: newMode.hud || "preview",
+    slots: Array.isArray(newMode.slots) ? newMode.slots : [],
+    enabled: newMode.enabled !== void 0 ? newMode.enabled : true
+  };
+  if (existingIndex >= 0) {
+    const copy = [...modes];
+    copy[existingIndex] = modeNormalized;
+    return copy;
+  }
+  return [...modes, modeNormalized];
+}
+function removeCustomMode(modes, modeId) {
+  const normId = modeId.trim().toLowerCase();
+  return modes.filter((m) => m.id.toLowerCase() !== normId);
+}
+function updateCustomMode(modes, modeId, patch) {
+  const normId = modeId.trim().toLowerCase();
+  return modes.map((m) => m.id.toLowerCase() === normId ? { ...m, ...patch } : m);
+}
+function toggleCustomMode(modes, modeId) {
+  const normId = modeId.trim().toLowerCase();
+  return modes.map((m) => m.id.toLowerCase() === normId ? { ...m, enabled: !m.enabled } : m);
+}
+function addSlotToMode(modes, modeId, slot) {
+  const normModeId = modeId.trim().toLowerCase();
+  const normSlotId = slot.id.trim().toLowerCase();
+  return modes.map((m) => {
+    if (m.id.toLowerCase() !== normModeId) return m;
+    const existingIdx = m.slots.findIndex((s) => s.id.toLowerCase() === normSlotId);
+    let newSlots;
+    if (existingIdx >= 0) {
+      newSlots = [...m.slots];
+      newSlots[existingIdx] = { ...slot, id: normSlotId };
+    } else {
+      newSlots = [...m.slots, { ...slot, id: normSlotId }];
+    }
+    return { ...m, slots: newSlots };
+  });
+}
+function removeSlotFromMode(modes, modeId, slotId) {
+  const normModeId = modeId.trim().toLowerCase();
+  const normSlotId = slotId.trim().toLowerCase();
+  return modes.map((m) => {
+    if (m.id.toLowerCase() !== normModeId) return m;
+    return { ...m, slots: m.slots.filter((s) => s.id.toLowerCase() !== normSlotId) };
+  });
+}
 var SLOT_PRESETS = {
   developer: {
     name: "Developer",
     description: "Standard agile collaboration: Spoken + Written + Vocab",
-    slots: (sourceLang = "en") => {
-      const isZh = sourceLang === "zh" || sourceLang === "tw";
-      const isJa = sourceLang === "ja";
-      return [
-        { id: "source", label: isZh ? "\u539F\u6587" : isJa ? "\u539F\u6587" : "Source", role: "source", enabled: true },
-        { id: "spoken", label: isZh ? "\u53E3\u8BED" : isJa ? "\u53E3\u8A9E" : "Spoken", role: "translation", instruction: "Natural, fluent spoken flow (daily standup, Slack, agile collaboration, conversational banter).", showMeaning: true, enabled: true },
-        { id: "written", label: isZh ? "\u5199\u4F5C" : isJa ? "\u6587\u9762" : "Written", role: "translation", instruction: "Clear, precise, modern technical written prose (RFCs, PR descriptions, documentation, deep insight).", showMeaning: true, enabled: true },
-        { id: "vocab", label: isZh ? "\u91CD\u70B9" : isJa ? "\u5358\u8A9E" : "Vocab", role: "vocab", instruction: "Extract key idiomatic collocations, phrasal verbs, or technical idioms.", enabled: true }
-      ];
-    }
+    slots: (sourceLang = "en") => getDefaultSlots(sourceLang)
   },
   social: {
     name: "Social",
-    description: "Overseas Twitter / Community building: Hook + Deep + Vocab",
-    slots: (sourceLang = "en") => {
-      const isZh = sourceLang === "zh" || sourceLang === "tw";
-      return [
-        { id: "source", label: isZh ? "\u539F\u6587" : "Source", role: "source", enabled: true },
-        { id: "spoken", label: "Hook", role: "translation", instruction: "High-engagement, punchy opening hook optimized for Twitter/X threads and viral developer discussions.", showMeaning: true, enabled: true },
-        { id: "written", label: "Deep", role: "translation", instruction: "Insightful, narrative technical value and nuanced architecture reasoning.", showMeaning: true, enabled: true },
-        { id: "vocab", label: isZh ? "\u91CD\u70B9" : "Vocab", role: "vocab", instruction: "Key engagement idioms and technical phrases.", enabled: true }
-      ];
-    }
+    description: "Community building: Hook + Deep + Vocab",
+    slots: (_sourceLang = "en") => [
+      { id: "source", label: "Source", role: "source", enabled: true },
+      { id: "spoken", label: "Hook", role: "translation", instruction: "High-engagement opening hook for social threads.", showMeaning: true, enabled: true },
+      { id: "written", label: "Deep", role: "translation", instruction: "Insightful technical value and architecture reasoning.", showMeaning: true, enabled: true },
+      { id: "vocab", label: "Vocab", role: "vocab", instruction: "Key engagement idioms and phrases.", enabled: true }
+    ]
   },
   japanese: {
     name: "Japanese",
-    description: "Dual-register Japanese companion: \u53E3\u8A9E + \u656C\u8A9E + \u5358\u8BED",
-    slots: (sourceLang = "en") => {
-      const isZh = sourceLang === "zh" || sourceLang === "tw";
-      const isJa = sourceLang === "ja";
-      return [
-        { id: "source", label: isZh ? "\u539F\u6587" : isJa ? "\u539F\u6587" : "Source", role: "source", enabled: true },
-        { id: "spoken", label: "\u53E3\u8A9E", role: "translation", instruction: "Natural, colloquial spoken Japanese (daily casual chat, team talk, direct).", showMeaning: true, enabled: true },
-        { id: "written", label: "\u656C\u8A9E", role: "translation", instruction: "Formal, polite business Japanese (Keigo, Sonkeigo/Kenjougo, professional email/PR).", showMeaning: true, enabled: true },
-        { id: "vocab", label: "\u5358\u8A9E", role: "vocab", instruction: "Key Japanese vocabulary, kanji readings, and idiomatic expressions.", enabled: true }
-      ];
-    }
+    description: "Dual-register Japanese companion: \u53E3\u8A9E + \u656C\u8A9E + \u5358\u8A9E",
+    slots: (_sourceLang = "en") => [
+      { id: "source", label: "\u539F\u6587", role: "source", enabled: true },
+      { id: "spoken", label: "\u53E3\u8A9E", role: "translation", instruction: "Natural, colloquial spoken Japanese (daily casual chat, team talk).", showMeaning: true, enabled: true },
+      { id: "written", label: "\u656C\u8A9E", role: "translation", instruction: "Formal, polite business Japanese (Keigo, professional email/PR).", showMeaning: true, enabled: true },
+      { id: "vocab", label: "\u5358\u8A9E", role: "vocab", instruction: "Key Japanese vocabulary and idiomatic expressions.", enabled: true }
+    ]
   },
   academic: {
     name: "Academic",
     description: "Paper & rigorous discussion: Discussion + Paper",
-    slots: (sourceLang = "en") => {
-      const isZh = sourceLang === "zh" || sourceLang === "tw";
-      return [
-        { id: "source", label: isZh ? "\u539F\u6587" : "Source", role: "source", enabled: true },
-        { id: "spoken", label: "Discussion", role: "translation", instruction: "Academic colloquium and seminar discussion tone.", showMeaning: true, enabled: true },
-        { id: "written", label: "Paper", role: "translation", instruction: "Formal, objective academic prose suitable for peer-reviewed IEEE/ACM papers and arXiv preprints.", showMeaning: true, enabled: true },
-        { id: "vocab", label: isZh ? "\u91CD\u70B9" : "Vocab", role: "vocab", enabled: false }
-      ];
-    }
+    slots: (_sourceLang = "en") => [
+      { id: "source", label: "Source", role: "source", enabled: true },
+      { id: "spoken", label: "Discussion", role: "translation", instruction: "Academic colloquium and seminar discussion tone.", showMeaning: true, enabled: true },
+      { id: "written", label: "Paper", role: "translation", instruction: "Formal, objective academic prose suitable for papers.", showMeaning: true, enabled: true },
+      { id: "vocab", label: "Vocab", role: "vocab", enabled: false }
+    ]
   },
   compact2: {
     name: "Compact 2-Slot",
     description: "Minimalist dual-slot: Source + Target translation only",
-    slots: (sourceLang = "en") => {
-      const isZh = sourceLang === "zh" || sourceLang === "tw";
-      const isJa = sourceLang === "ja";
-      return [
-        { id: "source", label: isZh ? "\u539F\u6587" : isJa ? "\u539F\u6587" : "Source", role: "source", enabled: true },
-        { id: "spoken", label: isZh ? "\u8BD1\u6587" : isJa ? "\u8A33\u6587" : "Translation", role: "translation", instruction: "Natural, idiomatic target language translation.", showMeaning: true, enabled: true },
-        { id: "written", label: isZh ? "\u5199\u4F5C" : "Written", role: "translation", enabled: false },
-        { id: "vocab", label: isZh ? "\u91CD\u70B9" : "Vocab", role: "vocab", enabled: false }
-      ];
-    }
+    slots: (_sourceLang = "en") => [
+      { id: "source", label: "Source", role: "source", enabled: true },
+      { id: "spoken", label: "Translation", role: "translation", instruction: "Natural, idiomatic target language translation.", showMeaning: true, enabled: true },
+      { id: "written", label: "Written", role: "translation", enabled: false },
+      { id: "vocab", label: "Vocab", role: "vocab", enabled: false }
+    ]
   }
 };
 function resolveSlotsForPreset(presetName = "developer", sourceLang = "en") {
@@ -1167,6 +1087,85 @@ function resolveSlotsForPreset(presetName = "developer", sourceLang = "en") {
   return preset.slots(sourceLang);
 }
 var LANGUAGE_PRESETS = {
+  en: {
+    slot1Label: "Spoken",
+    slot2Label: "Written",
+    vocabLabel: "Vocab",
+    sourceLabel: "Source",
+    hudTitle: "en \u21C4 ja",
+    statusOriginal: "en \u21C4 ja",
+    statusEnglish: "en \u21C4 ja",
+    statusOff: "en \u21C4 ja: off",
+    subNuanceLabel: "\u21B3",
+    notifyOriginal: "[en \u21C4 ja] Companion mode: raw send + HUD learning card above",
+    notifyEnglish: "[en \u21C4 ja] Direct mode: prompt optimized into target language",
+    notifyOff: "[en \u21C4 ja] Companion disabled",
+    notifyPaging: "[en \u21C4 ja] Long sentence paginated, use Alt+. or Alt+, to navigate",
+    notifyNoHistory: "[en \u21C4 ja] No previous companion card recorded",
+    notifyHistoryRestored: "[en \u21C4 ja] Restored previous companion card",
+    notifyAgentHelp: "\u{1F4A1} Built-in lingual-tuner skill: Ask the agent to configure companion settings anytime.",
+    notifyModelSwitched: "Companion model switched to: {model}",
+    notifyLangSwitched: "Companion language switched to: {lang}",
+    notifyLangInvalid: "Invalid language code. Supported: zh, ja, ko, en, es, fr, de, ru",
+    notifyCompactOn: "[en \u21C4 ja] Capsule mode enabled: single-line compact view",
+    notifyCompactOff: "[en \u21C4 ja] Tree branch mode enabled: full multi-slot view",
+    notifyTimeout: "[en \u21C4 ja] Prompt rewrite timed out; original prompt passed",
+    notifyError: "[en \u21C4 ja] Prompt rewrite error; original prompt passed",
+    cmdDescMode: "Cycle companion mode [en \u21C4 ja]: [Companion] \u2794 [Direct] \u2794 [Off]",
+    cmdDescStatus: "View companion status and model diagnostics: /lingual-status",
+    cmdDescModel: "Inspect or switch companion model [en \u21C4 ja]: /lingual-model [model-id|auto]",
+    cmdDescLang: "Switch language pair [en \u21C4 ja]: /lang <source> [target]",
+    cmdDescCompact: "Toggle single-line capsule mode and full tree layout: /lingual-compact",
+    cmdDescLast: "Replay previous companion card: /last",
+    cmdDescAgent: "View companion customization guide: /lingual-agent",
+    shortcutNextPage: "Next companion page segment",
+    shortcutPrevPage: "Previous companion page segment",
+    capsuleSlot1Prefix: "Spk",
+    capsuleSlot2Prefix: "Wrt",
+    layoutCapsule: "Single-Line Capsule (1-Line)",
+    layoutTree: "Trifecta Minimalist Left-Rail Tree (\xB7 \u250C \u251C \u2514)",
+    statusReportTitle: "Companion Status Report",
+    statusReportMode: "Mode",
+    statusReportFlow: "Language Flow",
+    statusReportModel: "Model",
+    statusReportCache: "Cache",
+    statusReportLayout: "Layout: Trifecta Minimalist Left-Rail Tree",
+    statusReportAuth: "Auth: Pi Native In-Process Credentials",
+    statusReportShortcuts: "Shortcuts: /lingual \xB7 /slots \xB7 /lang \xB7 /lingual-compact",
+    statusReportTuner: "Slot Tuner: Built-in lingual-tuner skill",
+    modeDescOriginal: "Companion \xB7 0ms pass-through",
+    modeDescEnglish: "Direct \xB7 Deep code reasoning",
+    modeDescOff: "Disabled",
+    modelCurrentLabel: "Current companion model",
+    modelFollowSession: "follow session",
+    modelAvailableListHeader: "Available models (use /lingual-model <id>):",
+    modelAutoFollowDesc: "auto (follow active session model)",
+    modelSelectHint: "Use /lingual-model <model-id> or auto.",
+    langUsageHint: "Usage: /lang <source> [target] (e.g. /lang ja en or /lang en zh)",
+    langList: ["\u2022 zh", "\u2022 ja", "\u2022 en", "\u2022 es", "\u2022 fr", "\u2022 de", "\u2022 ru", "\u2022 ko"],
+    slotsHeader: "Dynamic Slots Architecture",
+    slotsActiveTag: "active",
+    slotsNone: "No slots configured",
+    slotsStatusEnabled: "enabled",
+    slotsStatusDisabled: "disabled",
+    slotsWithNuance: " +nuance",
+    slotsNlTitle: "\u{1F4AC} Natural Language Customization:",
+    slotsNlExamples: ['\u2022 "Customize slots: show tweets and deep analysis, no source"'],
+    slotsCliTitle: "CLI Management Commands:",
+    slotsCliHelp: ["\u2022 /slots add <id> <label> [instruction...]", "\u2022 /slots rm <id>", "\u2022 /slots toggle <id>", "\u2022 /slots reset"],
+    slotsResetSuccess: "[{pair}] Reset slots to clean defaults",
+    slotsRemovedSuccess: '[{pair}] Removed slot [{id}] ("{label}")',
+    slotsRemovedSourceNote: " (Source line will no longer appear on cards)",
+    slotsToggled: "[{pair}] Slot [{id}] is now {status}",
+    slotsAdded: '[{pair}] Added/updated slot [{id}] "{label}"',
+    slotsNotFound: "[{pair}] Slot [{id}] not found",
+    slotsUsageAdd: "Usage: /slots add <id> <label> [instruction...]",
+    slotsUsageRm: "Usage: /slots rm <slot-id>",
+    slotsUsageToggle: "Usage: /slots toggle <slot-id>",
+    slotsUnknown: 'Unknown slot command or preset "{cmd}".',
+    spokenLabel: "Spoken",
+    writtenLabel: "Written"
+  },
   zh: {
     slot1Label: "\u53E3\u8BED",
     slot2Label: "\u5199\u4F5C",
@@ -1183,21 +1182,21 @@ var LANGUAGE_PRESETS = {
     notifyPaging: "[zh \u21C4 en] \u957F\u53E5\u5DF2\u5207\u5206\u591A\u6BB5\uFF0C\u6309 Alt+. \u6216 Alt+, \u7FFB\u9875\u6D4F\u89C8",
     notifyNoHistory: "[zh \u21C4 en] \u6682\u65E0\u4E0A\u4E00\u6761\u4F34\u5B66\u8BB0\u5F55",
     notifyHistoryRestored: "[zh \u21C4 en] \u5DF2\u91CD\u65B0\u663E\u793A\u4E0A\u4E00\u6761\u4F34\u5B66\u5361\u7247",
-    notifyAgentHelp: '\u{1F4A1} \u5185\u7F6E lingual-tuner \u69FD\u4F4D\u8C03\u4F18\u6280\u80FD\uFF1A\u76F4\u63A5\u5BF9\u5F53\u524D Agent \u8BF4 "\u5E2E\u6211\u5B9A\u5236\u4F34\u5B66\uFF1A\u53EA\u8981\u63A8\u6587\u548C\u6DF1\u5EA6\u5206\u6790\uFF0C\u4E0D\u8981\u539F\u6587" \u5373\u53EF\u514D\u547D\u4EE4\u81EA\u52A8\u88C5\u914D\uFF01\u5207\u6362\u6BCD\u8BED\u8BF7\u8FD0\u884C /lang <code>\u3002',
+    notifyAgentHelp: '\u{1F4A1} \u5185\u7F6E lingual-tuner \u69FD\u4F4D\u8C03\u4F18\u6280\u80FD\uFF1A\u76F4\u63A5\u5BF9\u5F53\u524D Agent \u8BF4 "\u5E2E\u6211\u5B9A\u5236\u4F34\u5B66" \u5373\u53EF\u514D\u547D\u4EE4\u81EA\u52A8\u88C5\u914D\uFF01',
     notifyModelSwitched: "\u4F34\u5B66\u6A21\u578B\u5DF2\u5207\u6362\u4E3A: {model}",
-    notifyLangSwitched: "\u4F34\u5B66\u8BED\u8A00\u5DF2\u5207\u6362\u4E3A: {lang}\uFF08\u63D0\u793A\uFF1A\u547D\u4EE4\u8865\u5168\u83DC\u5355\u6587\u9762\u5C06\u5728\u91CD\u542F\u7EC8\u7AEF\u540E\u5B8C\u5168\u540C\u6B65\uFF09",
-    notifyLangInvalid: "\u65E0\u6548\u7684\u8BED\u8A00\u4EE3\u7801\u3002\u652F\u6301\u7684\u8BED\u8A00\u4EE3\u7801: zh, ja, en, es, fr, de",
-    notifyCompactOn: "[zh \u21C4 en] \u5DF2\u5F00\u542F\u5355\u884C\u80F6\u56CA\u6A21\u5F0F\uFF1A\u6781\u7B80\u5360\u4F4D\uFF0C\u4FDD\u62A4\u5206\u5C4F\u89C6\u91CE",
-    notifyCompactOff: "[zh \u21C4 en] \u5DF2\u5207\u6362\u4E3A\u5DE6\u5BFC\u8F68\u6811\u72B6\u67B6\u6784\uFF1A\u5C55\u793A\u5B8C\u6574\u53CC\u6A21\u4E0E\u8BED\u611F",
-    notifyTimeout: "[zh \u21C4 en] \u82F1\u6587\u7FFB\u8BD1\u8BF7\u6C42\u672A\u5C31\u7EEA\u6216\u8D85\u65F6\uFF0C\u672C\u6B21\u5DF2\u653E\u884C\u539F\u6587",
-    notifyError: "[zh \u21C4 en] \u82F1\u6587\u7FFB\u8BD1\u8BF7\u6C42\u5F02\u5E38\uFF0C\u672C\u6B21\u5DF2\u653E\u884C\u539F\u6587",
-    cmdDescMode: "\u5207\u6362\u4F34\u5B66\u6A21\u5F0F [zh \u21C4 en]: [\u539F\u6587] \u2794 [\u82F1\u6587] \u2794 [\u5173]",
-    cmdDescStatus: "\u67E5\u770B\u4F34\u5B66\u63D2\u4EF6\u5F53\u524D\u72B6\u6001\u62A5\u544A\u4E0E\u6A21\u578B\u8BCA\u65AD: /lingual-status",
-    cmdDescModel: "\u67E5\u770B\u6216\u5207\u6362\u4F34\u5B66\u6A21\u578B [zh \u21C4 en]: /lingual-model [model-id|auto]",
-    cmdDescLang: "\u67E5\u770B\u6216\u5207\u6362\u4F34\u5B66\u6BCD\u8BED [zh \u21C4 en]: /lingual-lang [zh|ja|en|es|fr|de]",
-    cmdDescCompact: "\u5207\u6362\u5355\u884C\u80F6\u56CA\u6A21\u5F0F\u4E0E\u5B8C\u6574\u6811\u72B6\u56FE: /lingual-compact",
-    cmdDescLast: "\u91CD\u65B0\u56DE\u770B\u6216\u91CD\u73B0\u4E0A\u4E00\u6761\u4F34\u5B66\u5361\u7247: /lingual-last",
-    cmdDescAgent: "\u67E5\u770B\u4F34\u5B66\u5B9A\u5236\u4E0E\u6BCD\u8BED\u5207\u6362\u6307\u5357: /lingual-agent",
+    notifyLangSwitched: "\u4F34\u5B66\u8BED\u8A00\u5DF2\u5207\u6362\u4E3A: {lang}",
+    notifyLangInvalid: "\u65E0\u6548\u7684\u8BED\u8A00\u4EE3\u7801\u3002\u652F\u6301: zh, ja, en, es, fr, de, ko, ru",
+    notifyCompactOn: "[zh \u21C4 en] \u5DF2\u5F00\u542F\u5355\u884C\u80F6\u56CA\u6A21\u5F0F\uFF1A\u6781\u7B80\u5360\u4F4D",
+    notifyCompactOff: "[zh \u21C4 en] \u5DF2\u5207\u6362\u4E3A\u5DE6\u5BFC\u8F68\u6811\u72B6\u67B6\u6784\uFF1A\u5C55\u793A\u5B8C\u6574\u591A\u69FD\u4E0E\u8BED\u611F",
+    notifyTimeout: "[zh \u21C4 en] \u63D0\u793A\u8BCD\u4F18\u5316\u8BF7\u6C42\u672A\u5C31\u7EEA\u6216\u8D85\u65F6\uFF0C\u672C\u6B21\u5DF2\u653E\u884C\u539F\u6587",
+    notifyError: "[zh \u21C4 en] \u63D0\u793A\u8BCD\u4F18\u5316\u8BF7\u6C42\u5F02\u5E38\uFF0C\u672C\u6B21\u5DF2\u653E\u884C\u539F\u6587",
+    cmdDescMode: "\u5207\u6362\u4F34\u5B66\u6A21\u5F0F: /lingual",
+    cmdDescStatus: "\u67E5\u770B\u72B6\u6001\u62A5\u544A: /lingual status",
+    cmdDescModel: "\u5207\u6362\u4F34\u5B66\u6A21\u578B: /lingual model [id]",
+    cmdDescLang: "\u5207\u6362\u4F34\u5B66\u8BED\u8A00: /lang <code>",
+    cmdDescCompact: "\u5207\u6362\u80F6\u56CA\u4E0E\u6811\u72B6\u56FE: /lingual compact",
+    cmdDescLast: "\u56DE\u770B\u4E0A\u4E00\u6761\u5361\u7247: /last",
+    cmdDescAgent: "\u67E5\u770B\u4F34\u5B66\u6307\u5357: /lingual tuner",
     shortcutNextPage: "\u5207\u6362\u81F3\u4E0B\u4E00\u6BB5\u4F34\u5B66\u5207\u7247",
     shortcutPrevPage: "\u5207\u6362\u81F3\u4E0A\u4E00\u6BB5\u4F34\u5B66\u5207\u7247",
     capsuleSlot1Prefix: "\u53E3",
@@ -1209,57 +1208,42 @@ var LANGUAGE_PRESETS = {
     statusReportFlow: "\u8BED\u8A00\u6D41\u5411",
     statusReportModel: "\u4F34\u5B66\u6A21\u578B",
     statusReportCache: "\u4F1A\u8BDD\u7F13\u5B58",
-    statusReportLayout: "HUD\u5E03\u5C40: Trifecta \u5F00\u653E\u5F0F\u5DE6\u5BFC\u8F68\u6811\u72B6\u67B6\u6784 (\xB7 \u250C \u251C \u2514)",
-    statusReportAuth: "\u51ED\u636E\u6A21\u5F0F: Pi \u539F\u751F\u8FDB\u7A0B\u5185\u8BA4\u8BC1 (Zero Config \xB7 \u96F6Token\u6CC4\u9732)",
-    statusReportShortcuts: "\u5FEB\u6377\u64CD\u4F5C: /lingual (\u5207\u6362\u6A21\u5F0F) \xB7 /slots (\u7BA1\u7406\u69FD\u4F4D) \xB7 /lang (\u5207\u8BED\u8A00) \xB7 /lingual-compact (\u5207\u6362\u5E03\u5C40)",
-    statusReportTuner: "\u69FD\u4F4D\u8C03\u4F18: \u5185\u7F6E lingual-tuner \u6280\u80FD\uFF08\u76F4\u63A5\u5411 Agent \u63CF\u8FF0\u5373\u53EF\u514D\u547D\u4EE4\u5B9A\u5236\uFF09",
+    statusReportLayout: "HUD\u5E03\u5C40: Trifecta \u5F00\u653E\u5F0F\u5DE6\u5BFC\u8F68\u6811\u72B6\u67B6\u6784",
+    statusReportAuth: "\u51ED\u636E\u6A21\u5F0F: Pi \u539F\u751F\u8FDB\u7A0B\u5185\u8BA4\u8BC1 (Zero Config)",
+    statusReportShortcuts: "\u5FEB\u6377\u64CD\u4F5C: /lingual \xB7 /slots \xB7 /lang \xB7 /last",
+    statusReportTuner: "\u69FD\u4F4D\u8C03\u4F18: \u5185\u7F6E lingual-tuner \u69FD\u4F4D\u8C03\u4F18\u6280\u80FD\uFF08\u76F4\u63A5\u5411 Agent \u63CF\u8FF0\u5373\u53EF\u514D\u547D\u4EE4\u5B9A\u5236\uFF09",
     modeDescOriginal: "\u539F\u6587\u76F4\u901A \xB7 0ms\u975E\u963B\u585E",
     modeDescEnglish: "\u82F1\u6587\u6A21\u5F0F \xB7 \u6DF1\u5EA6\u4EE3\u7801\u63A8\u7406",
     modeDescOff: "\u5DF2\u5173\u95ED",
     modelCurrentLabel: "\u5F53\u524D\u4F34\u5B66\u6A21\u578B",
     modelFollowSession: "\u8DDF\u968F\u4F1A\u8BDD",
-    modelAvailableListHeader: "\u53EF\u7528\u6A21\u578B (\u8F93\u5165 /lingual-model <id> \u5207\u6362):",
+    modelAvailableListHeader: "\u53EF\u7528\u6A21\u578B (\u8F93\u5165 /lingual model <id> \u5207\u6362):",
     modelAutoFollowDesc: "auto (\u81EA\u52A8\u8DDF\u968F\u5F53\u524D\u4F1A\u8BDD\u4E3B\u6A21\u578B)",
-    modelSelectHint: "\u53EF\u8F93\u5165 /lingual-model <model-id> \u6216 auto \u6307\u5B9A\u4F34\u5B66\u6A21\u578B\u3002",
+    modelSelectHint: "\u53EF\u8F93\u5165 /lingual model <model-id> \u6216 auto \u6307\u5B9A\u6A21\u578B\u3002",
     langUsageHint: "\u7528\u6CD5: /lang <zh|ja|en|es|fr|de> [target] (\u5982 /lang ja \u6216 /lang zh ja)",
-    langList: [
-      "\u2022 zh (\u4E2D\u6587 \u2794 \u82F1\u6587)",
-      "\u2022 ja (\u65E5\u672C\u8A9E \u2794 \u82F1\u8A9E)",
-      "\u2022 en (\u82F1\u6587 \u2794 \u65E5\u6587)",
-      "\u2022 es (\u897F\u73ED\u7259\u6587 \u2794 \u82F1\u6587)",
-      "\u2022 fr (\u6CD5\u6587 \u2794 \u82F1\u6587)",
-      "\u2022 de (\u5FB7\u6587 \u2794 \u82F1\u6587)"
-    ],
-    // 动态槽位架构本地化文案 (中文)
+    langList: ["\u2022 zh", "\u2022 ja", "\u2022 en", "\u2022 es", "\u2022 fr", "\u2022 de", "\u2022 ko", "\u2022 ru"],
     slotsHeader: "\u52A8\u6001\u69FD\u4F4D\u67B6\u6784",
     slotsActiveTag: "\u6FC0\u6D3B",
     slotsNone: "\u672A\u914D\u7F6E\u4EFB\u4F55\u69FD\u4F4D",
     slotsStatusEnabled: "\u5DF2\u542F\u7528",
     slotsStatusDisabled: "\u5DF2\u7981\u7528",
     slotsWithNuance: " +\u6BCD\u8BED\u5FAE\u91CA\u4E49",
-    slotsNlTitle: "\u{1F4AC} \u81EA\u7136\u8BED\u8A00\u5B9A\u5236\uFF08\u76F4\u63A5\u5411\u5F53\u524D Agent \u63CF\u8FF0\uFF0C\u65E0\u9700\u624B\u52A8\u8F93\u5165\u547D\u4EE4\uFF09\uFF1A",
-    slotsNlExamples: [
-      '\u2022 "\u5E2E\u6211\u5B9A\u5236\u4F34\u5B66\uFF1A\u53EA\u8981\u63A8\u7279\u63A8\u6587\u548C\u6DF1\u5EA6\u5206\u6790\uFF0C\u4E0D\u8981\u539F\u6587"',
-      '\u2022 "\u628A\u4F34\u5B66\u6539\u6210\u5355\u69FD\u4F4D\u7EAF\u8BD1\u6587"',
-      '\u2022 "\u6062\u590D\u9ED8\u8BA4\u4F34\u5B66\u69FD\u4F4D"'
-    ],
-    slotsCliTitle: "\u26A1\uFE0F \u5E38\u7528\u5FEB\u6377\u547D\u4EE4\uFF1A",
-    slotsCliHelp: [
-      "\u2022 /slots rm source       - \u7269\u7406\u9690\u85CF\u539F\u6587\u884C",
-      "\u2022 /slots compact2        - \u6781\u7B80\u53CC\u69FD\u4F4D",
-      "\u2022 /slots reset           - \u6062\u590D\u521D\u59CB\u9ED8\u8BA4",
-      "\u2022 /slots toggle <id>     - \u4E34\u65F6\u5F00\u5173\u69FD\u4F4D"
-    ],
-    slotsResetSuccess: "[{pair}] \u5DF2\u91CD\u7F6E\u69FD\u4F4D\u4E3A\u521D\u59CB\u9ED8\u8BA4\u72B6\u6001\uFF08\u539F\u6587 + \u53E3\u8BED + \u5199\u4F5C + \u91CD\u70B9\uFF09",
+    slotsNlTitle: "\u{1F4AC} \u81EA\u7136\u8BED\u8A00\u5B9A\u5236\uFF08\u76F4\u63A5\u5BF9 Agent \u8BF4\u5373\u53EF\u5B9A\u5236\uFF09\uFF1A",
+    slotsNlExamples: ['\u2022 "\u5E2E\u6211\u5B9A\u5236\u4F34\u5B66\uFF1A\u53EA\u8981\u63A8\u6587\u548C\u6DF1\u5EA6\u5206\u6790\uFF0C\u4E0D\u8981\u539F\u6587"'],
+    slotsCliTitle: "\u5E38\u7528\u5FEB\u6377\u547D\u4EE4\uFF1A",
+    slotsCliHelp: ["\u2022 /slots add <id> <label> [instruction...]", "\u2022 /slots rm <id>", "\u2022 /slots toggle <id>", "\u2022 /slots reset"],
+    slotsResetSuccess: "[{pair}] \u5DF2\u91CD\u7F6E\u69FD\u4F4D\u4E3A\u521D\u59CB\u9ED8\u8BA4\u72B6\u6001",
     slotsRemovedSuccess: '[{pair}] \u5DF2\u79FB\u9664\u69FD\u4F4D [{id}] ("{label}")',
-    slotsRemovedSourceNote: "\uFF08\u5DF2\u7269\u7406\u9690\u85CF\u539F\u6587\u884C\uFF09",
-    slotsToggled: "[{pair}] \u69FD\u4F4D [{id}] \u5F53\u524D\u72B6\u6001: {status}",
+    slotsRemovedSourceNote: " (\u5DF2\u7269\u7406\u9690\u85CF\u539F\u6587\u884C)",
+    slotsToggled: "[{pair}] \u69FD\u4F4D [{id}] \u72B6\u6001\u53D8\u66F4\u4E3A: {status}",
     slotsAdded: '[{pair}] \u5DF2\u6DFB\u52A0/\u66F4\u65B0\u69FD\u4F4D [{id}] "{label}"',
-    slotsNotFound: "[{pair}] \u672A\u627E\u5230\u69FD\u4F4D [{id}]\u3002\u8FD0\u884C /slots \u67E5\u770B\u5F53\u524D\u69FD\u4F4D",
-    slotsUsageAdd: "\u7528\u6CD5: /slots add <id> <\u6807\u7B7E> [\u63D0\u793A\u8BCD...]\n\u793A\u4F8B: /slots add twitter \u63A8\u6587 280\u5B57\u7B26\u4EE5\u5185\u7206\u6B3E\u6280\u672F\u63A8\u6587",
-    slotsUsageRm: "\u7528\u6CD5: /slots rm <\u69FD\u4F4DID> (\u4F8B\u5982 /slots rm source \u9690\u85CF\u539F\u6587)",
-    slotsUsageToggle: "\u7528\u6CD5: /slots toggle <\u69FD\u4F4DID>",
-    slotsUnknown: '[{pair}] \u672A\u77E5\u69FD\u4F4D\u547D\u4EE4\u6216\u9884\u8BBE "{cmd}"\u3002\u8F93\u5165 /slots \u67E5\u770B\u5F53\u524D\u69FD\u4F4D\u4E0E\u5E2E\u52A9'
+    slotsNotFound: "[{pair}] \u672A\u627E\u5230\u69FD\u4F4D [{id}]",
+    slotsUsageAdd: "\u7528\u6CD5: /slots add <id> <label> [instruction...]",
+    slotsUsageRm: "\u7528\u6CD5: /slots rm <slot-id>",
+    slotsUsageToggle: "\u7528\u6CD5: /slots toggle <slot-id>",
+    slotsUnknown: '\u672A\u8BC6\u522B\u7684\u69FD\u4F4D\u547D\u4EE4 "{cmd}"\u3002',
+    spokenLabel: "\u53E3\u8BED",
+    writtenLabel: "\u5199\u4F5C"
   },
   ja: {
     slot1Label: "\u53E3\u8A9E",
@@ -1271,665 +1255,74 @@ var LANGUAGE_PRESETS = {
     statusEnglish: "ja \u21C4 en",
     statusOff: "ja \u21C4 en: off",
     subNuanceLabel: "\u21B3",
-    notifyOriginal: "[ja \u21C4 en] \u3010\u539F\u6587\u30E2\u30FC\u30C9\u3011\u306B\u5207\u308A\u66FF\u3048\u307E\u3057\u305F\uFF1A\u5165\u529B\u306F\u539F\u6587\u306E\u307E\u307E\u3001\u4E0A\u90E8\u30AB\u30FC\u30C9\u3067\u82F1\u8A9E\u3092\u8868\u793A",
-    notifyEnglish: "[ja \u21C4 en] \u3010\u82F1\u8A9E\u30E2\u30FC\u30C9\u3011\u306B\u5207\u308A\u66FF\u3048\u307E\u3057\u305F\uFF1AAI\u3078\u306E\u5165\u529B\u306F\u7D14\u7C8B\u306A\u6280\u8853\u82F1\u8A9E\u306B\u81EA\u52D5\u5909\u63DB\u3055\u308C\u307E\u3059",
-    notifyOff: "[ja \u21C4 en] \u4F34\u8D70\u6A5F\u80FD\u3092\u30AA\u30D5\u306B\u3057\u307E\u3057\u305F",
-    notifyPaging: "[ja \u21C4 en] \u9577\u6587\u3092\u5206\u5272\u3057\u307E\u3057\u305F\u3002Alt+. \u307E\u305F\u306F Alt+, \u3067\u30DA\u30FC\u30B8\u9001\u308A",
-    notifyNoHistory: "[ja \u21C4 en] \u524D\u56DE\u306E\u8A18\u9332\u306F\u3042\u308A\u307E\u305B\u3093",
-    notifyHistoryRestored: "[ja \u21C4 en] \u524D\u56DE\u306E\u30AB\u30FC\u30C9\u3092\u5FA9\u5143\u3057\u307E\u3057\u305F",
-    notifyAgentHelp: "\u{1F4A1} lingual-tuner \u30B9\u30ED\u30C3\u30C8\u8ABF\u6574\u30B9\u30AD\u30EB\u642D\u8F09\uFF1AAgent\u306B\u300C\u30C4\u30A4\u30FC\u30C8\u3068\u6280\u8853\u7684\u6D1E\u5BDF\u306E\u307F\u3001\u539F\u6587\u306F\u4E0D\u8981\u300D\u3068\u4F1D\u3048\u308B\u3060\u3051\u3067\u81EA\u52D5\u8A2D\u5B9A\u5B8C\u4E86\uFF01\u6BCD\u8A9E\u5207\u66FF\u306F /lang <code> \u3067\u3059\u3002",
-    notifyModelSwitched: "\u30E2\u30C7\u30EB\u3092\u5207\u308A\u66FF\u3048\u307E\u3057\u305F: {model}",
-    notifyLangSwitched: "\u6BCD\u8A9E\u3092\u5207\u308A\u66FF\u3048\u307E\u3057\u305F: {lang}\uFF08\u203B\u30B3\u30DE\u30F3\u30C9\u88DC\u5B8C\u30E1\u30CB\u30E5\u30FC\u306E\u6587\u9762\u306F\u7AEF\u672B\u518D\u8D77\u52D5\u5F8C\u306B\u5B8C\u5168\u306B\u53CD\u6620\u3055\u308C\u307E\u3059\uFF09",
-    notifyLangInvalid: "\u7121\u52B9\u306A\u8A00\u8A9E\u30B3\u30FC\u30C9\u3067\u3059\u3002\u5BFE\u5FDC\u8A00\u8A9E: zh, ja, en, es, fr, de",
-    notifyCompactOn: "[ja \u21C4 en] 1\u884C\u30AB\u30D7\u30BB\u30EB\u30E2\u30FC\u30C9\u3092\u6709\u52B9\u306B\u3057\u307E\u3057\u305F\uFF1A\u753B\u9762\u9818\u57DF\u3092\u6700\u5927\u9650\u78BA\u4FDD",
-    notifyCompactOff: "[ja \u21C4 en] \u30D5\u30EB\u30C4\u30EA\u30FC\u8868\u793A\u306B\u5207\u308A\u66FF\u3048\u307E\u3057\u305F\uFF1A\u8A73\u7D30\u306A\u30CB\u30E5\u30A2\u30F3\u30B9\u3092\u8868\u793A",
-    notifySlotSwitched: "[ja \u21C4 en] \u30B9\u30ED\u30C3\u30C8\u69CB\u6210\u3092 [{preset}] \u306B\u5207\u308A\u66FF\u3048\u307E\u3057\u305F: {desc}",
-    notifyTimeout: "[ja \u21C4 en] \u82F1\u8A9E\u7FFB\u8A33\u30EA\u30AF\u30A8\u30B9\u30C8\u304C\u30BF\u30A4\u30E0\u30A2\u30A6\u30C8\u3057\u307E\u3057\u305F\u3002\u539F\u6587\u3092\u9001\u4FE1\u3057\u307E\u3057\u305F",
-    notifyError: "[ja \u21C4 en] \u82F1\u8A9E\u7FFB\u8A33\u30EA\u30AF\u30A8\u30B9\u30C8\u3067\u30A8\u30E9\u30FC\u304C\u767A\u751F\u3057\u307E\u3057\u305F\u3002\u539F\u6587\u3092\u9001\u4FE1\u3057\u307E\u3057\u305F",
-    cmdDescMode: "\u30E2\u30FC\u30C9\u5207\u66FF [ja \u21C4 en]: [\u539F\u6587] \u2794 [\u82F1\u8A9E] \u2794 [\u30AA\u30D5]",
-    cmdDescStatus: "\u72B6\u614B\u30EC\u30DD\u30FC\u30C8\u3068\u30E2\u30C7\u30EB\u8A3A\u65AD\u3092\u8868\u793A: /lingual-status",
-    cmdDescModel: "\u5B66\u7FD2\u30E2\u30C7\u30EB\u306E\u78BA\u8A8D\u30FB\u5207\u66FF: /lingual-model [model-id|auto]",
-    cmdDescLang: "\u4F34\u8D70\u306E\u6BCD\u8A9E\u3092\u78BA\u8A8D\u30FB\u5909\u66F4: /lingual-lang [zh|ja|en|es|fr|de]",
-    cmdDescSlots: "\u30B9\u30ED\u30C3\u30C8\u69CB\u6210\u306E\u78BA\u8A8D\u30FB\u5207\u66FF [ja \u21C4 en]: /slots [developer|social|japanese|academic|compact2]",
-    cmdDescCompact: "1\u884C\u30AB\u30D7\u30BB\u30EB\u8868\u793A\u3068\u30D5\u30EB\u30C4\u30EA\u30FC\u306E\u5207\u66FF: /lingual-compact",
-    cmdDescLast: "\u524D\u56DE\u306E\u4F34\u8D70\u30AB\u30FC\u30C9\u3092\u518D\u8868\u793A: /lingual-last",
-    cmdDescAgent: "\u4F34\u8D70\u30AB\u30B9\u30BF\u30DE\u30A4\u30BA\u3068\u6BCD\u8A9E\u5909\u66F4\u306E\u6848\u5185\u3092\u8868\u793A: /lingual-agent",
-    shortcutNextPage: "\u6B21\u306E\u30BB\u30B0\u30E1\u30F3\u30C8\u306B\u5207\u308A\u66FF\u3048",
-    shortcutPrevPage: "\u524D\u306E\u30BB\u30B0\u30E1\u30F3\u30C8\u306B\u5207\u308A\u66FF\u3048",
+    notifyOriginal: "[ja \u21C4 en] \u3010\u539F\u6587\u30E2\u30FC\u30C9\u3011\u306B\u5207\u308A\u66FF\u3048\u307E\u3057\u305F\uFF1A\u539F\u6587\u9001\u4FE1\uFF0B\u5B66\u7FD2\u30AB\u30FC\u30C9\u8868\u793A",
+    notifyEnglish: "[ja \u21C4 en] \u3010\u82F1\u8A9E\u30E2\u30FC\u30C9\u3011\u306B\u5207\u308A\u66FF\u3048\u307E\u3057\u305F\uFF1A\u30D7\u30ED\u30F3\u30D7\u30C8\u3092\u82F1\u8A9E\u306B\u5909\u63DB\u3057\u3066\u9001\u4FE1",
+    notifyOff: "[ja \u21C4 en] \u30AA\u30D5\u306B\u3057\u307E\u3057\u305F",
+    notifyPaging: "[ja \u21C4 en] \u9577\u6587\u3092\u5206\u5272\u3057\u307E\u3057\u305F\u3002Alt+. \u307E\u305F\u306F Alt+, \u3067\u79FB\u52D5",
+    notifyNoHistory: "[ja \u21C4 en] \u5C65\u6B74\u304C\u3042\u308A\u307E\u305B\u3093",
+    notifyHistoryRestored: "[ja \u21C4 en] \u524D\u56DE\u306E\u30AB\u30FC\u30C9\u3092\u518D\u8868\u793A\u3057\u307E\u3057\u305F",
+    notifyAgentHelp: "\u{1F4A1} lingual-tuner \u30B9\u30AD\u30EB\u3067\u81EA\u7531\u306B\u30AB\u30B9\u30BF\u30DE\u30A4\u30BA\u53EF\u80FD\u3067\u3059\uFF08\u6BCD\u8A9E\u5207\u66FF\u5BFE\u5FDC\uFF09",
+    notifyModelSwitched: "\u30E2\u30C7\u30EB\u3092\u5909\u66F4\u3057\u307E\u3057\u305F: {model}",
+    notifyLangSwitched: "\u8A00\u8A9E\u3092\u5909\u66F4\u3057\u307E\u3057\u305F: {lang}",
+    notifyLangInvalid: "\u7121\u52B9\u306A\u8A00\u8A9E\u30B3\u30FC\u30C9\u3067\u3059",
+    notifyCompactOn: "[ja \u21C4 en] 1\u884C\u30AB\u30D7\u30BB\u30EB\u8868\u793A\u3092\u6709\u52B9\u5316\u3057\u307E\u3057\u305F",
+    notifyCompactOff: "[ja \u21C4 en] \u30C4\u30EA\u30FC\u8868\u793A\u3092\u6709\u52B9\u5316\u3057\u307E\u3057\u305F",
+    notifyTimeout: "[ja \u21C4 en] \u30BF\u30A4\u30E0\u30A2\u30A6\u30C8\u306E\u305F\u3081\u539F\u6587\u3092\u9001\u4FE1\u3057\u307E\u3057\u305F",
+    notifyError: "[ja \u21C4 en] \u30A8\u30E9\u30FC\u306E\u305F\u3081\u539F\u6587\u3092\u9001\u4FE1\u3057\u307E\u3057\u305F",
+    cmdDescMode: "\u30E2\u30FC\u30C9\u5207\u66FF: /lingual",
+    cmdDescStatus: "\u72B6\u614B\u8868\u793A: /lingual status",
+    cmdDescModel: "\u30E2\u30C7\u30EB\u5207\u66FF: /lingual model [id]",
+    cmdDescLang: "\u8A00\u8A9E\u5207\u66FF: /lang <code>",
+    cmdDescCompact: "\u8868\u793A\u5207\u66FF: /lingual compact",
+    cmdDescLast: "\u524D\u56DE\u30AB\u30FC\u30C9\u518D\u8868\u793A: /last",
+    cmdDescAgent: "\u30AC\u30A4\u30C9\u8868\u793A: /lingual tuner",
+    shortcutNextPage: "\u6B21\u306E\u30B9\u30E9\u30A4\u30B9\u3078\u79FB\u52D5",
+    shortcutPrevPage: "\u524D\u306E\u30B9\u30E9\u30A4\u30B9\u3078\u79FB\u52D5",
     capsuleSlot1Prefix: "\u53E3",
     capsuleSlot2Prefix: "\u6587",
-    layoutCapsule: "1\u884C\u30AB\u30D7\u30BB\u30EB\u8868\u793A (1-Line Capsule)",
-    layoutTree: "Trifecta \u30AA\u30FC\u30D7\u30F3\u5DE6\u30EC\u30FC\u30EB\u30C4\u30EA\u30FC\u69CB\u9020 (\xB7 \u250C \u251C \u2514)",
+    layoutCapsule: "1\u884C\u30AB\u30D7\u30BB\u30EB\u8868\u793A",
+    layoutTree: "Trifecta \u30C4\u30EA\u30FC\u8868\u793A",
     statusReportTitle: "\u30B9\u30C6\u30FC\u30BF\u30B9\u30EC\u30DD\u30FC\u30C8",
     statusReportMode: "\u73FE\u5728\u306E\u30E2\u30FC\u30C9",
     statusReportFlow: "\u8A00\u8A9E\u30D5\u30ED\u30FC",
-    statusReportModel: "\u4F34\u8D70\u30E2\u30C7\u30EB",
-    statusReportCache: "\u30BB\u30C3\u30B7\u30E7\u30F3\u30AD\u30E3\u30C3\u30B7\u30E5",
-    statusReportLayout: "HUD\u30EC\u30A4\u30A2\u30A6\u30C8: Trifecta \u30AA\u30FC\u30D7\u30F3\u5DE6\u30EC\u30FC\u30EB\u30C4\u30EA\u30FC\u69CB\u9020 (\xB7 \u250C \u251C \u2514)",
-    statusReportAuth: "\u8A8D\u8A3C\u65B9\u5F0F: Pi \u30CD\u30A4\u30C6\u30A3\u30D6\u30A4\u30F3\u30D7\u30ED\u30BB\u30B9\u8A8D\u8A3C (\u30BC\u30ED\u8A2D\u5B9A\u30FBToken\u5B89\u5168)",
-    statusReportShortcuts: "\u30AF\u30A4\u30C3\u30AF\u64CD\u4F5C: /lingual (\u30E2\u30FC\u30C9\u5207\u66FF) \xB7 /slots (\u30B9\u30ED\u30C3\u30C8\u7BA1\u7406) \xB7 /lang (\u8A00\u8A9E\u5207\u66FF) \xB7 /lingual-compact (\u30EC\u30A4\u30A2\u30A6\u30C8\u5207\u66FF)",
-    statusReportTuner: "\u30B9\u30ED\u30C3\u30C8\u8ABF\u6574: lingual-tuner \u30B9\u30AD\u30EB\u642D\u8F09\uFF08Agent\u306B\u8981\u671B\u3092\u4F1D\u3048\u308B\u3060\u3051\u3067\u8A2D\u5B9A\uFF09",
+    statusReportModel: "\u30E2\u30C7\u30EB",
+    statusReportCache: "\u30AD\u30E3\u30C3\u30B7\u30E5",
+    statusReportLayout: "\u30EC\u30A4\u30A2\u30A6\u30C8: Trifecta \u30C4\u30EA\u30FC\u8868\u793A",
+    statusReportAuth: "\u8A8D\u8A3C\u65B9\u5F0F: Pi \u30CD\u30A4\u30C6\u30A3\u30D6\u30A4\u30F3\u30D7\u30ED\u30BB\u30B9\u8A8D\u8A3C",
+    statusReportShortcuts: "\u30B7\u30E7\u30FC\u30C8\u30AB\u30C3\u30C8: /lingual \xB7 /slots \xB7 /lang \xB7 /last",
+    statusReportTuner: "\u30C1\u30E5\u30FC\u30CA\u30FC: lingual-tuner \u30B9\u30AD\u30EB",
     modeDescOriginal: "\u539F\u6587\u30D1\u30B9\u30B9\u30EB\u30FC \xB7 0ms\u975E\u540C\u671F",
-    modeDescEnglish: "\u82F1\u8A9E\u30E2\u30FC\u30C9 \xB7 \u9AD8\u5EA6\u30B3\u30FC\u30C9\u63A8\u8AD6",
+    modeDescEnglish: "\u76F4\u884C \xB7 \u30B3\u30FC\u30C9\u63A8\u8AD6",
     modeDescOff: "\u30AA\u30D5",
     modelCurrentLabel: "\u73FE\u5728\u306E\u5B66\u7FD2\u30E2\u30C7\u30EB",
     modelFollowSession: "\u30BB\u30C3\u30B7\u30E7\u30F3\u9023\u52D5",
-    modelAvailableListHeader: "\u5229\u7528\u53EF\u80FD\u306A\u30E2\u30C7\u30EB (/lingual-model <id> \u3067\u5207\u66FF):",
-    modelAutoFollowDesc: "auto (\u30BB\u30C3\u30B7\u30E7\u30F3\u306E\u4E3B\u30E2\u30C7\u30EB\u306B\u81EA\u52D5\u8FFD\u5F93)",
-    modelSelectHint: "/lingual-model <model-id> \u307E\u305F\u306F auto \u3092\u5165\u529B\u3057\u3066\u30E2\u30C7\u30EB\u3092\u6307\u5B9A\u3067\u304D\u307E\u3059\u3002",
-    langUsageHint: "\u4F7F\u3044\u65B9: /lang <zh|ja|en|es|fr|de> [target] (\u4F8B: /lang ja \u307E\u305F\u306F /lang zh ja)",
-    langList: [
-      "\u2022 zh (\u4E2D\u56FD\u8A9E \u2794 \u82F1\u8A9E)",
-      "\u2022 ja (\u65E5\u672C\u8A9E \u2794 \u82F1\u8A9E)",
-      "\u2022 en (\u82F1\u8A9E \u2794 \u65E5\u672C\u8A9E)",
-      "\u2022 es (\u30B9\u30DA\u30A4\u30F3\u8A9E \u2794 \u82F1\u8A9E)",
-      "\u2022 fr (\u30D5\u30E9\u30F3\u30B9\u8A9E \u2794 \u82F1\u8A9E)",
-      "\u2022 de (\u30C9\u30A4\u30C4\u8A9E \u2794 \u82F1\u8A9E)"
-    ],
-    // 動的スロット構成ローカライズ文言 (日本語)
-    slotsHeader: "\u52D5\u7684\u30B9\u30ED\u30C3\u30C8\u69CB\u6210",
+    modelAvailableListHeader: "\u5229\u7528\u53EF\u80FD\u306A\u30E2\u30C7\u30EB:",
+    modelAutoFollowDesc: "auto (\u30BB\u30C3\u30B7\u30E7\u30F3\u9023\u52D5)",
+    modelSelectHint: "/lingual model <id> \u307E\u305F\u306F auto \u3092\u6307\u5B9A\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+    langUsageHint: "\u4F7F\u3044\u65B9: /lang <source> [target] (\u4F8B: /lang ja en)",
+    langList: ["\u2022 ja", "\u2022 en", "\u2022 zh", "\u2022 es", "\u2022 fr", "\u2022 de", "\u2022 ko", "\u2022 ru"],
+    slotsHeader: "\u30C0\u30A4\u30CA\u30DF\u30C3\u30AF\u30B9\u30ED\u30C3\u30C8",
     slotsActiveTag: "\u6709\u52B9",
     slotsNone: "\u30B9\u30ED\u30C3\u30C8\u304C\u8A2D\u5B9A\u3055\u308C\u3066\u3044\u307E\u305B\u3093",
     slotsStatusEnabled: "\u6709\u52B9",
     slotsStatusDisabled: "\u7121\u52B9",
     slotsWithNuance: " +\u30CB\u30E5\u30A2\u30F3\u30B9",
-    slotsNlTitle: "\u{1F4AC} \u81EA\u7136\u8A00\u8A9E\u30AB\u30B9\u30BF\u30DE\u30A4\u30BA\uFF08\u73FE\u5728\u306E Agent \u306B\u76F4\u63A5\u4F1D\u3048\u308B\u3060\u3051\uFF09\uFF1A",
-    slotsNlExamples: [
-      "\u2022 \u300C\u4F34\u8D70\u30B9\u30ED\u30C3\u30C8\u3092\u30AB\u30B9\u30BF\u30DE\u30A4\u30BA\u3057\u3066\uFF1A\u30C4\u30A4\u30FC\u30C8\u3068\u6280\u8853\u7684\u6D1E\u5BDF\u306E\u307F\u3001\u539F\u6587\u306F\u4E0D\u8981\u300D",
-      "\u2022 \u300C1\u884C\u306E\u7D14\u7C8B\u306A\u8A33\u6587\u306E\u307F\u306B\u5909\u66F4\u3057\u3066\u300D",
-      "\u2022 \u300C\u30C7\u30D5\u30A9\u30EB\u30C8\u306E\u30B9\u30ED\u30C3\u30C8\u69CB\u6210\u306B\u623B\u3057\u3066\u300D"
-    ],
-    slotsCliTitle: "\u26A1\uFE0F \u30AF\u30A4\u30C3\u30AFCLI\u30B3\u30DE\u30F3\u30C9\uFF1A",
-    slotsCliHelp: [
-      "\u2022 /slots rm source       - \u539F\u6587\u884C\u3092\u5B8C\u5168\u306B\u975E\u8868\u793A",
-      "\u2022 /slots compact2        - \u30DF\u30CB\u30DE\u30EB2\u30B9\u30ED\u30C3\u30C8",
-      "\u2022 /slots reset           - \u30C7\u30D5\u30A9\u30EB\u30C8\u72B6\u614B\u306B\u30EA\u30BB\u30C3\u30C8",
-      "\u2022 /slots toggle <id>     - \u30B9\u30ED\u30C3\u30C8\u306E\u4E00\u6642\u7684\u306A\u30AA\u30F3/\u30AA\u30D5"
-    ],
-    slotsResetSuccess: "[{pair}] \u30B9\u30ED\u30C3\u30C8\u69CB\u6210\u3092\u30C7\u30D5\u30A9\u30EB\u30C8\u306B\u30EA\u30BB\u30C3\u30C8\u3057\u307E\u3057\u305F",
-    slotsRemovedSuccess: '[{pair}] \u30B9\u30ED\u30C3\u30C8 [{id}] ("{label}") \u3092\u524A\u9664\u3057\u307E\u3057\u305F',
-    slotsRemovedSourceNote: "\uFF08\u539F\u6587\u884C\u306F\u975E\u8868\u793A\u306B\u306A\u308A\u307E\u3059\uFF09",
-    slotsToggled: "[{pair}] \u30B9\u30ED\u30C3\u30C8 [{id}] \u306F\u73FE\u5728: {status}",
+    slotsNlTitle: "\u{1F4AC} \u81EA\u7136\u8A00\u8A9E\u30AB\u30B9\u30BF\u30DE\u30A4\u30BA:",
+    slotsNlExamples: ['\u2022 "\u30C4\u30A4\u30FC\u30C8\u3068\u6280\u8853\u8003\u5BDF\u3060\u3051\u8868\u793A\u3057\u3066\u539F\u6587\u306F\u975E\u8868\u793A\u306B\u3057\u3066"'],
+    slotsCliTitle: "CLI\u30B3\u30DE\u30F3\u30C9:",
+    slotsCliHelp: ["\u2022 /slots add <id> <label> [instruction...]", "\u2022 /slots rm <id>", "\u2022 /slots toggle <id>", "\u2022 /slots reset"],
+    slotsResetSuccess: "[{pair}] \u30C7\u30D5\u30A9\u30EB\u30C8\u8A2D\u5B9A\u306B\u30EA\u30BB\u30C3\u30C8\u3057\u307E\u3057\u305F",
+    slotsRemovedSuccess: "[{pair}] \u30B9\u30ED\u30C3\u30C8 [{id}] \u3092\u524A\u9664\u3057\u307E\u3057\u305F",
+    slotsRemovedSourceNote: " (\u539F\u6587\u306F\u8868\u793A\u3055\u308C\u306A\u304F\u306A\u308A\u307E\u3059)",
+    slotsToggled: "[{pair}] \u30B9\u30ED\u30C3\u30C8 [{id}] \u3092 {status} \u306B\u3057\u307E\u3057\u305F",
     slotsAdded: '[{pair}] \u30B9\u30ED\u30C3\u30C8 [{id}] "{label}" \u3092\u8FFD\u52A0/\u66F4\u65B0\u3057\u307E\u3057\u305F',
-    slotsNotFound: "[{pair}] \u30B9\u30ED\u30C3\u30C8 [{id}] \u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093\u3002/slots \u3067\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044",
-    slotsUsageAdd: "\u4F7F\u3044\u65B9: /slots add <id> <\u30E9\u30D9\u30EB> [\u30D7\u30ED\u30F3\u30D7\u30C8...]\n\u4F8B: /slots add twitter \u30C4\u30A4\u30FC\u30C8 280\u5B57\u4EE5\u5185\u306E\u6280\u8853\u30C4\u30A4\u30FC\u30C8",
-    slotsUsageRm: "\u4F7F\u3044\u65B9: /slots rm <\u30B9\u30ED\u30C3\u30C8ID> (\u4F8B: /slots rm source)",
-    slotsUsageToggle: "\u4F7F\u3044\u65B9: /slots toggle <\u30B9\u30ED\u30C3\u30C8ID>",
-    slotsUnknown: '[{pair}] \u672A\u77E5\u306E\u30B3\u30DE\u30F3\u30C9\u307E\u305F\u306F\u30D7\u30EA\u30BB\u30C3\u30C8 "{cmd}" \u3067\u3059\u3002/slots \u3092\u5165\u529B\u3057\u3066\u304F\u3060\u3055\u3044'
-  },
-  en: {
-    slot1Label: "Spoken",
-    slot2Label: "Written",
-    vocabLabel: "Vocab",
-    sourceLabel: "Source",
-    hudTitle: "en \u21C4 ja",
-    statusOriginal: "en \u21C4 ja",
-    statusEnglish: "en \u21C4 ja",
-    statusOff: "en \u21C4 ja: off",
-    subNuanceLabel: "\u21B3",
-    notifyOriginal: "[en \u21C4 ja] Switched to [Original] mode: Prompt passed to AI unmodified, HUD displays translations",
-    notifyEnglish: "[en \u21C4 ja] Switched to [English] mode: Prompt transformed into idiomatic technical English",
-    notifyOff: "[en \u21C4 ja] Companion turned off",
-    notifyPaging: "[en \u21C4 ja] Long prompt segmented. Press Alt+. or Alt+, to navigate pages",
-    notifyNoHistory: "[en \u21C4 ja] No previous companion card recorded",
-    notifyHistoryRestored: "[en \u21C4 ja] Restored previous companion card",
-    notifyAgentHelp: '\u{1F4A1} Built-in lingual-tuner skill: Just tell your Agent "Customize companion: tweet and deep insight only, no source text" to tune slots in 1 turn! Switch language via /lang <code>.',
-    notifyModelSwitched: "Companion model switched to: {model}",
-    notifyLangSwitched: "Native language switched to: {lang} (Note: Command autocomplete descriptions will fully refresh on terminal restart)",
-    notifyLangInvalid: "Invalid language code. Supported: zh, ja, en, es, fr, de",
-    notifyCompactOn: "[en \u21C4 ja] Single-line capsule mode enabled for compact split panes",
-    notifyCompactOff: "[en \u21C4 ja] Full tree layout restored",
-    notifySlotSwitched: "[en \u21C4 ja] Switched slot architecture to [{preset}]: {desc}",
-    notifyTimeout: "[en \u21C4 ja] English translation timed out or not ready; original prompt passed",
-    notifyError: "[en \u21C4 ja] English translation request error; original prompt passed",
-    cmdDescMode: "Cycle companion mode [en \u21C4 ja]: [Original] \u2794 [English] \u2794 [Off]",
-    cmdDescStatus: "Display companion status report and model diagnosis: /lingual-status",
-    cmdDescModel: "Inspect or switch companion model: /lingual-model [model-id|auto]",
-    cmdDescLang: "View or switch companion native language: /lingual-lang [zh|ja|en|es|fr|de]",
-    cmdDescSlots: "Inspect or switch slot architecture: /slots [developer|social|japanese|academic|compact2]",
-    cmdDescCompact: "Toggle single-line capsule mode: /lingual-compact",
-    cmdDescLast: "Replay previous companion card: /lingual-last",
-    cmdDescAgent: "Display companion customization & language guide: /lingual-agent",
-    shortcutNextPage: "Switch to next companion segment",
-    shortcutPrevPage: "Switch to previous companion segment",
-    capsuleSlot1Prefix: "Spk",
-    capsuleSlot2Prefix: "Wrt",
-    layoutCapsule: "Single-Line Capsule (1-Line)",
-    layoutTree: "Trifecta Minimalist Left-Rail Tree (\xB7 \u250C \u251C \u2514)",
-    statusReportTitle: "Companion Status Report",
-    statusReportMode: "Current mode",
-    statusReportFlow: "Language flow",
-    statusReportModel: "Companion model",
-    statusReportCache: "Session Cache",
-    statusReportLayout: "HUD Layout: Trifecta Minimalist Left-Rail Tree (\xB7 \u250C \u251C \u2514)",
-    statusReportAuth: "Auth: Pi Native In-Process Auth (Zero Config \xB7 Secure)",
-    statusReportShortcuts: "Shortcuts: /lingual (mode) \xB7 /slots (slots) \xB7 /lang (lang) \xB7 /lingual-compact (layout)",
-    statusReportTuner: "Slot Tuner: Built-in lingual-tuner skill (Just describe your preferences to Agent)",
-    modeDescOriginal: "Pass-through \xB7 0ms non-blocking",
-    modeDescEnglish: "English mode \xB7 Deep reasoning",
-    modeDescOff: "Disabled",
-    modelCurrentLabel: "Current companion model",
-    modelFollowSession: "Follow session",
-    modelAvailableListHeader: "Available models (run /lingual-model <id> to switch):",
-    modelAutoFollowDesc: "auto (Automatically follows active session model)",
-    modelSelectHint: "Run /lingual-model <model-id> or auto to designate a model.",
-    langUsageHint: "Usage: /lang <zh|ja|en|es|fr|de> [target] (e.g. /lang ja or /lang zh ja)",
-    langList: [
-      "\u2022 zh (Chinese \u2794 English)",
-      "\u2022 ja (Japanese \u2794 English)",
-      "\u2022 en (English \u2794 Japanese)",
-      "\u2022 es (Spanish \u2794 English)",
-      "\u2022 fr (French \u2794 English)",
-      "\u2022 de (German \u2794 English)"
-    ],
-    // Dynamic slots chrome (English)
-    slotsHeader: "Dynamic Slots Architecture",
-    slotsActiveTag: "active",
-    slotsNone: "No slots configured",
-    slotsStatusEnabled: "enabled",
-    slotsStatusDisabled: "disabled",
-    slotsWithNuance: " +nuance",
-    slotsNlTitle: "\u{1F4AC} Natural Language Customization (Just ask your Agent directly):",
-    slotsNlExamples: [
-      '\u2022 "Customize companion: only tweet and deep insight, no source text"',
-      '\u2022 "Switch companion to single-slot clean translation"',
-      '\u2022 "Reset companion slots to default"'
-    ],
-    slotsCliTitle: "\u26A1\uFE0F Quick CLI Commands:",
-    slotsCliHelp: [
-      "\u2022 /slots rm source       - Hide original source text row",
-      "\u2022 /slots compact2        - Minimal dual slot",
-      "\u2022 /slots reset           - Reset to clean defaults",
-      "\u2022 /slots toggle <id>     - Toggle slot enable/disable"
-    ],
-    slotsResetSuccess: "[{pair}] Reset slots to clean defaults (Source + Spoken + Written + Vocab)",
-    slotsRemovedSuccess: '[{pair}] Removed slot [{id}] ("{label}")',
-    slotsRemovedSourceNote: " (Source line will no longer appear on cards)",
-    slotsToggled: "[{pair}] Slot [{id}] is now {status}",
-    slotsAdded: '[{pair}] Added/updated slot [{id}] "{label}"',
-    slotsNotFound: "[{pair}] Slot [{id}] not found. Run /slots to inspect",
-    slotsUsageAdd: "Usage: /slots add <id> <label> [instruction...]\nExample: /slots add twitter Tweet Short punchy tweet under 280 chars",
-    slotsUsageRm: "Usage: /slots rm <slot-id> (e.g. /slots rm source)",
-    slotsUsageToggle: "Usage: /slots toggle <slot-id>",
-    slotsUnknown: '[{pair}] Unknown slot command or preset "{cmd}". Type /slots to view help'
-  },
-  es: {
-    slot1Label: "Coloquial",
-    slot2Label: "Escrito",
-    vocabLabel: "Vocab",
-    sourceLabel: "Original",
-    hudTitle: "es \u21C4 en",
-    statusOriginal: "es \u21C4 en",
-    statusEnglish: "es \u21C4 en",
-    statusOff: "es \u21C4 en: off",
-    subNuanceLabel: "\u21B3",
-    notifyOriginal: "[es \u21C4 en] Cambiado al modo [Original]: El texto se env\xEDa sin modificar",
-    notifyEnglish: "[es \u21C4 en] Cambiado al modo [Ingl\xE9s]: El texto se transforma en ingl\xE9s t\xE9cnico",
-    notifyOff: "[es \u21C4 en] Asistente desactivado",
-    notifyPaging: "[es \u21C4 en] Texto largo segmentado. Presione Alt+. o Alt+, para navegar",
-    notifyNoHistory: "[es \u21C4 en] No hay registros anteriores",
-    notifyHistoryRestored: "[es \u21C4 en] Tarjeta anterior restaurada",
-    notifyAgentHelp: '\u{1F4A1} Habilidad lingual-tuner integrada: Simplemente p\xEDdale a su Agente "Personaliza el asistente: solo tuit y an\xE1lisis, sin texto original" para configurar las ranuras al instante. Cambie de idioma con /lang <code>.',
-    notifyModelSwitched: "Modelo cambiado a: {model}",
-    notifyLangSwitched: "Idioma nativo cambiado a: {lang} (Nota: Las descripciones del men\xFA de comandos se actualizar\xE1n tras reiniciar la terminal)",
-    notifyLangInvalid: "C\xF3digo de idioma no v\xE1lido. Admitidos: zh, ja, en, es, fr, de",
-    notifyCompactOn: "[es \u21C4 en] Modo c\xE1psula de una l\xEDnea activado",
-    notifyCompactOff: "[es \u21C4 en] Modo \xE1rbol completo restaurado",
-    notifySlotSwitched: "[es \u21C4 en] Arquitectura de ranuras cambiada a [{preset}]: {desc}",
-    notifyTimeout: "[es \u21C4 en] La traducci\xF3n al ingl\xE9s agot\xF3 el tiempo; se envi\xF3 el texto original",
-    notifyError: "[es \u21C4 en] Error en la traducci\xF3n al ingl\xE9s; se envi\xF3 el texto original",
-    cmdDescMode: "Cambiar modo [es \u21C4 en]: [Original] \u2794 [Ingl\xE9s] \u2794 [Apagado]",
-    cmdDescStatus: "Mostrar diagn\xF3stico y estado del modelo: /lingual-status",
-    cmdDescModel: "Consultar o cambiar modelo: /lingual-model [model-id|auto]",
-    cmdDescLang: "Ver o cambiar idioma nativo: /lingual-lang [zh|ja|en|es|fr|de]",
-    cmdDescSlots: "Inspeccionar o cambiar ranuras: /slots [developer|social|japanese|academic|compact2]",
-    cmdDescCompact: "Alternar modo c\xE1psula de una l\xEDnea: /lingual-compact",
-    cmdDescLast: "Reaparecer tarjeta anterior: /lingual-last",
-    cmdDescAgent: "Ver gu\xEDa de personalizaci\xF3n y cambio de idioma: /lingual-agent",
-    shortcutNextPage: "Cambiar al siguiente segmento",
-    shortcutPrevPage: "Cambiar al segmento anterior",
-    capsuleSlot1Prefix: "Col",
-    capsuleSlot2Prefix: "Esc",
-    layoutCapsule: "C\xE1psula de una l\xEDnea (1-Line Capsule)",
-    layoutTree: "Trifecta \xE1rbol de gu\xEDa izquierda (\xB7 \u250C \u251C \u2514)",
-    statusReportTitle: "Informe de estado",
-    statusReportMode: "Modo actual",
-    statusReportFlow: "Flujo de idiomas",
-    statusReportModel: "Modelo asistente",
-    statusReportCache: "Cach\xE9 de sesi\xF3n",
-    statusReportLayout: "Dise\xF1o HUD: Trifecta \xE1rbol de gu\xEDa izquierda (\xB7 \u250C \u251C \u2514)",
-    statusReportAuth: "Autenticaci\xF3n: Proceso nativo de Pi (Sin config \xB7 Seguro)",
-    statusReportShortcuts: "Accesos directos: /lingual (modo) \xB7 /slots (ranuras) \xB7 /lang (idioma) \xB7 /lingual-compact (dise\xF1o)",
-    statusReportTuner: "Ajuste de ranuras: Habilidad lingual-tuner integrada (configure hablando con su Agente)",
-    modeDescOriginal: "Directo \xB7 0ms no bloqueante",
-    modeDescEnglish: "Modo ingl\xE9s \xB7 Razonamiento profundo",
-    modeDescOff: "Apagado",
-    modelCurrentLabel: "Modelo actual",
-    modelFollowSession: "Siguiendo sesi\xF3n",
-    modelAvailableListHeader: "Modelos disponibles (ejecute /lingual-model <id>):",
-    modelAutoFollowDesc: "auto (Sigue autom\xE1ticamente el modelo de la sesi\xF3n)",
-    modelSelectHint: "Use /lingual-model <id> o auto para asignar un modelo.",
-    langUsageHint: "Uso: /lang <zh|ja|en|es|fr|de> [target] (ej. /lang ja o /lang zh ja)",
-    langList: [
-      "\u2022 zh (Chino \u2794 Ingl\xE9s)",
-      "\u2022 ja (Japon\xE9s \u2794 Ingl\xE9s)",
-      "\u2022 en (Ingl\xE9s \u2794 Japon\xE9s)",
-      "\u2022 es (Espa\xF1ol \u2794 Ingl\xE9s)",
-      "\u2022 fr (Franc\xE9s \u2794 Ingl\xE9s)",
-      "\u2022 de (Alem\xE1n \u2794 Ingl\xE9s)"
-    ],
-    // Ranuras dinámicas (Español)
-    slotsHeader: "Arquitectura de ranuras din\xE1micas",
-    slotsActiveTag: "activas",
-    slotsNone: "No hay ranuras configuradas",
-    slotsStatusEnabled: "activada",
-    slotsStatusDisabled: "desactivada",
-    slotsWithNuance: " +matiz",
-    slotsNlTitle: "\u{1F4AC} Personalizaci\xF3n con lenguaje natural (consulte a su Agente directamente):",
-    slotsNlExamples: [
-      '\u2022 "Personaliza el asistente: solo tuit y an\xE1lisis profundo, sin texto original"',
-      '\u2022 "Cambia el asistente a traducci\xF3n limpia de una sola ranura"',
-      '\u2022 "Restablece las ranuras predeterminadas"'
-    ],
-    slotsCliTitle: "\u26A1\uFE0F Comandos CLI r\xE1pidos:",
-    slotsCliHelp: [
-      "\u2022 /slots rm source       - Ocultar la fila de texto original",
-      "\u2022 /slots compact2        - Ranura doble m\xEDnima",
-      "\u2022 /slots reset           - Restablecer valores predeterminados",
-      "\u2022 /slots toggle <id>     - Activar/desactivar ranura"
-    ],
-    slotsResetSuccess: "[{pair}] Ranuras restablecidas a los valores predeterminados",
-    slotsRemovedSuccess: '[{pair}] Ranura [{id}] ("{label}") eliminada',
-    slotsRemovedSourceNote: " (La l\xEDnea de texto original ya no aparecer\xE1)",
-    slotsToggled: "[{pair}] La ranura [{id}] ahora est\xE1: {status}",
-    slotsAdded: '[{pair}] Ranura [{id}] "{label}" agregada/actualizada',
-    slotsNotFound: "[{pair}] No se encontr\xF3 la ranura [{id}]. Ejecute /slots para inspeccionar",
-    slotsUsageAdd: "Uso: /slots add <id> <etiqueta> [instrucci\xF3n...]",
-    slotsUsageRm: "Uso: /slots rm <id_ranura>",
-    slotsUsageToggle: "Uso: /slots toggle <id_ranura>",
-    slotsUnknown: '[{pair}] Comando o ajuste preestablecido desconocido "{cmd}". Escriba /slots para ver la ayuda'
-  },
-  fr: {
-    slot1Label: "Oral",
-    slot2Label: "\xC9crit",
-    vocabLabel: "Vocab",
-    sourceLabel: "Source",
-    hudTitle: "fr \u21C4 en",
-    statusOriginal: "fr \u21C4 en",
-    statusEnglish: "fr \u21C4 en",
-    statusOff: "fr \u21C4 en: off",
-    subNuanceLabel: "\u21B3",
-    notifyOriginal: "[fr \u21C4 en] Mode [Original] activ\xE9 : Votre texte reste inchang\xE9",
-    notifyEnglish: "[fr \u21C4 en] Mode [Anglais] activ\xE9 : Votre prompt est traduit en anglais technique",
-    notifyOff: "[fr \u21C4 en] Compagnon d\xE9sactiv\xE9",
-    notifyPaging: "[fr \u21C4 en] Long texte segment\xE9. Appuyez sur Alt+. ou Alt+, pour parcourir",
-    notifyNoHistory: "[fr \u21C4 en] Aucun historique pr\xE9c\xE9dent",
-    notifyHistoryRestored: "[fr \u21C4 en] Carte pr\xE9c\xE9dente restaur\xE9e",
-    notifyAgentHelp: '\u{1F4A1} Comp\xE9tence lingual-tuner int\xE9gr\xE9e : Dites simplement \xE0 votre Agent "Personnalise le compagnon : uniquement tweet et analyse, sans texte original" pour ajuster les emplacements. Changez de langue avec /lang <code>.',
-    notifyModelSwitched: "Mod\xE8le chang\xE9 pour : {model}",
-    notifyLangSwitched: "Langue maternelle chang\xE9e en : {lang} (Note : L'autocompl\xE9tion des commandes sera actualis\xE9e apr\xE8s red\xE9marrage du terminal)",
-    notifyLangInvalid: "Code de langue invalide. Pris en charge : zh, ja, en, es, fr, de",
-    notifyCompactOn: "[fr \u21C4 en] Mode capsule sur une seule ligne activ\xE9",
-    notifyCompactOff: "[fr \u21C4 en] Mode arborescence compl\xE8te restaur\xE9",
-    notifyTimeout: "[fr \u21C4 en] La traduction en anglais a expir\xE9 ; le prompt original a \xE9t\xE9 transmis",
-    notifyError: "[fr \u21C4 en] Erreur de traduction en anglais ; le prompt original a \xE9t\xE9 transmis",
-    cmdDescMode: "Changer de mode [fr \u21C4 en]: [Original] \u2794 [Anglais] \u2794 [D\xE9sactiv\xE9]",
-    cmdDescStatus: "Afficher le rapport d'\xE9tat et le diagnostic: /lingual-status",
-    cmdDescModel: "Consulter ou changer de mod\xE8le: /lingual-model [model-id|auto]",
-    cmdDescLang: "Afficher ou changer la langue maternelle: /lingual-lang [zh|ja|en|es|fr|de]",
-    cmdDescCompact: "Basculer le mode capsule sur une ligne: /lingual-compact",
-    cmdDescLast: "R\xE9afficher la carte pr\xE9c\xE9dente: /lingual-last",
-    cmdDescAgent: "Afficher le guide de personnalisation et de changement de langue : /lingual-agent",
-    shortcutNextPage: "Passer au segment suivant",
-    shortcutPrevPage: "Passer au segment pr\xE9c\xE9dent",
-    capsuleSlot1Prefix: "Oral",
-    capsuleSlot2Prefix: "\xC9crit",
-    layoutCapsule: "Capsule sur une ligne (1-Line Capsule)",
-    layoutTree: "Disposition HUD : Arbre guide gauche Trifecta (\xB7 \u250C \u251C \u2514)",
-    statusReportTitle: "Rapport d'\xE9tat",
-    statusReportMode: "Mode actuel",
-    statusReportFlow: "Flux linguistique",
-    statusReportModel: "Mod\xE8le compagnon",
-    statusReportCache: "Cache de session",
-    statusReportLayout: "Disposition HUD : Arbre guide gauche Trifecta (\xB7 \u250C \u251C \u2514)",
-    statusReportAuth: "Authentification : Processus interne Pi natif (Z\xE9ro config \xB7 S\xE9curis\xE9)",
-    statusReportShortcuts: "Raccourcis : /lingual (mode) \xB7 /slots (emplacements) \xB7 /lang (langue) \xB7 /lingual-compact (mise en page)",
-    statusReportTuner: "Ajustement d'emplacements : Comp\xE9tence lingual-tuner int\xE9gr\xE9e (d\xE9crivez vos pr\xE9f\xE9rences \xE0 l'Agent)",
-    modeDescOriginal: "Passerelle directe \xB7 0ms non bloquant",
-    modeDescEnglish: "Mode anglais \xB7 Raisonnement approfondi",
-    modeDescOff: "D\xE9sactiv\xE9",
-    modelCurrentLabel: "Mod\xE8le actuel",
-    modelFollowSession: "Suit la session",
-    modelAvailableListHeader: "Mod\xE8les disponibles (tapez /lingual-model <id>):",
-    modelAutoFollowDesc: "auto (Suit automatiquement le mod\xE8le principal)",
-    modelSelectHint: "Entrez /lingual-model <id> ou auto pour d\xE9finir le mod\xE8le.",
-    langUsageHint: "Utilisation : /lang <zh|ja|en|es|fr|de> [target] (ex : /lang ja ou /lang zh ja)",
-    langList: [
-      "\u2022 zh (Chinois \u2794 Anglais)",
-      "\u2022 ja (Japonais \u2794 Anglais)",
-      "\u2022 en (Anglais \u2794 Japonais)",
-      "\u2022 es (Espagnol \u2794 Anglais)",
-      "\u2022 fr (Fran\xE7ais \u2794 Anglais)",
-      "\u2022 de (Allemand \u2794 Anglais)"
-    ],
-    // Emplacements dynamiques (Français)
-    slotsHeader: "Architecture d'emplacements dynamiques",
-    slotsActiveTag: "actifs",
-    slotsNone: "Aucun emplacement configur\xE9",
-    slotsStatusEnabled: "activ\xE9",
-    slotsStatusDisabled: "d\xE9sactiv\xE9",
-    slotsWithNuance: " +nuance",
-    slotsNlTitle: "\u{1F4AC} Personnalisation en langage naturel (demandez \xE0 votre Agent) :",
-    slotsNlExamples: [
-      '\u2022 "Personnalise le compagnon : uniquement tweet et analyse approfondie, sans texte original"',
-      '\u2022 "Passe le compagnon \xE0 une traduction unique \xE9pur\xE9e"',
-      '\u2022 "R\xE9initialise les emplacements par d\xE9faut"'
-    ],
-    slotsCliTitle: "\u26A1\uFE0F Commandes CLI rapides :",
-    slotsCliHelp: [
-      "\u2022 /slots rm source       - Masquer la ligne de texte source",
-      "\u2022 /slots compact2        - Double emplacement minimal",
-      "\u2022 /slots reset           - R\xE9initialiser par d\xE9faut",
-      "\u2022 /slots toggle <id>     - Activer/d\xE9sactiver l'emplacement"
-    ],
-    slotsResetSuccess: "[{pair}] Emplacements r\xE9initialis\xE9s par d\xE9faut",
-    slotsRemovedSuccess: '[{pair}] Emplacement [{id}] ("{label}") supprim\xE9',
-    slotsRemovedSourceNote: " (La ligne source ne sera plus affich\xE9e)",
-    slotsToggled: "[{pair}] L'emplacement [{id}] est maintenant : {status}",
-    slotsAdded: '[{pair}] Emplacement [{id}] "{label}" ajout\xE9/mis \xE0 jour',
-    slotsNotFound: "[{pair}] Emplacement [{id}] introuvable. Ex\xE9cutez /slots pour v\xE9rifier",
-    slotsUsageAdd: "Utilisation : /slots add <id> <\xE9tiquette> [instruction...]",
-    slotsUsageRm: "Utilisation : /slots rm <id_emplacement>",
-    slotsUsageToggle: "Utilisation : /slots toggle <id_emplacement>",
-    slotsUnknown: `[{pair}] Commande ou pr\xE9r\xE9glage inconnu "{cmd}". Tapez /slots pour afficher l'aide`
-  },
-  de: {
-    slot1Label: "Gesprochen",
-    slot2Label: "Schriftlich",
-    vocabLabel: "Wortschatz",
-    sourceLabel: "Quelle",
-    hudTitle: "de \u21C4 en",
-    statusOriginal: "de \u21C4 en",
-    statusEnglish: "de \u21C4 en",
-    statusOff: "de \u21C4 en: off",
-    subNuanceLabel: "\u21B3",
-    notifyOriginal: "[de \u21C4 en] Modus [Original] aktiviert: Eingabe wird unver\xE4ndert weitergeleitet",
-    notifyEnglish: "[de \u21C4 en] Modus [Englisch] aktiviert: Eingabe wird in technisches Englisch \xFCbersetzt",
-    notifyOff: "[de \u21C4 en] Begleiter deaktiviert",
-    notifyPaging: "[de \u21C4 en] Langer Text segmentiert. Mit Alt+. oder Alt+, bl\xE4ttern",
-    notifyNoHistory: "[de \u21C4 en] Kein vorheriger Eintrag vorhanden",
-    notifyHistoryRestored: "[de \u21C4 en] Vorherige Karte wiederhergestellt",
-    notifyAgentHelp: '\u{1F4A1} Integrierter lingual-tuner Skill: Sagen Sie Ihrem Agenten einfach "Passen Sie die Begleitung an: nur Tweet und tiefe Einsicht, kein Originaltext", um Slots anzupassen. Sprache wechseln mit /lang <code>.',
-    notifyModelSwitched: "Modell gewechselt zu: {model}",
-    notifyLangSwitched: "Muttersprache ge\xE4ndert zu: {lang} (Hinweis: Befehlsbeschreibungen werden nach dem Terminal-Neustart vollst\xE4ndig aktualisiert)",
-    notifyLangInvalid: "Ung\xFCltiger Sprachcode. Unterst\xFCtzt: zh, ja, en, es, fr, de",
-    notifyCompactOn: "[de \u21C4 en] Einzeiliger Kapselmodus aktiviert",
-    notifyCompactOff: "[de \u21C4 en] Vollst\xE4ndige Baumansicht wiederhergestellt",
-    notifySlotSwitched: "[de \u21C4 en] Slot-Architektur auf [{preset}] umgestellt: {desc}",
-    notifyTimeout: "[de \u21C4 en] Englische \xDCbersetzung hat das Zeitlimit \xFCberschritten; Originaltext wurde \xFCbergeben",
-    notifyError: "[de \u21C4 en] Fehler bei der englischen \xDCbersetzung; Originaltext wurde \xFCbergeben",
-    cmdDescMode: "Modus umschalten [de \u21C4 en]: [Original] \u2794 [Englisch] \u2794 [Aus]",
-    cmdDescStatus: "Statusbericht und Modell-Diagnose anzeigen: /lingual-status",
-    cmdDescModel: "Modell pr\xFCfen oder wechseln: /lingual-model [model-id|auto]",
-    cmdDescLang: "Muttersprache anzeigen oder wechseln: /lingual-lang [zh|ja|en|es|fr|de]",
-    cmdDescSlots: "Slot-Architektur anzeigen/umstellen: /slots [developer|social|japanese|academic|compact2]",
-    cmdDescCompact: "Einzeiligen Kapselmodus umschalten: /lingual-compact",
-    cmdDescLast: "Vorherige Karte erneut anzeigen: /lingual-last",
-    cmdDescAgent: "Anleitung zur Anpassung und Sprachumstellung anzeigen: /lingual-agent",
-    shortcutNextPage: "Zum n\xE4chsten Segment wechseln",
-    shortcutPrevPage: "Zum vorherigen Segment wechseln",
-    capsuleSlot1Prefix: "Ges",
-    capsuleSlot2Prefix: "Sch",
-    layoutCapsule: "Einzeilige Kapsel (1-Line Capsule)",
-    layoutTree: "HUD-Layout: Trifecta Minimalistische Baumstruktur (\xB7 \u250C \u251C \u2514)",
-    statusReportTitle: "Statusbericht",
-    statusReportMode: "Aktueller Modus",
-    statusReportFlow: "Sprachfluss",
-    statusReportModel: "Begleitmodell",
-    statusReportCache: "Sitzungscache",
-    statusReportLayout: "HUD-Layout: Trifecta Minimalistische Baumstruktur (\xB7 \u250C \u251C \u2514)",
-    statusReportAuth: "Authentifizierung: Pi nativer In-Process Modus (Zero Config \xB7 Sicher)",
-    statusReportShortcuts: "Befehle: /lingual (Modus) \xB7 /slots (Slots) \xB7 /lang (Sprache) \xB7 /lingual-compact (Layout)",
-    statusReportTuner: "Slot-Anpassung: Integrierter lingual-tuner Skill (Pr\xE4ferenzen einfach dem Agenten beschreiben)",
-    modeDescOriginal: "Direkt \xB7 0ms nicht blockierend",
-    modeDescEnglish: "Englisch-Modus \xB7 Tiefgreifende Logik",
-    modeDescOff: "Aus",
-    modelCurrentLabel: "Aktuelles Modell",
-    modelFollowSession: "Sitzungsmodell",
-    modelAvailableListHeader: "Verf\xFCgbare Modelle (/lingual-model <id> ausf\xFChren):",
-    modelAutoFollowDesc: "auto (Folgt automatisch dem aktiven Sitzungsmodell)",
-    modelSelectHint: "Geben Sie /lingual-model <id> oder auto ein.",
-    langUsageHint: "Verwendung: /lang <zh|ja|en|es|fr|de> [target] (z.B. /lang ja oder /lang zh ja)",
-    langList: [
-      "\u2022 zh (Chinesisch \u2794 Englisch)",
-      "\u2022 ja (Japanisch \u2794 Englisch)",
-      "\u2022 en (Englisch \u2794 Japanisch)",
-      "\u2022 es (Spanisch \u2794 Englisch)",
-      "\u2022 fr (Franz\xF6sisch \u2794 Englisch)",
-      "\u2022 de (Deutsch \u2794 Englisch)"
-    ],
-    // Dynamische Slot-Architektur (Deutsch)
-    slotsHeader: "Dynamische Slot-Architektur",
-    slotsActiveTag: "aktiv",
-    slotsNone: "Keine Slots konfiguriert",
-    slotsStatusEnabled: "aktiviert",
-    slotsStatusDisabled: "deaktiviert",
-    slotsWithNuance: " +Nuance",
-    slotsNlTitle: "\u{1F4AC} Anpassung in nat\xFCrlicher Sprache (fragen Sie Ihren Agenten direkt):",
-    slotsNlExamples: [
-      '\u2022 "Passen Sie die Begleitung an: nur Tweet und tiefe Einsicht, kein Originaltext"',
-      '\u2022 "Stellen Sie auf reine einzeilige \xDCbersetzung um"',
-      '\u2022 "Slots auf Standard zur\xFCcksetzen"'
-    ],
-    slotsCliTitle: "\u26A1\uFE0F Schnelle CLI-Befehle:",
-    slotsCliHelp: [
-      "\u2022 /slots rm source       - Originaltextzeile ausblenden",
-      "\u2022 /slots compact2        - Minimaler Doppel-Slot",
-      "\u2022 /slots reset           - Auf Standard zur\xFCcksetzen",
-      "\u2022 /slots toggle <id>     - Slot aktivieren/deaktivieren"
-    ],
-    slotsResetSuccess: "[{pair}] Slots auf Standard zur\xFCckgesetzt",
-    slotsRemovedSuccess: '[{pair}] Slot [{id}] ("{label}") entfernt',
-    slotsRemovedSourceNote: " (Originaltextzeile wird nicht mehr angezeigt)",
-    slotsToggled: "[{pair}] Slot [{id}] ist jetzt: {status}",
-    slotsAdded: '[{pair}] Slot [{id}] "{label}" hinzugef\xFCgt/aktualisiert',
-    slotsNotFound: "[{pair}] Slot [{id}] nicht gefunden. F\xFChren Sie /slots aus",
-    slotsUsageAdd: "Verwendung: /slots add <id> <Label> [Anweisung...]",
-    slotsUsageRm: "Verwendung: /slots rm <Slot-ID>",
-    slotsUsageToggle: "Verwendung: /slots toggle <Slot-ID>",
-    slotsUnknown: '[{pair}] Unbekannter Befehl oder Preset "{cmd}". /slots f\xFCr Hilfe eingeben'
-  },
-  ko: {
-    slot1Label: "\uAD6C\uC5B4\uCCB4",
-    slot2Label: "\uBB38\uC5B4\uCCB4",
-    vocabLabel: "\uD575\uC2EC\uD45C\uD604",
-    sourceLabel: "\uC6D0\uBB38",
-    hudTitle: "ko \u21C4 en",
-    statusOriginal: "ko \u21C4 en",
-    statusEnglish: "ko \u21C4 en",
-    statusOff: "ko \u21C4 en: off",
-    subNuanceLabel: "\u21B3",
-    notifyOriginal: "[ko \u21C4 en] [\uC6D0\uBB38 \uBAA8\uB4DC] \uD65C\uC131\uD654: \uC6D0\uBB38\uC774 \uADF8\uB300\uB85C \uC804\uB2EC\uB429\uB2C8\uB2E4",
-    notifyEnglish: "[ko \u21C4 en] [\uC601\uC5B4 \uBAA8\uB4DC] \uD65C\uC131\uD654: \uAE30\uC220 \uC601\uC5B4\uB85C \uC790\uB3D9 \uBCC0\uD658\uB418\uC5B4 \uC804\uB2EC\uB429\uB2C8\uB2E4",
-    notifyOff: "[ko \u21C4 en] \uB3D9\uBC18 \uBAA8\uB4DC \uAEBC\uC9D0",
-    notifyPaging: "[ko \u21C4 en] \uC7A5\uBB38 \uBD84\uD560\uB428. Alt+. \uB610\uB294 Alt+, \uD0A4\uB85C \uD0D0\uC0C9",
-    notifyNoHistory: "[ko \u21C4 en] \uC774\uC804 \uAE30\uB85D\uC774 \uC5C6\uC2B5\uB2C8\uB2E4",
-    notifyHistoryRestored: "[ko \u21C4 en] \uC774\uC804 \uCE74\uB4DC\uAC00 \uBCF5\uC6D0\uB418\uC5C8\uC2B5\uB2C8\uB2E4",
-    notifyAgentHelp: '\u{1F4A1} lingual-tuner \uAE30\uB2A5 \uB0B4\uC7A5: \uC5D0\uC774\uC804\uD2B8\uC5D0\uAC8C "\uC6D0\uBB38 \uC5C6\uC774 \uD575\uC2EC \uC694\uC57D\uB9CC \uD45C\uC2DC\uD574\uC918"\uB77C\uACE0 \uC694\uCCAD\uD558\uBA74 \uC790\uB3D9 \uC124\uC815\uB429\uB2C8\uB2E4.',
-    notifyModelSwitched: "\uB3D9\uBC18 \uBAA8\uB378 \uBCC0\uACBD\uB428: {model}",
-    notifyLangSwitched: "\uBAA8\uAD6D\uC5B4 \uBCC0\uACBD\uB428: {lang}",
-    notifyLangInvalid: "\uC720\uD6A8\uD558\uC9C0 \uC54A\uC740 \uC5B8\uC5B4 \uCF54\uB4DC\uC785\uB2C8\uB2E4. \uC9C0\uC6D0: zh, ja, en, ko, es, fr, de, ru",
-    notifyCompactOn: "[ko \u21C4 en] \uB2E8\uC77C \uD589 \uCEA1\uC290 \uBAA8\uB4DC \uCF1C\uC9D0",
-    notifyCompactOff: "[ko \u21C4 en] \uD2B8\uB9AC \uB808\uC774\uC544\uC6C3 \uBCF5\uC6D0\uB428",
-    notifyTimeout: "[ko \u21C4 en] \uBC88\uC5ED \uC2DC\uAC04 \uCD08\uACFC; \uC6D0\uBB38\uC774 \uADF8\uB300\uB85C \uC804\uB2EC\uB418\uC5C8\uC2B5\uB2C8\uB2E4",
-    notifyError: "[ko \u21C4 en] \uBC88\uC5ED \uC624\uB958; \uC6D0\uBB38\uC774 \uADF8\uB300\uB85C \uC804\uB2EC\uB418\uC5C8\uC2B5\uB2C8\uB2E4",
-    cmdDescMode: "\uBAA8\uB4DC \uC804\uD658 [ko \u21C4 en]: [\uC6D0\uBB38] \u2794 [\uC601\uC5B4] \u2794 [\uB054]",
-    cmdDescStatus: "\uC0C1\uD0DC \uBCF4\uACE0\uC11C \uBC0F \uC9C4\uB2E8 \uD655\uC778: /lingual-status",
-    cmdDescModel: "\uBAA8\uB378 \uD655\uC778 \uBC0F \uBCC0\uACBD: /lingual-model [model-id|auto]",
-    cmdDescLang: "\uBAA8\uAD6D\uC5B4 \uD655\uC778 \uBC0F \uBCC0\uACBD: /lingual-lang",
-    cmdDescSlots: "\uC2AC\uB86F \uAD6C\uC131 \uBCC0\uACBD: /slots",
-    cmdDescCompact: "\uB2E8\uC77C \uD589 \uCEA1\uC290 \uBAA8\uB4DC \uD1A0\uAE00: /lingual-compact",
-    cmdDescLast: "\uC774\uC804 \uCE74\uB4DC \uB2E4\uC2DC \uBCF4\uAE30: /lingual-last",
-    cmdDescAgent: "\uC0AC\uC6A9\uC790 \uC124\uC815 \uAC00\uC774\uB4DC: /lingual-agent",
-    shortcutNextPage: "\uB2E4\uC74C \uC138\uADF8\uBA3C\uD2B8\uB85C \uC774\uB3D9",
-    shortcutPrevPage: "\uC774\uC804 \uC138\uADF8\uBA3C\uD2B8\uB85C \uC774\uB3D9",
-    capsuleSlot1Prefix: "\uAD6C",
-    capsuleSlot2Prefix: "\uBB38",
-    layoutCapsule: "\uB2E8\uC77C \uD589 \uCEA1\uC290 (1-Line Capsule)",
-    layoutTree: "Trifecta \uC88C\uCE21 \uB808\uC77C \uD2B8\uB9AC (\xB7 \u250C \u251C \u2514)",
-    statusReportTitle: "\uC0C1\uD0DC \uBCF4\uACE0\uC11C",
-    statusReportMode: "\uD604\uC7AC \uBAA8\uB4DC",
-    statusReportFlow: "\uC5B8\uC5B4 \uD750\uB984",
-    statusReportModel: "\uB3D9\uBC18 \uBAA8\uB378",
-    statusReportCache: "\uC138\uC158 \uCE90\uC2DC",
-    statusReportLayout: "HUD \uB808\uC774\uC544\uC6C3: Trifecta \uC88C\uCE21 \uB808\uC77C \uD2B8\uB9AC (\xB7 \u250C \u251C \u2514)",
-    statusReportAuth: "\uC778\uC99D \uBAA8\uB4DC: Pi \uD504\uB85C\uC138\uC2A4 \uB0B4 \uC9C1\uC811 \uC778\uC99D (Zero Config)",
-    statusReportShortcuts: "\uBA85\uB839\uC5B4: /lingual (\uBAA8\uB4DC) \xB7 /slots (\uC2AC\uB86F) \xB7 /lang (\uC5B8\uC5B4) \xB7 /lingual-compact (\uB808\uC774\uC544\uC6C3)",
-    statusReportTuner: "\uC2AC\uB86F \uD29C\uB108: lingual-tuner \uB0B4\uC7A5",
-    modeDescOriginal: "\uC6D0\uBB38 \uC9C1\uD1B5 \xB7 0ms \uBE44\uCC28\uB2E8",
-    modeDescEnglish: "\uC601\uC5B4 \uBAA8\uB4DC \xB7 \uC2EC\uCE35 \uCF54\uB4DC \uCD94\uB860",
-    modeDescOff: "\uAEBC\uC9D0",
-    modelCurrentLabel: "\uD604\uC7AC \uBAA8\uB378",
-    modelFollowSession: "\uC138\uC158 \uB530\uB984",
-    modelAvailableListHeader: "\uC0AC\uC6A9 \uAC00\uB2A5\uD55C \uBAA8\uB378 (/lingual-model <id>):",
-    modelAutoFollowDesc: "auto (\uD604\uC7AC \uC138\uC158 \uC8FC \uBAA8\uB378 \uC790\uB3D9 \uCD94\uC885)",
-    modelSelectHint: "/lingual-model <id> \uB610\uB294 auto \uC9C0\uC815.",
-    langUsageHint: "\uC0AC\uC6A9\uBC95: /lang <\uCF54\uB4DC> [\uBAA9\uD45C\uC5B8\uC5B4]",
-    langList: [
-      "\u2022 zh (\uC911\uAD6D\uC5B4 \u2794 \uC601\uC5B4)",
-      "\u2022 ja (\uC77C\uBCF8\uC5B4 \u2794 \uC601\uC5B4)",
-      "\u2022 en (\uC601\uC5B4 \u2794 \uC77C\uBCF8\uC5B4/\uD55C\uAD6D\uC5B4)",
-      "\u2022 ko (\uD55C\uAD6D\uC5B4 \u2794 \uC601\uC5B4)",
-      "\u2022 es (\uC2A4\uD398\uC778\uC5B4 \u2794 \uC601\uC5B4)",
-      "\u2022 fr (\uD504\uB791\uC2A4\uC5B4 \u2794 \uC601\uC5B4)",
-      "\u2022 de (\uB3C5\uC77C\uC5B4 \u2794 \uC601\uC5B4)",
-      "\u2022 ru (\uB7EC\uC2DC\uC544\uC5B4 \u2794 \uC601\uC5B4)"
-    ],
-    slotsHeader: "\uB3D9\uC801 \uC2AC\uB86F \uC544\uD0A4\uD14D\uCC98",
-    slotsActiveTag: "\uD65C\uC131",
-    slotsNone: "\uAD6C\uC131\uB41C \uC2AC\uB86F \uC5C6\uC74C",
-    slotsStatusEnabled: "\uD65C\uC131\uD654\uB428",
-    slotsStatusDisabled: "\uBE44\uD65C\uC131\uD654\uB428",
-    slotsWithNuance: " +\uB258\uC559\uC2A4",
-    slotsNlTitle: "\u{1F4AC} \uC790\uC5F0\uC5B4 \uC124\uC815:",
-    slotsNlExamples: [
-      '\u2022 "\uC6D0\uBB38 \uC5C6\uC774 \uCE90\uC8FC\uC5BC\uACFC \uACA9\uC2DD\uCCB4\uB9CC \uBCF4\uC5EC\uC918"',
-      '\u2022 "\uB2E8\uC77C \uD589 \uC21C\uC218 \uBC88\uC5ED\uC73C\uB85C \uBCC0\uACBD\uD574\uC918"',
-      '\u2022 "\uAE30\uBCF8 \uC2AC\uB86F\uC73C\uB85C \uBCF5\uC6D0\uD574\uC918"'
-    ],
-    slotsCliTitle: "\u26A1\uFE0F \uBE60\uB978 CLI \uBA85\uB839\uC5B4:",
-    slotsCliHelp: [
-      "\u2022 /slots rm source       - \uC6D0\uBB38 \uD589 \uC228\uAE30\uAE30",
-      "\u2022 /slots compact2        - \uCD5C\uC18C \uB4C0\uC5BC \uC2AC\uB86F",
-      "\u2022 /slots reset           - \uAE30\uBCF8\uAC12\uC73C\uB85C \uBCF5\uC6D0",
-      "\u2022 /slots toggle <id>     - \uC2AC\uB86F \uCF1C\uAE30/\uB044\uAE30"
-    ],
-    slotsResetSuccess: "[{pair}] \uC2AC\uB86F\uC774 \uAE30\uBCF8\uAC12\uC73C\uB85C \uBCF5\uC6D0\uB418\uC5C8\uC2B5\uB2C8\uB2E4",
-    slotsRemovedSuccess: '[{pair}] \uC2AC\uB86F [{id}] ("{label}") \uC81C\uAC70\uB428',
-    slotsRemovedSourceNote: " (\uC6D0\uBB38 \uD589\uC774 \uB354 \uC774\uC0C1 \uD45C\uC2DC\uB418\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4)",
-    slotsToggled: "[{pair}] \uC2AC\uB86F [{id}] \uC0C1\uD0DC: {status}",
-    slotsAdded: '[{pair}] \uC2AC\uB86F [{id}] "{label}" \uCD94\uAC00/\uC5C5\uB370\uC774\uD2B8\uB428',
-    slotsNotFound: "[{pair}] \uC2AC\uB86F [{id}]\uC744(\uB97C) \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
-    slotsUsageAdd: "\uC0AC\uC6A9\uBC95: /slots add <id> <\uB77C\uBCA8> [\uD504\uB86C\uD504\uD2B8...]",
-    slotsUsageRm: "\uC0AC\uC6A9\uBC95: /slots rm <\uC2AC\uB86F_id>",
-    slotsUsageToggle: "\uC0AC\uC6A9\uBC95: /slots toggle <\uC2AC\uB86F_id>",
-    slotsUnknown: '[{pair}] \uC54C \uC218 \uC5C6\uB294 \uBA85\uB839\uC5B4 "{cmd}". /slots \uB3C4\uC6C0\uB9D0 \uCC38\uC870'
-  },
-  ru: {
-    slot1Label: "\u0420\u0430\u0437\u0433\u043E\u0432\u043E\u0440\u043D\u044B\u0439",
-    slot2Label: "\u0414\u0435\u043B\u043E\u0432\u043E\u0439",
-    vocabLabel: "\u041B\u0435\u043A\u0441\u0438\u043A\u0430",
-    sourceLabel: "\u041E\u0440\u0438\u0433\u0438\u043D\u0430\u043B",
-    hudTitle: "ru \u21C4 en",
-    statusOriginal: "ru \u21C4 en",
-    statusEnglish: "ru \u21C4 en",
-    statusOff: "ru \u21C4 en: off",
-    subNuanceLabel: "\u21B3",
-    notifyOriginal: "[ru \u21C4 en] \u0420\u0435\u0436\u0438\u043C [\u041E\u0440\u0438\u0433\u0438\u043D\u0430\u043B]: \u0432\u0430\u0448 \u0442\u0435\u043A\u0441\u0442 \u043F\u0435\u0440\u0435\u0434\u0430\u0435\u0442\u0441\u044F \u0431\u0435\u0437 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0439",
-    notifyEnglish: "[ru \u21C4 en] \u0420\u0435\u0436\u0438\u043C [\u0410\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u0438\u0439]: \u0437\u0430\u043F\u0440\u043E\u0441 \u043F\u0435\u0440\u0435\u0432\u043E\u0434\u0438\u0442\u0441\u044F \u043D\u0430 \u0442\u0435\u0445\u043D\u0438\u0447\u0435\u0441\u043A\u0438\u0439 \u0430\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u0438\u0439",
-    notifyOff: "[ru \u21C4 en] \u041F\u043E\u043C\u043E\u0449\u043D\u0438\u043A \u0432\u044B\u043A\u043B\u044E\u0447\u0435\u043D",
-    notifyPaging: "[ru \u21C4 en] \u0414\u043B\u0438\u043D\u043D\u044B\u0439 \u0442\u0435\u043A\u0441\u0442 \u0440\u0430\u0437\u0431\u0438\u0442 \u043D\u0430 \u0441\u0435\u0433\u043C\u0435\u043D\u0442\u044B. \u041D\u0430\u0436\u043C\u0438\u0442\u0435 Alt+. \u0438\u043B\u0438 Alt+,",
-    notifyNoHistory: "[ru \u21C4 en] \u041D\u0435\u0442 \u043F\u0440\u0435\u0434\u044B\u0434\u0443\u0449\u0435\u0439 \u0437\u0430\u043F\u0438\u0441\u0438",
-    notifyHistoryRestored: "[ru \u21C4 en] \u041F\u0440\u0435\u0434\u044B\u0434\u0443\u0449\u0430\u044F \u043A\u0430\u0440\u0442\u043E\u0447\u043A\u0430 \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u0430",
-    notifyAgentHelp: "\u{1F4A1} \u041D\u0430\u0432\u044B\u043A lingual-tuner: \u043F\u0440\u043E\u0441\u0442\u043E \u0441\u043A\u0430\u0436\u0438\u0442\u0435 \u0410\u0433\u0435\u043D\u0442\u0443 \u043D\u0430\u0441\u0442\u0440\u043E\u0438\u0442\u044C \u0441\u043B\u043E\u0442\u044B \u0431\u0435\u0437 \u0440\u0443\u0447\u043D\u044B\u0445 \u043A\u043E\u043C\u0430\u043D\u0434.",
-    notifyModelSwitched: "\u041C\u043E\u0434\u0435\u043B\u044C \u043F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0435\u043D\u0430 \u043D\u0430: {model}",
-    notifyLangSwitched: "\u042F\u0437\u044B\u043A \u043F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0435\u043D \u043D\u0430: {lang}",
-    notifyLangInvalid: "\u041D\u0435\u0432\u0435\u0440\u043D\u044B\u0439 \u043A\u043E\u0434 \u044F\u0437\u044B\u043A\u0430. \u041F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u044E\u0442\u0441\u044F: zh, ja, en, ko, es, fr, de, ru",
-    notifyCompactOn: "[ru \u21C4 en] \u041E\u0434\u043D\u043E\u0441\u0442\u0440\u043E\u0447\u043D\u044B\u0439 \u0440\u0435\u0436\u0438\u043C \u043A\u0430\u043F\u0441\u0443\u043B\u044B \u0432\u043A\u043B\u044E\u0447\u0435\u043D",
-    notifyCompactOff: "[ru \u21C4 en] \u041F\u043E\u043B\u043D\u043E\u0435 \u0434\u0435\u0440\u0435\u0432\u043E \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u043E",
-    notifyTimeout: "[ru \u21C4 en] \u0412\u0440\u0435\u043C\u044F \u043E\u0436\u0438\u0434\u0430\u043D\u0438\u044F \u043F\u0435\u0440\u0435\u0432\u043E\u0434\u0430 \u0438\u0441\u0442\u0435\u043A\u043B\u043E; \u043F\u0435\u0440\u0435\u0434\u0430\u043D \u043E\u0440\u0438\u0433\u0438\u043D\u0430\u043B",
-    notifyError: "[ru \u21C4 en] \u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0435\u0440\u0435\u0432\u043E\u0434\u0430; \u043F\u0435\u0440\u0435\u0434\u0430\u043D \u043E\u0440\u0438\u0433\u0438\u043D\u0430\u043B",
-    cmdDescMode: "\u041F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0438\u0442\u044C \u0440\u0435\u0436\u0438\u043C [ru \u21C4 en]: [\u041E\u0440\u0438\u0433\u0438\u043D\u0430\u043B] \u2794 [\u0410\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u0438\u0439] \u2794 [\u0412\u044B\u043A\u043B]",
-    cmdDescStatus: "\u041E\u0442\u0447\u0435\u0442 \u043E \u0441\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u0438 \u0438 \u0434\u0438\u0430\u0433\u043D\u043E\u0441\u0442\u0438\u043A\u0430: /lingual-status",
-    cmdDescModel: "\u041F\u0440\u043E\u0432\u0435\u0440\u0438\u0442\u044C \u0438\u043B\u0438 \u0441\u043C\u0435\u043D\u0438\u0442\u044C \u043C\u043E\u0434\u0435\u043B\u044C: /lingual-model [model-id|auto]",
-    cmdDescLang: "\u041F\u0440\u043E\u0432\u0435\u0440\u0438\u0442\u044C \u0438\u043B\u0438 \u0441\u043C\u0435\u043D\u0438\u0442\u044C \u044F\u0437\u044B\u043A: /lingual-lang",
-    cmdDescSlots: "\u041D\u0430\u0441\u0442\u0440\u043E\u0438\u0442\u044C \u0441\u043B\u043E\u0442\u044B: /slots",
-    cmdDescCompact: "\u041F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0438\u0442\u044C \u0440\u0435\u0436\u0438\u043C \u043A\u0430\u043F\u0441\u0443\u043B\u044B: /lingual-compact",
-    cmdDescLast: "\u041F\u043E\u043A\u0430\u0437\u0430\u0442\u044C \u043F\u0440\u0435\u0434\u044B\u0434\u0443\u0449\u0443\u044E \u043A\u0430\u0440\u0442\u043E\u0447\u043A\u0443: /lingual-last",
-    cmdDescAgent: "\u0420\u0443\u043A\u043E\u0432\u043E\u0434\u0441\u0442\u0432\u043E \u043F\u043E \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0435: /lingual-agent",
-    shortcutNextPage: "\u041F\u0435\u0440\u0435\u0439\u0442\u0438 \u043A \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u043C\u0443 \u0441\u0435\u0433\u043C\u0435\u043D\u0442\u0443",
-    shortcutPrevPage: "\u041F\u0435\u0440\u0435\u0439\u0442\u0438 \u043A \u043F\u0440\u0435\u0434\u044B\u0434\u0443\u0449\u0435\u043C\u0443 \u0441\u0435\u0433\u043C\u0435\u043D\u0442\u0443",
-    capsuleSlot1Prefix: "\u0420\u0430\u0437\u0433",
-    capsuleSlot2Prefix: "\u0414\u0435\u043B",
-    layoutCapsule: "\u041E\u0434\u043D\u043E\u0441\u0442\u0440\u043E\u0447\u043D\u0430\u044F \u043A\u0430\u043F\u0441\u0443\u043B\u0430 (1-Line Capsule)",
-    layoutTree: "Trifecta \u043B\u0435\u0432\u043E\u043D\u0430\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u043D\u043E\u0435 \u0434\u0435\u0440\u0435\u0432\u043E (\xB7 \u250C \u251C \u2514)",
-    statusReportTitle: "\u041E\u0442\u0447\u0435\u0442 \u043E \u0441\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u0438",
-    statusReportMode: "\u0422\u0435\u043A\u0443\u0449\u0438\u0439 \u0440\u0435\u0436\u0438\u043C",
-    statusReportFlow: "\u041F\u043E\u0442\u043E\u043A \u044F\u0437\u044B\u043A\u043E\u0432",
-    statusReportModel: "\u041C\u043E\u0434\u0435\u043B\u044C \u043F\u043E\u043C\u043E\u0449\u043D\u0438\u043A\u0430",
-    statusReportCache: "\u041A\u044D\u0448 \u0441\u0435\u0441\u0441\u0438\u0438",
-    statusReportLayout: "HUD: Trifecta \u043B\u0435\u0432\u043E\u043D\u0430\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u043D\u043E\u0435 \u0434\u0435\u0440\u0435\u0432\u043E (\xB7 \u250C \u251C \u2514)",
-    statusReportAuth: "\u0410\u0443\u0442\u0435\u043D\u0442\u0438\u0444\u0438\u043A\u0430\u0446\u0438\u044F: \u0412\u0441\u0442\u0440\u043E\u0435\u043D\u043D\u044B\u0439 \u043F\u0440\u043E\u0446\u0435\u0441\u0441 Pi (Zero Config)",
-    statusReportShortcuts: "\u041A\u043E\u043C\u0430\u043D\u0434\u044B: /lingual (\u0440\u0435\u0436\u0438\u043C) \xB7 /slots (\u0441\u043B\u043E\u0442\u044B) \xB7 /lang (\u044F\u0437\u044B\u043A)",
-    statusReportTuner: "\u041D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0430 \u0441\u043B\u043E\u0442\u043E\u0432: \u0432\u0441\u0442\u0440\u043E\u0435\u043D\u043D\u044B\u0439 \u043D\u0430\u0432\u044B\u043A lingual-tuner",
-    modeDescOriginal: "\u041E\u0440\u0438\u0433\u0438\u043D\u0430\u043B \xB7 0\u043C\u0441 \u0431\u0435\u0437 \u0431\u043B\u043E\u043A\u0438\u0440\u043E\u0432\u043A\u0438",
-    modeDescEnglish: "\u0410\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u0438\u0439 \u0440\u0435\u0436\u0438\u043C \xB7 \u0433\u043B\u0443\u0431\u043E\u043A\u043E\u0435 \u0440\u0430\u0441\u0441\u0443\u0436\u0434\u0435\u043D\u0438\u0435",
-    modeDescOff: "\u0412\u044B\u043A\u043B\u044E\u0447\u0435\u043D\u043E",
-    modelCurrentLabel: "\u0422\u0435\u043A\u0443\u0449\u0430\u044F \u043C\u043E\u0434\u0435\u043B\u044C",
-    modelFollowSession: "\u0421\u043B\u0435\u0434\u043E\u0432\u0430\u0442\u044C \u0437\u0430 \u0441\u0435\u0441\u0441\u0438\u0435\u0439",
-    modelAvailableListHeader: "\u0414\u043E\u0441\u0442\u0443\u043F\u043D\u044B\u0435 \u043C\u043E\u0434\u0435\u043B\u0438 (/lingual-model <id>):",
-    modelAutoFollowDesc: "auto (\u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u0435\u0441\u043A\u0438 \u0441\u043B\u0435\u0434\u043E\u0432\u0430\u0442\u044C \u0437\u0430 \u043C\u043E\u0434\u0435\u043B\u044C\u044E \u0441\u0435\u0441\u0441\u0438\u0438)",
-    modelSelectHint: "\u0418\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u0439\u0442\u0435 /lingual-model <id> \u0438\u043B\u0438 auto.",
-    langUsageHint: "\u0418\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u043D\u0438\u0435: /lang <\u043A\u043E\u0434> [\u0446\u0435\u043B\u0435\u0432\u043E\u0439_\u044F\u0437\u044B\u043A]",
-    langList: [
-      "\u2022 zh (\u041A\u0438\u0442\u0430\u0439\u0441\u043A\u0438\u0439 \u2794 \u0410\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u0438\u0439)",
-      "\u2022 ja (\u042F\u043F\u043E\u043D\u0441\u043A\u0438\u0439 \u2794 \u0410\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u0438\u0439)",
-      "\u2022 en (\u0410\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u0438\u0439 \u2794 \u0420\u0443\u0441\u0441\u043A\u0438\u0439/\u042F\u043F\u043E\u043D\u0441\u043A\u0438\u0439)",
-      "\u2022 ko (\u041A\u043E\u0440\u0435\u0439\u0441\u043A\u0438\u0439 \u2794 \u0410\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u0438\u0439)",
-      "\u2022 es (\u0418\u0441\u043F\u0430\u043D\u0441\u043A\u0438\u0439 \u2794 \u0410\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u0438\u0439)",
-      "\u2022 fr (\u0424\u0440\u0430\u043D\u0446\u0443\u0437\u0441\u043A\u0438\u0439 \u2794 \u0410\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u0438\u0439)",
-      "\u2022 de (\u041D\u0435\u043C\u0435\u0446\u043A\u0438\u0439 \u2794 \u0410\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u0438\u0439)",
-      "\u2022 ru (\u0420\u0443\u0441\u0441\u043A\u0438\u0439 \u2794 \u0410\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u0438\u0439)"
-    ],
-    slotsHeader: "\u0410\u0440\u0445\u0438\u0442\u0435\u043A\u0442\u0443\u0440\u0430 \u0434\u0438\u043D\u0430\u043C\u0438\u0447\u0435\u0441\u043A\u0438\u0445 \u0441\u043B\u043E\u0442\u043E\u0432",
-    slotsActiveTag: "\u0430\u043A\u0442\u0438\u0432\u043D\u044B",
-    slotsNone: "\u0421\u043B\u043E\u0442\u044B \u043D\u0435 \u043D\u0430\u0441\u0442\u0440\u043E\u0435\u043D\u044B",
-    slotsStatusEnabled: "\u0432\u043A\u043B\u044E\u0447\u0435\u043D",
-    slotsStatusDisabled: "\u043E\u0442\u043A\u043B\u044E\u0447\u0435\u043D",
-    slotsWithNuance: " +\u043D\u044E\u0430\u043D\u0441",
-    slotsNlTitle: "\u{1F4AC} \u041D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0430 \u0435\u0441\u0442\u0435\u0441\u0442\u0432\u0435\u043D\u043D\u044B\u043C \u044F\u0437\u044B\u043A\u043E\u043C:",
-    slotsNlExamples: [
-      '\u2022 "\u0421\u0434\u0435\u043B\u0430\u0439 \u0442\u043E\u043B\u044C\u043A\u043E \u0440\u0430\u0437\u0433\u043E\u0432\u043E\u0440\u043D\u044B\u0439 \u0438 \u0434\u0435\u043B\u043E\u0432\u043E\u0439 \u0441\u0442\u0438\u043B\u044C, \u0431\u0435\u0437 \u043E\u0440\u0438\u0433\u0438\u043D\u0430\u043B\u0430"',
-      '\u2022 "\u041F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0438 \u043D\u0430 \u0447\u0438\u0441\u0442\u044B\u0439 \u043E\u0434\u043D\u043E\u0441\u0442\u0440\u043E\u0447\u043D\u044B\u0439 \u043F\u0435\u0440\u0435\u0432\u043E\u0434"',
-      '\u2022 "\u0421\u0431\u0440\u043E\u0441\u044C \u0441\u043B\u043E\u0442\u044B \u043D\u0430 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F \u043F\u043E \u0443\u043C\u043E\u043B\u0447\u0430\u043D\u0438\u044E"'
-    ],
-    slotsCliTitle: "\u26A1\uFE0F \u0411\u044B\u0441\u0442\u0440\u044B\u0435 \u043A\u043E\u043C\u0430\u043D\u0434\u044B CLI:",
-    slotsCliHelp: [
-      "\u2022 /slots rm source       - \u0421\u043A\u0440\u044B\u0442\u044C \u0441\u0442\u0440\u043E\u043A\u0443 \u043E\u0440\u0438\u0433\u0438\u043D\u0430\u043B\u0430",
-      "\u2022 /slots compact2        - \u041C\u0438\u043D\u0438\u043C\u0430\u043B\u044C\u043D\u044B\u0439 \u0434\u0432\u043E\u0439\u043D\u043E\u0439 \u0441\u043B\u043E\u0442",
-      "\u2022 /slots reset           - \u0421\u0431\u0440\u043E\u0441\u0438\u0442\u044C \u043D\u0430 \u0441\u0442\u0430\u043D\u0434\u0430\u0440\u0442\u043D\u044B\u0435",
-      "\u2022 /slots toggle <id>     - \u0412\u043A\u043B\u044E\u0447\u0438\u0442\u044C/\u0432\u044B\u043A\u043B\u044E\u0447\u0438\u0442\u044C \u0441\u043B\u043E\u0442"
-    ],
-    slotsResetSuccess: "[{pair}] \u0421\u043B\u043E\u0442\u044B \u0441\u0431\u0440\u043E\u0448\u0435\u043D\u044B \u043D\u0430 \u0441\u0442\u0430\u043D\u0434\u0430\u0440\u0442\u043D\u044B\u0435",
-    slotsRemovedSuccess: '[{pair}] \u0421\u043B\u043E\u0442 [{id}] ("{label}") \u0443\u0434\u0430\u043B\u0435\u043D',
-    slotsRemovedSourceNote: " (\u0421\u0442\u0440\u043E\u043A\u0430 \u043E\u0440\u0438\u0433\u0438\u043D\u0430\u043B\u0430 \u0431\u043E\u043B\u044C\u0448\u0435 \u043D\u0435 \u043E\u0442\u043E\u0431\u0440\u0430\u0436\u0430\u0435\u0442\u0441\u044F)",
-    slotsToggled: "[{pair}] \u0421\u043B\u043E\u0442 [{id}] \u0442\u0435\u043F\u0435\u0440\u044C: {status}",
-    slotsAdded: '[{pair}] \u0421\u043B\u043E\u0442 [{id}] "{label}" \u0434\u043E\u0431\u0430\u0432\u043B\u0435\u043D/\u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D',
-    slotsNotFound: "[{pair}] \u0421\u043B\u043E\u0442 [{id}] \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D",
-    slotsUsageAdd: "\u0418\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u043D\u0438\u0435: /slots add <id> <\u043C\u0435\u0442\u043A\u0430> [\u0438\u043D\u0441\u0442\u0440\u0443\u043A\u0446\u0438\u044F...]",
-    slotsUsageRm: "\u0418\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u043D\u0438\u0435: /slots rm <id_\u0441\u043B\u043E\u0442\u0430>",
-    slotsUsageToggle: "\u0418\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u043D\u0438\u0435: /slots toggle <id_\u0441\u043B\u043E\u0442\u0430>",
-    slotsUnknown: '[{pair}] \u041D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u0430\u044F \u043A\u043E\u043C\u0430\u043D\u0434\u0430 "{cmd}". \u0412\u0432\u0435\u0434\u0438\u0442\u0435 /slots \u0434\u043B\u044F \u0441\u043F\u0440\u0430\u0432\u043A\u0438'
+    slotsNotFound: "[{pair}] \u30B9\u30ED\u30C3\u30C8 [{id}] \u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093",
+    slotsUsageAdd: "\u4F7F\u3044\u65B9: /slots add <id> <label> [instruction...]",
+    slotsUsageRm: "\u4F7F\u3044\u65B9: /slots rm <slot-id>",
+    slotsUsageToggle: "\u4F7F\u3044\u65B9: /slots toggle <slot-id>",
+    slotsUnknown: '\u4E0D\u660E\u306A\u30B9\u30ED\u30C3\u30C8\u30B3\u30DE\u30F3\u30C9 "{cmd}" \u3067\u3059\u3002',
+    spokenLabel: "\u53E3\u8A9E",
+    writtenLabel: "\u6587\u9762"
   }
 };
 function resolveLabelsForLang(lang = "en", overrides, targetLang) {
@@ -1939,15 +1332,15 @@ function resolveLabelsForLang(lang = "en", overrides, targetLang) {
   const pairTitle = `${norm} \u21C4 ${actualTarget}`;
   const merged = {
     ...LANGUAGE_PRESETS.en,
-    // 1. 英文全量保底 (保证任何新增 key 不为空，不泄露中文)
+    // 1. Universal English baseline
     ...target,
-    // 2. 目标母语官方预设
+    // 2. Localized native language preset
     hudTitle: pairTitle,
     statusOriginal: pairTitle,
     statusEnglish: pairTitle,
     statusOff: `${pairTitle}: off`,
     ...overrides || {}
-    // 3. 用户显式覆盖
+    // 3. User explicit overrides
   };
   for (const [key, val] of Object.entries(merged)) {
     if (typeof val === "string") {
@@ -1976,7 +1369,7 @@ function formatStatusReport(labels, info) {
     `\u2022 ${labels.statusReportLayout || "Layout"}: ${layoutDesc}`,
     `\u2022 ${labels.statusReportAuth || "Auth: Pi Native In-Process Auth"}`,
     `\u2022 ${labels.statusReportTuner || "Slot Tuner: Built-in lingual-tuner skill (Just describe preferences to Agent)"}`,
-    `\u2022 ${labels.statusReportShortcuts || "Shortcuts: /lingual \xB7 /slots \xB7 /lang \xB7 /lingual-compact \xB7 /status"}`
+    `\u2022 ${labels.statusReportShortcuts || "Shortcuts: /lingual \xB7 /slots \xB7 /lang \xB7 /last"}`
   );
   return lines.join("\n");
 }
@@ -1989,7 +1382,7 @@ ${availableList}
 \u2022 ${labels.modelAutoFollowDesc || "auto"}
 `;
   }
-  msg += labels.modelSelectHint || "Specify model with /lingual-model <model-id> or auto.";
+  msg += labels.modelSelectHint || "Specify model with /lingual model <model-id> or auto.";
   return msg;
 }
 
@@ -2207,7 +1600,7 @@ var LingualLruCache = class {
   hits = 0;
   misses = 0;
   /**
-   * 生成标准化缓存键（结合源语言与目标语言）
+   * Generates a normalized cache key incorporating language pairs and slot signature.
    */
   static buildKey(text, sourceLang = "en", targetLang = "ja", slotSignature) {
     const sig = slotSignature ? `[${slotSignature}]` : "";
@@ -2751,7 +2144,7 @@ function renderCardLayout(card, labels, options = {}) {
     effectiveSlots = options.slots.filter((s) => s.enabled);
   } else {
     effectiveSlots = [
-      { id: "source", label: labels.sourceLabel || "\u539F\u6587", role: "source", enabled: true },
+      { id: "source", label: labels.sourceLabel || "Source", role: "source", enabled: true },
       { id: "spoken", label: labels.slot1Label || "Spoken", role: "translation", enabled: true, showMeaning: true },
       ...card.written ? [{ id: "written", label: labels.slot2Label || "Written", role: "translation", enabled: true, showMeaning: true }] : [],
       ...card.vocab ? [{ id: "vocab", label: labels.vocabLabel || "Vocab", role: "vocab", enabled: true }] : []
@@ -2793,7 +2186,7 @@ function renderCardLayout(card, labels, options = {}) {
       contentBranches.push({
         id: slot.id,
         label: slot.label,
-        role: slot.role,
+        role: slot.role || "translation",
         content: content.trim(),
         meaning: slot.showMeaning !== false && meaning && meaning.trim() ? meaning.trim() : void 0
       });
@@ -2819,7 +2212,7 @@ function renderCardLayout(card, labels, options = {}) {
   const sourceSlot = effectiveSlots.find((s) => s.role === "source");
   let sourceLines = [];
   if (sourceSlot && card.sourceText && card.sourceText.trim()) {
-    const sourceLabel = sourceSlot.label || labels.sourceLabel || "\u539F\u6587";
+    const sourceLabel = sourceSlot.label || labels.sourceLabel || "Source";
     const prefixRaw = `  \xB7 [${sourceLabel}] `;
     const prefixW = getVisualWidth(prefixRaw);
     const pageTagW = pageTag ? getVisualWidth(pageTag) : 0;
@@ -3008,16 +2401,16 @@ function renderCardLayout(card, labels, options = {}) {
 var LingualSessionController = class {
   activeAbortController = null;
   currentGeneration = 0;
-  // 分页状态管理
+  // Pagination state management
   pagedResults = [];
   currentPageIndex = 0;
   totalExpectedPages = 1;
   lastResult = null;
   /**
-   * 启动一次新的会话请求：
-   * 1. 物理中断前序正在排队或流式传输的 HTTP 请求；
-   * 2. 生成单调递增的新世代号；
-   * 3. 绑定全新的 AbortSignal。
+   * Begins a new session request:
+   * 1. Aborts in-flight HTTP stream/request from previous turn;
+   * 2. Increments monotonic generation counter;
+   * 3. Binds a fresh AbortSignal.
    */
   beginRequest() {
     this.abortActive();
@@ -3029,7 +2422,7 @@ var LingualSessionController = class {
     };
   }
   /**
-   * 物理中断当前正在活跃的网络请求
+   * Aborts currently active in-flight network requests.
    */
   abortActive() {
     if (this.activeAbortController) {
@@ -3038,19 +2431,19 @@ var LingualSessionController = class {
     }
   }
   /**
-   * 判定指定世代号是否仍为当前最新的活跃世代
+   * Checks if the specified generation token is still the latest active generation.
    */
   isLatest(generation) {
     return this.currentGeneration === generation;
   }
   /**
-   * 获取当前最新世代号
+   * Gets the latest generation counter value.
    */
   getCurrentGeneration() {
     return this.currentGeneration;
   }
   /**
-   * 初始化分页池 (当输入被切分为多个意群分块时调用)
+   * Initializes the pagination pool when input is split into multiple semantic chunks.
    */
   initPagination(totalExpectedPages) {
     this.pagedResults = [];
@@ -3058,7 +2451,7 @@ var LingualSessionController = class {
     this.totalExpectedPages = Math.max(1, totalExpectedPages);
   }
   /**
-   * 存入某个切片的翻译结果 (具备世代守卫，拒绝陈旧世代脏写)
+   * Sets page result for a chunk index with generation guard to reject stale writes.
    */
   setPageResult(chunkIndex, result, generation) {
     if (!this.isLatest(generation)) {
@@ -3069,7 +2462,7 @@ var LingualSessionController = class {
     return true;
   }
   /**
-   * 获取当前展示页的翻译结果
+   * Gets translation result for currently active page.
    */
   getActiveResult() {
     const readyList = this.getReadyPages();
@@ -3082,13 +2475,13 @@ var LingualSessionController = class {
     return readyList[this.currentPageIndex] || null;
   }
   /**
-   * 获取所有已就绪的分页结果列表
+   * Gets all ready page results.
    */
   getReadyPages() {
     return this.pagedResults.filter((item) => Boolean(item));
   }
   /**
-   * 获取当前分页状态快照
+   * Gets a snapshot of the current pagination state.
    */
   getPaginationSnapshot() {
     const readyCount = this.getReadyPages().length;
@@ -3101,8 +2494,8 @@ var LingualSessionController = class {
     };
   }
   /**
-   * 翻至下一页 (循环翻页)
-   * 返回 true 表示发生了有效翻页
+   * Cycles to the next ready page.
+   * Returns true if pagination changed.
    */
   nextPage() {
     const readyList = this.getReadyPages();
@@ -3111,8 +2504,8 @@ var LingualSessionController = class {
     return true;
   }
   /**
-   * 翻至上一页 (循环翻页)
-   * 返回 true 表示发生了有效翻页
+   * Cycles to the previous ready page.
+   * Returns true if pagination changed.
    */
   prevPage() {
     const readyList = this.getReadyPages();
@@ -3121,7 +2514,7 @@ var LingualSessionController = class {
     return true;
   }
   /**
-   * 清空分页池 (在遇到非自然语言输入、或关闭伴学时调用，杜绝幽灵卡片复活)
+   * Clears pagination pool on non-translatable input or teardown to prevent ghost cards.
    */
   clearPagination() {
     this.pagedResults = [];
@@ -3129,19 +2522,19 @@ var LingualSessionController = class {
     this.totalExpectedPages = 1;
   }
   /**
-   * 获取上一条记录 (用于 /lingual-last 回显)
+   * Gets the most recent translation result for /last replay.
    */
   getLastResult() {
     return this.lastResult;
   }
   /**
-   * 显式设置上一条记录
+   * Explicitly sets the last translation result.
    */
   setLastResult(result) {
     this.lastResult = result;
   }
   /**
-   * 彻底重置状态机
+   * Resets the controller completely.
    */
   reset() {
     this.abortActive();
@@ -3163,6 +2556,20 @@ function invalidateUserConfigCache() {
 }
 function isTestEnvironment() {
   return process.env.NODE_ENV === "test" || process.env.NODE_TEST_CONTEXT !== void 0 || process.execArgv.some((a) => a.startsWith("--test") || a === "--test") || process.argv.some((a) => a === "--test" || a.startsWith("--test=") || /\.(?:test|spec)\.[cm]?[jt]s$/i.test(a)) || process.env.npm_lifecycle_event === "test";
+}
+function isUserLingualConfigured() {
+  if (isTestEnvironment()) return true;
+  const agentDir = path.join(os.homedir(), ".pi", "agent");
+  const lingualFile = path.join(agentDir, "lingual.json");
+  if (!fs.existsSync(lingualFile)) return false;
+  try {
+    const raw = fs.readFileSync(lingualFile, "utf8");
+    const parsed = JSON.parse(raw);
+    const inner = parsed && (parsed["pi-lingual"] || parsed);
+    return Boolean(inner && (inner.configured || inner.sourceLang && inner.targetLang));
+  } catch {
+    return false;
+  }
 }
 function loadUserLingualConfig() {
   if (isTestEnvironment()) {
@@ -3217,6 +2624,10 @@ function loadUserLingualConfig() {
     const compact = target.compact;
     const slotPreset = target.slotPreset;
     const filterSlots = (arr) => Array.isArray(arr) ? arr.filter((s) => s && typeof s === "object" && typeof s.id === "string" && typeof s.label === "string") : void 0;
+    const filterModes = (arr) => Array.isArray(arr) ? arr.filter((m) => m && typeof m === "object" && typeof m.id === "string") : void 0;
+    const modes = filterModes(target.modes);
+    const activeModeId = typeof target.activeModeId === "string" ? target.activeModeId : void 0;
+    const globalKillList = Array.isArray(target.globalKillList) ? target.globalKillList : void 0;
     const slots = filterSlots(target.slots);
     const directSlots = filterSlots(target.directSlots);
     const promptSlots = filterSlots(target.promptSlots);
@@ -3229,6 +2640,7 @@ function loadUserLingualConfig() {
     const labels = resolveLabelsForLang(sourceLang || "en", target.labels, targetLang || "ja");
     const normalizedMode = typeof target.mode === "string" ? normalizeLingualModeInput(target.mode) || target.mode : void 0;
     cachedUserConfig = {
+      ...target,
       ...endpoint ? { endpoint } : {},
       ...apiKey ? { apiKey } : {},
       ...model ? { model } : {},
@@ -3237,6 +2649,9 @@ function loadUserLingualConfig() {
       ...modeLocked !== void 0 ? { modeLocked } : {},
       ...compact !== void 0 ? { compact: Boolean(compact) } : {},
       ...slotPreset ? { slotPreset } : {},
+      ...modes ? { modes } : {},
+      ...activeModeId ? { activeModeId } : {},
+      ...globalKillList ? { globalKillList } : {},
       ...slots ? { slots } : {},
       ...directSlots ? { directSlots } : {},
       ...promptSlots ? { promptSlots } : {},
@@ -3275,7 +2690,7 @@ function saveUserLingualConfig(patch) {
     }
     for (const [k, v] of Object.entries(patch)) {
       const isEmptyArray = Array.isArray(v) && v.length === 0;
-      if (v === void 0 || v === "" || isEmptyArray || v === "auto" || v === "original" || v === "companion" || k === "compact" && v === false || k === "modeLocked" && v === false) {
+      if (v === void 0 || v === "" || isEmptyArray || v === "auto" || k === "compact" && v === false || k === "modeLocked" && v === false) {
         delete existing[k];
       } else if (k === "mode") {
         existing[k] = v === "english" ? "direct" : v === "select" ? "candidates" : v;
@@ -3307,7 +2722,7 @@ var DEFAULT_CONFIG = {
   apiKey: process.env.LINGUAL_API_KEY || "",
   model: process.env.LINGUAL_MODEL || "",
   selectedModel: "auto",
-  mode: "original",
+  mode: "direct",
   sourceLang: "en",
   targetLang: "ja",
   temperature: 0.2,
@@ -3464,7 +2879,7 @@ async function translateCore(req, options) {
       const content = out?.content || toCleanString(rawObj[slot.id]) || (slot.id === "spoken" ? parsed.spoken : slot.id === "written" ? parsed.written || "" : slot.id === "vocab" ? parsed.vocab || "" : "");
       const meaning = out?.meaning || toCleanString(rawObj[slot.id + "_meaning"]) || (slot.id === "spoken" ? parsed.spokenMeaning : slot.id === "written" ? parsed.writtenMeaning : void 0) || void 0;
       if (content) {
-        slotResults.push({ id: slot.id, label: slot.label, role: slot.role, content, meaning });
+        slotResults.push({ id: slot.id, label: slot.label, role: slot.role || "translation", content, meaning });
       }
     }
   }
@@ -3492,22 +2907,26 @@ async function executeLlmCompletion(text, sysPrompt, cfg) {
   }
   try {
     if (typeof cfg.complete === "function") {
-      return await cfg.complete(text, sysPrompt, controller.signal);
+      return await cfg.complete(text, sysPrompt, controller.signal, { reasoning: cfg.reasoning });
     }
     if (cfg.endpoint) {
       const headers = { "Content-Type": "application/json" };
       if (cfg.apiKey) headers["Authorization"] = `Bearer ${cfg.apiKey}`;
+      const requestBody = {
+        model: cfg.model || "gemini-3.8-flash",
+        messages: [
+          { role: "system", content: sysPrompt },
+          { role: "user", content: text }
+        ],
+        temperature: cfg.temperature
+      };
+      if (cfg.reasoning) {
+        requestBody.reasoning = cfg.reasoning;
+      }
       const response = await fetch(cfg.endpoint, {
         method: "POST",
         headers,
-        body: JSON.stringify({
-          model: cfg.model || "gemini-3.8-flash",
-          messages: [
-            { role: "system", content: sysPrompt },
-            { role: "user", content: text }
-          ],
-          temperature: cfg.temperature
-        }),
+        body: JSON.stringify(requestBody),
         signal: controller.signal
       });
       if (!response.ok) return null;
@@ -3685,7 +3104,151 @@ function resolveModifySlotsFromConfig(cfg) {
   }
   return getDefaultModifySlots(cfg.sourceLang, cfg.explainLang);
 }
-async function generatePromptCandidates(text, userConfig = {}) {
+function resolveModesFromConfig(cfg) {
+  if (Array.isArray(cfg.modes) && cfg.modes.length > 0) {
+    const valid = cfg.modes.filter(
+      (m) => m && typeof m.id === "string" && m.id.trim() && Array.isArray(m.slots)
+    );
+    if (valid.length > 0) return valid;
+  }
+  const hasLegacyCustomSlots = Array.isArray(cfg.slots) || Array.isArray(cfg.directSlots) || Array.isArray(cfg.promptSlots) || Array.isArray(cfg.modifySlots);
+  if (hasLegacyCustomSlots) {
+    const sourceLang = cfg.sourceLang || "en";
+    const explainLang = cfg.explainLang;
+    const directSlots = resolveDirectSlotsFromConfig({ sourceLang, directSlots: cfg.directSlots });
+    const modifySlots = resolveModifySlotsFromConfig({ sourceLang, explainLang, modifySlots: cfg.modifySlots });
+    const promptSlots = resolveCandidateSlotsFromConfig({ sourceLang, promptSlots: cfg.promptSlots });
+    const companionSlots = (Array.isArray(cfg.slots) && cfg.slots.length > 0 ? cfg.slots : getDefaultSlots(sourceLang)).map((s) => ({
+      id: s.id,
+      label: s.label,
+      role: s.role === "vocab" ? "vocab" : "rewrite",
+      instruction: s.instruction || "Natural expressions matching context",
+      enabled: s.enabled !== false
+    }));
+    return [
+      {
+        id: "direct",
+        name: sourceLang === "zh" ? "\u89C4\u8303\u76F4\u53D1" : sourceLang === "ja" ? "\u4ED5\u69D8\u76F4\u884C" : "Logical Spec",
+        flow: "translate",
+        action: "transform",
+        hud: "preview",
+        slots: directSlots,
+        enabled: true
+      },
+      {
+        id: "live-flow",
+        name: sourceLang === "zh" ? "\u5B9E\u6218\u72C2\u98D9" : sourceLang === "ja" ? "\u5B9F\u6226\u75BE\u8D70" : "Live Flow",
+        flow: "proofread",
+        action: "transform",
+        hud: "adaptive-takeaway",
+        slots: modifySlots,
+        enabled: true
+      },
+      {
+        id: "companion",
+        name: sourceLang === "zh" ? "\u7EAF\u4F34\u5B66" : sourceLang === "ja" ? "\u7D14\u4F34\u8D70" : "Companion",
+        flow: "translate",
+        action: "pass-through",
+        hud: "tree",
+        slots: companionSlots,
+        enabled: true
+      },
+      {
+        id: "candidates",
+        name: sourceLang === "zh" ? "\u6311\u5019\u9009" : sourceLang === "ja" ? "\u5019\u88DC\u9078\u629E" : "Candidates",
+        flow: "translate",
+        action: "select",
+        hud: "tree",
+        slots: promptSlots,
+        enabled: true
+      }
+    ];
+  }
+  return getDefaultFactoryModes(cfg.sourceLang, cfg.explainLang);
+}
+function normalizeActiveModeId(cfg, modes) {
+  if (cfg.mode === "off") return "off";
+  const activeModes = modes.filter((m) => m.enabled !== false);
+  if (cfg.activeModeId && activeModes.some((m) => m.id === cfg.activeModeId)) {
+    return cfg.activeModeId;
+  }
+  if (cfg.mode) {
+    const legacyMap = {
+      original: "companion",
+      companion: "companion",
+      english: "direct",
+      direct: "direct",
+      lazy: "direct",
+      select: "candidates",
+      candidates: "candidates",
+      modify: "live-flow",
+      "live-flow": "live-flow",
+      raw: "live-flow"
+    };
+    const mappedId = legacyMap[cfg.mode] || cfg.mode;
+    if (activeModes.some((m) => m.id === mappedId)) {
+      return mappedId;
+    }
+  }
+  return activeModes[0]?.id || "direct";
+}
+function compileModeSystemPrompt(mode, options) {
+  const sourceLang = mode.customInputLang || options.sourceLang || "en";
+  const targetLang = mode.customOutputLang || options.targetLang || "en";
+  const explainLang = options.explainLang || sourceLang;
+  const interpolatedSlots = mode.slots.map((s) => ({
+    ...s,
+    instruction: s.instruction ? interpolatePromptVariables(s.instruction, {
+      sourceLang,
+      targetLang,
+      explainLang
+    }) : ""
+  }));
+  const slotKillLists = (mode.slots || []).flatMap((s) => s.killList || []);
+  const combinedKillList = [...mode.killList || [], ...slotKillLists];
+  const killListBlock = compileKillListInstruction(combinedKillList, options.globalKillList);
+  let systemHintBlock = "";
+  if (mode.systemHint) {
+    const rawHints = Array.isArray(mode.systemHint) ? mode.systemHint : [mode.systemHint];
+    const hints = rawHints.map((h) => interpolatePromptVariables(h, { sourceLang, targetLang, explainLang }).trim()).filter(Boolean);
+    if (hints.length > 0) {
+      systemHintBlock = `
+
+[USER SPECIFIED MODE RULES - MANDATORY]:
+${hints.map((h, i) => `(${i + 1}) ${h}`).join("\n")}`;
+    }
+  }
+  let codeSwitchingBlock = "";
+  if (mode.preserveCodeSwitching && mode.flow === "proofread") {
+    codeSwitchingBlock = `
+
+[CODE-SWITCHING PRESERVATION]:
+If the user's input draft contains native ${sourceLang} words or expressions mixed in, seamlessly translate them into ${targetLang} in the fixed and native outputs, and explicitly record the translation in the takeaways ("fixes").`;
+  }
+  let contextBlock = "";
+  if (options.context && options.context.trim()) {
+    contextBlock = `
+
+[CONTEXT / RECENT GIT DIFF]:
+${options.context.trim().slice(0, 500)}`;
+  }
+  if (mode.flow === "proofread") {
+    const base2 = buildModifySystemPrompt({
+      sourceLang,
+      targetLang,
+      explainLang,
+      customSlots: interpolatedSlots
+    });
+    return `${base2}${codeSwitchingBlock}${systemHintBlock}${contextBlock}${killListBlock}`;
+  }
+  const base = buildPromptCandidatesSystemPrompt({
+    sourceLang,
+    targetLang,
+    promptSlots: interpolatedSlots
+  });
+  return `${base}${codeSwitchingBlock}${systemHintBlock}${contextBlock}${killListBlock}`;
+}
+async function executeModeRunner(text, mode, userConfig = {}) {
   const trimmed = text.trim();
   if (!trimmed) return null;
   const diskConfig = loadUserLingualConfig();
@@ -3693,67 +3256,80 @@ async function generatePromptCandidates(text, userConfig = {}) {
   if (!shouldTriggerTranslation(trimmed, cfg.sourceLang, true)) {
     return null;
   }
-  const slots = resolveCandidateSlotsFromConfig({
-    sourceLang: cfg.sourceLang,
-    promptSlots: userConfig.promptSlots ?? diskConfig.promptSlots
+  const resolvedReasoning = mode.reasoning ?? cfg.reasoning ?? "low";
+  const effectiveCfg = {
+    ...cfg,
+    reasoning: resolvedReasoning
+  };
+  const sysPrompt = compileModeSystemPrompt(mode, {
+    sourceLang: effectiveCfg.sourceLang,
+    targetLang: effectiveCfg.targetLang,
+    explainLang: effectiveCfg.explainLang,
+    globalKillList: effectiveCfg.globalKillList,
+    context: effectiveCfg.context || userConfig.context
   });
-  const isModify = slots.some((s) => s.id === "fixed");
-  const sysPrompt = isModify ? buildModifySystemPrompt({
-    sourceLang: cfg.sourceLang,
-    targetLang: cfg.targetLang,
-    explainLang: cfg.explainLang
-  }) : buildPromptCandidatesSystemPrompt({
-    sourceLang: cfg.sourceLang,
-    targetLang: cfg.targetLang,
-    promptSlots: slots
-  });
-  const raw = await executeLlmCompletion(trimmed, sysPrompt, cfg);
+  const raw = await executeLlmCompletion(trimmed, sysPrompt, effectiveCfg);
   if (typeof raw !== "string" || !raw.trim()) return null;
   const obj = repairAndParseJsonObject(raw);
   if (!obj) {
-    const fallbackSingle = extractCleanJsonField(raw, slots[0]?.id || "prompt");
+    const fallbackSingle = extractCleanJsonField(raw, mode.slots[0]?.id || "prompt");
     if (fallbackSingle) {
-      return [{ id: slots[0]?.id || "concise", label: slots[0]?.label || "Direct", content: fallbackSingle }];
+      return [{ id: mode.slots[0]?.id || "concise", label: mode.slots[0]?.label || "Direct", content: fallbackSingle }];
     }
     return null;
   }
-  const vocabSlot = slots.find((s) => s.role === "vocab");
+  const enabledSlots = mode.slots.filter((s) => s.enabled !== false);
+  const vocabSlot = enabledSlots.find((s) => s.role === "vocab" || s.id === "vocab" || s.id === "fixes");
   const extractedVocab = vocabSlot && !BLOCKED_JSON_KEYS.has(vocabSlot.id) && typeof obj[vocabSlot.id] === "string" && obj[vocabSlot.id].trim() ? obj[vocabSlot.id].trim() : typeof obj.fixes === "string" && obj.fixes.trim() ? obj.fixes.trim() : typeof obj.vocab === "string" && obj.vocab.trim() ? obj.vocab.trim() : void 0;
-  if (isModify && typeof obj.fixed === "string" && obj.fixed.trim()) {
-    const fixedVal = obj.fixed.trim();
-    const nativeVal = typeof obj.native === "string" ? obj.native.trim() : "";
-    const res = [
-      {
-        id: "fixed",
-        label: slots.find((s) => s.id === "fixed")?.label || "Fixed",
-        content: fixedVal,
-        ...extractedVocab ? { vocab: extractedVocab } : {}
-      }
-    ];
-    if (nativeVal && slots.some((s) => s.id === "native")) {
-      res.push({
-        id: "native",
-        label: slots.find((s) => s.id === "native")?.label || "Native",
-        content: nativeVal,
-        ...extractedVocab ? { vocab: extractedVocab } : {}
-      });
-    }
-    return res;
-  }
+  const rewriteSlots = enabledSlots.filter((s) => s.role !== "vocab" && s.id !== "source");
   const candidates = [];
-  for (const slot of slots) {
-    if (slot.role === "vocab" || BLOCKED_JSON_KEYS.has(slot.id)) continue;
-    const val = obj[slot.id] ?? (slots.length === 1 ? obj.prompt : void 0);
+  for (const slot of rewriteSlots) {
+    if (BLOCKED_JSON_KEYS.has(slot.id)) continue;
+    let val = obj[slot.id];
+    if (!val) {
+      if (slot.id === "fixed" && typeof obj.fixed === "string") val = obj.fixed;
+      else if (slot.id === "native" && typeof obj.native === "string") val = obj.native;
+      else if (rewriteSlots.length === 1) val = obj.prompt ?? obj.direct_spec ?? obj.fixed ?? obj.spoken;
+    }
+    const meaningVal = typeof obj[`${slot.id}_meaning`] === "string" ? obj[`${slot.id}_meaning`].trim() : void 0;
     if (typeof val === "string" && val.trim()) {
       candidates.push({
         id: slot.id,
         label: slot.label,
         content: val.trim(),
-        ...extractedVocab ? { vocab: extractedVocab } : {}
+        meaning: meaningVal,
+        ...extractedVocab ? { vocab: extractedVocab } : {},
+        hideWhenLong: Boolean(slot.hideWhenLong)
       });
     }
   }
+  if (mode.primarySlotId && candidates.length > 1) {
+    const pIdx = candidates.findIndex((c) => c.id.toLowerCase() === mode.primarySlotId?.toLowerCase());
+    if (pIdx > 0) {
+      const [primary] = candidates.splice(pIdx, 1);
+      candidates.unshift(primary);
+    }
+  }
   return candidates.length > 0 ? candidates : null;
+}
+async function generatePromptCandidates(text, userConfig = {}) {
+  const diskConfig = loadUserLingualConfig();
+  const cfg = { ...DEFAULT_CONFIG, ...diskConfig, ...userConfig };
+  const slots = resolveCandidateSlotsFromConfig({
+    sourceLang: cfg.sourceLang,
+    promptSlots: userConfig.promptSlots ?? diskConfig.promptSlots
+  });
+  const isModify = slots.some((s) => s.id === "fixed");
+  const virtualMode = {
+    id: isModify ? "live-flow" : "candidates",
+    name: isModify ? "\u5B9E\u6218\u72C2\u98D9" : "\u5019\u9009\u751F\u6210",
+    flow: isModify ? "proofread" : "translate",
+    action: isModify ? "transform" : "select",
+    hud: isModify ? "adaptive-takeaway" : "tree",
+    slots,
+    enabled: true
+  };
+  return executeModeRunner(text, virtualMode, userConfig);
 }
 async function rewritePromptDirect(text, userConfig = {}) {
   const diskConfig = loadUserLingualConfig();
@@ -3768,13 +3344,10 @@ async function rewritePromptDirect(text, userConfig = {}) {
 }
 function stripLingualContextWhenOff(systemPrompt, lastUserText = "", tunerArmed = false) {
   if (!systemPrompt) return systemPrompt;
-  if (tunerArmed || /(?:lingual-tuner|\/lingual\s+(?:tuner|tune|agent)|定制伴学|配置伴学)/i.test(lastUserText)) {
+  if (tunerArmed || /(?:lingual-tuner|\/lingual\s+(?:tuner|tune|agent)|(?:定制|配置|调整)伴学)/i.test(lastUserText)) {
     return systemPrompt;
   }
-  return systemPrompt.replace(
-    /\s*<skill>\s*<name>lingual-tuner<\/name>[\s\S]*?<\/skill>/gi,
-    ""
-  );
+  return systemPrompt.replace(/\s*<skill>\s*<name>lingual-tuner<\/name>[\s\S]*?<\/skill>/gi, "").replace(/\s*<skill[^>]*>[\s\S]*?<name>lingual-tuner<\/name>[\s\S]*?<\/skill>/gi, "");
 }
 var MODE_DISPLAY_BY_LANG = {
   zh: {
@@ -3812,66 +3385,6 @@ var MODE_DISPLAY_BY_LANG = {
     notifyCandidates: (p, s) => `[${p}] \u30103 \u5019\u88DC\u9078 (candidates)\u3011\u306B\u5207\u66FF\uFF1A\u5019\u88DC (${s}) \u304B\u3089\u9078\u629E\u3057\u3066\u9001\u4FE1`,
     notifyModify: (p, s1) => `[${p}] \u30104 \u539F\u6587\u4FEE\u6B63 (modify)\u3011\u306B\u5207\u66FF\uFF1A\u6700\u5C0F\u4FEE\u6B63 [${s1}] \u5373\u6642\u9001\u4FE1\uFF0B\u81EA\u7136\u8868\u73FE\u6BD4\u8F03`,
     notifyOff: (p) => `[${p}] \u30100 \u30AA\u30D5 (off)\u3011\uFF1A\u4E0B\u90E8\u30D0\u30FC\u975E\u8868\u793A\u30FB\u76E3\u8996\u505C\u6B62\u30FB0 Token \u7121\u8CA0\u8377`
-  },
-  ko: {
-    companion: "\uB3D9\uBC18",
-    direct: "\uC9C1\uC811\uC218\uC815",
-    candidates: "\uD6C4\uBCF4\uC120\uD0DD",
-    modify: "\uC6D0\uBB38\uC218\uC815",
-    off: "\uAEBC\uC9D0",
-    notifyCompanion: (p) => `[${p}] [1 \uB3D9\uBC18 (companion)] \uC804\uD658: \uC6D0\uBB38 0ms \uC804\uC1A1 + \uC0C1\uB2E8 \uD559\uC2B5 \uCE74\uB4DC \uD45C\uC2DC`,
-    notifyDirect: (p, s1) => `[${p}] [2 \uC9C1\uC811\uC218\uC815 (direct)] \uC804\uD658: \uCCAB \uC2AC\uB86F [${s1}] \uAE30\uC900\uC73C\uB85C \uC989\uC2DC \uB2E4\uB4EC\uC5B4 \uC804\uC1A1`,
-    notifyCandidates: (p, s) => `[${p}] [3 \uD6C4\uBCF4\uC120\uD0DD (candidates)] \uC804\uD658: \uD6C4\uBCF4 (${s}) \uC911 \uACE8\uB77C\uC11C \uC804\uC1A1`,
-    notifyModify: (p, s1) => `[${p}] [4 \uC6D0\uBB38\uC218\uC815 (modify)] \uC804\uD658: \uCD5C\uC18C \uC218\uC815 [${s1}] \uC989\uC2DC \uC804\uC1A1 + \uC790\uC5F0\uC2A4\uB7EC\uC6B4 \uD45C\uD604 \uB300\uC870`,
-    notifyOff: (p) => `[${p}] [0 \uAEBC\uC9D0 (off)]: \uD558\uB2E8\uBC14 \uC228\uAE40 \xB7 \uAC10\uC2DC \uD574\uC81C \xB7 0 Token \uBB34\uBD80\uB2F4`
-  },
-  es: {
-    companion: "Estudio",
-    direct: "Directo",
-    candidates: "Opciones",
-    modify: "Correcci\xF3n",
-    off: "Apagado",
-    notifyCompanion: (p) => `[${p}] Modo [1 Estudio (companion)]: Env\xEDo 0ms + tarjeta de aprendizaje arriba`,
-    notifyDirect: (p, s1) => `[${p}] Modo [2 Directo (direct)]: Reescritura 1a1 con ranura #1 [${s1}]`,
-    notifyCandidates: (p, s) => `[${p}] Modo [3 Opciones (candidates)]: Elige entre (${s})`,
-    notifyModify: (p, s1) => `[${p}] Modo [4 Correcci\xF3n (modify)]: Arreglo m\xEDnimo [${s1}] + opci\xF3n nativa arriba`,
-    notifyOff: (p) => `[${p}] Modo [0 Apagado (off)]: Barra oculta \xB7 0 hooks \xB7 0 tokens`
-  },
-  fr: {
-    companion: "\xC9tude",
-    direct: "Direct",
-    candidates: "Options",
-    modify: "Correction",
-    off: "D\xE9sactiv\xE9",
-    notifyCompanion: (p) => `[${p}] Mode [1 \xC9tude (companion)] : Envoi 0ms + carte d'\xE9tude en haut`,
-    notifyDirect: (p, s1) => `[${p}] Mode [2 Direct (direct)] : R\xE9\xE9criture 1\xE01 via le slot #1 [${s1}]`,
-    notifyCandidates: (p, s) => `[${p}] Mode [3 Options (candidates)] : Choisissez parmi (${s})`,
-    notifyModify: (p, s1) => `[${p}] Mode [4 Correction (modify)] : Correction minimale [${s1}] + variante native`,
-    notifyOff: (p) => `[${p}] Mode [0 D\xE9sactiv\xE9 (off)] : Barre masqu\xE9e \xB7 0 hook \xB7 0 token`
-  },
-  de: {
-    companion: "Lernen",
-    direct: "Direkt",
-    candidates: "Auswahl",
-    modify: "Korrektur",
-    off: "Aus",
-    notifyCompanion: (p) => `[${p}] Modus [1 Lernen (companion)]: 0ms Senden + Lernkarte oben`,
-    notifyDirect: (p, s1) => `[${p}] Modus [2 Direkt (direct)]: Direktes Umformulieren \xFCber Slot #1 [${s1}]`,
-    notifyCandidates: (p, s) => `[${p}] Modus [3 Auswahl (candidates)]: Auswahl aus (${s})`,
-    notifyModify: (p, s1) => `[${p}] Modus [4 Korrektur (modify)]: Minimale Reparatur [${s1}] + native Alternative`,
-    notifyOff: (p) => `[${p}] Modus [0 Aus (off)]: Leiste ausgeblendet \xB7 0 Hooks \xB7 0 Tokens`
-  },
-  ru: {
-    companion: "\u0423\u0447\u0435\u0431\u0430",
-    direct: "\u041F\u0440\u044F\u043C\u043E\u0439",
-    candidates: "\u0412\u044B\u0431\u043E\u0440",
-    modify: "\u041F\u0440\u0430\u0432\u043A\u0430",
-    off: "\u0412\u044B\u043A\u043B",
-    notifyCompanion: (p) => `[${p}] \u0420\u0435\u0436\u0438\u043C [1 \u0423\u0447\u0435\u0431\u0430 (companion)]: \u043E\u0442\u043F\u0440\u0430\u0432\u043A\u0430 0\u043C\u0441 + \u043A\u0430\u0440\u0442\u043E\u0447\u043A\u0430 \u0441\u0432\u0435\u0440\u0445\u0443`,
-    notifyDirect: (p, s1) => `[${p}] \u0420\u0435\u0436\u0438\u043C [2 \u041F\u0440\u044F\u043C\u043E\u0439 (direct)]: \u043F\u0440\u044F\u043C\u0430\u044F \u043F\u0435\u0440\u0435\u0437\u0430\u043F\u0438\u0441\u044C \u043F\u043E \u0441\u043B\u043E\u0442\u0443 #1 [${s1}]`,
-    notifyCandidates: (p, s) => `[${p}] \u0420\u0435\u0436\u0438\u043C [3 \u0412\u044B\u0431\u043E\u0440 (candidates)]: \u0432\u044B\u0431\u043E\u0440 \u0438\u0437 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u043E\u0432 (${s})`,
-    notifyModify: (p, s1) => `[${p}] \u0420\u0435\u0436\u0438\u043C [4 \u041F\u0440\u0430\u0432\u043A\u0430 (modify)]: \u043C\u0438\u043D\u0438\u043C\u0430\u043B\u044C\u043D\u0430\u044F \u043F\u0440\u0430\u0432\u043A\u0430 [${s1}] + \u043D\u0430\u0442\u0438\u0432\u043D\u044B\u0439 \u0432\u0430\u0440\u0438\u0430\u043D\u0442`,
-    notifyOff: (p) => `[${p}] \u0420\u0435\u0436\u0438\u043C [0 \u0412\u044B\u043A\u043B (off)]: \u0441\u0442\u0440\u043E\u043A\u0430 \u0441\u043A\u0440\u044B\u0442\u0430 \xB7 0 \u0445\u0443\u043A\u043E\u0432 \xB7 0 \u0442\u043E\u043A\u0435\u043D\u043E\u0432`
   },
   en: {
     companion: "Companion",
@@ -3914,6 +3427,7 @@ var MODE_ALIAS_MAP = {
   english: "english",
   en: "english",
   eng: "english",
+  lazy: "english",
   "\u76F4\u63A5\u6539": "english",
   "\u76F4\u6539": "english",
   "\u76F4\u51FA": "english",
@@ -3942,6 +3456,8 @@ var MODE_ALIAS_MAP = {
   polish: "modify",
   fix: "modify",
   proofread: "modify",
+  raw: "modify",
+  "live-flow": "modify",
   "\u539F\u53E5\u4FEE\u8865": "modify",
   "\u539F\u53E5\u4FEE\u88DC": "modify",
   "\u4FEE\u8865": "modify",
@@ -3970,7 +3486,7 @@ function normalizeLingualModeInput(raw) {
   if (!raw) return null;
   return MODE_ALIAS_MAP[raw.trim().toLowerCase()] || null;
 }
-var CURRENT_FEATURE_BANNER_VERSION = "0.5.5";
+var CURRENT_FEATURE_BANNER_VERSION = "0.6.0";
 function resolveReleaseBannerLang(explicitSourceLang, sessionEntries) {
   const supported = /* @__PURE__ */ new Set(["zh", "tw", "ja", "ko", "es", "fr", "de", "ru", "en"]);
   if (explicitSourceLang && explicitSourceLang.trim()) {
@@ -4014,111 +3530,111 @@ function formatReleaseBannerLines(sourceLang = "en", maxCols = 80, fg = (_c, t) 
   const effectiveCols = Math.max(40, maxCols);
   const copyByLang = {
     zh: {
-      title: "\xB7 [pi-lingual v0.5.5 \u66F4\u65B0\u8BF4\u660E] \u5B9E\u6218\u72C2\u98D9\u4E0A\u7EBF\u4E0E\u67B6\u6784\u6F14\u8FDB\u9884\u544A (\u53D1\u6D88\u606F\u81EA\u52A8\u6536\u8D77)",
-      subtitle: "\u2502 \u7C97\u53E3\u4E0E\u60C5\u7EEA 100% \u4FDD\u7559\uFF1B\u9519\u8BCD\u53E5\u6CD5\u81EA\u52A8\u4FEE\u590D\u76F4\u53D1\uFF1B\u76F2\u70B9\u590D\u76D8\u6C38\u4E45\u56FA\u5316\u6BCD\u8BED",
+      title: "\xB7 [pi-lingual v0.6.0] \u6781\u7B80\u53CC\u6838\u6A21\u5F0F\u4E0A\u7EBF & Tuner \u5B8C\u5168\u5F00\u653E (\u53D1\u6D88\u606F\u81EA\u52A8\u6536\u8D77)",
+      subtitle: "\u2502 \u4E00\u5207\u6A21\u5F0F\u4E0E\u63D0\u793A\u8BCD\u7686\u53EF\u5BF9\u8BDD\u5B9A\u5236\uFF1B\u51FA\u5382\u7CBE\u7B80\u4E3A\u4E24\u5927\u6838\u5FC3\uFF1B\u914D\u7F6E\u6C38\u4E45\u72EC\u7ACB",
       rows: [
-        "\u250C [4 \u5B9E\u6218\u72C2\u98D9 \xB7 modify]  \u76F4\u63A5\u98D9\u5916\u8BED\uFF1B\u7EA0\u504F\u76F4\u53D1 Agent + \u76F2\u70B9\u590D\u76D8 (/lingual 4)",
-        "\u2502   (\u7C97\u53E3\u539F\u6C41\u539F\u5473\u653E\u884C\uFF1B\u6807\u70B9\u5927\u5C0F\u5199\u96F6\u8BF4\u6559\uFF1B\u77ED\u53E5\u5E26\u6539\u7248\uFF0C\u957F\u53E5\u805A\u7126\u76F2\u70B9)",
-        "\u251C [\u4E09\u5927\u4E60\u60EF\u76F2\u70B9\u4FEE\u590D]   \u8986\u76D6\u53E5\u6CD5\u5D4C\u5957\u3001\u5E73\u53F0\u4ECB\u8BCD(on X)\u4E0E\u5355\u590D\u6570\uFF1B\u7EDD\u4E0D\u62D4\u9AD8",
-        '\u2502   (explainLang: "zh" \u8BA4\u77E5\u6BCD\u8BED\u56FA\u5316\uFF0C\u7528\u5927\u8111\u6700\u8F7B\u677E\u7684\u8BED\u8A00\u8BB2\u900F\u76F2\u70B9)',
-        "\u251C [\u4E0B\u4E00\u4EE3\u6F14\u8FDB\u9884\u544A]     \u5373\u5C06\u4E0A\u7EBF\u300C\u6A21\u5F0F\u5373\u914D\u7F6E (Mode as Config)\u300D\u67B6\u6784\uFF1A",
-        "\u2514   (\u5168\u6A21\u5F0F\u589E\u5220\u6539\u5F7B\u5E95\u4E0B\u653E\u7ED9\u7528\u6237\uFF0C\u51FA\u5382\u9644\u8D60\u53CC\u6838\u9EC4\u91D1\u9ED8\u8BA4\uFF0C\u7EC8\u751F\u514D\u6539\u7248)"
+        "\u250C [\u6838\u5FC3\u5B9A\u5236\u4E2D\u5FC3 \xB7 Tuner] \u6572 /tuner \u76F4\u63A5\u8DDF AI \u8BF4\u8BDD\uFF0C\u968F\u610F\u589E\u5220\u6539\u6A21\u5F0F\u4E0E\u63D0\u793A\u8BCD",
+        "\u2502   (\u5185\u7F6E 4 \u5927\u5B9E\u6218\u914D\u88C5\uFF1B\u60F3\u52A0\u53D1\u63A8\u3001\u63D0\u4EA4\u3001\u5BF9\u7EBF\u7B49\u6A21\u5F0F\uFF0C\u4E00\u53E5\u8BDD\u79D2\u6210)",
+        "\u251C [1 \u89C4\u8303\u76F4\u53D1 \xB7 direct]  \u6572\u4E2D\u6587\uFF0C0ms \u8F6C\u6210\u4E13\u4E1A\u89C4\u8303\u82F1\u6587\u76F4\u53D1 Agent (/lingual 1)",
+        "\u2502   (\u4FDD\u8BC1\u4EE3\u7801\u548C\u6CE8\u91CA\u662F\u7EAF\u82F1\u6587\uFF1B\u9002\u5408\u4E13\u6CE8\u5F00\u53D1\u3001\u4E0D\u60F3\u8D39\u8111\u618B\u82F1\u8BED\u65F6\u4F7F\u7528)",
+        "\u251C [2 \u5B9E\u6218\u72C2\u98D9 \xB7 live]    \u76F4\u63A5\u6253\u82F1\u6587\uFF1B\u53EA\u4FEE\u8BED\u6CD5\u9519\u8BCD\uFF0C\u7C97\u53E3\u4E0E\u60C5\u7EEA 100% \u4FDD\u7559",
+        "\u2514   (\u60F3\u9A82\u5C31\u9A82\uFF0C\u8BED\u6CD5\u81EA\u52A8\u515C\u5E95\uFF1B\u4E0B\u65B9\u7528\u4E2D\u6587\u8BB2\u900F\u76F2\u70B9\uFF0C\u8D8A\u7528\u8BED\u611F\u8D8A\u5F3A)"
       ]
     },
     tw: {
-      title: "\xB7 [pi-lingual v0.5.5 \u66F4\u65B0\u8AAA\u660E] \u5BE6\u6230\u72C2\u98C6\u4E0A\u7DDA\u8207\u67B6\u69CB\u6F14\u9032\u9810\u544A (\u767C\u8A0A\u606F\u81EA\u52D5\u6536\u8D77)",
-      subtitle: "\u2502 \u7C97\u53E3\u8207\u60C5\u7DD2 100% \u4FDD\u7559\uFF1B\u932F\u8A5E\u53E5\u6CD5\u81EA\u52D5\u4FEE\u5FA9\u76F4\u767C\uFF1B\u76F2\u9EDE\u8907\u76E4\u6C38\u4E45\u56FA\u5316\u6BCD\u8A9E",
+      title: "\xB7 [pi-lingual v0.6.0] \u6975\u7C21\u96D9\u6838\u6A21\u5F0F\u4E0A\u7DDA & Tuner \u5B8C\u5168\u958B\u653E (\u767C\u8A0A\u606F\u81EA\u52D5\u6536\u8D77)",
+      subtitle: "\u2502 \u4E00\u5207\u6A21\u5F0F\u8207\u63D0\u793A\u8A5E\u7686\u53EF\u5C0D\u8A71\u5B9A\u5236\uFF1B\u51FA\u5EE0\u7CBE\u7C21\u70BA\u5169\u5927\u6838\u5FC3\uFF1B\u8A2D\u5B9A\u6C38\u4E45\u7368\u7ACB",
       rows: [
-        "\u250C [4 \u5BE6\u6230\u72C2\u98C6 \xB7 modify]  \u76F4\u63A5\u98C6\u5916\u8A9E\uFF1B\u7CFE\u504F\u76F4\u767C Agent + \u76F2\u9EDE\u8907\u76E4 (/lingual 4)",
-        "\u2502   (\u7C97\u53E3\u539F\u6C41\u539F\u5473\u653E\u884C\uFF1B\u6A19\u9EDE\u5927\u5C0F\u5BEB\u96F6\u8AAA\u6559\uFF1B\u77ED\u53E5\u5E36\u6539\u7248\uFF0C\u9577\u53E5\u805A\u7126\u76F2\u9EDE)",
-        "\u251C [\u4E09\u5927\u7FD2\u6163\u76F2\u9EDE\u4FEE\u5FA9]   \u8986\u84CB\u53E5\u6CD5\u5D4C\u5957\u3001\u5E73\u53F0\u4ECB\u8A5E(on X)\u8207\u55AE\u8907\u6578\uFF1B\u7D55\u4E0D\u62D4\u9AD8",
-        '\u2502   (explainLang: "zh" \u8A8D\u77E5\u6BCD\u8A9E\u56FA\u5316\uFF0C\u7528\u5927\u8166\u6700\u8F15\u9B06\u7684\u8A9E\u8A00\u8B1B\u900F\u76F2\u9EDE)',
-        "\u251C [\u4E0B\u4E00\u4EE3\u6F14\u9032\u9810\u544A]     \u5373\u5C07\u4E0A\u7DDA\u300C\u6A21\u5F0F\u5373\u914D\u7F6E (Mode as Config)\u300D\u67B6\u69CB\uFF1A",
-        "\u2514   (\u5168\u6A21\u5F0F\u589E\u5220\u6539\u5FB9\u5E95\u4E0B\u653E\u7D66\u7528\u6236\uFF0C\u51FA\u5EE0\u9644\u8D08\u96D9\u6838\u9EC3\u91D1\u9810\u8A2D\uFF0C\u7D42\u751F\u514D\u6539\u7248)"
+        "\u250C [\u6838\u5FC3\u5B9A\u5236\u4E2D\u5FC3 \xB7 Tuner] \u6572 /tuner \u76F4\u63A5\u8DDF AI \u8AAA\u8A71\uFF0C\u96A8\u610F\u589E\u522A\u6539\u6A21\u5F0F\u8207\u63D0\u793A\u8A5E",
+        "\u2502   (\u5167\u7F6E 4 \u5927\u5BE6\u6230\u914D\u88DD\uFF1B\u60F3\u52A0\u767C\u63A8\u3001\u63D0\u4EA4\u3001\u5C0D\u7DDA\u7B49\u6A21\u5F0F\uFF0C\u4E00\u53E5\u8A71\u79D2\u6210)",
+        "\u251C [1 \u898F\u7BC4\u76F4\u767C \xB7 direct]  \u6572\u4E2D\u6587\uFF0C0ms \u8F49\u6210\u5C08\u696D\u898F\u7BC4\u82F1\u6587\u76F4\u767C Agent (/lingual 1)",
+        "\u2502   (\u4FDD\u8B49\u4EE3\u78BC\u548C\u8A3B\u91CB\u662F\u7D14\u82F1\u6587\uFF1B\u9069\u5408\u5C08\u6CE8\u958B\u767C\u3001\u4E0D\u60F3\u8CBB\u8166\u618B\u82F1\u8A9E\u6642\u4F7F\u7528)",
+        "\u251C [2 \u5BE6\u6230\u72C2\u98C6 \xB7 live]    \u76F4\u63A5\u6253\u82F1\u6587\uFF1B\u53EA\u4FEE\u8A9E\u6CD5\u932F\u8A5E\uFF0C\u7C97\u53E3\u8207\u60C5\u7DD2 100% \u4FDD\u7559",
+        "\u2514   (\u60F3\u7F75\u5C31\u7F75\uFF0C\u8A9E\u6CD5\u81EA\u52D5\u515C\u5E95\uFF1B\u4E0B\u65B9\u7528\u4E2D\u6587\u8B1B\u900F\u76F2\u9EDE\uFF0C\u8D8A\u7528\u8A9E\u611F\u8D8A\u5F37)"
       ]
     },
     ja: {
-      title: "\xB7 [pi-lingual v0.5.5 \u66F4\u65B0\u6848\u5185] Live Flow \u5B9F\u88C5\u3068\u6B21\u671F\u8A2D\u8A08\u4E88\u544A (\u9001\u4FE1\u3067\u9589\u3058\u308B)",
-      subtitle: "\u2502 \u611F\u60C5\u30FB\u30B9\u30E9\u30F3\u30B0\u5B8C\u5168\u4FDD\u6301\uFF1B\u6587\u6CD5\u30FB\u524D\u7F6E\u8A5E\u306E\u5373\u6642\u88DC\u6B63\uFF1B\u6BCD\u8A9E\u306B\u3088\u308B\u76F2\u70B9\u89E3\u8AAC",
+      title: "\xB7 [pi-lingual v0.6.0] \u30B3\u30A22\u30E2\u30FC\u30C9\u5237\u65B0 & Tuner \u5168\u9762\u958B\u653E (\u9001\u4FE1\u3067\u9589\u3058\u308B)",
+      subtitle: "\u2502 \u5168\u30E2\u30FC\u30C9\u3068\u30D7\u30ED\u30F3\u30D7\u30C8\u3092\u5BFE\u8A71\u3067\u81EA\u5728\u306B\u8A2D\u8A08\uFF1B\u8A2D\u5B9A\u306F\u6C38\u4E45\u30ED\u30FC\u30AB\u30EB\u4FDD\u6301",
       rows: [
-        "\u250C [4 \u5B9F\u6226\u75BE\u8D70 \xB7 modify]  \u82F1\u8A9E\u3067\u76F4\u63A5\u5165\u529B\uFF1B\u81EA\u52D5\u88DC\u6B63\u9001\u4FE1\uFF0B\u6BCD\u8A9E\u89E3\u8AAC (/lingual 4)",
-        "\u2502   (\u30B9\u30E9\u30F3\u30B0\u5B8C\u5168\u4FDD\u6301\u30FB\u5927\u6587\u5B57\u3084\u53E5\u8AAD\u70B9\u3078\u306E\u904E\u5270\u6307\u6458\u30BC\u30ED\u30FB\u9577\u6587\u8981\u70B9\u96C6\u7D04)",
-        "\u251C [\u7FD2\u6163\u7684\u76F2\u70B9\u306E\u6539\u5584]   \u69CB\u6587\u30CD\u30B9\u30C8\u30FB\u30D7\u30E9\u30C3\u30C8\u30D5\u30A9\u30FC\u30E0\u524D\u7F6E\u8A5E(on X)\u30FB\u6642\u5236 (i+1)",
-        "\u2502   (explainLang \u3067\u6BCD\u8A9E\u306B\u3088\u308B\u76F4\u611F\u7684\u306A\u8981\u70B9\u89E3\u8AAC\u3092\u6052\u4E45\u4FDD\u5B58)",
-        "\u251C [\u6B21\u4E16\u4EE3\u8A2D\u8A08\u4E88\u544A]     \u300CMode as Config (\u30E2\u30FC\u30C9\uFF1D\u8A2D\u5B9A)\u300D\u3078\u9032\u5316\u4E88\u5B9A\uFF1A",
-        "\u2514   (\u5168\u30E2\u30FC\u30C9\u30FB\u30D7\u30ED\u30F3\u30D7\u30C8\u306E\u5B8C\u5168\u30AB\u30B9\u30BF\u30DE\u30A4\u30BA\u958B\u653E\u3001\u30B3\u30A22\u7A2E\u30C7\u30D5\u30A9\u30EB\u30C8\u642D\u8F09)"
+        "\u250C [\u5BFE\u8A71\u8A2D\u8A08 \xB7 Tuner]     /tuner \u3067AI\u3068\u5BFE\u8A71\u3057\u3001\u65B0\u30E2\u30FC\u30C9\u3084\u30D7\u30ED\u30F3\u30D7\u30C8\u3092\u5373\u8FFD\u52A0",
+        "\u2502   (4\u5927\u30D7\u30EA\u30BB\u30C3\u30C8\u5185\u8535 \xB7 PR\u30EC\u30D3\u30E5\u30FC\u3084SNS\u6295\u7A3F\u7528\u30E2\u30FC\u30C9\u3082\u4F1A\u8A71\u3060\u3051\u3067\u5B8C\u6210)",
+        "\u251C [1 \u4ED5\u69D8\u76F4\u884C \xB7 direct]  \u6BCD\u8A9E\u5165\u529B\u30010ms\u3067\u898F\u7BC4\u7684\u82F1\u8A9E\u306B\u6574\u3048\u5373\u9001\u4FE1 (/lingual 1)",
+        "\u2502   (\u30B3\u30FC\u30C9\u3068\u30B3\u30E1\u30F3\u30C8\u306E\u5B8C\u5168\u82F1\u8A9E\u5316\u3092\u4FDD\u8A3C \xB7 \u96C6\u4E2D\u3057\u3066\u958B\u767A\u3092\u9032\u3081\u305F\u3044\u6642\u306B)",
+        "\u251C [2 \u5B9F\u6226\u75BE\u8D70 \xB7 live]    \u82F1\u8A9E\u3067\u76F4\u63A5\u5165\u529B\uFF1B\u30B9\u30E9\u30F3\u30B0\u30FB\u611F\u60C5\u3092100%\u4FDD\u6301\u3057\u88DC\u6B63",
+        "\u2514   (\u611F\u60C5\u306E\u307E\u307E\u306B\u5165\u529B\u53EF\u80FD \xB7 \u4E0B\u90E8\u306B\u6BCD\u8A9E\u3067\u6587\u6CD5\u76F2\u70B9\u3092\u76F4\u611F\u7684\u306B\u89E3\u8AAC)"
       ]
     },
     ko: {
-      title: "\xB7 [pi-lingual v0.5.5 \uC5C5\uB370\uC774\uD2B8] Live Flow \uBAA8\uB4DC \uBC0F \uCC28\uC138\uB300 \uC608\uACE0 (\uC785\uB825 \uC2DC \uB2EB\uD798)",
-      subtitle: "\u2502 \uAC70\uCE5C \uD45C\uD604 100% \uC720\uC9C0\xB7\uBB38\uBC95/\uC804\uCE58\uC0AC \uC989\uC2DC \uAD50\uC815 \uC804\uC1A1\xB7\uBAA8\uAD6D\uC5B4 \uB9F9\uC810 \uBCF5\uAE30 \uC601\uAD6C\uD654",
+      title: "\xB7 [pi-lingual v0.6.0] \uB4C0\uC5BC \uCF54\uC5B4 \uBAA8\uB4DC & Tuner \uC804\uBA74 \uAC1C\uBC29 (\uC785\uB825 \uC2DC \uB2EB\uD798)",
+      subtitle: "\u2502 \uBAA8\uB4E0 \uBAA8\uB4DC\uC640 \uD504\uB86C\uD504\uD2B8\uB97C \uB300\uD654\uB85C \uB9DE\uCDA4 \uC124\uC815; \uC124\uC815\uC740 \uB85C\uCEEC\uC5D0 \uC601\uAD6C \uBCF4\uC874",
       rows: [
-        "\u250C [4 \uC2E4\uC804\uC9C8\uC8FC \xB7 modify] \uC601\uC5B4\uB85C \uC9C1\uC811 \uC785\uB825; \uAD50\uC815 \uC804\uC1A1 + \uB9F9\uC810 \uBCF5\uAE30 (/lingual 4)",
-        "\u2502   (\uAC70\uCE5C \uAC10\uC815 \uC6D0\uBB38 \uC720\uC9C0\xB7\uB300\uC18C\uBB38\uC790/\uBB38\uC7A5\uBD80\uD638 \uC9C0\uC801 \uBC30\uC81C\xB7\uC7A5\uBB38 \uD575\uC2EC \uC694\uC57D)",
-        "\u251C [3\uB300 \uC5B8\uC5B4\uC2B5\uAD00 \uAD50\uC815]  \uBB38\uC7A5 \uAD6C\uC870\xB7\uD50C\uB7AB\uD3FC \uC804\uCE58\uC0AC(on X)\xB7\uC2DC\uC81C/\uB2E8\uBCF5\uC218 \uC644\uBCBD \uBCF4\uC815",
-        "\u2502   (explainLang \uC124\uC815\uC73C\uB85C \uAC00\uC7A5 \uD3B8\uD55C \uBAA8\uAD6D\uC5B4\uB85C \uB9F9\uC810 \uC6D0\uB9AC \uC9C1\uAD00\uC801 \uC124\uBA85)",
-        "\u251C [\uCC28\uC138\uB300 \uC544\uD0A4\uD14D\uCC98]    \u300CMode as Config (\uBAA8\uB4DC=\uC124\uC815)\u300D \uC804\uBA74 \uAC1C\uBC29 \uC608\uC815:",
-        "\u2514   (\uC0AC\uC6A9\uC790 \uC815\uC758 \uBAA8\uB4DC \uC644\uC804 \uAC1C\uBC29\xB7\uB4C0\uC5BC \uCF54\uC5B4 \uAE30\uBCF8\uD0D1\uC7AC\uB85C \uC885\uC2E0 \uC5C5\uB370\uC774\uD2B8 \uD504\uB9AC)"
+        "\u250C [\uB9DE\uCDA4 \uC124\uACC4 \xB7 Tuner]    /tuner \uB85C AI\uC640 \uB300\uD654\uD558\uBA70 \uBAA8\uB4DC\uC640 \uD504\uB86C\uD504\uD2B8 \uC790\uC720 \uCD94\uAC00",
+        "\u2502   (4\uB300 \uD504\uB9AC\uC14B \uB0B4\uC7A5 \xB7 PR \uAC80\uD1A0\uB098 SNS\uC6A9 \uBAA8\uB4DC\uB3C4 \uB9D0 \uD55C\uB9C8\uB514\uB85C \uC989\uC2DC \uC0DD\uC131)",
+        "\u251C [1 \uB17C\uB9AC\uC815\uC81C \xB7 direct]  \uBAA8\uAD6D\uC5B4 \uC785\uB825, 0ms \uADDC\uACA9\uD654\uB41C \uAE30\uC220 \uC601\uC5B4\uB85C \uC989\uC2DC \uC804\uC1A1",
+        "\u2502   (\uCF54\uB4DC\uC640 \uC8FC\uC11D\uC758 \uC21C\uC218 \uC601\uC5B4 \uC720\uC9C0 \xB7 \uAC1C\uBC1C\uC5D0 \uC9D1\uC911\uD558\uACE0 \uC2F6\uC744 \uB54C \uCD5C\uC801)",
+        "\u251C [2 \uC2E4\uC804\uC9C8\uC8FC \xB7 live]    \uC601\uC5B4\uB85C \uC9C1\uC811 \uC791\uC131; \uAC70\uCE5C \uD45C\uD604 100% \uC720\uC9C0\uD558\uBA70 \uAD50\uC815 \uC804\uC1A1",
+        "\u2514   (\uAC10\uC815 \uADF8\uB300\uB85C \uC785\uB825 \uAC00\uB2A5 \xB7 \uD558\uB2E8\uC5D0 \uBAA8\uAD6D\uC5B4\uB85C \uD575\uC2EC \uBB38\uBC95 \uB9F9\uC810 \uBCF5\uAE30)"
       ]
     },
     es: {
-      title: "\xB7 [pi-lingual v0.5.5] Live Flow y arquitectura futura (cierra al enviar)",
-      subtitle: "\u2502 Pasi\xF3n sin censura; correcci\xF3n sint\xE1ctica; notas en lengua nativa",
+      title: "\xB7 [pi-lingual v0.6.0] D\xFAo esencial y Tuner abierto (cierra al enviar)",
+      subtitle: "\u2502 Dise\xF1a modos y prompts conversando; configuraci\xF3n aislada en local",
       rows: [
-        "\u250C [4 Live Flow \xB7 modify] Escribe en ingl\xE9s; corrige y env\xEDa (/lingual 4)",
-        "\u2502   (Sin censura de tono; sin fijaci\xF3n en may\xFAsculas; enfoque en fallos)",
-        "\u251C [H\xE1bitos corregidos]   Sintaxis, preposiciones (on X) y tiempos (i+1)",
-        "\u2502   (explainLang guarda tu idioma nativo para explicar el porqu\xE9 en 0.1s)",
-        "\u251C [Pr\xF3xima arquitectura] Viene 'Mode as Configuration' declarativo:",
-        "\u2514   (Modos 100% personalizables; 2 preajustes de f\xE1brica; cero fricci\xF3n)"
+        "\u250C [Centro Tuner]   Ejecuta /tuner para crear o cambiar modos con AI",
+        "\u2502   (4 recetas listas; a\xF1ade flujos de PR o Twitter en una frase)",
+        "\u251C [1 Directo]      Escribe en tu idioma, 0ms a ingl\xE9s t\xE9cnico",
+        "\u2502   (Mantiene c\xF3digo y comentarios en ingl\xE9s; avanza r\xE1pido)",
+        "\u251C [2 Live Flow]    Escribe directo en ingl\xE9s; pasi\xF3n y tacos intactos",
+        "\u2514   (Pasa tu rabia sin censura; notas abajo para aprender el porqu\xE9)"
       ]
     },
     fr: {
-      title: "\xB7 [pi-lingual v0.5.5] Mode Live Flow & architecture future (ferm\xE9 \xE0 l'envoi)",
-      subtitle: "\u2502 Passion sans filtre ; correction syntaxique ; retours en langue nat.",
+      title: "\xB7 [pi-lingual v0.6.0] Duo essentiel et Tuner ouvert (ferm\xE9 \xE0 l'envoi)",
+      subtitle: "\u2502 Cr\xE9ez modes et prompts en dialoguant ; configuration locale isol\xE9e",
       rows: [
-        "\u250C [4 Live Flow \xB7 modify] R\xE9digez en anglais ; corrig\xE9 et envoy\xE9 (/lingual 4)",
-        "\u2502   (Ton pr\xE9serv\xE9 \xE0 100% ; z\xE9ro pointilleux sur la casse ; focus erreurs)",
-        "\u251C [Habitudes corrig\xE9es]  Syntaxe, pr\xE9positions (on X) et temps verbaux (i+1)",
-        "\u2502   (explainLang m\xE9morise votre langue native pour comprendre en 0,1s)",
-        "\u251C [Prochaine \xE9tape]      Moteur d\xE9claratif 'Mode as Configuration' \xE0 venir :",
-        "\u2514   (Modes 100% libres ; 2 r\xE9glages d'usine essentiels ; stabilit\xE9 totale)"
+        "\u250C [Centre Tuner]   Tapez /tuner pour cr\xE9er ou modifier des modes avec l'IA",
+        "\u2502   (4 recettes int\xE9gr\xE9es ; ajoutez des modes PR en une phrase)",
+        "\u251C [1 Direct]       Saisie en langue native, 0ms vers l'anglais technique",
+        "\u2502   (Code et commentaires en anglais pur ; id\xE9al pour coder)",
+        "\u251C [2 Live Flow]    Saisie directe en anglais ; passion et jurons gard\xE9s",
+        "\u2514   (Exprimez-vous sans filtre ; explications claires sous la saisie)"
       ]
     },
     de: {
-      title: "\xB7 [pi-lingual v0.5.5] Live Flow Modus & Roadmap (schlie\xDFt bei Senden)",
-      subtitle: "\u2502 Rohe Emotion 100% erhalten; Syntax-Korrektur; muttersprachliche Takeaways",
+      title: "\xB7 [pi-lingual v0.6.0] 2 Kern-Modi & Tuner offen (schlie\xDFt bei Senden)",
+      subtitle: "\u2502 Modi & Prompts per Chat anpassen; Konfiguration dauerhaft isoliert",
       rows: [
-        "\u250C [4 Live Flow \xB7 modify] Auf Englisch tippen; korrigiert (/lingual 4)",
-        "\u2502   (Null Zensur; kein Picken auf Gro\xDFschreibung; Fokus auf Kernfehler)",
-        "\u251C [Grammatik-Reflexe]    Satzbau, Pr\xE4positionen (on X) und Zeiten (i+1)",
-        "\u2502   (explainLang speichert Muttersprache f\xFCr sofortige Regelerkl\xE4rung)",
-        "\u251C [Kommende Architektur] 'Mode as Configuration' deklarative Engine:",
-        "\u2514   (Voll anpassbare Modi; 2 schlanke Standardmodi; dauerhafte Stabilit\xE4t)"
+        "\u250C [Tuner-Zentrale]  /tuner starten, um Modi und Prompts anzupassen",
+        "\u2502   (4 Rezepte an Bord; neue PR- oder Twitter-Modi mit einem Satz)",
+        "\u251C [1 Direkt]        Auf Deutsch tippen, 0ms als klares Englisch",
+        "\u2502   (H\xE4lt Code & Kommentare auf Englisch; perfekt f\xFCr Fokus)",
+        "\u251C [2 Live Flow]     Direkt auf Englisch tippen; Emotionen 100% erhalten",
+        "\u2514   (Tippen ohne Zensur; kurze muttersprachliche Erkl\xE4rungen unten)"
       ]
     },
     ru: {
-      title: "\xB7 [pi-lingual v0.5.5] \u0420\u0435\u0436\u0438\u043C Live Flow \u0438 \u0430\u043D\u043E\u043D\u0441 \u0430\u0440\u0445\u0438\u0442\u0435\u043A\u0442\u0443\u0440\u044B (\u0430\u0432\u0442\u043E\u0437\u0430\u043A\u0440\u044B\u0442\u0438\u0435)",
-      subtitle: "\u2502 \u042D\u043C\u043E\u0446\u0438\u0438 \u0431\u0435\u0437 \u0446\u0435\u043D\u0437\u0443\u0440\u044B; \u0442\u043E\u0447\u043D\u0430\u044F \u043F\u0440\u0430\u0432\u043A\u0430 \u0441\u0438\u043D\u0442\u0430\u043A\u0441\u0438\u0441\u0430; \u0440\u0430\u0437\u0431\u043E\u0440 \u043D\u0430 \u0440\u043E\u0434\u043D\u043E\u043C \u044F\u0437\u044B\u043A\u0435",
+      title: "\xB7 [pi-lingual v0.6.0] 2 \u0433\u043B\u0430\u0432\u043D\u044B\u0445 \u0440\u0435\u0436\u0438\u043C\u0430 \u0438 Tuner (\u0437\u0430\u043A\u0440\u043E\u0435\u0442\u0441\u044F \u043F\u0440\u0438 \u0432\u0432\u043E\u0434\u0435)",
+      subtitle: "\u2502 \u041D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0430 \u0440\u0435\u0436\u0438\u043C\u043E\u0432 \u0438 \u043F\u0440\u043E\u043C\u043F\u0442\u043E\u0432 \u0447\u0435\u0440\u0435\u0437 AI; \u043A\u043E\u043D\u0444\u0438\u0433 \u0438\u0437\u043E\u043B\u0438\u0440\u043E\u0432\u0430\u043D \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u043E",
       rows: [
-        "\u250C [4 Live Flow \xB7 modify] \u041F\u0438\u0448\u0438\u0442\u0435 \u043D\u0430 \u0430\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u043E\u043C; \u043F\u0440\u0430\u0432\u043A\u0430 \u0430\u0433\u0435\u043D\u0442\u0443 (/lingual 4)",
-        "\u2502   (\u0411\u0435\u0437 \u0446\u0435\u043D\u0437\u0443\u0440\u044B \u0441\u043B\u0435\u043D\u0433\u0430; \u0431\u0435\u0437 \u0437\u0430\u043D\u0443\u0434\u0441\u0442\u0432\u0430 \u043E \u0440\u0435\u0433\u0438\u0441\u0442\u0440\u0430\u0445; \u0444\u043E\u043A\u0443\u0441 \u043D\u0430 \u0441\u043B\u0435\u043F\u044B\u0445 \u0437\u043E\u043D\u0430\u0445)",
-        "\u251C [\u0418\u0441\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u043F\u0440\u0438\u0432\u044B\u0447\u0435\u043A] \u0421\u0438\u043D\u0442\u0430\u043A\u0441\u0438\u0441, \u043F\u0440\u0435\u0434\u043B\u043E\u0433\u0438 (on X) \u0438 \u0432\u0440\u0435\u043C\u0435\u043D\u0430 (\u043F\u0440\u0438\u043D\u0446\u0438\u043F i+1)",
-        "\u2502   (explainLang \u0441\u043E\u0445\u0440\u0430\u043D\u044F\u0435\u0442 \u0440\u043E\u0434\u043D\u043E\u0439 \u044F\u0437\u044B\u043A \u0434\u043B\u044F \u043E\u0431\u044A\u044F\u0441\u043D\u0435\u043D\u0438\u044F \u043B\u043E\u0433\u0438\u043A\u0438 \u0437\u0430 0.1\u0441)",
-        "\u251C [\u0421\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0439 \u0448\u0430\u0433]        \u0421\u043A\u043E\u0440\u043E: \u0434\u0435\u043A\u043B\u0430\u0440\u0430\u0442\u0438\u0432\u043D\u044B\u0439 'Mode as Configuration':",
-        "\u2514   (\u041F\u043E\u043B\u043D\u0430\u044F \u043A\u0430\u0441\u0442\u043E\u043C\u0438\u0437\u0430\u0446\u0438\u044F \u0440\u0435\u0436\u0438\u043C\u043E\u0432; 2 \u0437\u043E\u043B\u043E\u0442\u044B\u0445 \u0441\u0442\u0430\u043D\u0434\u0430\u0440\u0442\u0430 \u0438\u0437 \u043A\u043E\u0440\u043E\u0431\u043A\u0438)"
+        "\u250C [\u0426\u0435\u043D\u0442\u0440 Tuner]    \u041D\u0430\u0431\u0435\u0440\u0438\u0442\u0435 /tuner \u0434\u043B\u044F \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438 \u0440\u0435\u0436\u0438\u043C\u043E\u0432 \u0441 AI",
+        "\u2502   (4 \u0433\u043E\u0442\u043E\u0432\u044B\u0445 \u0440\u0435\u0446\u0435\u043F\u0442\u0430; \u0440\u0435\u0436\u0438\u043C\u044B \u0441\u043E\u0437\u0434\u0430\u044E\u0442\u0441\u044F \u0432 \u043E\u0434\u043D\u0443 \u0444\u0440\u0430\u0437\u0443)",
+        "\u251C [1 \u041F\u0440\u044F\u043C\u043E\u0439 \u043F\u043E\u0442\u043E\u043A] \u0412\u0432\u043E\u0434 \u043D\u0430 \u0440\u043E\u0434\u043D\u043E\u043C \u044F\u0437\u044B\u043A\u0435, 0\u043C\u0441 \u0432 \u0447\u0435\u0442\u043A\u0438\u0439 \u0442\u0435\u0445-\u0430\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u0438\u0439",
+        "\u2502   (\u0427\u0438\u0441\u0442\u044B\u0439 \u0430\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u0438\u0439 \u0432 \u043A\u043E\u0434\u0435 \u0438 \u043A\u043E\u043C\u043C\u0435\u043D\u0442\u0430\u0440\u0438\u044F\u0445; \u0434\u043B\u044F \u0431\u044B\u0441\u0442\u0440\u043E\u0439 \u0440\u0430\u0431\u043E\u0442\u044B)",
+        "\u251C [2 Live Flow]    \u041F\u0438\u0448\u0438\u0442\u0435 \u0441\u0440\u0430\u0437\u0443 \u043D\u0430 \u0430\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u043E\u043C; \u0441\u043B\u0435\u043D\u0433 \u0438 \u044D\u043C\u043E\u0446\u0438\u0438 \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u044B",
+        "\u2514   (\u0412\u0432\u043E\u0434 \u0431\u0435\u0437 \u0446\u0435\u043D\u0437\u0443\u0440\u044B; \u0432\u043D\u0438\u0437\u0443 \u043F\u043E\u043D\u044F\u0442\u043D\u044B\u0439 \u0440\u0430\u0437\u0431\u043E\u0440 \u043F\u0440\u0430\u0432\u0438\u043B)"
       ]
     },
     en: {
-      title: "\xB7 [pi-lingual v0.5.5 Release Note] Live Flow Mode & Roadmap (auto-dismiss)",
-      subtitle: "\u2502 Keep profanity & heat; surgical syntax repair; native cognitive memory",
+      title: "\xB7 [pi-lingual v0.6.0] Dual-Core Golden Defaults & Tuner (auto-dismiss)",
+      subtitle: "\u2502 Pure declarative modes & slots; customize via natural language",
       rows: [
-        "\u250C [4 Live Flow \xB7 modify] Direct English; surgical repair (/lingual 4)",
-        "\u2502   (Profanity 100% kept; zero casing nitpicks; adaptive takeaway card)",
-        "\u251C [Core Habit Repairs]  Fixes syntax, prepositions (on X), and tenses",
-        "\u2502   (explainLang preserves cognitive language for 0.1s instant takeaways)",
-        "\u251C [Next Leap Roadmap]   Coming soon: 'Mode as Configuration' engine",
-        "\u2514   (Full custom mode pipelines; dual golden defaults; zero version churn)"
+        "\u250C [Architect Tuner] Run /tuner to add or edit modes with AI",
+        "\u2502   (4 tactical loadouts included: spec, commit, oss, yap)",
+        "\u251C [1 Logical Spec \xB7 direct]  Native input \u2794 0ms imperative spec",
+        "\u2502   (Ensures clean English instructions while keeping code untouched)",
+        "\u251C [2 Live Flow \xB7 live]       Draft in English; grammar patched, passion kept",
+        "\u2514   (Vent freely without censorship; takeaway diffs explain rules below)"
       ]
     }
   };
@@ -4130,7 +3646,9 @@ export {
   CANNOT_START_LINE_CHARS,
   CURRENT_FEATURE_BANNER_VERSION,
   DEFAULT_CONFIG,
+  DEFAULT_KILL_LIST,
   LANGUAGE_PRESETS,
+  LANGUAGE_SPECS,
   LEGACY_SLOT_PRESETS,
   LINGUAL_SYSTEM_PROMPT,
   LINGUA_SYSTEM_PROMPT,
@@ -4139,14 +3657,20 @@ export {
   LingualSessionController,
   MAX_TRANSLATION_CHARS,
   MAX_TRANSLATION_LINES,
+  PRESET_LOADOUTS,
   PROMPT_RULE_PRESETS,
   SLOT_PRESETS,
+  addCustomMode,
   addSlotToList,
+  addSlotToMode,
   buildDirectRewriteSystemPrompt,
   buildModifySystemPrompt,
   buildPromptCandidatesSystemPrompt,
   buildSystemPrompt,
+  compileKillListInstruction,
+  compileModeSystemPrompt,
   createCustomSlot,
+  executeModeRunner,
   extractVocabPhrases,
   formatCapsuleLine,
   formatModelSelectionMessage,
@@ -4159,30 +3683,40 @@ export {
   formatVocabItemsAtomic,
   generatePromptCandidates,
   getDefaultDirectSlots,
+  getDefaultFactoryModes,
   getDefaultModifySlots,
   getDefaultPromptSlots,
   getDefaultSlots,
   getEffectiveMaxCols,
+  getPresetLoadout,
   getVisualWidth,
   globalLinguaCache,
   globalLingualCache,
+  interpolatePromptVariables,
   invalidateUserConfigCache,
   isDynamicLongInput,
   isNonEnglish,
   isTestEnvironment,
+  isUserLingualConfigured,
+  listPresetLoadouts,
   loadUserConfig,
   loadUserLingualConfig,
   moveSlotInList,
+  normalizeActiveModeId,
   normalizeLingualModeInput,
   normalizePromptRules,
   parseLlmResponse,
+  removeCustomMode,
   removeSlotFromList,
+  removeSlotFromMode,
   renderCardLayout,
   repairAndParseJsonObject,
   resolveCandidateSlotsFromConfig,
   resolveDirectSlotsFromConfig,
   resolveLabelsForLang,
+  resolveLanguageName,
   resolveModeDisplaySpec,
+  resolveModesFromConfig,
   resolveModifySlotsFromConfig,
   resolvePromptRulePreset,
   resolvePromptTargetLangName,
@@ -4199,10 +3733,12 @@ export {
   stripLinguaAnnotation,
   stripLingualAnnotation,
   stripLingualContextWhenOff,
+  toggleCustomMode,
   toggleSlotInList,
   translateCore,
   translatePrompt,
   truncateVisual,
+  updateCustomMode,
   updateSlotInList,
   wrapVisualText
 };

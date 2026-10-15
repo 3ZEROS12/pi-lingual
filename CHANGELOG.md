@@ -1,5 +1,40 @@
 # Changelog
 
+## 0.6.0
+
+- **Mode as Configuration (模式即配置 · Declarative Architecture)**:
+  - Transitioned the entire extension architecture from hardcoded mode conditionals into a user-governed declarative state machine engine (`CustomModeConfig`).
+  - Modes, actions (`pass-through`, `transform`, `select`), HUD styles (`preview`, `adaptive-takeaway`, `tree`, `none`), flow directions (`translate`, `proofread`, `custom`), output targets (`agent` vs `clipboard`), and prompt slots are 100% defined and persisted in `~/.pi/agent/lingual.json`.
+- **Dual-Core Golden Defaults (`lazy` / `direct` + `raw` / `live-flow`)**:
+  - Ships with exactly two factory golden defaults out of the box:
+    1. **`lazy` / `direct` (Logical Spec / 规范直发)**: Imperative engineering prompt structuring on Enter (`action: "transform"`, `hud: "preview"`).
+    2. **`raw` / `live-flow` (Live Flow / 实战狂飙)**: Direct foreign language drafting with zero tone sanitization, i+1 anti-level-leap, and adaptive takeaway diffs (`action: "transform"`, `hud: "adaptive-takeaway"`).
+    3. **`off` (已关闭)**: 0 pixels, 0 listeners, 0 tokens.
+- **Tactical Loadouts Catalog (`spec`, `commit`, `oss`, `yap`)**:
+  - Introduced four pre-configured tactical loadouts accessible via `/lingual loadout apply <id>`:
+    1. **`spec` (Brain-Dump to Spec · 脑暴压铸)**: Casts messy thoughts into strict Objective, Constraints, Edge Cases, and Do Not Touch modules for agent plan mode (`target: "agent"`).
+    2. **`commit` (Commit Dehydrator · 提交脱水)**: Generates strict Conventional Commits format with strong imperative verbs, Root Cause & Impact body (`target: "clipboard"`).
+    3. **`oss` (OSS Peer Comms · 开源对线)**: Transforms blunt critiques into objective, peer-level GitHub comments using maintainer idioms (`nit:`, `under contention`, `race condition`) (`target: "clipboard"`).
+    4. **`yap` (Indie Shipper · 极客发推)**: Cold, high-density Indie Hacker tech post (<280 chars) with 0 emojis, 0 corporate marketing hype (`target: "clipboard"`).
+- **Output Stream Diversion (`target: "agent" | "clipboard"`)**:
+  - Transformed outputs can target the AI coding agent directly or copy seamlessly to system clipboard in 0ms (with zero prompt mutation and a clean HUD toast), ready for `Ctrl+V` into browser, GitHub, or X.
+- **Anti-AI Buzzword Blacklist (`Kill_List` · 绝对禁区)**:
+  - Added `DEFAULT_KILL_LIST` and mode-level `killList` to strictly ban empty AI clichés: `delve`, `tapestry`, `seamless`, `seamlessly`, `robust`, `streamline`, `comprehensive`, `enhance`, `thrilled to announce`, `game-changer`, etc.
+- **Target-Language Linguistic Profiles (Decoupled Pragmatics)**:
+  - Eliminated English-only assumptions. The proofreading and prompt compiler dynamically attaches linguistic profiles for English, Chinese, Japanese, and other target languages.
+- **Dynamic Semantic Variable Interpolation (`${sourceLang}`, `${targetLang}`, `${explainLang}`)**:
+  - Eliminated all hardcoded Sino-centric or English-only assumptions from generic prompt templates. Prompt slots dynamically expand variables into the user's active native language, target foreign language, and cognitive explanation language.
+- **First-Run Language Handshake (Cold-Boot Zero Residue)**:
+  - When installed on a fresh machine without an existing `lingual.json`, `session_start` sniffs the native OS locale and presents an ephemeral pre-filled input (e.g. `zh en` or `ja en`).
+  - Unmounts with 0 visual residue upon pressing Enter and permanently marks configuration complete so it never prompts again.
+- **Programmatic Mode CRUD API & Geek CLI Commands (`/lingual mode`, `/lingual loadout`)**:
+  - Implemented typed, immutable helper functions (`addCustomMode`, `removeCustomMode`, `updateCustomMode`, `toggleCustomMode`, `addSlotToMode`, `removeSlotFromMode`).
+  - Added CLI management commands: `/lingual mode [list | add | rm | toggle | reset]` and `/lingual loadout [list | apply <id>]`.
+- **Upgraded S-Tier Bilingual Prompt Architect (`lingual-tuner` Skill)**:
+  - Rebuilt with a 4-slot loadout anatomy (`[Input]`, `[Transform]`, `[Kill_List]`, `[HUD]`), the 3-second glanceability rule, and symmetric polyglot scenarios (e.g. English founder reaching Chinese clients on WeChat vs Enterprise).
+- **Backward Compatibility Bridge**:
+  - Automatically maps legacy `lingual.json` configs lacking a `modes` array into virtual modes in-memory with zero breaking changes or data loss.
+
 ## 0.5.5
 
 - **Mode 4 [Live Flow · 实战狂飙] (`/lingual 4` / `modify`)**:

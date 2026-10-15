@@ -1,67 +1,67 @@
-import { L as LingualResult, a as LingualI18nLabels, S as SlotConfig } from './index-BNsJ7K9S.js';
-export { C as CURRENT_FEATURE_BANNER_VERSION, b as CacheStats, c as CustomSlotsConfig, D as DEFAULT_CONFIG, d as LANGUAGE_PRESETS, e as LEGACY_SLOT_PRESETS, f as LINGUAL_SYSTEM_PROMPT, g as LINGUA_SYSTEM_PROMPT, h as LinguaConfig, i as LinguaI18nLabels, j as LinguaLruCache, k as LinguaMode, l as LinguaResult, m as LingualConfig, n as LingualCoreOptions, o as LingualLruCache, p as LingualMode, q as LingualRequest, r as LingualResponse, M as MAX_TRANSLATION_CHARS, s as MAX_TRANSLATION_LINES, t as ModeDisplaySpec, P as PROMPT_RULE_PRESETS, u as PromptCandidate, v as PromptSlotConfig, w as SLOT_PRESETS, x as SanitizedPromptResult, y as SlotDefinition, z as SlotPresetDefinition, A as SlotResult, B as SlotRole, T as TranslationPayload, E as addSlotToList, F as buildDirectRewriteSystemPrompt, G as buildModifySystemPrompt, H as buildPromptCandidatesSystemPrompt, I as buildSystemPrompt, J as createCustomSlot, K as formatModelSelectionMessage, N as formatNativeReplyGuardHint, O as formatReleaseBannerLines, Q as formatStatusReport, R as generatePromptCandidates, U as getDefaultDirectSlots, V as getDefaultModifySlots, W as getDefaultPromptSlots, X as getDefaultSlots, Y as globalLinguaCache, Z as globalLingualCache, _ as invalidateUserConfigCache, $ as isDynamicLongInput, a0 as isNonEnglish, a1 as isTestEnvironment, a2 as loadUserConfig, a3 as loadUserLingualConfig, a4 as moveSlotInList, a5 as normalizeLingualModeInput, a6 as normalizePromptRules, a7 as parseLlmResponse, a8 as removeSlotFromList, a9 as repairAndParseJsonObject, aa as resolveCandidateSlotsFromConfig, ab as resolveDirectSlotsFromConfig, ac as resolveLabelsForLang, ad as resolveModeDisplaySpec, ae as resolveModifySlotsFromConfig, af as resolvePromptRulePreset, ag as resolvePromptTargetLangName, ah as resolveReleaseBannerLang, ai as resolveSlotsForPreset, aj as rewritePromptDirect, ak as sanitizePromptForTranslation, al as saveUserLingualConfig, am as shouldInjectNativeReplyGuard, an as shouldShieldBypass, ao as shouldTriggerTranslation, ap as stripLinguaAnnotation, aq as stripLingualAnnotation, ar as stripLingualContextWhenOff, as as toggleSlotInList, at as translateCore, au as translatePrompt, av as updateSlotInList } from './index-BNsJ7K9S.js';
+import { L as LingualResult, a as LingualI18nLabels, S as SlotConfig } from './index-BT3fdTE0.js';
+export { C as CURRENT_FEATURE_BANNER_VERSION, b as CacheStats, c as CustomModeConfig, d as CustomSlotsConfig, D as DEFAULT_CONFIG, e as DEFAULT_KILL_LIST, f as LANGUAGE_PRESETS, g as LANGUAGE_SPECS, h as LEGACY_SLOT_PRESETS, i as LINGUAL_SYSTEM_PROMPT, j as LINGUA_SYSTEM_PROMPT, k as LanguageSpec, l as LinguaConfig, m as LinguaI18nLabels, n as LinguaLruCache, o as LinguaMode, p as LinguaResult, q as LingualConfig, r as LingualCoreOptions, s as LingualLruCache, t as LingualMode, u as LingualRequest, v as LingualResponse, w as LoadoutDefinition, M as MAX_TRANSLATION_CHARS, x as MAX_TRANSLATION_LINES, y as ModeAction, z as ModeDisplaySpec, A as ModeFlow, B as ModeHud, E as ModeTarget, P as PRESET_LOADOUTS, F as PROMPT_RULE_PRESETS, G as PromptCandidate, H as PromptSlotConfig, R as ReasoningEffort, I as SLOT_PRESETS, J as SanitizedPromptResult, K as SlotDefinition, N as SlotPresetDefinition, O as SlotResult, Q as SlotRole, T as TranslationPayload, U as UserLingualConfig, V as addCustomMode, W as addSlotToList, X as addSlotToMode, Y as buildDirectRewriteSystemPrompt, Z as buildModifySystemPrompt, _ as buildPromptCandidatesSystemPrompt, $ as buildSystemPrompt, a0 as compileKillListInstruction, a1 as compileModeSystemPrompt, a2 as createCustomSlot, a3 as executeModeRunner, a4 as formatModelSelectionMessage, a5 as formatNativeReplyGuardHint, a6 as formatReleaseBannerLines, a7 as formatStatusReport, a8 as generatePromptCandidates, a9 as getDefaultDirectSlots, aa as getDefaultFactoryModes, ab as getDefaultModifySlots, ac as getDefaultPromptSlots, ad as getDefaultSlots, ae as getPresetLoadout, af as globalLinguaCache, ag as globalLingualCache, ah as interpolatePromptVariables, ai as invalidateUserConfigCache, aj as isDynamicLongInput, ak as isNonEnglish, al as isTestEnvironment, am as isUserLingualConfigured, an as listPresetLoadouts, ao as loadUserConfig, ap as loadUserLingualConfig, aq as moveSlotInList, ar as normalizeActiveModeId, as as normalizeLingualModeInput, at as normalizePromptRules, au as parseLlmResponse, av as removeCustomMode, aw as removeSlotFromList, ax as removeSlotFromMode, ay as repairAndParseJsonObject, az as resolveCandidateSlotsFromConfig, aA as resolveDirectSlotsFromConfig, aB as resolveLabelsForLang, aC as resolveLanguageName, aD as resolveModeDisplaySpec, aE as resolveModesFromConfig, aF as resolveModifySlotsFromConfig, aG as resolvePromptRulePreset, aH as resolvePromptTargetLangName, aI as resolveReleaseBannerLang, aJ as resolveSlotsForPreset, aK as rewritePromptDirect, aL as sanitizePromptForTranslation, aM as saveUserLingualConfig, aN as shouldInjectNativeReplyGuard, aO as shouldShieldBypass, aP as shouldTriggerTranslation, aQ as stripLinguaAnnotation, aR as stripLingualAnnotation, aS as stripLingualContextWhenOff, aT as toggleCustomMode, aU as toggleSlotInList, aV as translateCore, aW as translatePrompt, aX as updateCustomMode, aY as updateSlotInList } from './index-BT3fdTE0.js';
 
 /**
- * Terminal Box Model & Layout Engine (终端盒模型与几何排版求解引擎)
+ * Terminal Box Model & Layout Engine.
  *
- * 物理职责：
- * 1. 严格遵循 Unicode Standard Annex #11 (East Asian Width) 计算终端显示列宽；
- * 2. 具备标点行头禁则 (Kinsoku Shori) 的确定性断行算法，杜绝孤立标点；
- * 3. 严格有界的单行胶囊流 (1-Line Capsule) 求解器，绝对不溢出终端列宽；
- * 4. Trifecta 开放式左导轨树状分支 (· ┌ ├ └) 格式化生成；
- * 5. 9 行硬预算盒模型求解器 (renderCardLayout)，保证行数物理断言 <= 9。
+ * Responsibilities:
+ * 1. Strict adherence to Unicode Standard Annex #11 (East Asian Width) for terminal cell widths.
+ * 2. Deterministic Kinsoku Shori line-breaking algorithm preventing orphaned punctuation.
+ * 3. Strictly bounded 1-line capsule solver immune to terminal column overflow.
+ * 4. Trifecta open left-rail tree branch formatting (· ┌ ├ └).
+ * 5. Kinetic 9-line budget box model solver guaranteeing lines.length <= 9.
  */
 
 /**
- * 禁则处理标点集合：绝对禁止出现在行首的标点符号
+ * Punctuation set strictly forbidden from starting a line (Kinsoku Shori).
  */
 declare const CANNOT_START_LINE_CHARS: Set<string>;
 /**
- * 终端窗口物理列宽安全计算 (带缩放 SIGWINCH 防崩溃保底)
+ * Calculates safe visual columns with SIGWINCH crash defense.
  */
 declare function getEffectiveMaxCols(requested?: number): number;
 /**
- * Unicode Standard Annex #11 视觉单元格宽度测算:
- * - ANSI 转义序列 (CSI / OSC) = 0 单元格
- * - 零宽字符 (ZWJ / 变体选择符 / 组合音标) = 0 单元格
- * - CJK 宽字符、全角字符、Emoji = 2 单元格
- * - ASCII 西文字符 = 1 单元格
+ * Unicode Standard Annex #11 visual cell width calculation:
+ * - ANSI escape sequences (CSI / OSC) = 0 cells
+ * - Zero-width characters (ZWJ / variation selectors / combining marks) = 0 cells
+ * - CJK wide characters, full-width symbols, Emoji = 2 cells
+ * - ASCII Latin characters = 1 cell
  */
 declare function getVisualWidth(str: string): number;
 /**
- * 基于视觉单元格与 ANSI 安全边界的无溢出截断 (截断后总宽度严格 <= maxVisualCols)
+ * Truncates text based on visual cell width and ANSI escape boundaries (strictly <= maxVisualCols).
  */
 declare function truncateVisual(str: string, maxVisualCols: number): string;
 /**
- * 基于标点禁则与列宽边界的视觉折行算法
+ * Visual text wrapping algorithm bounded by punctuation Kinsoku Shori and max visual width.
  */
 declare function wrapVisualText(text: string, maxWidth: number): string[];
 /**
- * 格式化树状悬挂缩进分支 (· ┌ ├ └)
+ * Formats tree branches with hanging indent (· ┌ ├ └).
  */
 declare function formatTreeBranch(branchChar: string, contChar: string, tag: string, content: string, prefixDecorator?: (p: string) => string, tagDecorator?: (t: string) => string, contDecorator?: (c: string) => string, lineDecorator?: ((l: string) => string) | number, maxCols?: number): string[];
 /**
- * 格式化语感子导轨 (↳)
+ * Formats native nuance sub-rail (↳).
  */
 declare function formatSubRail(contChar: string, nuanceText: string, arrow?: string, contDecorator?: (c: string) => string, lineDecorator?: (l: string) => string, maxCols?: number, indentCols?: number): string[];
 /**
- * 从 vocab 字符串中解析出纯净的目标短语列表 (由长到短排序)
- * 例如: "on board with (赞成/支持) · dive in (立刻着手/开搞)"
+ * Extracts clean target phrases from vocab string (sorted longest first).
+ * e.g.: "on board with (agree) · dive in (start right away)"
  * ➔ ["on board with", "dive in"]
  */
 declare function extractVocabPhrases(vocab: string | undefined): string[];
 /**
- * 对目标文本中的指定短语进行非破坏性 ANSI 下划线瞄准点亮 (Spotlight Highlighting)
- * 大小写不敏感匹配，保留原始文本的大小写与排版
- * 原生支持 CJK (日文/中文) 以及 ASCII 西文字符
+ * Highlights target phrases non-destructively using ANSI underline (Spotlight Highlighting).
+ * Case-insensitive match preserving original casing and formatting.
+ * Supports CJK ideographs and ASCII characters.
  */
 declare function spotlightPhrases(text: string, phrases: string[]): string;
 /**
- * 按原子短语 (Item-level) 格式化重点词汇单行流，绝不把任何词汇项砍成半截或留下未闭合的 "(" (彻底解决 BUG-VOCAB-TRUNCATION)
+ * Formats vocabulary terms in a single line at item level without mid-word cuts or unclosed parentheses.
  */
 declare function formatVocabItemsAtomic(vocab: string, prefix: string, maxCols: number): string;
 /**
- * 格式化终端树状全景输出 (formatTerminalAnnotation)
+ * Formats terminal panoramic tree branch output (formatTerminalAnnotation).
  */
 declare function formatTerminalAnnotation(sourceText: string, spoken: string, written?: string, vocab?: string, options?: {
     spokenMeaning?: string;
@@ -73,8 +73,8 @@ declare function formatTerminalAnnotation(sourceText: string, spoken: string, wr
     spotlight?: boolean;
 }): string;
 /**
- * 格式化极端分屏下的单行高密度胶囊流 (Single-Line Capsule Layout)
- * 严格限制在 1 行内，按终端列宽动态均衡截断，绝不溢出单行
+ * Formats dense single-line capsule layout for narrow viewports.
+ * Strictly constrained to 1 line, dynamically balanced by column width.
  */
 declare function formatCapsuleLine(hudTitle: string, spoken: string, written?: string, options?: {
     slot1Short?: string;
@@ -82,8 +82,8 @@ declare function formatCapsuleLine(hudTitle: string, spoken: string, written?: s
     maxCols?: number;
 }): string;
 /**
- * 盒模型布局求解器 (renderCardLayout)
- * 统一求解 9 行硬预算、树状全景与单行胶囊降级
+ * Box model layout solver (renderCardLayout).
+ * Solves 9-line kinetic budget, tree branch formatting, and compact capsule degradation.
  */
 declare function renderCardLayout(card: LingualResult, labels: LingualI18nLabels, options?: {
     maxCols?: number;
@@ -103,21 +103,19 @@ declare function renderCardLayout(card: LingualResult, labels: LingualI18nLabels
  * Preserves punctuation (。！？；\n and .!?\n).
  *
  * Line Budget & Ergonomics:
- * 结合 9 行硬预算折叠守卫与树状全景舒展度，单卡最舒适自然容量为 60~70 字符（约 30~35 汉字）。
- * 默认预算校准至 65 字符：
- * - 确保多句诗文/长段落切分后，每一卡均能以 6~8 行完整树状形式优雅展开，绝不触发单行胶囊降级；
- * - 绝不过度粉碎短句，保留自然停顿。
+ * Calibrated to ~65 characters per card to ensure full tree branches fit within 6-8 lines
+ * without triggering compact capsule degradation or over-fragmenting short inputs.
  */
 declare function splitSemanticChunks(text: string, maxChunkChars?: number): string[];
 
 /**
- * Monotonic Session FSM & Cancellation Controller (单调会话状态机与协同掐断控制器)
+ * Monotonic Session FSM & Cooperative Abort Controller.
  *
- * 物理职责：
- * 1. 单调递增世代追踪 (Generation Counter)，彻底杜绝异步竞态与陈旧回调屏幕覆写；
- * 2. 物理 AbortController 协同掐断：新请求到达时，瞬间 abort 掐断上一轮未决的远程网络 Socket；
- * 3. 封装分页池 (Pagination Pool) 与历史卡片缓存，消除散落全局的可变状态；
- * 4. 0 外部依赖，纯 TypeScript 原生事件模型。
+ * Responsibilities:
+ * 1. Monotonic generation counter tracking: eliminates asynchronous race conditions and stale callback overwrites.
+ * 2. Cooperative AbortController cancellation: immediately aborts in-flight remote sockets when a new prompt arrives.
+ * 3. Encapsulates pagination pool and history card cache, eliminating scattered mutable state.
+ * 4. Zero external dependencies, pure native TypeScript event model.
  */
 
 interface SessionRequestToken {
@@ -138,68 +136,68 @@ declare class LingualSessionController {
     private totalExpectedPages;
     private lastResult;
     /**
-     * 启动一次新的会话请求：
-     * 1. 物理中断前序正在排队或流式传输的 HTTP 请求；
-     * 2. 生成单调递增的新世代号；
-     * 3. 绑定全新的 AbortSignal。
+     * Begins a new session request:
+     * 1. Aborts in-flight HTTP stream/request from previous turn;
+     * 2. Increments monotonic generation counter;
+     * 3. Binds a fresh AbortSignal.
      */
     beginRequest(): SessionRequestToken;
     /**
-     * 物理中断当前正在活跃的网络请求
+     * Aborts currently active in-flight network requests.
      */
     abortActive(): void;
     /**
-     * 判定指定世代号是否仍为当前最新的活跃世代
+     * Checks if the specified generation token is still the latest active generation.
      */
     isLatest(generation: number): boolean;
     /**
-     * 获取当前最新世代号
+     * Gets the latest generation counter value.
      */
     getCurrentGeneration(): number;
     /**
-     * 初始化分页池 (当输入被切分为多个意群分块时调用)
+     * Initializes the pagination pool when input is split into multiple semantic chunks.
      */
     initPagination(totalExpectedPages: number): void;
     /**
-     * 存入某个切片的翻译结果 (具备世代守卫，拒绝陈旧世代脏写)
+     * Sets page result for a chunk index with generation guard to reject stale writes.
      */
     setPageResult(chunkIndex: number, result: LingualResult, generation: number): boolean;
     /**
-     * 获取当前展示页的翻译结果
+     * Gets translation result for currently active page.
      */
     getActiveResult(): LingualResult | null;
     /**
-     * 获取所有已就绪的分页结果列表
+     * Gets all ready page results.
      */
     getReadyPages(): LingualResult[];
     /**
-     * 获取当前分页状态快照
+     * Gets a snapshot of the current pagination state.
      */
     getPaginationSnapshot(): PaginationSnapshot;
     /**
-     * 翻至下一页 (循环翻页)
-     * 返回 true 表示发生了有效翻页
+     * Cycles to the next ready page.
+     * Returns true if pagination changed.
      */
     nextPage(): boolean;
     /**
-     * 翻至上一页 (循环翻页)
-     * 返回 true 表示发生了有效翻页
+     * Cycles to the previous ready page.
+     * Returns true if pagination changed.
      */
     prevPage(): boolean;
     /**
-     * 清空分页池 (在遇到非自然语言输入、或关闭伴学时调用，杜绝幽灵卡片复活)
+     * Clears pagination pool on non-translatable input or teardown to prevent ghost cards.
      */
     clearPagination(): void;
     /**
-     * 获取上一条记录 (用于 /lingual-last 回显)
+     * Gets the most recent translation result for /last replay.
      */
     getLastResult(): LingualResult | null;
     /**
-     * 显式设置上一条记录
+     * Explicitly sets the last translation result.
      */
     setLastResult(result: LingualResult | null): void;
     /**
-     * 彻底重置状态机
+     * Resets the controller completely.
      */
     reset(): void;
 }

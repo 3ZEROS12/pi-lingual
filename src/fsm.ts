@@ -1,11 +1,11 @@
 /**
- * Monotonic Session FSM & Cancellation Controller (单调会话状态机与协同掐断控制器)
+ * Monotonic Session FSM & Cooperative Abort Controller.
  * 
- * 物理职责：
- * 1. 单调递增世代追踪 (Generation Counter)，彻底杜绝异步竞态与陈旧回调屏幕覆写；
- * 2. 物理 AbortController 协同掐断：新请求到达时，瞬间 abort 掐断上一轮未决的远程网络 Socket；
- * 3. 封装分页池 (Pagination Pool) 与历史卡片缓存，消除散落全局的可变状态；
- * 4. 0 外部依赖，纯 TypeScript 原生事件模型。
+ * Responsibilities:
+ * 1. Monotonic generation counter tracking: eliminates asynchronous race conditions and stale callback overwrites.
+ * 2. Cooperative AbortController cancellation: immediately aborts in-flight remote sockets when a new prompt arrives.
+ * 3. Encapsulates pagination pool and history card cache, eliminating scattered mutable state.
+ * 4. Zero external dependencies, pure native TypeScript event model.
  */
 
 import type { LingualResult } from "./types.js";
@@ -26,17 +26,17 @@ export class LingualSessionController {
   private activeAbortController: AbortController | null = null;
   private currentGeneration = 0;
 
-  // 分页状态管理
+  // Pagination state management
   private pagedResults: LingualResult[] = [];
   private currentPageIndex = 0;
   private totalExpectedPages = 1;
   private lastResult: LingualResult | null = null;
 
   /**
-   * 启动一次新的会话请求：
-   * 1. 物理中断前序正在排队或流式传输的 HTTP 请求；
-   * 2. 生成单调递增的新世代号；
-   * 3. 绑定全新的 AbortSignal。
+   * Begins a new session request:
+   * 1. Aborts in-flight HTTP stream/request from previous turn;
+   * 2. Increments monotonic generation counter;
+   * 3. Binds a fresh AbortSignal.
    */
   public beginRequest(): SessionRequestToken {
     this.abortActive();
@@ -49,7 +49,7 @@ export class LingualSessionController {
   }
 
   /**
-   * 物理中断当前正在活跃的网络请求
+   * Aborts currently active in-flight network requests.
    */
   public abortActive(): void {
     if (this.activeAbortController) {
@@ -59,21 +59,21 @@ export class LingualSessionController {
   }
 
   /**
-   * 判定指定世代号是否仍为当前最新的活跃世代
+   * Checks if the specified generation token is still the latest active generation.
    */
   public isLatest(generation: number): boolean {
     return this.currentGeneration === generation;
   }
 
   /**
-   * 获取当前最新世代号
+   * Gets the latest generation counter value.
    */
   public getCurrentGeneration(): number {
     return this.currentGeneration;
   }
 
   /**
-   * 初始化分页池 (当输入被切分为多个意群分块时调用)
+   * Initializes the pagination pool when input is split into multiple semantic chunks.
    */
   public initPagination(totalExpectedPages: number): void {
     this.pagedResults = [];
@@ -82,11 +82,11 @@ export class LingualSessionController {
   }
 
   /**
-   * 存入某个切片的翻译结果 (具备世代守卫，拒绝陈旧世代脏写)
+   * Sets page result for a chunk index with generation guard to reject stale writes.
    */
   public setPageResult(chunkIndex: number, result: LingualResult, generation: number): boolean {
     if (!this.isLatest(generation)) {
-      return false; // 陈旧世代，果断拒绝写入
+      return false; // Stale generation, reject write
     }
     this.pagedResults[chunkIndex] = result;
     this.lastResult = result;
@@ -94,7 +94,7 @@ export class LingualSessionController {
   }
 
   /**
-   * 获取当前展示页的翻译结果
+   * Gets translation result for currently active page.
    */
   public getActiveResult(): LingualResult | null {
     const readyList = this.getReadyPages();
@@ -108,14 +108,14 @@ export class LingualSessionController {
   }
 
   /**
-   * 获取所有已就绪的分页结果列表
+   * Gets all ready page results.
    */
   public getReadyPages(): LingualResult[] {
     return this.pagedResults.filter((item): item is LingualResult => Boolean(item));
   }
 
   /**
-   * 获取当前分页状态快照
+   * Gets a snapshot of the current pagination state.
    */
   public getPaginationSnapshot(): PaginationSnapshot {
     const readyCount = this.getReadyPages().length;
@@ -129,8 +129,8 @@ export class LingualSessionController {
   }
 
   /**
-   * 翻至下一页 (循环翻页)
-   * 返回 true 表示发生了有效翻页
+   * Cycles to the next ready page.
+   * Returns true if pagination changed.
    */
   public nextPage(): boolean {
     const readyList = this.getReadyPages();
@@ -140,8 +140,8 @@ export class LingualSessionController {
   }
 
   /**
-   * 翻至上一页 (循环翻页)
-   * 返回 true 表示发生了有效翻页
+   * Cycles to the previous ready page.
+   * Returns true if pagination changed.
    */
   public prevPage(): boolean {
     const readyList = this.getReadyPages();
@@ -151,7 +151,7 @@ export class LingualSessionController {
   }
 
   /**
-   * 清空分页池 (在遇到非自然语言输入、或关闭伴学时调用，杜绝幽灵卡片复活)
+   * Clears pagination pool on non-translatable input or teardown to prevent ghost cards.
    */
   public clearPagination(): void {
     this.pagedResults = [];
@@ -160,21 +160,21 @@ export class LingualSessionController {
   }
 
   /**
-   * 获取上一条记录 (用于 /lingual-last 回显)
+   * Gets the most recent translation result for /last replay.
    */
   public getLastResult(): LingualResult | null {
     return this.lastResult;
   }
 
   /**
-   * 显式设置上一条记录
+   * Explicitly sets the last translation result.
    */
   public setLastResult(result: LingualResult | null): void {
     this.lastResult = result;
   }
 
   /**
-   * 彻底重置状态机
+   * Resets the controller completely.
    */
   public reset(): void {
     this.abortActive();

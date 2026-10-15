@@ -7,7 +7,7 @@ Code in your native language. See real-time Silicon Valley spoken phrasing and f
 [![npm version](https://img.shields.io/npm/v/pi-lingual?color=blue)](https://www.npmjs.com/package/pi-lingual)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Built for Pi](https://img.shields.io/badge/Built%20for-Pi%20Coding%20Agent-orange)](https://github.com/earendil-works/pi-coding-agent)
-[![Tests](https://img.shields.io/badge/Tests-97%2F97%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
+[![Tests](https://img.shields.io/badge/Tests-116%2F116%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict%20Zero%20Error-blue)](tsconfig.json)
 
 **English** | [简体中文](./README_zh.md)
@@ -44,7 +44,7 @@ Pairing with terminal AI coding agents creates four acute frictions for develope
 ### 1. Global & Team Repositories Require Clean English
 In open-source projects or cross-border teams, code comments, commit messages, and PR descriptions must be strictly in English.
 When you prompt an AI agent in your native language, the model frequently generates code with native-language comments and explanations. You have to manually review and clean them up before every push.
-In `english` mode: You type naturally in your native language. `pi-lingual` automatically rewrites your instruction into standard technical English before passing it to the AI. **All generated code, comments, and documentation remain uniformly in clean English.**
+In Logical Spec mode (`direct` / `lazy`): You type naturally in your native language. `pi-lingual` automatically rewrites your instruction into standard technical English before passing it to the AI. **All generated code, comments, and documentation remain uniformly in clean English.**
 
 ### 2. Catching the 5-Second Generation Gap
 After hitting Enter, an LLM typically takes 5 to 15 seconds to synthesize code or execute refactorings.
@@ -63,37 +63,57 @@ Traditional closed rectangular boxes (`│ ... │`) fracture when character wid
 
 ---
 
-## Five Operating States (`1 ➔ 2 ➔ 3 ➔ 4 ➔ 0`)
+## Dual-Core Golden Defaults & Declarative Mode Architecture (`Mode as Configuration`)
 
-Press `/lingual` to cycle sequentially, or jump directly via `/lingual <1|2|3|4|0|companion|direct|candidates|modify|off>`:
+`pi-lingual` ships with **Dual-Core Golden Defaults** and supports infinite customization via its declarative state machine engine. Press `/lingual` to cycle sequentially through enabled modes and off, or jump directly via `/lingual <id|index>`:
 
-| State | CLI ID | What You Type | What the Engine Does | Status & UI Feedback | Best For |
+| State | CLI ID & Aliases | What You Type | What the Engine Does | Status & UI Feedback | Best For |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **`[1] Companion`** | `companion` | Native Language *(e.g. Chinese / Japanese)* | **0ms Pass-Through** to main AI + async companion card (`slots`) | `zh ⇄ en · Companion` + Dual-register HUD | Coding at full speed while absorbing authentic phrasing |
-| **`[2] Direct`** | `direct` | Native / Colloquial Input | **Runs dedicated `directSlots` ➔ 1-to-1 Direct Send** | `zh ⇄ en · Direct` + Clean conversion preview | Instant 1-to-1 faithful translation or polishing on Enter |
-| **`[3] Candidates`** | `candidates` | Native / Colloquial Input | **Runs `promptSlots` ➔ Press keys `1..N` to send immediately (`0`/`Esc` raw)** | `zh ⇄ en · Candidates` + Full card + `1..N` hotkey bar | Comparing multiple languages or registers and firing with 1 keypress |
-| **`[4] Live Flow`** | `modify` | Target Language Draft / Raw Input | **Surgically repairs typos, prepositions & syntax, preserves profanity/heat, sends to AI** | `zh ⇄ en · Live Flow` + Adaptive takeaway HUD (short: fixed+diff, long: diff focus) | Taking the steering wheel directly in English with an invisible safety net |
+| **`[1] Logical Spec`** | `direct` *(alias: `lazy`)* | Native Language *(e.g. Chinese / Japanese)* | **Restructures thoughts into imperative engineering specs with active verbs** | `zh ⇄ en · Logical Spec` + Clean preview | 1-to-1 imperative prompt structuring on Enter, keeping codebases & commits 100% pure English |
+| **`[2] Live Flow`** | `live-flow` *(alias: `raw`)* | Foreign Draft / Raw Venting | **Surgically patches typos & prepositions, preserves profanity/heat, sends to AI** | `zh ⇄ en · Live Flow` + Adaptive takeaway card | Taking the steering wheel directly in English with zero tone-sanitization and native takeaway diffs |
 | **`[0] Off`** | `off` | Any Text | **Hides status bar badge (`undefined`), detaches resize listeners & strips skill block** | **0 pixels, 0 listeners, 0 tokens** — completely invisible inside Pi | Pure coding or screen recording with zero visual or context footprint |
 
-### Strict 4-Way Mode Isolation + On-Demand `/lingual tuner` (0 System Prompt Tokens by Default)
-`pi-lingual` isolates each mode's configuration in `~/.pi/agent/lingual.json` so experiments in one mode never leak into another (while stripping the `lingual-tuner` skill block across all modes during normal coding for **0.00-token** overhead, waking it invisibly via `display: false` only when you run `/lingual tuner`):
-1. **`slots` (Powers `[1] Companion` ONLY)**:
-   - Defines your non-blocking learning card rows (`Spoken`, `Written`, `Vocab`, or multi-language rows), or omits `{ role: "source" }` via `/lingual hide-source` to save vertical height.
-2. **`directSlots` (Powers `[2] Direct` ONLY)**:
-   - Dedicated 1-to-1 conversion rule (defaults to 100% faithful natural translation without forced summarization), immune to changes in Mode 1 or Mode 3.
-3. **`promptSlots` (Powers `[3] Candidates` ONLY)**:
-   - Multi-candidate list displayed in full on the `aboveEditor` card, paired with a compact bottom hotkey bar where pressing number keys **`1`..`N`** fires your chosen candidate in `0ms` without pressing Enter (`0`/`Esc` sends original raw text).
-4. **`modifySlots` (Powers `[4] Live Flow` ONLY)**:
-   - **Zero Level Leap (i+1 Rule)**: Repairs your draft at your natural vocabulary tier; never inflates casual dev English into stuffy academic GRE prose.
-   - **Zero Tone Sanitization**: Preserves swear words and raw emotional intensity (`fuck`, `suck`, `shit`) 100%; zero nitpicking over casual lowercase casing or missing punctuation.
-   - **Adaptive HUD Retention**: Short sentences display fixed version + takeaways; long sentences/paragraphs suppress the full fixed text (dispatched to AI in background) to keep the HUD focused on 2-3 core takeaway diffs.
-   - **`explainLang` Cognitive Memory**: Stores your native language (e.g. `zh`, `ja`, `en`) to explain takeaways in the tongue you understand most effortlessly, surviving updates permanently.
+---
+
+### First-Run Language Handshake (Zero Visual Residue)
+When a new developer installs `pi-lingual` on a fresh system, `session_start` sniffs the native OS locale and presents an ephemeral pre-filled input:
+```text
+✦ [pi-lingual Setup] Native ⇄ Target language (detected: ja):
+> ja en
+```
+- **0.2s Confirmation**: Press `Enter` immediately to confirm the detected default; backspace to modify to any language pair.
+- **Zero Visual Residue**: The input prompt physically unmounts upon pressing Enter, restoring a pristine terminal screen; persisted permanently to `~/.pi/agent/lingual.json` and never prompts again.
+
+---
+
+### Declarative Mode Registry & CLI Commands (`/lingual mode`)
+Developers can customize modes via natural language using `lingual-tuner` or manage the registry directly via the CLI:
+- `/lingual mode list`: Print the active mode registry, flow directions, actions, and slot counts.
+- `/lingual mode add <id> <name> [flow] [action] [hud]`: Register a custom workflow mode.
+- `/lingual mode rm <id>`: Remove a mode by ID.
+- `/lingual mode toggle <id>`: Enable or disable a mode from the `/lingual` cycle.
+- `/lingual mode reset`: Restore factory dual-core golden defaults.
+
+---
+
+### Tactical Loadouts Catalog (`/lingual loadout`)
+
+Beyond the dual-core factory defaults, `pi-lingual` provides 4 pre-configured battle-tested tactical loadouts that can be applied with one command or customized via `/lingual tuner`:
+
+- **`spec` (Brain-Dump to Spec)**: `flow: "translate"` · `action: "transform"` · `target: "agent"` · `hud: "preview"`  
+  Casts raw, messy thoughts into structured engineering specifications (Objective, Constraints, Edge Cases, and Do Not Touch clauses) for agent plan mode.
+- **`commit` (Commit Dehydrator)**: `flow: "translate"` · `action: "transform"` · `target: "clipboard"` · `hud: "preview"`  
+  Transforms plain-language explanations or commit drafts into strict Conventional Commits (first line $\le 50$ chars, imperative verbs, Root Cause & Impact body) and copies directly to clipboard.
+- **`oss` (OSS Peer Comms)**: `flow: "translate"` · `action: "transform"` · `target: "clipboard"` · `hud: "tree"`  
+  Turns blunt technical feedback into objective, peer-level GitHub issue/PR comments using authentic maintainer idioms (`nit:`, `under contention`, `race condition`, `repro:`). Copies directly to clipboard.
+- **`yap` (Indie Shipper)**: `flow: "translate"` · `action: "transform"` · `target: "clipboard"` · `hud: "tree"`  
+  Distills technical milestones into cold, high-density developer posts ($< 280$ chars) for X and Hacker News. Strict 0-Emoji rule, zero corporate marketing hype. Copies directly to clipboard.
 
 ### Hybrid Intent Grafting (Code Stays Untouched)
-In `english` mode, pasting code blocks or error logs never translates the code:
-- **Translates intent only**: Converts natural language instructions into crisp technical English.
+In prompt transform mode, pasting code blocks or error logs never translates the code:
+- **Translates intent only**: Converts natural language instructions into crisp technical English (or your active target language, reflecting symmetric bidirectional parity).
 - **Keeps code untouched**: Grafts your original code block or stack trace right back onto the prompt.
-- **The result**: Clean English instructions paired with complete technical context.
+- **The result**: Clean English instructions paired with complete technical context in full bidirectional parity.
 
 ---
 
@@ -116,21 +136,6 @@ Memorizing isolated vocabulary lists does not build expressive capability. Real 
 
 ---
 
-## Dynamic Dual-Slot Architecture (Domain-Specific Customization)
-
-`[Spoken]` and `[Written]` are simply the out-of-the-box defaults for **Slot 1** and **Slot 2** in `pi-lingual`'s underlying **Dynamic Dual-Slot Architecture**. The engine is not restricted to software engineering; both slots can be decoupled and rebound to match any domain via custom Agent instructions or preset configurations:
-
-| Preset | Target Domain | Slot 1 (Casual / Immediate) | Slot 2 (Formal / Rigorous) |
-| :--- | :--- | :--- | :--- |
-| **`developer` (Default)** | Software Engineering | `[Spoken]` Silicon Valley Standup / Slack | `[Written]` RFC / PR Review Plain English |
-| **`social`** | Twitter/X & Social Growth | `[Hook]` Viral Hook / Engaging Banter | `[Deep]` Structured Technical Insight |
-| **`japanese`** | Japanese Immersion | `[口語]` Casual Tameguchi / Huddle | `[敬語]` Business Polite Keigo |
-| **`academic`** | Academic Research | `[Discussion]` Lab Colloquy / Q&A | `[Paper]` Peer-Reviewed Journal Prose |
-
-*To customize slot styles, describe your target audience and tone to your Agent (e.g. `/lingual-agent`), or supply custom slot definitions via `CustomSlotsConfig` in the API.*
-
----
-
 ## Form Factors: Full Tree vs. Single-Line Capsule
 
 Two layouts designed to protect your editor workspace:
@@ -140,7 +145,7 @@ Two layouts designed to protect your editor workspace:
 </p>
 
 1. **Left-Rail Tree HUD (Default)**: Open-branch layout (`· ┌ ├ └`) using Unicode UAX #11 metrics. Eliminates closed borders to prevent terminal wrapping tears. Stays strictly within 9 lines to avoid host widget truncation warnings.
-2. **Single-Line Capsule Mode (`/compact`)**: Compresses the HUD into a dense single-line stream:
+2. **Single-Line Capsule Mode (`/lingual compact`)**: Compresses the HUD into a dense single-line stream:
    ```text
    zh ⇄ en · [Spk] This feels over-engineered... │ [Wrt] Proposed approach introduces unnecessary complexity...
    ```
@@ -195,11 +200,14 @@ To keep Pi's `/` autocomplete menu clean, `pi-lingual` registers only **4 top-le
 
 | Core Command | Subcommands / Arguments | Description |
 | :--- | :--- | :--- |
-| **`/lingual`** | `/lingual [1\|2\|3\|0]` | Cycle `1 ➔ 2 ➔ 3 ➔ 0` when called without args, or jump directly by number/name |
-| ↳ Subcommand | `/lingual tuner <request>` | Activate on-demand `lingual-tuner` skill to customize `slots` or `promptSlots` |
-| ↳ Subcommand | `/lingual compact` \| `model` \| `status` \| `news` | Toggle single-line capsule, switch model, inspect cache stats, or view release notes |
+| **`/lingual`** | `/lingual [id\|index\|off]` | Smoothly cycles enabled modes; jump directly by number or ID |
+| ↳ Reasoning Effort | `/lingual reasoning [low\|medium\|high]` | Switch model reasoning depth (`low` for instant ~200ms utility, `medium` for complex `spec`) |
+| ↳ Mode Registry | `/lingual mode [list\|add\|rm\|toggle\|reset]` | Manage custom modes, flow directions, and slots via CLI |
+| ↳ Loadouts | `/lingual loadout [list\|apply <id>]` | Inspect or apply tactical loadouts (`spec`, `commit`, `oss`, `yap`) |
+| ↳ Subcommands | `/lingual compact` \| `model` \| `status` \| `news` \| `lock` | Toggle capsule, switch model, inspect cache, view news, or lock mode |
+| **`/tuner`** | `/tuner [request]` | Launch on-demand Bilingual Prompt Architect wizard directly |
 | **`/lang`** | `/lang <source> [target]` | Switch language pair (e.g. `/lang ja en`, `/lang 日语`) |
-| **`/slots`** | `/slots [add\|rm\|toggle\|reset]` | Manage companion slots (add custom slots or remove `source` text row) |
+| **`/slots`** | `/slots [add\|rm\|toggle\|reset]` | Manage active mode slots (adding slots automatically upgrades to Tree HUD if > 1 slot) |
 | **`/last`** | `/last` | Replay the most recent companion or rewrite card |
 
 *Keyboard shortcuts: `Alt+.` (next page), `Alt+,` (previous page). Standalone CLI: `lingual "prompt"`.*
@@ -223,13 +231,23 @@ Never get locked into rigid, hardcoded templates. Every slot on your companion c
 
 ## Dedicated Models & Privacy
 
+### Configurable Reasoning Effort (`/lingual reasoning`)
+Instead of swapping models for different tasks, `pi-lingual` dynamically adjusts the reasoning effort level per mode:
+```bash
+/lingual reasoning low       # Ultra-fast (~200ms) execution for daily direct & live-flow rewriting
+/lingual reasoning medium    # Deeper structural thinking for complex loadouts (e.g. Brain-Dump to Spec)
+/lingual reasoning high      # Maximum reasoning depth for intricate multi-constraint requirements
+```
+- Daily modes (`direct`/`lazy`, `live-flow`/`raw`, `commit`, `oss`, `yap`) default to `"low"` for near-instant latency.
+- Complex architectural loadouts (`spec`) default to `"medium"` to structure exhaustive specifications without hallucinating.
+
 ### Protecting High-Tier Reasoning Quotas
 By default, `pi-lingual` runs securely in-process using your active Pi session model.
 
 When pairing with high-tier reasoning models, delegate companion duties to a lightweight model to save quota:
 ```bash
-/lingual-model <lightweight-model-id>    # Delegate to a lightweight model
-/lingual-model auto                      # Revert to follow-session mode
+/lingual model <lightweight-model-id>    # Delegate to a lightweight model
+/lingual model auto                      # Revert to follow-session mode
 ```
 
 Local Ollama or custom OpenAI-compatible endpoints can also be configured in `~/.pi/agent/lingual.json`:
@@ -246,7 +264,7 @@ Local Ollama or custom OpenAI-compatible endpoints can also be configured in `~/
 
 ## Author's Note
 
-The system prompts for the translation model are currently tailored by me, but you can deeply customize them to fit your own needs at any time using the `/lingual agent` command or the built-in `lingual-tuner` skill.
+The system prompts for the translation model are currently tailored by me, but you can deeply customize them to fit your own needs at any time using the `/lingual tuner` command or the built-in `lingual-tuner` skill.
 
 Beyond just tweaking configurations, I genuinely encourage everyone to think through the output style you actually want:
 * **How granular should the breakdown of key phrases in a sentence be?**
@@ -265,7 +283,7 @@ I hope everyone takes the time to tune a prompt that works best for them, catche
 
 ```bash
 npm run typecheck   # Strict tsc --noEmit check (0 errors)
-npm test            # 96/96 test assertions passing (100% green)
+npm test            # 116/116 test assertions passing (100% green)
 npm run build       # Multi-entry compilation via tsup (extension + core engine)
 ```
 

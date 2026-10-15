@@ -1,51 +1,51 @@
 /**
- * Prompt Sanitizer & Intent Distiller (报错审查与意图萃取器)
+ * Prompt Sanitizer & Intent Distiller.
  *
- * 物理职责：
- * 1. 剥离图片路径与文件路径前缀 (如 C:\Users\...\pi-clipboard-xxx.png)；
- * 2. 识别并折叠多行堆栈追踪 (Node.js at ..., Python Traceback, Java Caused by...)；
- * 3. 识别并折叠多行 Markdown 代码块 (```...```) 为 [...]；
- * 4. 识别并折叠多行编译器/Linter 诊断报错，仅保留首行关键信息；
- * 5. 严格保留 shell 命令行 (git, npm, cargo 等) 原型，不进行破坏性抹除；
- * 6. 提炼出核心自然语言意图，防止几百行报错撑爆终端与大模型上下文。
+ * Responsibilities:
+ * 1. Strips clipboard screenshot paths (pi-clipboard-*.png);
+ * 2. Identifies and collapses multiline stack traces (Node.js at ..., Python Traceback, Java Caused by...);
+ * 3. Collapses multiline Markdown code blocks (```...```) to [...];
+ * 4. Collapses multiline compiler/linter diagnostics, preserving the first summary line;
+ * 5. Strictly preserves Shell CLI commands (git, npm, cargo, etc.) verbatim;
+ * 6. Distills core natural language intent to prevent prompt bloating.
  */
 
 import { isNonEnglish } from "./shield.js";
 
-// 常见临时剪贴板图片正则 (精确匹配 pi-clipboard 截图，绝不误伤普通代码或 docs/README.md 文件)
-// 支持 Windows 盘符 (正反斜杠)、支持包含空格的用户名路径 (如 Jason Miller)
+// Targeted regex for temporary clipboard image paths (e.g. pi-clipboard-*.png)
+// Supports Windows drive letters (forward and backward slashes) and paths with spaces
 const TARGETED_CLIPBOARD_PATH_REGEX = /(?:[a-zA-Z]:[\\\/](?:[^:\r\n\t]+[\\\/])?pi-clipboard-[a-zA-Z0-9\-]+\.png|\/(?:[^\r\n\t]+[\\\/])?pi-clipboard-[a-zA-Z0-9\-]+\.png)/gi;
 const LEADING_TARGETED_CLIPBOARD_REGEX = /^(?:[a-zA-Z]:[\\\/](?:[^:\r\n\t]+[\\\/])?pi-clipboard-[a-zA-Z0-9\-]+\.png|\/(?:[^\r\n\t]+[\\\/])?pi-clipboard-[a-zA-Z0-9\-]+\.png)\s*/i;
 
-// 常见长绝对文件路径 (如 C:\Users\Jason\... 或 /var/log/...) 与 UUID/会话哈希
-// 自动折叠为 (...)，防止超长复制路径污染翻译 Prompt、撑爆终端行预算或引发大模型脑补展开
+// Absolute file paths (e.g. C:\Users\... or /var/log/...) and UUID/session hashes
+// Folded into (...) to prevent path hallucination and terminal line overflow
 const ABSOLUTE_LONG_PATH_REGEX = /(?:[a-zA-Z]:[\\\/](?:[^:\r\n\t\s<>"]+[\\\/])+[a-zA-Z0-9_\-\.]+\.[a-zA-Z0-9_]+|\/(?:[a-zA-Z0-9_\-\.]+[\\\/]){3,}[a-zA-Z0-9_\-\.]+\.[a-zA-Z0-9_]+)/gi;
 const UUID_OR_SESSION_REGEX = /(?:(?:session|id|uuid)[\s:=]*)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4,16}(?:\.jsonl)?/gi;
 
-// 堆栈跟踪特征正则
+// Stack trace pattern
 const STACK_LINE_REGEX = /^\s*(?:at\s+(?:[\w$.<>]+|[^\s]+)\s*\(.*:\d+:\d+\)|at\s+.*:\d+:\d+|File\s+".*", line \d+, in\s+.*|goroutine \d+ \[.*\]:|Caused by:.*|^\s*\d+:\s+0x[0-9a-f]+)/;
 
-// 编译器多行诊断格式 (TS / Rustc / GCC / Python)
+// Compiler multiline diagnostic pattern (TS / Rustc / GCC / Python)
 const COMPILER_DIAGNOSTIC_REGEX = /^(?:[a-zA-Z]:[\\\/]|\.{0,2}[\\\/]|[a-zA-Z0-9_\-\.]+)[^:\r\n]+:\d+:\d+:\s*(?:error|warning|fatal error|note):/i;
 
-// 常见多行列表项特征正则 (支持 - * • 1. 2. 等项目符号)
+// Multiline list item pattern (-, *, •, 1., 2.)
 const LIST_ITEM_REGEX = /^\s*(?:[-*•]|\d+[\.、)])\s+/;
 
 export interface SanitizedPromptResult {
-  /** 审查折叠后用于翻译与分句的紧凑意图文本 */
+  /** Distilled compact text after sanitization and folding */
   distilledText: string;
-  /** 是否包含有效的人类自然语言提问/意图 */
+  /** Whether prompt contains valid human natural language intent */
   hasNaturalLanguage: boolean;
-  /** 是否折叠了堆栈、代码块或报错 */
+  /** Whether stack traces, code blocks, or logs were collapsed */
   hasCollapsedContent: boolean;
-  /** 自然语言核心字符数估算 */
+  /** Estimated natural language character count */
   naturalCharsLength: number;
-  /** 提取出的原始代码块、堆栈或诊断附件 (供 english 模式实施混合意图嫁接) */
+  /** Preserved raw payload (code blocks, stack traces) for hybrid grafting */
   rawPayload?: string;
 }
 
 /**
- * 对用户原始输入进行审查与折叠萃取
+ * Sanitizes user input and distills natural language intent.
  */
 export function sanitizePromptForTranslation(raw: string): SanitizedPromptResult {
   const trimmed = raw.trim();
@@ -58,13 +58,13 @@ export function sanitizePromptForTranslation(raw: string): SanitizedPromptResult
     };
   }
 
-  // 1. 循环剥离所有临时截图前缀，并安全滤除文本末尾或夹带的剪贴板图片路径 (绝不误伤普通源码与 README.md)
+  // 1. Strip temporary screenshot path prefixes and trailing image paths
   let text = trimmed;
   while (LEADING_TARGETED_CLIPBOARD_REGEX.test(text)) {
     text = text.replace(LEADING_TARGETED_CLIPBOARD_REGEX, "").trim();
   }
   
-  // 提取夹带在行内或尾部的截图/临时状态路径，存入 rawPayload 供 AI 上下文使用，不污染自然语言切片
+  // Extract inline or trailing screenshot paths into rawPayload
   const inlinePathMatches = text.match(TARGETED_CLIPBOARD_PATH_REGEX);
   const extraPayloads: string[] = [];
   if (inlinePathMatches && inlinePathMatches.length > 0) {
@@ -72,7 +72,7 @@ export function sanitizePromptForTranslation(raw: string): SanitizedPromptResult
     text = text.replace(TARGETED_CLIPBOARD_PATH_REGEX, "").trim();
   }
 
-  // 1.1 识别复制的长绝对文件路径与 UUID 会话哈希，提取至 rawPayload 并用 (...) 占位折叠
+  // 1.1 Match long absolute file paths and session UUIDs, extract to rawPayload and fold to (...)
   const longPathMatches = text.match(ABSOLUTE_LONG_PATH_REGEX);
   if (longPathMatches && longPathMatches.length > 0) {
     extraPayloads.push(...longPathMatches);
@@ -85,7 +85,7 @@ export function sanitizePromptForTranslation(raw: string): SanitizedPromptResult
     text = text.replace(UUID_OR_SESSION_REGEX, "(...)");
   }
 
-  // 折叠多余的连续 "(...) (...)"
+  // Collapse redundant consecutive "(...) (...)"
   text = text.replace(/(?:\(\.\.\.\)\s*){2,}/g, "(...) ").trim();
 
   let trailingPathPayload: string | undefined = extraPayloads.length > 0 ? extraPayloads.join("\n") : undefined;
@@ -100,7 +100,7 @@ export function sanitizePromptForTranslation(raw: string): SanitizedPromptResult
     };
   }
 
-  // 2. 折叠 Markdown 封闭代码块 (```...```) 为 [...]
+  // 2. Collapse Markdown code blocks (```...```) to [...]
   let hasCollapsed = Boolean(longPathMatches || uuidMatches);
   text = text.replace(/```[\w\-]*\r?\n([\s\S]*?)\r?\n```/g, (_match, codeContent) => {
     hasCollapsed = true;
@@ -111,7 +111,7 @@ export function sanitizePromptForTranslation(raw: string): SanitizedPromptResult
     return "[code ...]";
   });
 
-  // 3. 按行审查与堆栈/报错/列表折叠
+  // 3. Line-by-line inspection and stack / diagnostic / list folding
   const lines = text.split(/\r?\n/);
   const resultLines: string[] = [];
   let inStackBlock = false;
@@ -122,14 +122,14 @@ export function sanitizePromptForTranslation(raw: string): SanitizedPromptResult
   const flushListItems = () => {
     const totalLength = currentListItems.reduce((acc, cur) => acc + cur.length, 0);
 
-    // 保护短列表语义：条目 <= 4 且总字数 <= 120 时，绝不粗暴折叠，完整保留选项上下文！
+    // Protect short lists: keep options if items <= 4 and total length <= 120
     if (currentListItems.length >= 2 && (currentListItems.length > 4 || totalLength > 120)) {
       hasCollapsed = true;
       resultLines.push(`[${currentListItems.length} items ...]`);
       collapsedListBlocks.push(currentListItems.join("\n"));
       currentListItems.length = 0;
     } else {
-      // 短列表逐行完整保留
+      // Preserve short list line-by-line
       resultLines.push(...currentListItems);
       currentListItems.length = 0;
     }
@@ -139,7 +139,7 @@ export function sanitizePromptForTranslation(raw: string): SanitizedPromptResult
     const line = lines[i];
     const lineTrim = line.trim();
 
-    // 空行直接跳过或保留单个
+    // Skip empty lines
     if (!lineTrim) {
       flushListItems();
       inStackBlock = false;
@@ -147,7 +147,7 @@ export function sanitizePromptForTranslation(raw: string): SanitizedPromptResult
       continue;
     }
 
-    // A. 判定是否为堆栈追踪行 (at Function..., File "...", line...)
+    // A. Check if line is a stack trace line
     if (STACK_LINE_REGEX.test(lineTrim) || lineTrim.startsWith("Traceback (most recent call last):")) {
       flushListItems();
       hasCollapsed = true;
@@ -160,12 +160,12 @@ export function sanitizePromptForTranslation(raw: string): SanitizedPromptResult
       inStackBlock = false;
     }
 
-    // B. 判定是否为编译器连续报错 (如 src/index.ts:12:4: error: ...)
+    // B. Check if line is a compiler diagnostic line
     if (COMPILER_DIAGNOSTIC_REGEX.test(lineTrim)) {
       flushListItems();
       hasCollapsed = true;
       if (!inDiagnosticBlock) {
-        // 保留首行核心报错摘要
+        // Keep first diagnostic summary line
         resultLines.push(lineTrim);
         resultLines.push("[... diagnostics ...]");
         inDiagnosticBlock = true;
@@ -175,7 +175,7 @@ export function sanitizePromptForTranslation(raw: string): SanitizedPromptResult
       inDiagnosticBlock = false;
     }
 
-    // C. 常见 npm ERR! 连续堆叠折叠
+    // C. Collapse consecutive npm ERR! blocks
     if (/^npm ERR!/i.test(lineTrim)) {
       flushListItems();
       hasCollapsed = true;
@@ -185,7 +185,7 @@ export function sanitizePromptForTranslation(raw: string): SanitizedPromptResult
       continue;
     }
 
-    // D. 项目列表项折叠 (连续 2 条及以上列表项折叠)
+    // D. Collapse multiline list items (>= 2 items)
     if (LIST_ITEM_REGEX.test(lineTrim)) {
       currentListItems.push(line);
       continue;
@@ -193,42 +193,41 @@ export function sanitizePromptForTranslation(raw: string): SanitizedPromptResult
       flushListItems();
     }
 
-    // 正常文本行保留
+    // Preserve normal text lines
     resultLines.push(line);
   }
 
   flushListItems();
 
-  // 合并折叠后的紧凑文本
+  // Join collapsed lines
   const distilledText = resultLines.join(" ").replace(/\s+/g, " ").trim();
 
-  // 4. 判定是否包含人类自然语言意图
-  // 如果整段文本只剩下纯报错占位符、纯英文符号、纯文件名，而没有任何自然语言表达：
+  // 4. Determine if input contains human natural language intent
   const withoutPlaceholders = distilledText
     .replace(/\[\.\.\.[^\]]*\]|\[\d+\s*items\s*\.\.\.\]/g, "")
     .replace(/[a-zA-Z0-9_\-\.\/\\:]+/g, "")
     .trim();
 
-  // 如果包含中日韩或非 ASCII 自然语言文字，或包含自然语言问句/指导动词
+  // Check for non-English scripts, technical questions, or imperative verbs
   const hasCJK = isNonEnglish(distilledText);
   const hasQuestionKeywords = /(?:为什么|怎么|如何|帮我|排查|优化|修改|修复|为何|报错|审查|看下|explain|why|how|please|help|could you|fix|should|what|inspect)/i.test(distilledText);
   
-  // 纯编译器诊断守卫：如果整段输入全是 TS/GCC 编译报错模板句，且没有任何人类疑问词，判定为纯输出
+  // Pure compiler diagnostic guard: TS/GCC output with no question keywords
   const isPureDiagnosticOutput = /^(?:[a-zA-Z0-9_\-\.\/\\:]+\s*-\s*error\s+[a-zA-Z0-9]+|error(?:\s+TS\d+|:)|warning:)/i.test(distilledText) && !hasQuestionKeywords;
 
-  // 纯报错/堆栈守卫：纯 Error: ... 紧随堆栈，且无任何人类提问意图
+  // Pure error stack guard: Error: ... followed by stack with no question intent
   const isPureErrorOrDiagnostic =
     isPureDiagnosticOutput ||
     (/^Error:\s*[\w\s:]*\[\.\.\.\s*stack trace\s*\.\.\.\]/i.test(distilledText) && !hasQuestionKeywords);
 
-  // 自然语言英语句子判定：在非纯堆栈场景下，包含由空格分隔的标准英文自然词汇 >= 4 个 (确保英文陈述句被准确识别)
+  // English sentence check: >= 4 space-separated words outside error headers
   const cleanEnglishWords = distilledText.replace(/\[\.\.\.[^\]]*\]|\[code[^\]]*\]|\[\d+\s*items\s*\.\.\.\]/gi, " ").trim();
   const words = cleanEnglishWords.match(/\b[a-zA-Z]{2,}\b/g) || [];
   const hasEnglishSentence = !isPureErrorOrDiagnostic && words.length >= 4 && !distilledText.startsWith("Error:");
 
   const hasNaturalLanguage = (hasCJK || hasQuestionKeywords || hasEnglishSentence || withoutPlaceholders.length > 5) && !isPureErrorOrDiagnostic;
 
-  // 5. 提取可能被折叠的原始代码块与堆栈追踪附件 (供 english 模式嫁接保留真实排障上下文)
+  // 5. Extract collapsed code blocks and stack traces into rawPayload for hybrid intent grafting
   let rawPayload: string | undefined;
   const payloadParts: string[] = [];
   if (trailingPathPayload) {
