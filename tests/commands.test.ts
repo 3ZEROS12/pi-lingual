@@ -199,6 +199,17 @@ test("standalone /lang and language normalization - switches languages and handl
   await registeredCommands["lang"].handler("zh ja", mockCtx);
   assert.ok(notifications[notifications.length - 1].includes("zh ⇄ ja"));
 
+  // 4b. Help message includes tw (B2)
+  await registeredCommands["lang"].handler("help", mockCtx);
+  assert.ok(
+    notifications[notifications.length - 1].includes("tw"),
+    "/lang help message must include tw"
+  );
+
+  // 4c. Switch to tw
+  await registeredCommands["lang"].handler("tw", mockCtx);
+  assert.ok(notifications[notifications.length - 1].includes("tw"));
+
   // 5. Subcommand /lingual compact
   await registeredCommands["lingual"].handler("compact", mockCtx);
   assert.ok(

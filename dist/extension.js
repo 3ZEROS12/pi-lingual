@@ -1538,7 +1538,7 @@ var LANGUAGE_PRESETS = {
     notifyAgentHelp: "\u{1F4A1} Built-in lingual-tuner skill: Ask the agent to configure companion settings anytime.",
     notifyModelSwitched: "Companion model switched to: {model}",
     notifyLangSwitched: "Companion language switched to: {lang}",
-    notifyLangInvalid: "Invalid language code. Supported: zh, ja, ko, en, es, fr, de, ru",
+    notifyLangInvalid: "Invalid language code. Supported: zh, tw, ja, ko, en, es, fr, de, ru",
     notifyCompactOn: "[en \u21C4 ja] Capsule mode enabled: single-line compact view",
     notifyCompactOff: "[en \u21C4 ja] Tree branch mode enabled: full multi-slot view",
     notifyTimeout: "[en \u21C4 ja] Prompt rewrite timed out; original prompt passed",
@@ -1610,7 +1610,7 @@ var LANGUAGE_PRESETS = {
     notifyAgentHelp: '\u{1F4A1} \u5185\u7F6E lingual-tuner \u69FD\u4F4D\u8C03\u4F18\u6280\u80FD\uFF1A\u76F4\u63A5\u5BF9\u5F53\u524D Agent \u8BF4 "\u5E2E\u6211\u5B9A\u5236\u4F34\u5B66" \u5373\u53EF\u514D\u547D\u4EE4\u81EA\u52A8\u88C5\u914D\uFF01',
     notifyModelSwitched: "\u4F34\u5B66\u6A21\u578B\u5DF2\u5207\u6362\u4E3A: {model}",
     notifyLangSwitched: "\u4F34\u5B66\u8BED\u8A00\u5DF2\u5207\u6362\u4E3A: {lang}",
-    notifyLangInvalid: "\u65E0\u6548\u7684\u8BED\u8A00\u4EE3\u7801\u3002\u652F\u6301: zh, ja, en, es, fr, de, ko, ru",
+    notifyLangInvalid: "\u65E0\u6548\u7684\u8BED\u8A00\u4EE3\u7801\u3002\u652F\u6301: zh, tw, ja, en, es, fr, de, ko, ru",
     notifyCompactOn: "[zh \u21C4 en] \u5DF2\u5F00\u542F\u5355\u884C\u80F6\u56CA\u6A21\u5F0F\uFF1A\u6781\u7B80\u5360\u4F4D",
     notifyCompactOff: "[zh \u21C4 en] \u5DF2\u5207\u6362\u4E3A\u5DE6\u5BFC\u8F68\u6811\u72B6\u67B6\u6784\uFF1A\u5C55\u793A\u5B8C\u6574\u591A\u69FD\u4E0E\u8BED\u611F",
     notifyTimeout: "[zh \u21C4 en] \u63D0\u793A\u8BCD\u4F18\u5316\u8BF7\u6C42\u672A\u5C31\u7EEA\u6216\u8D85\u65F6\uFF0C\u672C\u6B21\u5DF2\u653E\u884C\u539F\u6587",
@@ -2630,7 +2630,8 @@ function saveUserLingualConfig(patch) {
     }
     for (const [k, v] of Object.entries(patch)) {
       const isEmptyArray = Array.isArray(v) && v.length === 0;
-      if (v === void 0 || v === "" || isEmptyArray || v === "auto" || k === "compact" && v === false || k === "modeLocked" && v === false) {
+      if (v === void 0 || v === "" || isEmptyArray || v === "auto" || // Intentional revert-to-default semantic: passing "auto" deletes key to restore auto-probing
+      k === "compact" && v === false || k === "modeLocked" && v === false) {
         delete existing[k];
       } else if (k === "mode") {
         existing[k] = v === "english" ? "direct" : v === "select" ? "candidates" : v;
@@ -2924,7 +2925,14 @@ function resolveModifySlotsFromConfig(cfg) {
 }
 function resolveModesFromConfig(cfg) {
   if (Array.isArray(cfg.modes) && cfg.modes.length > 0) {
-    const valid = cfg.modes.filter((m) => m && typeof m.id === "string" && m.id.trim()).map((m) => Array.isArray(m.slots) ? m : { ...m, slots: [] });
+    const sourceLang = cfg.sourceLang || "en";
+    const explainLang = cfg.explainLang;
+    const valid = cfg.modes.filter((m) => m && typeof m.id === "string" && m.id.trim()).map((m) => {
+      if (Array.isArray(m.slots) && m.slots.length > 0) return m;
+      if (m.action === "pass-through") return { ...m, slots: [] };
+      const defaultSlots = m.flow === "proofread" ? getDefaultModifySlots(sourceLang, explainLang) : getDefaultDirectSlots(sourceLang);
+      return { ...m, slots: defaultSlots };
+    });
     if (valid.length > 0) return valid;
   }
   const hasLegacyCustomSlots = Array.isArray(cfg.slots) || Array.isArray(cfg.directSlots) || Array.isArray(cfg.promptSlots) || Array.isArray(cfg.modifySlots);
@@ -3012,7 +3020,8 @@ function compileModeSystemPrompt(mode, options) {
   const sourceLang = mode.customInputLang || options.sourceLang || "en";
   const targetLang = mode.customOutputLang || options.targetLang || "en";
   const explainLang = options.explainLang || sourceLang;
-  const interpolatedSlots = mode.slots.map((s) => ({
+  const rawSlots = Array.isArray(mode.slots) && mode.slots.length > 0 ? mode.slots : mode.action === "pass-through" ? [] : mode.flow === "proofread" ? getDefaultModifySlots(sourceLang, explainLang) : getDefaultDirectSlots(sourceLang);
+  const interpolatedSlots = rawSlots.map((s) => ({
     ...s,
     instruction: s.instruction ? interpolatePromptVariables(s.instruction, {
       sourceLang,
@@ -3020,7 +3029,7 @@ function compileModeSystemPrompt(mode, options) {
       explainLang
     }) : ""
   }));
-  const slotKillLists = (mode.slots || []).flatMap((s) => s.killList || []);
+  const slotKillLists = rawSlots.flatMap((s) => s.killList || []);
   const combinedKillList = [...mode.killList || [], ...slotKillLists];
   const killListBlock = compileKillListInstruction(combinedKillList, options.globalKillList);
   let systemHintBlock = "";
@@ -3299,7 +3308,7 @@ function resolveReleaseBannerLang(explicitSourceLang, sessionEntries) {
 }
 function formatReleaseBannerLines(sourceLang = "en", maxCols = 80, fg = (_c, t) => t) {
   const norm = (sourceLang || "en").toLowerCase().split("-")[0];
-  const effectiveCols = Math.max(40, maxCols);
+  const effectiveCols = typeof maxCols === "number" && maxCols > 0 ? maxCols : 80;
   const copyByLang = {
     zh: {
       title: "\xB7 [pi-lingual v0.6.0] \u6781\u7B80\u53CC\u6838\u6A21\u5F0F\u4E0A\u7EBF & Tuner \u5B8C\u5168\u5F00\u653E (\u53D1\u6D88\u606F\u81EA\u52A8\u6536\u8D77)",
@@ -4232,10 +4241,10 @@ function extension_default(pi) {
       const helpMsg = isZh ? `[\u5F53\u524D\u4F34\u5B66\u8BED\u8A00: ${flowText2}]
 \u2022 \u5E38\u7528\u5207\u6362: /lang ja (\u5207\u6362\u76EE\u6807\u4E3A\u65E5\u8BED) \xB7 /lang en (\u5207\u6362\u76EE\u6807\u4E3A\u82F1\u8BED)
 \u2022 \u53CC\u5411\u5207\u6362: /lang zh ja \xB7 /lang ja en \xB7 /lang en zh
-\u2022 \u652F\u6301\u8BED\u79CD: zh (\u4E2D\u6587), ja (\u65E5\u8BED), ko (\u97E9\u8BED), en (\u82F1\u8BED), es (\u897F\u8BED), fr (\u6CD5\u8BED), de (\u5FB7\u8BED), ru (\u4FC4\u8BED)` : `[Companion Language: ${flowText2}]
+\u2022 \u652F\u6301\u8BED\u79CD: zh (\u4E2D\u6587), tw (\u7E41\u4E2D), ja (\u65E5\u8BED), ko (\u97E9\u8BED), en (\u82F1\u8BED), es (\u897F\u8BED), fr (\u6CD5\u8BED), de (\u5FB7\u8BED), ru (\u4FC4\u8BED)` : `[Companion Language: ${flowText2}]
 \u2022 Quick switch: /lang ja (target Japanese) \xB7 /lang en (target English)
 \u2022 Pair switch: /lang en ja \xB7 /lang ja en \xB7 /lang es en
-\u2022 Supported codes: zh, ja, ko, en, es, fr, de, ru`;
+\u2022 Supported codes: zh, tw, ja, ko, en, es, fr, de, ru`;
       ctx.ui.notify(helpMsg, "info");
       return;
     }
@@ -4246,7 +4255,7 @@ function extension_default(pi) {
       const code = normalizeLangCode(parts[0]);
       if (!isSupportedLangCode(code)) {
         ctx.ui.notify(
-          state.labels.notifyLangInvalid || "Invalid language code. Supported: zh, ja, ko, en, es, fr, de, ru",
+          state.labels.notifyLangInvalid || "Invalid language code. Supported: zh, tw, ja, ko, en, es, fr, de, ru",
           "warning"
         );
         return;
@@ -4261,7 +4270,7 @@ function extension_default(pi) {
       newTarget = normalizeLangCode(parts[1]);
       if (!isSupportedLangCode(newSource)) {
         ctx.ui.notify(
-          state.labels.notifyLangInvalid || "Invalid language code. Supported: zh, ja, ko, en, es, fr, de, ru",
+          state.labels.notifyLangInvalid || "Invalid language code. Supported: zh, tw, ja, ko, en, es, fr, de, ru",
           "warning"
         );
         return;

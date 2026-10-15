@@ -12,7 +12,7 @@ import {
   resolveLangPair,
   resolveLabelsForLang,
 } from "../src/presets.js";
-import { resolveModesFromConfig, resolveReleaseBannerLang } from "../src/engine.js";
+import { resolveModesFromConfig, resolveReleaseBannerLang, compileModeSystemPrompt } from "../src/engine.js";
 import { getBannerMaxCols, getVisualWidth } from "../src/layout.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -144,7 +144,22 @@ test("legacy config bridge - user modes are never dropped for a missing slots ar
 
   assert.equal(modes.length, 1, "A user-authored mode without a slots array must survive resolution");
   assert.equal(modes[0].id, "hand-written");
-  assert.deepEqual(modes[0].slots, [], "Missing slots are normalized, not fatal");
+  assert.ok(Array.isArray(modes[0].slots) && modes[0].slots.length > 0, "Missing slots are populated with flow defaults");
+
+  // Pass-through action preserves empty slots
+  const passThroughModes = resolveModesFromConfig({
+    modes: [{ id: "quiet", name: "Quiet", action: "pass-through" } as any],
+  });
+  assert.deepEqual(passThroughModes[0].slots, [], "Pass-through action preserves empty slots");
+
+  // Slotless transform mode must not fall back to candidate slots ("concise"/"spec"/"deep") (B3)
+  const compiled = compileModeSystemPrompt(
+    { id: "hand-written", name: "Hand Written", flow: "translate", action: "transform", hud: "preview", slots: [] } as any,
+    { sourceLang: "zh", targetLang: "en" }
+  );
+  assert.ok(!compiled.includes('"concise"'), "Must NOT fall back to concise candidate slot");
+  assert.ok(!compiled.includes('"spec"'), "Must NOT fall back to spec candidate slot");
+  assert.ok(!compiled.includes('"deep"'), "Must NOT fall back to deep candidate slot");
 
   const factory = resolveModesFromConfig({ sourceLang: "zh" } as any);
   assert.deepEqual(factory.map((m) => m.id), ["direct", "live-flow"], "Factory dual-core defaults stay intact");

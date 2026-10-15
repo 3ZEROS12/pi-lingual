@@ -275,7 +275,7 @@ export function saveUserLingualConfig(patch: Record<string, any>): void {
         v === undefined ||
         v === "" ||
         isEmptyArray ||
-        v === "auto" ||
+        v === "auto" || // Intentional revert-to-default semantic: passing "auto" deletes key to restore auto-probing
         (k === "compact" && v === false) ||
         (k === "modeLocked" && v === false)
       ) {
@@ -813,10 +813,20 @@ export function resolveModifySlotsFromConfig(cfg: {
 
 export function resolveModesFromConfig(cfg: Partial<LingualConfig>): CustomModeConfig[] {
   if (Array.isArray(cfg.modes) && cfg.modes.length > 0) {
-    // Keep every user-authored mode; a missing slots array is normalized instead of dropping the entry.
+    const sourceLang = cfg.sourceLang || "en";
+    const explainLang = cfg.explainLang;
+    // Keep every user-authored mode; populate clean defaults for missing/empty slots by flow
     const valid = cfg.modes
       .filter((m) => m && typeof m.id === "string" && m.id.trim())
-      .map((m) => (Array.isArray(m.slots) ? m : { ...m, slots: [] }));
+      .map((m) => {
+        if (Array.isArray(m.slots) && m.slots.length > 0) return m;
+        if (m.action === "pass-through") return { ...m, slots: [] };
+        const defaultSlots =
+          m.flow === "proofread"
+            ? getDefaultModifySlots(sourceLang, explainLang)
+            : getDefaultDirectSlots(sourceLang);
+        return { ...m, slots: defaultSlots };
+      });
     if (valid.length > 0) return valid;
   }
 
@@ -928,7 +938,16 @@ export function compileModeSystemPrompt(
   const targetLang = mode.customOutputLang || options.targetLang || "en";
   const explainLang = options.explainLang || sourceLang;
 
-  const interpolatedSlots = mode.slots.map((s) => ({
+  const rawSlots =
+    Array.isArray(mode.slots) && mode.slots.length > 0
+      ? mode.slots
+      : mode.action === "pass-through"
+        ? []
+        : mode.flow === "proofread"
+          ? getDefaultModifySlots(sourceLang, explainLang)
+          : getDefaultDirectSlots(sourceLang);
+
+  const interpolatedSlots = rawSlots.map((s) => ({
     ...s,
     instruction: s.instruction
       ? interpolatePromptVariables(s.instruction, {
@@ -939,7 +958,7 @@ export function compileModeSystemPrompt(
       : "",
   }));
 
-  const slotKillLists = (mode.slots || []).flatMap((s) => s.killList || []);
+  const slotKillLists = rawSlots.flatMap((s) => s.killList || []);
   const combinedKillList = [...(mode.killList || []), ...slotKillLists];
   const killListBlock = compileKillListInstruction(combinedKillList, options.globalKillList);
 
@@ -1293,7 +1312,8 @@ export function formatReleaseBannerLines(
   fg: (color: string, text: string) => string = (_c, t) => t
 ): string[] {
   const norm = (sourceLang || "en").toLowerCase().split("-")[0];
-  const effectiveCols = Math.max(40, maxCols);
+  // Strictly honor live column budget on narrow viewports without artificial inflation
+  const effectiveCols = typeof maxCols === "number" && maxCols > 0 ? maxCols : 80;
 
   const copyByLang: Record<string, BannerSpec> = {
     zh: {

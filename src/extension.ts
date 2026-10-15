@@ -748,8 +748,8 @@ export default function (pi: ExtensionAPI) {
       const isZh = state.sourceLang === "zh" || state.sourceLang === "tw";
       const flowText = `${state.sourceLang} ➔ ${state.targetLang}`;
       const helpMsg = isZh
-        ? `[当前伴学语言: ${flowText}]\n• 常用切换: /lang ja (切换目标为日语) · /lang en (切换目标为英语)\n• 双向切换: /lang zh ja · /lang ja en · /lang en zh\n• 支持语种: zh (中文), ja (日语), ko (韩语), en (英语), es (西语), fr (法语), de (德语), ru (俄语)`
-        : `[Companion Language: ${flowText}]\n• Quick switch: /lang ja (target Japanese) · /lang en (target English)\n• Pair switch: /lang en ja · /lang ja en · /lang es en\n• Supported codes: zh, ja, ko, en, es, fr, de, ru`;
+        ? `[当前伴学语言: ${flowText}]\n• 常用切换: /lang ja (切换目标为日语) · /lang en (切换目标为英语)\n• 双向切换: /lang zh ja · /lang ja en · /lang en zh\n• 支持语种: zh (中文), tw (繁中), ja (日语), ko (韩语), en (英语), es (西语), fr (法语), de (德语), ru (俄语)`
+        : `[Companion Language: ${flowText}]\n• Quick switch: /lang ja (target Japanese) · /lang en (target English)\n• Pair switch: /lang en ja · /lang ja en · /lang es en\n• Supported codes: zh, tw, ja, ko, en, es, fr, de, ru`;
       ctx.ui.notify(helpMsg, "info");
       return;
     }
@@ -762,7 +762,7 @@ export default function (pi: ExtensionAPI) {
       const code = normalizeLangCode(parts[0]);
       if (!isSupportedLangCode(code)) {
         ctx.ui.notify(
-          state.labels.notifyLangInvalid || "Invalid language code. Supported: zh, ja, ko, en, es, fr, de, ru",
+          state.labels.notifyLangInvalid || "Invalid language code. Supported: zh, tw, ja, ko, en, es, fr, de, ru",
           "warning"
         );
         return;
@@ -778,7 +778,7 @@ export default function (pi: ExtensionAPI) {
       newTarget = normalizeLangCode(parts[1]);
       if (!isSupportedLangCode(newSource)) {
         ctx.ui.notify(
-          state.labels.notifyLangInvalid || "Invalid language code. Supported: zh, ja, ko, en, es, fr, de, ru",
+          state.labels.notifyLangInvalid || "Invalid language code. Supported: zh, tw, ja, ko, en, es, fr, de, ru",
           "warning"
         );
         return;

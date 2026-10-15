@@ -82,3 +82,25 @@ test("narrow terminals - truncateVisual never drops a trailing opener and never 
   assert.equal(truncateVisual("hello", 5), "hello");
   assert.ok(getVisualWidth(truncateVisual("中文中文中文中文", 7)) <= 7);
 });
+
+test("narrow terminals - release banner bounds to live budget at 30 and 20 columns across all 9 languages (B1, B6)", () => {
+  const openRegex = /[(\[{（【]/g;
+  const closeRegex = /[)\]}）】]/g;
+
+  for (const cols of [30, 20]) {
+    for (const lang of LANGS) {
+      const lines = formatReleaseBannerLines(lang, cols);
+      assert.equal(lines.length, 8, `[${lang} @ ${cols}col] banner must stay at 8 lines`);
+      for (const line of lines) {
+        assert.ok(
+          getVisualWidth(line) <= cols,
+          `[${lang} @ ${cols}col] banner line overflows budget (${getVisualWidth(line)} > ${cols}): ${line}`
+        );
+        const opens = (line.match(openRegex) || []).length;
+        const closes = (line.match(closeRegex) || []).length;
+        assert.equal(opens, closes, `[${lang} @ ${cols}col] unclosed delimiter in clipped line: ${line}`);
+      }
+    }
+  }
+});
+
