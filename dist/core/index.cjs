@@ -811,18 +811,22 @@ var import_node_os = __toESM(require("os"), 1);
 // src/presets.ts
 function getDefaultFactoryModes(sourceLang = "en", explainLang) {
   const norm = (sourceLang || "en").toLowerCase().split("-")[0];
-  const isZh = norm === "zh" || norm === "tw";
-  const isJa = norm === "ja";
-  const directName = isZh ? "\u89C4\u8303\u76F4\u53D1" : isJa ? "\u4ED5\u69D8\u76F4\u884C" : "Logical Spec";
-  const liveFlowName = isZh ? "\u5B9E\u6218\u72C2\u98D9" : isJa ? "\u5B9F\u6226\u75BE\u8D70" : "Live Flow";
-  const vocabName = isZh ? "\u6838\u5FC3\u8868\u8FBE" : isJa ? "\u91CD\u8981\u8868\u73FE" : "Key Terms";
-  const fixedName = isZh ? "\u539F\u53E5\u4FEE\u8865" : isJa ? "\u539F\u6587\u4FEE\u6B63" : "Fixed";
-  const nativeName = isZh ? "\u5730\u9053\u8868\u8FBE" : isJa ? "\u81EA\u7136\u8868\u73FE" : "Native";
-  const takeawayName = isZh ? "\u6536\u83B7\u590D\u76D8" : isJa ? "\u91CD\u8981\u30DD\u30A4\u30F3\u30C8" : "Takeaways";
+  const SEED_NAMES = {
+    en: { direct: "Logical Spec", liveFlow: "Live Flow", vocab: "Key Terms", fixed: "Fixed", native: "Native", takeaway: "Takeaways" },
+    zh: { direct: "\u89C4\u8303\u76F4\u53D1", liveFlow: "\u5B9E\u6218\u72C2\u98D9", vocab: "\u6838\u5FC3\u8868\u8FBE", fixed: "\u539F\u53E5\u4FEE\u8865", native: "\u5730\u9053\u8868\u8FBE", takeaway: "\u6536\u83B7\u590D\u76D8" },
+    tw: { direct: "\u898F\u7BC4\u76F4\u767C", liveFlow: "\u5BE6\u6230\u72C2\u98C6", vocab: "\u6838\u5FC3\u8868\u9054", fixed: "\u539F\u53E5\u4FEE\u88DC", native: "\u9053\u5730\u8868\u9054", takeaway: "\u6536\u7A6B\u8907\u76E4" },
+    ja: { direct: "\u4ED5\u69D8\u76F4\u884C", liveFlow: "\u5B9F\u6226\u75BE\u8D70", vocab: "\u91CD\u8981\u8A9E\u5F59", fixed: "\u539F\u6587\u4FEE\u6B63", native: "\u81EA\u7136\u8868\u73FE", takeaway: "\u91CD\u8981\u30DD\u30A4\u30F3\u30C8" },
+    ko: { direct: "\uB17C\uB9AC\uC815\uC81C", liveFlow: "\uC2E4\uC804\uC9C8\uC8FC", vocab: "\uD575\uC2EC\uC5B4\uD718", fixed: "\uC6D0\uBB38\uC218\uC815", native: "\uC790\uC5F0\uC2A4\uB7EC\uC6B4\uD45C\uD604", takeaway: "\uD575\uC2EC\uD3EC\uC778\uD2B8" },
+    es: { direct: "Directo L\xF3gico", liveFlow: "Live Flow", vocab: "T\xE9rminos clave", fixed: "Corregido", native: "Nativo", takeaway: "Puntos clave" },
+    fr: { direct: "Direct Logique", liveFlow: "Live Flow", vocab: "Termes cl\xE9s", fixed: "Corrig\xE9", native: "Naturel", takeaway: "Points cl\xE9s" },
+    de: { direct: "Direkte Logik", liveFlow: "Live Flow", vocab: "Schl\xFCsselbegriffe", fixed: "Korrigiert", native: "Nativ", takeaway: "Wichtige Punkte" },
+    ru: { direct: "\u041F\u0440\u044F\u043C\u043E\u0439 \u043F\u043E\u0442\u043E\u043A", liveFlow: "Live Flow", vocab: "\u041A\u043B\u044E\u0447\u0435\u0432\u044B\u0435 \u0441\u043B\u043E\u0432\u0430", fixed: "\u0418\u0441\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u043E", native: "\u041D\u0430\u0442\u0438\u0432\u043D\u044B\u0439", takeaway: "\u0413\u043B\u0430\u0432\u043D\u043E\u0435" }
+  };
+  const n = SEED_NAMES[norm] || SEED_NAMES.en;
   return [
     {
       id: "direct",
-      name: directName,
+      name: n.direct,
       aliases: ["lazy"],
       flow: "translate",
       action: "transform",
@@ -831,14 +835,14 @@ function getDefaultFactoryModes(sourceLang = "en", explainLang) {
       slots: [
         {
           id: "direct_spec",
-          label: directName,
+          label: n.direct,
           role: "rewrite",
           instruction: "Target Language: ${targetLang}. Strictly output in ${targetLang} ONLY: Translate and restructure user's raw, colloquial, or fragmented thoughts from ${sourceLang} into a clear, imperative, high-precision engineering instruction for an AI coding agent. Start directly with an active imperative verb (e.g. 'Inspect', 'Refactor', 'Implement', 'Fix', 'Trace'), eliminate conversational filler, preserve all code tokens, file paths, and CLI flags 100% verbatim, and strictly avoid hallucinations.",
           enabled: true
         },
         {
           id: "vocab",
-          label: vocabName,
+          label: n.vocab,
           role: "vocab",
           instruction: "Extract 2-3 high-value idiomatic ${targetLang} technical expressions relevant to this instruction following the 3-Second Glanceability Rule: 'term (${explainLang} meaning) \xB7 term2 (...)'.",
           enabled: true
@@ -848,7 +852,7 @@ function getDefaultFactoryModes(sourceLang = "en", explainLang) {
     },
     {
       id: "live-flow",
-      name: liveFlowName,
+      name: n.liveFlow,
       aliases: ["raw"],
       flow: "proofread",
       action: "transform",
@@ -857,7 +861,7 @@ function getDefaultFactoryModes(sourceLang = "en", explainLang) {
       slots: [
         {
           id: "fixed",
-          label: fixedName,
+          label: n.fixed,
           role: "rewrite",
           instruction: "Target Language: ${targetLang}. Strictly output in ${targetLang} ONLY: Surgically correct ONLY spelling mistakes, fast typos, syntax structure (e.g. 'want that you can' \u2794 'want you to'), wrong prepositions/articles, and grammatical slips in the user's ${targetLang} sentence. CRITICAL RULES: (1) Zero Level Leap (i+1 Rule): Match user's natural vocabulary tier; do NOT artificially inflate everyday dev text into academic prose. (2) Zero Tone Sanitization: NEVER censor swear words or raw emotions (e.g. 'fuck', 'suck', 'shit')\u2014passion and emotional heat are natural and MUST be preserved 100%! (3) Zero Punctuation/Casing Nitpicking. (4) 100% preserve original words and cadence.",
           hideWhenLong: true,
@@ -865,7 +869,7 @@ function getDefaultFactoryModes(sourceLang = "en", explainLang) {
         },
         {
           id: "native",
-          label: nativeName,
+          label: n.native,
           role: "rewrite",
           instruction: "Target Language: ${targetLang}. Strictly output in ${targetLang} ONLY: Provide a natural, idiomatic native phrasing expressing the exact same intent without level-leaping.",
           hideWhenLong: true,
@@ -873,7 +877,7 @@ function getDefaultFactoryModes(sourceLang = "en", explainLang) {
         },
         {
           id: "fixes",
-          label: takeawayName,
+          label: n.takeaway,
           role: "vocab",
           instruction: "Extract 1-3 essential takeaways in the format: 'before \u2794 after (<= 10 words/chars grounded intuition in ${explainLang})'.",
           enabled: true

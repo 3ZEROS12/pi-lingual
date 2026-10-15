@@ -15,20 +15,26 @@ import { getDefaultDirectSlots, getDefaultModifySlots, getDefaultSlots } from ".
  */
 export function getDefaultFactoryModes(sourceLang = "en", explainLang?: string): CustomModeConfig[] {
   const norm = (sourceLang || "en").toLowerCase().split("-")[0];
-  const isZh = norm === "zh" || norm === "tw";
-  const isJa = norm === "ja";
-
-  const directName = isZh ? "规范直发" : isJa ? "仕様直行" : "Logical Spec";
-  const liveFlowName = isZh ? "实战狂飙" : isJa ? "実戦疾走" : "Live Flow";
-  const vocabName = isZh ? "核心表达" : isJa ? "重要表現" : "Key Terms";
-  const fixedName = isZh ? "原句修补" : isJa ? "原文修正" : "Fixed";
-  const nativeName = isZh ? "地道表达" : isJa ? "自然表現" : "Native";
-  const takeawayName = isZh ? "收获复盘" : isJa ? "重要ポイント" : "Takeaways";
+  const SEED_NAMES: Record<
+    string,
+    { direct: string; liveFlow: string; vocab: string; fixed: string; native: string; takeaway: string }
+  > = {
+    en: { direct: "Logical Spec", liveFlow: "Live Flow", vocab: "Key Terms", fixed: "Fixed", native: "Native", takeaway: "Takeaways" },
+    zh: { direct: "规范直发", liveFlow: "实战狂飙", vocab: "核心表达", fixed: "原句修补", native: "地道表达", takeaway: "收获复盘" },
+    tw: { direct: "規範直發", liveFlow: "實戰狂飆", vocab: "核心表達", fixed: "原句修補", native: "道地表達", takeaway: "收穫複盤" },
+    ja: { direct: "仕様直行", liveFlow: "実戦疾走", vocab: "重要語彙", fixed: "原文修正", native: "自然表現", takeaway: "重要ポイント" },
+    ko: { direct: "논리정제", liveFlow: "실전질주", vocab: "핵심어휘", fixed: "원문수정", native: "자연스러운표현", takeaway: "핵심포인트" },
+    es: { direct: "Directo Lógico", liveFlow: "Live Flow", vocab: "Términos clave", fixed: "Corregido", native: "Nativo", takeaway: "Puntos clave" },
+    fr: { direct: "Direct Logique", liveFlow: "Live Flow", vocab: "Termes clés", fixed: "Corrigé", native: "Naturel", takeaway: "Points clés" },
+    de: { direct: "Direkte Logik", liveFlow: "Live Flow", vocab: "Schlüsselbegriffe", fixed: "Korrigiert", native: "Nativ", takeaway: "Wichtige Punkte" },
+    ru: { direct: "Прямой поток", liveFlow: "Live Flow", vocab: "Ключевые слова", fixed: "Исправлено", native: "Нативный", takeaway: "Главное" },
+  };
+  const n = SEED_NAMES[norm] || SEED_NAMES.en;
 
   return [
     {
       id: "direct",
-      name: directName,
+      name: n.direct,
       aliases: ["lazy"],
       flow: "translate",
       action: "transform",
@@ -37,7 +43,7 @@ export function getDefaultFactoryModes(sourceLang = "en", explainLang?: string):
       slots: [
         {
           id: "direct_spec",
-          label: directName,
+          label: n.direct,
           role: "rewrite",
           instruction:
             "Target Language: ${targetLang}. Strictly output in ${targetLang} ONLY: Translate and restructure user's raw, colloquial, or fragmented thoughts from ${sourceLang} into a clear, imperative, high-precision engineering instruction for an AI coding agent. Start directly with an active imperative verb (e.g. 'Inspect', 'Refactor', 'Implement', 'Fix', 'Trace'), eliminate conversational filler, preserve all code tokens, file paths, and CLI flags 100% verbatim, and strictly avoid hallucinations.",
@@ -45,7 +51,7 @@ export function getDefaultFactoryModes(sourceLang = "en", explainLang?: string):
         },
         {
           id: "vocab",
-          label: vocabName,
+          label: n.vocab,
           role: "vocab",
           instruction:
             "Extract 2-3 high-value idiomatic ${targetLang} technical expressions relevant to this instruction following the 3-Second Glanceability Rule: 'term (${explainLang} meaning) · term2 (...)'.",
@@ -56,7 +62,7 @@ export function getDefaultFactoryModes(sourceLang = "en", explainLang?: string):
     },
     {
       id: "live-flow",
-      name: liveFlowName,
+      name: n.liveFlow,
       aliases: ["raw"],
       flow: "proofread",
       action: "transform",
@@ -65,7 +71,7 @@ export function getDefaultFactoryModes(sourceLang = "en", explainLang?: string):
       slots: [
         {
           id: "fixed",
-          label: fixedName,
+          label: n.fixed,
           role: "rewrite",
           instruction:
             "Target Language: ${targetLang}. Strictly output in ${targetLang} ONLY: Surgically correct ONLY spelling mistakes, fast typos, syntax structure (e.g. 'want that you can' ➔ 'want you to'), wrong prepositions/articles, and grammatical slips in the user's ${targetLang} sentence. CRITICAL RULES: (1) Zero Level Leap (i+1 Rule): Match user's natural vocabulary tier; do NOT artificially inflate everyday dev text into academic prose. (2) Zero Tone Sanitization: NEVER censor swear words or raw emotions (e.g. 'fuck', 'suck', 'shit')—passion and emotional heat are natural and MUST be preserved 100%! (3) Zero Punctuation/Casing Nitpicking. (4) 100% preserve original words and cadence.",
@@ -74,7 +80,7 @@ export function getDefaultFactoryModes(sourceLang = "en", explainLang?: string):
         },
         {
           id: "native",
-          label: nativeName,
+          label: n.native,
           role: "rewrite",
           instruction:
             "Target Language: ${targetLang}. Strictly output in ${targetLang} ONLY: Provide a natural, idiomatic native phrasing expressing the exact same intent without level-leaping.",
@@ -83,7 +89,7 @@ export function getDefaultFactoryModes(sourceLang = "en", explainLang?: string):
         },
         {
           id: "fixes",
-          label: takeawayName,
+          label: n.takeaway,
           role: "vocab",
           instruction:
             "Extract 1-3 essential takeaways in the format: 'before ➔ after (<= 10 words/chars grounded intuition in ${explainLang})'.",

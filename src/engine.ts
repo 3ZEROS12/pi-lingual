@@ -1206,18 +1206,15 @@ export function resolveModeDisplaySpec(sourceLang = "en"): ModeDisplaySpec {
 
 const MODE_ALIAS_MAP: Record<string, LingualMode> = {
   "1": "original", companion: "original", learn: "original", study: "original", original: "original", orig: "original",
-  "纯伴学": "original", "純伴學": "original", "伴学": "original", "伴走": "original", "동반": "original",
-  estudio: "original", "étude": "original", etude: "original", lernen: "original", "учеба": "original",
+  "纯伴学": "original", "純伴學": "original", "伴学": "original", "伴走": "original",
   "2": "english", direct: "english", rewrite: "english", refine: "english", english: "english", en: "english", eng: "english", lazy: "english",
-  "直接改": "english", "直改": "english", "直出": "english", "직접수정": "english", directo: "english", direkt: "english", "прямой": "english",
+  "规范直发": "english", "直接改": "english", "直改": "english", "直出": "english", "仕様直行": "english",
   "3": "select", candidates: "select", candidate: "select", select: "select", choices: "select", choice: "select", pick: "select",
-  "挑候选": "select", "挑候選": "select", "候选": "select", "候補選": "select", "후보선택": "select",
-  opciones: "select", options: "select", auswahl: "select", "выбор": "select",
+  "挑候选": "select", "挑候選": "select", "候选": "select", "候補選": "select",
   "4": "modify", modify: "modify", polish: "modify", fix: "modify", proofread: "modify", raw: "modify", "live-flow": "modify",
-  "原句修补": "modify", "原句修補": "modify", "修补": "modify", "原文修正": "modify", "원문수정": "modify", corrección: "modify", correction: "modify", korrektur: "modify", "правка": "modify",
+  "实战狂飙": "modify", "原句修补": "modify", "原句修補": "modify", "修补": "modify", "実戦疾走": "modify", "原文修正": "modify",
   "0": "off", off: "off", disable: "off", stop: "off",
-  "已关闭": "off", "已關閉": "off", "关闭": "off", "オフ": "off", "꺼짐": "off",
-  apagado: "off", "désactivé": "off", desactive: "off", aus: "off", "выкл": "off",
+  "已关闭": "off", "已關閉": "off", "关闭": "off", "オフ": "off",
 };
 
 export function normalizeLingualModeInput(raw?: string): LingualMode | null {
