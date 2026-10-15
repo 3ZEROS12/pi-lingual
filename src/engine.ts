@@ -813,9 +813,10 @@ export function resolveModifySlotsFromConfig(cfg: {
 
 export function resolveModesFromConfig(cfg: Partial<LingualConfig>): CustomModeConfig[] {
   if (Array.isArray(cfg.modes) && cfg.modes.length > 0) {
-    const valid = cfg.modes.filter(
-      (m) => m && typeof m.id === "string" && m.id.trim() && Array.isArray(m.slots)
-    );
+    // Keep every user-authored mode; a missing slots array is normalized instead of dropping the entry.
+    const valid = cfg.modes
+      .filter((m) => m && typeof m.id === "string" && m.id.trim())
+      .map((m) => (Array.isArray(m.slots) ? m : { ...m, slots: [] }));
     if (valid.length > 0) return valid;
   }
 
@@ -1216,6 +1217,20 @@ export function normalizeLingualModeInput(raw?: string): LingualMode | null {
 
 export const CURRENT_FEATURE_BANNER_VERSION = "0.6.0";
 
+/** Normalizes POSIX/BCP-47 locale tags (zh_TW.UTF-8, zh-Hant-TW) into a comparable dashed form. */
+function normalizeLocaleTag(raw: string): string {
+  return (raw || "").toLowerCase().replace(/_/g, "-").split(".")[0];
+}
+
+function isTraditionalChineseLocale(tag: string): boolean {
+  return (
+    tag.startsWith("zh-tw") ||
+    tag.startsWith("zh-hk") ||
+    tag.startsWith("zh-hant") ||
+    tag === "zh-mo"
+  );
+}
+
 export function resolveReleaseBannerLang(explicitSourceLang?: string, sessionEntries?: any[]): string {
   const supported = new Set(["zh", "tw", "ja", "ko", "es", "fr", "de", "ru", "en"]);
 
@@ -1243,23 +1258,23 @@ export function resolveReleaseBannerLang(explicitSourceLang?: string, sessionEnt
     const i18nFile = path.join(os.homedir(), ".config", "rpiv-i18n", "config.json");
     if (fs.existsSync(i18nFile)) {
       const raw = JSON.parse(fs.readFileSync(i18nFile, "utf8"));
-      const loc = String(raw?.locale || raw?.lang || "").toLowerCase();
-      if (loc.startsWith("zh-tw") || loc.startsWith("zh-hk")) return "tw";
-      const prefix = loc.split(/[-_]/)[0];
+      const loc = normalizeLocaleTag(String(raw?.locale || raw?.lang || ""));
+      if (isTraditionalChineseLocale(loc)) return "tw";
+      const prefix = loc.split("-")[0];
       if (supported.has(prefix)) return prefix;
     }
   } catch {}
 
   try {
-    const envLocale = (
+    const envLocale = normalizeLocaleTag(
       process.env.LC_ALL ||
-      process.env.LANGUAGE ||
-      process.env.LANG ||
-      Intl.DateTimeFormat().resolvedOptions().locale ||
-      "en"
-    ).toLowerCase();
-    if (envLocale.startsWith("zh-tw") || envLocale.startsWith("zh-hk")) return "tw";
-    const prefix = envLocale.split(/[-_.]/)[0];
+        process.env.LANGUAGE ||
+        process.env.LANG ||
+        Intl.DateTimeFormat().resolvedOptions().locale ||
+        "en"
+    );
+    if (isTraditionalChineseLocale(envLocale)) return "tw";
+    const prefix = envLocale.split("-")[0];
     if (supported.has(prefix)) return prefix;
   } catch {}
 

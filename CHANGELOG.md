@@ -34,6 +34,15 @@
   - Rebuilt with a 4-slot loadout anatomy (`[Input]`, `[Transform]`, `[Kill_List]`, `[HUD]`), the 3-second glanceability rule, and symmetric polyglot scenarios (e.g. English founder reaching Chinese clients on WeChat vs Enterprise).
 - **Backward Compatibility Bridge**:
   - Automatically maps legacy `lingual.json` configs lacking a `modes` array into virtual modes in-memory with zero breaking changes or data loss.
+- **Pre-Release Hardening (verified against sandboxed cold-boot upgrades)**:
+  - **Zero clipping at 80 columns**: the banner reserves 2 columns instead of the 8 reserved for box-bordered HUD cards. The previous budget clipped the tail of 8 of 9 localized banners with `...` on a standard 80-column terminal.
+  - **Closed parentheses on narrow terminals**: hard-clipped lines now close the bracket they opened instead of leaving it dangling.
+  - **Restored language surface (`es` / `fr` / `de` / `ko` / `ru`)**: the declarative refactor pruned five native chrome presets while `/lang`, the help text, the README matrix, the first-run handshake, and the 9-language banner kept advertising them. All nine advertised codes are switchable again, and `zh_TW` / `zh-Hant` locales resolve to Traditional Chinese copy.
+  - **Validated first-run handshake**: unvalidated free text can no longer poison `sourceLang` in `lingual.json`, and the handshake persists the flagship factory mode plus `activeModeId` so a restart never lands on a stale legacy id.
+  - **Delivery-gated banner**: `lastSeenVersion` is written only after the host accepted the banner widget, so a rejected render is retried on the next cold boot.
+  - **Preserved user modes**: a mode entry without a `slots` array is normalized instead of being dropped, which previously reset a customized registry back to factory defaults.
+  - **Honest footer badge**: the status badge now summarises the active mode's slots, and custom-mode lookups prefer the in-memory registry over a synchronous disk read on every update.
+  - **Clipboard durability**: every clipboard writer attaches a stdin error handler, so a missing `wl-copy` on Linux can no longer surface an unhandled `EPIPE`.
 
 ## 0.5.5
 

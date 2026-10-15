@@ -18,6 +18,7 @@
 - When `sourceLang !== "zh"` (e.g. `en ⇄ zh`, `en ⇄ ja`, `es ⇄ en`):
   - UI chrome, status badges, prompts, and notifications MUST contain **ZERO Chinese characters (`[\u4e00-\u9fa5]`)**.
   - All developer-facing comments across `src/**/*.ts` MUST be authored 100% in pure English.
+- **Language Surface Parity (RFC 2119)**: Every code listed in `SUPPORTED_LANG_CODES` (`zh, tw, ja, ko, en, es, fr, de, ru`) MUST be switchable through `/lang`, the first-run handshake, and the release banner. Advertising a language while rejecting it at `/lang` is FORBIDDEN. Codes without a dedicated chrome preset fall back to the Universal English baseline (`tw` intentionally reuses the Chinese chrome baseline).
 
 ### Invariant 2: Mode as Configuration (Declarative State Machine Architecture)
 - The entire extension operates on a declarative `modes: CustomModeConfig[]` pipeline stored in `~/.pi/agent/lingual.json`.
@@ -92,6 +93,9 @@ Out of the box, `pi-lingual` ships with exactly two golden baselines (with `0 Of
 - Substantive feature upgrades surface a one-time localized release banner (`aboveEditor`) on `session_start` tracking `CURRENT_FEATURE_BANNER_VERSION` ("0.6.0").
 - Aesthetics follow `notes/` style: clean open-tree typography (`· / ┌ / │ / ├ / └`), single uniform color (`fg("muted", line)` across all lines), zero emojis, and zero apologies.
 - Dismisses automatically on the user's first input turn and persists `lastSeenVersion` to `lingual.json` to prevent repeated prompts.
+- **Delivery-Gated Persistence (RFC 2119)**: `lastSeenVersion` MUST only be written after `ui.setWidget` physically accepted the banner. A stale context or host-rejected render MUST leave the notification unburned so it reappears on the next cold boot.
+- **Borderless Banner Geometry (RFC 2119)**: The banner MUST size itself with `getBannerMaxCols()` (full terminal width minus a 2-column margin), NEVER the HUD card reserve (`columns - 8`) which is reserved for box-bordered cards. Self-check: at `COLUMNS=80` all 9 languages render 8 lines with ZERO `...` clipping.
+- **Persisted-Mode Truthfulness (RFC 2119)**: After `session_start` resolves the mode registry, `state.mode` MUST be normalized through `normalizeActiveModeId()` so the footer badge, the active mode registry entry, and the persisted `mode`/`activeModeId` can never disagree.
 
 ---
 
@@ -102,7 +106,7 @@ Out of the box, `pi-lingual` ships with exactly two golden baselines (with `0 Of
   npm test
   # or from workspace root: node .scripts/fleet.mjs test pi-lingual
   ```
-  *Executes 111 test suites verifying cache, chunker, commands, engine, layout, modes, prompts, sanitizer, shield, slots, and sovereignty (100% green).*
+  *Executes 131 test suites covering banner geometry, cache, chunker, commands, engine, layout, modes, prompts, sanitizer, shield, slots, sovereignty, and sandboxed cold-boot upgrades (100% green).*
 
 - **Build Distribution Bundles**:
   ```bash

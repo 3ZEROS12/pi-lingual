@@ -21,6 +21,7 @@ import type {
 } from "./types.js";
 import {
   getEffectiveMaxCols,
+  getBannerMaxCols,
   formatTreeBranch,
   formatSubRail,
   truncateVisual,
@@ -80,6 +81,9 @@ import {
   listPresetLoadouts,
   SLOT_PRESETS,
   LANGUAGE_PRESETS,
+  isSupportedLangCode,
+  normalizeLangCode,
+  resolveLangPair,
 } from "./presets.js";
 import { splitSemanticChunks } from "./chunker.js";
 import { LingualSessionController } from "./fsm.js";
@@ -162,20 +166,24 @@ function copyToClipboard(text: string): boolean {
   try {
     if (process.platform === "win32") {
       const proc = spawn("clip.exe", { stdio: ["pipe", "ignore", "ignore"] });
+      proc.stdin.on("error", () => {});
       proc.stdin.write(text, "utf8");
       proc.stdin.end();
       return true;
     } else if (process.platform === "darwin") {
       const proc = spawn("pbcopy", { stdio: ["pipe", "ignore", "ignore"] });
+      proc.stdin.on("error", () => {});
       proc.stdin.write(text, "utf8");
       proc.stdin.end();
       return true;
     } else {
       // Linux: try wl-copy then fallback to xclip
       const proc = spawn("wl-copy", { stdio: ["pipe", "ignore", "ignore"] });
+      proc.stdin.on("error", () => {});
       proc.on("error", () => {
         try {
           const procX = spawn("xclip", ["-selection", "clipboard"], { stdio: ["pipe", "ignore", "ignore"] });
+          procX.stdin.on("error", () => {});
           procX.stdin.write(text, "utf8");
           procX.stdin.end();
         } catch {}
@@ -205,7 +213,11 @@ function updateFooter(ctx: ExtensionContext | null | undefined) {
   try {
     // Normalize status bar badge to clean minimal A ⇄ B (e.g. en ⇄ ja)
     let pair = `${state.sourceLang} ⇄ ${state.targetLang}`;
-    const enabledSlots = (state.slots || []).filter((s) => s.enabled);
+    // The badge summarises the ACTIVE MODE's slot anatomy (mode is the single source of truth),
+    // falling back to the global slot set only when the mode carries none.
+    const activeMode = (Array.isArray(state.modes) ? state.modes : []).find((m) => m.id === state.mode);
+    const modeSlots = activeMode && Array.isArray(activeMode.slots) ? activeMode.slots : [];
+    const enabledSlots = (modeSlots.length > 0 ? modeSlots : state.slots || []).filter((s) => s.enabled !== false);
     const hasSource = enabledSlots.some((s) => s.role === "source");
     const nonSourceCount = enabledSlots.filter((s) => s.role !== "source").length;
     
@@ -244,9 +256,12 @@ function updateFooter(ctx: ExtensionContext | null | undefined) {
         ctx.ui.setStatus("lingual", undefined as any);
         break;
       default: {
-        const disk = loadUserLingualConfig();
-        const modes = resolveModesFromConfig(disk);
-        const custom = modes.find((m) => m.id === state.mode);
+        // Prefer the in-memory registry (already synced from disk on every input) and only
+        // touch disk when an external writer added a mode we have not seen yet.
+        const inMemory = Array.isArray(state.modes) ? state.modes : [];
+        const custom =
+          inMemory.find((m) => m.id === state.mode) ||
+          resolveModesFromConfig(loadUserLingualConfig()).find((m) => m.id === state.mode);
         ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", `${pair} · ${custom ? custom.name : state.mode}`));
         break;
       }
@@ -349,10 +364,12 @@ export default function (pi: ExtensionAPI) {
   let showingReleaseBanner = false;
   let tunerArmed = false;
 
-  const renderReleaseBanner = (ctx: ExtensionContext, explicitLang?: string) => {
-    if (!hasActiveUI(ctx)) return;
+  const renderReleaseBanner = (ctx: ExtensionContext, explicitLang?: string): boolean => {
+    if (!hasActiveUI(ctx)) return false;
     try {
-      const maxCols = getEffectiveMaxCols();
+      // Borderless open-tree banner: full terminal width minus a 2-column safety margin
+      // (HUD cards reserve 8 columns for box borders, which would clip the banner copy).
+      const maxCols = getBannerMaxCols();
       const fg = ctx.ui.theme?.fg
         ? (c: string, t: string) => ctx.ui.theme.fg(c as any, t)
         : (_c: string, t: string) => t;
@@ -361,7 +378,10 @@ export default function (pi: ExtensionAPI) {
       const lines = formatReleaseBannerLines(bannerLang, maxCols, fg);
       ctx.ui.setWidget("lingual_hud", lines, { placement: "aboveEditor" });
       showingReleaseBanner = true;
-    } catch {}
+      return true;
+    } catch {
+      return false;
+    }
   };
 
   const onResize = () => {
@@ -406,7 +426,9 @@ export default function (pi: ExtensionAPI) {
     session.reset();
     lastContext = ctx;
     showingReleaseBanner = false;
-    const diskCfg = loadUserLingualConfig();
+    let diskCfg = loadUserLingualConfig();
+    // Native language detected by the cold-boot handshake (kept for banner chrome, e.g. zh_TW -> tw copy).
+    let handshakeLang: string | undefined;
 
     // First-Run Language Handshake: interactive setup on cold boot when unconfigured
     if (
@@ -417,6 +439,7 @@ export default function (pi: ExtensionAPI) {
       typeof (ctx.ui as any).input === "function"
     ) {
       const detected = resolveReleaseBannerLang();
+      handshakeLang = detected;
       const defaultPair =
         detected === "zh" || detected === "tw"
           ? "zh en"
@@ -441,23 +464,32 @@ export default function (pi: ExtensionAPI) {
         );
         safeClearWidget(ctx);
         const chosen = (typeof userInput === "string" ? userInput.trim() : "") || defaultPair;
-        const [sLang, tLang] = chosen.split(/\s+/);
-        if (sLang) {
-          state.sourceLang = sLang.toLowerCase();
-          state.targetLang = (tLang || (sLang === "en" ? "ja" : "en")).toLowerCase();
+        // Reject unvalidated free text so a stray keystroke can never poison lingual.json.
+        const { source: pickedSource, target: pickedTarget } = resolveLangPair(chosen, defaultPair);
+        if (pickedSource) {
+          state.sourceLang = pickedSource;
+          state.targetLang = pickedTarget;
           state.labels = resolveLabelsForLang(state.sourceLang, diskCfg.labels, state.targetLang);
           state.modes = getDefaultFactoryModes(state.sourceLang, state.sourceLang);
           state.slots = getDefaultSlots(state.sourceLang);
           state.directSlots = getDefaultDirectSlots(state.sourceLang);
           state.promptSlots = getDefaultPromptSlots(state.sourceLang);
           state.modifySlots = getDefaultModifySlots(state.sourceLang, state.sourceLang);
+          // Persist the flagship factory mode so a restart never lands on a stale legacy id.
+          const factorySeed = state.modes[0]?.id || "direct";
+          state.mode = factorySeed;
+          state.activeModeId = factorySeed;
           saveUserLingualConfig({
             sourceLang: state.sourceLang,
             targetLang: state.targetLang,
             explainLang: state.sourceLang,
             modes: state.modes,
+            mode: factorySeed,
+            activeModeId: factorySeed,
             configured: true,
           });
+          // The pre-handshake snapshot is now stale; re-read before applying config below.
+          diskCfg = loadUserLingualConfig();
         }
       } catch {
         safeClearWidget(ctx);
@@ -485,6 +517,13 @@ export default function (pi: ExtensionAPI) {
       state.promptSlots = diskCfg.promptSlots;
     }
     syncResizeListener();
+    // Single source of truth: the active mode must always resolve to a real registry id,
+    // so legacy ids never leave the badge disagreeing with the mode actually in force.
+    state.mode = normalizeActiveModeId(
+      { mode: state.mode, activeModeId: state.activeModeId || diskCfg.activeModeId },
+      state.modes
+    );
+    state.activeModeId = state.mode;
     if (hasActiveUI(ctx)) {
       safeClearWidget(ctx);
       // Release feature banner: rendered once on major version upgrade above editor
@@ -494,8 +533,11 @@ export default function (pi: ExtensionAPI) {
         event?.reason !== "resume" &&
         diskCfg.lastSeenVersion !== CURRENT_FEATURE_BANNER_VERSION
       ) {
-        renderReleaseBanner(ctx, diskCfg.sourceLang);
-        saveUserLingualConfig({ lastSeenVersion: CURRENT_FEATURE_BANNER_VERSION });
+        // Persist only after the banner is physically delivered, so a stale or failed
+        // render never burns the one-time notification permanently.
+        if (renderReleaseBanner(ctx, handshakeLang || diskCfg.sourceLang)) {
+          saveUserLingualConfig({ lastSeenVersion: CURRENT_FEATURE_BANNER_VERSION });
+        }
       }
     }
     // Non-intrusive cold boot: hide footer badge if off mode
@@ -700,19 +742,6 @@ export default function (pi: ExtensionAPI) {
     ctx.ui.notify(switchedMsg, "info");
   };
 
-  function normalizeLangCode(input: string): string {
-    const s = input.trim().toLowerCase().replace(/[-_].*$/, "");
-    if (s === "zh" || s === "cn" || s === "chinese" || s === "中文") return "zh";
-    if (s === "ja" || s === "jp" || s === "japanese" || s === "日本語" || s === "日文" || s === "日语") return "ja";
-    if (s === "ko" || s === "kr" || s === "korean" || s === "한국어" || s === "韩语" || s === "韩文") return "ko";
-    if (s === "en" || s === "eng" || s === "english" || s === "英语" || s === "英文") return "en";
-    if (s === "es" || s === "spanish" || s === "español" || s === "西语" || s === "西班牙语") return "es";
-    if (s === "fr" || s === "french" || s === "français" || s === "法语" || s === "法文") return "fr";
-    if (s === "de" || s === "german" || s === "deutsch" || s === "德语" || s === "德文") return "de";
-    if (s === "ru" || s === "russian" || s === "русский" || s === "俄语" || s === "俄文") return "ru";
-    return s;
-  }
-
   const switchLangHandler = async (args: string, ctx: ExtensionContext) => {
     const trimmed = args.trim().toLowerCase();
     if (!trimmed || trimmed === "list" || trimmed === "help" || trimmed === "?") {
@@ -731,7 +760,7 @@ export default function (pi: ExtensionAPI) {
 
     if (parts.length === 1) {
       const code = normalizeLangCode(parts[0]);
-      if (!LANGUAGE_PRESETS[code]) {
+      if (!isSupportedLangCode(code)) {
         ctx.ui.notify(
           state.labels.notifyLangInvalid || "Invalid language code. Supported: zh, ja, ko, en, es, fr, de, ru",
           "warning"
@@ -747,7 +776,7 @@ export default function (pi: ExtensionAPI) {
     } else {
       newSource = normalizeLangCode(parts[0]);
       newTarget = normalizeLangCode(parts[1]);
-      if (!LANGUAGE_PRESETS[newSource]) {
+      if (!isSupportedLangCode(newSource)) {
         ctx.ui.notify(
           state.labels.notifyLangInvalid || "Invalid language code. Supported: zh, ja, ko, en, es, fr, de, ru",
           "warning"

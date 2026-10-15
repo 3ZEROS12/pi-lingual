@@ -7,7 +7,7 @@ Code in your native language. See real-time Silicon Valley spoken phrasing and f
 [![npm version](https://img.shields.io/npm/v/pi-lingual?color=blue)](https://www.npmjs.com/package/pi-lingual)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Built for Pi](https://img.shields.io/badge/Built%20for-Pi%20Coding%20Agent-orange)](https://github.com/earendil-works/pi-coding-agent)
-[![Tests](https://img.shields.io/badge/Tests-116%2F116%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
+[![Tests](https://img.shields.io/badge/Tests-131%2F131%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict%20Zero%20Error-blue)](tsconfig.json)
 
 **English** | [简体中文](./README_zh.md)
@@ -34,6 +34,9 @@ pi install npm:pi-lingual
 ```
 
 Works out of the box with your current session model credentials. No extra API keys or setup required.
+
+> 💡 **Recommended Terminal Mode**:  
+> For companion learning and historical review, we recommend configuring `"tuiMode": "regular"` in `~/.pi/agent/settings.json`. Translation and vocab cards flow naturally with your conversation stream, allowing you to scroll back up anytime to review past expressions without sandbox barriers.
 
 ---
 
@@ -283,7 +286,7 @@ I hope everyone takes the time to tune a prompt that works best for them, catche
 
 ```bash
 npm run typecheck   # Strict tsc --noEmit check (0 errors)
-npm test            # 116/116 test assertions passing (100% green)
+npm test            # 131/131 test assertions passing (100% green)
 npm run build       # Multi-entry compilation via tsup (extension + core engine)
 ```
 

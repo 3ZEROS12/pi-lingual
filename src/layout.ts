@@ -39,6 +39,18 @@ export function getEffectiveMaxCols(requested?: number): number {
 const ANSI_ESCAPE_REGEX = /\x1b\[[0-9;?]*[a-zA-Z]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g;
 
 /**
+ * Borderless aboveEditor banners (release notes in open-tree typography) carry no box borders,
+ * so they reserve a 2-column right-edge safety margin instead of the HUD card border reserve.
+ */
+export function getBannerMaxCols(): number {
+  const terminalCols =
+    process.stdout?.columns ||
+    (process.env.COLUMNS ? parseInt(process.env.COLUMNS, 10) : undefined);
+  const raw = typeof terminalCols === "number" && terminalCols > 0 ? terminalCols - 2 : 78;
+  return Math.max(25, raw);
+}
+
+/**
  * Unicode Standard Annex #11 visual cell width calculation:
  * - ANSI escape sequences (CSI / OSC) = 0 cells
  * - Zero-width characters (ZWJ / variation selectors / combining marks) = 0 cells
@@ -83,6 +95,18 @@ export function getVisualWidth(str: string): number {
   return width;
 }
 
+/** Returns the closing delimiters needed to rebalance a hard-clipped fragment ("" when balanced). */
+function closingDelimitersFor(text: string): string {
+  const deficit = (opens: RegExp, closes: RegExp) => {
+    const o = (text.match(opens) || []).length;
+    const c = (text.match(closes) || []).length;
+    return Math.max(0, o - c);
+  };
+  return (
+    ")".repeat(deficit(/[\(\[\{]/g, /[\)\]\}]/g)) + "）".repeat(deficit(/[（【]/g, /[）】]/g))
+  );
+}
+
 /**
  * Truncates text based on visual cell width and ANSI escape boundaries (strictly <= maxVisualCols).
  */
@@ -94,34 +118,46 @@ export function truncateVisual(str: string, maxVisualCols: number): string {
   if (maxVisualCols <= 3) return ".".repeat(maxVisualCols);
 
   // Reserve 3 visual columns for ellipsis "..." to ensure total width <= maxVisualCols
+  const clipAt = (limit: number): string => {
+    let curWidth = 0;
+    let result = "";
+    let i = 0;
+
+    while (i < singleLine.length) {
+      ANSI_ESCAPE_REGEX.lastIndex = i;
+      const ansiMatch = ANSI_ESCAPE_REGEX.exec(singleLine);
+      if (ansiMatch && ansiMatch.index === i) {
+        result += ansiMatch[0];
+        i += ansiMatch[0].length;
+        continue;
+      }
+
+      const code = singleLine.codePointAt(i) || 0;
+      const charLen = code > 0xffff ? 2 : 1;
+      const ch = singleLine.slice(i, i + charLen);
+      const w = getVisualWidth(ch);
+
+      if (curWidth + w > limit) {
+        break;
+      }
+      result += ch;
+      curWidth += w;
+      i += charLen;
+    }
+
+    return result.replace(/\s*[\(\[\{（【]$/, "");
+  };
+
   const targetCols = Math.max(1, maxVisualCols - 3);
-  let curWidth = 0;
-  let result = "";
-  let i = 0;
+  let result = clipAt(targetCols);
 
-  while (i < singleLine.length) {
-    ANSI_ESCAPE_REGEX.lastIndex = i;
-    const ansiMatch = ANSI_ESCAPE_REGEX.exec(singleLine);
-    if (ansiMatch && ansiMatch.index === i) {
-      result += ansiMatch[0];
-      i += ansiMatch[0].length;
-      continue;
-    }
-
-    const code = singleLine.codePointAt(i) || 0;
-    const charLen = code > 0xffff ? 2 : 1;
-    const ch = singleLine.slice(i, i + charLen);
-    const w = getVisualWidth(ch);
-
-    if (curWidth + w > targetCols) {
-      break;
-    }
-    result += ch;
-    curWidth += w;
-    i += charLen;
+  // Invariant 11: never leave a dangling unclosed parenthesis after a hard clip.
+  const closers = closingDelimitersFor(result);
+  const closerWidth = getVisualWidth(closers);
+  if (closerWidth > 0 && targetCols > closerWidth) {
+    result = clipAt(targetCols - closerWidth) + closers;
   }
 
-  result = result.replace(/\s*[\(\[\{（【]$/, "");
   return result + (singleLine.includes("\x1b") ? "\x1b[0m" : "") + "...";
 }
 
