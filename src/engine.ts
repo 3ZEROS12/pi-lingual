@@ -271,11 +271,12 @@ export function saveUserLingualConfig(patch: Record<string, any>): void {
 
     for (const [k, v] of Object.entries(patch)) {
       const isEmptyArray = Array.isArray(v) && v.length === 0;
+      // Intentional revert-to-default semantic: passing "auto" deletes key to restore auto-probing
       if (
         v === undefined ||
         v === "" ||
         isEmptyArray ||
-        v === "auto" || // Intentional revert-to-default semantic: passing "auto" deletes key to restore auto-probing
+        v === "auto" ||
         (k === "compact" && v === false) ||
         (k === "modeLocked" && v === false)
       ) {
@@ -811,6 +812,18 @@ export function resolveModifySlotsFromConfig(cfg: {
   return getDefaultModifySlots(cfg.sourceLang, cfg.explainLang);
 }
 
+/** Resolves default slots for a custom mode based on its action and flow. */
+export function defaultSlotsForMode(
+  mode: Pick<CustomModeConfig, "action" | "flow">,
+  sourceLang: string,
+  explainLang?: string
+): SlotConfig[] {
+  if (mode.action === "pass-through") return [];
+  return mode.flow === "proofread"
+    ? getDefaultModifySlots(sourceLang, explainLang)
+    : getDefaultDirectSlots(sourceLang);
+}
+
 export function resolveModesFromConfig(cfg: Partial<LingualConfig>): CustomModeConfig[] {
   if (Array.isArray(cfg.modes) && cfg.modes.length > 0) {
     const sourceLang = cfg.sourceLang || "en";
@@ -820,12 +833,7 @@ export function resolveModesFromConfig(cfg: Partial<LingualConfig>): CustomModeC
       .filter((m) => m && typeof m.id === "string" && m.id.trim())
       .map((m) => {
         if (Array.isArray(m.slots) && m.slots.length > 0) return m;
-        if (m.action === "pass-through") return { ...m, slots: [] };
-        const defaultSlots =
-          m.flow === "proofread"
-            ? getDefaultModifySlots(sourceLang, explainLang)
-            : getDefaultDirectSlots(sourceLang);
-        return { ...m, slots: defaultSlots };
+        return { ...m, slots: defaultSlotsForMode(m, sourceLang, explainLang) };
       });
     if (valid.length > 0) return valid;
   }
@@ -941,11 +949,7 @@ export function compileModeSystemPrompt(
   const rawSlots =
     Array.isArray(mode.slots) && mode.slots.length > 0
       ? mode.slots
-      : mode.action === "pass-through"
-        ? []
-        : mode.flow === "proofread"
-          ? getDefaultModifySlots(sourceLang, explainLang)
-          : getDefaultDirectSlots(sourceLang);
+      : defaultSlotsForMode(mode, sourceLang, explainLang);
 
   const interpolatedSlots = rawSlots.map((s) => ({
     ...s,
@@ -1153,10 +1157,6 @@ export interface ModeDisplaySpec {
   candidates: string;
   modify: string;
   off: string;
-  notifyCompanion: (pair: string) => string;
-  notifyDirect: (pair: string, firstSlotLabel: string) => string;
-  notifyCandidates: (pair: string, slotLabels: string) => string;
-  notifyModify: (pair: string, firstSlotLabel: string) => string;
   notifyOff: (pair: string) => string;
 }
 
@@ -1167,10 +1167,6 @@ const MODE_DISPLAY_BY_LANG: Record<string, ModeDisplaySpec> = {
     candidates: "挑候选",
     modify: "原句修补",
     off: "已关闭",
-    notifyCompanion: (p) => `[${p}] 已切换至【1 纯伴学 (companion)】：原话 0ms 直发 + 上方浮现伴学卡`,
-    notifyDirect: (p, s1) => `[${p}] 已切换至【2 直接改 (direct)】：按首槽 [${s1}] 1对1 直接改好发出`,
-    notifyCandidates: (p, s) => `[${p}] 已切换至【3 挑候选 (candidates)】：生成候选 (${s}) 挑一发出`,
-    notifyModify: (p, s1) => `[${p}] 已切换至【4 原句修补 (modify)】：极简修正 [${s1}] 秒发 + 上方原生对照`,
     notifyOff: (p) => `[${p}] 已切换至【0 已关闭 (off)】：底栏隐藏 · 监听已卸 · 0 Token 零负担`,
   },
   tw: {
@@ -1179,10 +1175,6 @@ const MODE_DISPLAY_BY_LANG: Record<string, ModeDisplaySpec> = {
     candidates: "挑候選",
     modify: "原句修補",
     off: "已關閉",
-    notifyCompanion: (p) => `[${p}] 已切換至【1 純伴學 (companion)】：原話 0ms 直發 + 上方浮現伴學卡`,
-    notifyDirect: (p, s1) => `[${p}] 已切換至【2 直接改 (direct)】：按首槽 [${s1}] 1對1 直接改好發出`,
-    notifyCandidates: (p, s) => `[${p}] 已切換至【3 挑候選 (candidates)】：生成候選 (${s}) 挑一發出`,
-    notifyModify: (p, s1) => `[${p}] 已切換至【4 原句修補 (modify)】：極簡修正 [${s1}] 秒發 + 上方原生對照`,
     notifyOff: (p) => `[${p}] 已切換至【0 已關閉 (off)】：底欄隱藏 · 監聽已卸 · 0 Token 零負擔`,
   },
   ja: {
@@ -1191,10 +1183,6 @@ const MODE_DISPLAY_BY_LANG: Record<string, ModeDisplaySpec> = {
     candidates: "候補選",
     modify: "原文修正",
     off: "オフ",
-    notifyCompanion: (p) => `[${p}] 【1 伴走 (companion)】に切替：原文0ms送信＋上部に学習カード表示`,
-    notifyDirect: (p, s1) => `[${p}] 【2 直改 (direct)】に切替：第1スロット [${s1}] で直接書き換えて送信`,
-    notifyCandidates: (p, s) => `[${p}] 【3 候補選 (candidates)】に切替：候補 (${s}) から選択して送信`,
-    notifyModify: (p, s1) => `[${p}] 【4 原文修正 (modify)】に切替：最小修正 [${s1}] 即時送信＋自然表現比較`,
     notifyOff: (p) => `[${p}] 【0 オフ (off)】：下部バー非表示・監視停止・0 Token 無負荷`,
   },
   en: {
@@ -1203,10 +1191,6 @@ const MODE_DISPLAY_BY_LANG: Record<string, ModeDisplaySpec> = {
     candidates: "Candidates",
     modify: "Modify",
     off: "Off",
-    notifyCompanion: (p) => `[${p}] Switched to [1 Companion] mode: 0ms raw send + learning card above`,
-    notifyDirect: (p, s1) => `[${p}] Switched to [2 Direct (Prompt)] mode: 1-to-1 send via Slot #1 [${s1}]`,
-    notifyCandidates: (p, s) => `[${p}] Switched to [3 Candidates (select)] mode: Pick from (${s})`,
-    notifyModify: (p, s1) => `[${p}] Switched to [4 Modify (In-Place Fix)] mode: Surgical fix via [${s1}] + native sibling`,
     notifyOff: (p) => `[${p}] Switched to [0 Off] mode: Status hidden · listeners detached · 0 tokens`,
   },
 };
@@ -1322,10 +1306,10 @@ export function formatReleaseBannerLines(
       rows: [
         "┌ [核心定制中心 · Tuner] 敲 /tuner 直接跟 AI 说话，随意增删改模式与提示词",
         "│   (内置 4 大实战配装；想加发推、提交、对线等模式，一句话秒成)",
-        "├ [1 规范直发 · direct]  敲中文，0ms 转成专业规范英文直发 Agent (/lingual 1)",
+        "├ [规范直发 · direct]    敲中文，0ms 转成规范技术英文直发 (/lingual direct)",
         "│   (保证代码和注释是纯英文；适合专注开发、不想费脑憋英语时使用)",
-        "├ [2 实战狂飙 · live]    直接打英文；只修语法错词，粗口与情绪 100% 保留",
-        "└   (想骂就骂，语法自动兜底；下方用中文讲透盲点，越用语感越强)",
+        "├ [实战狂飙 · live-flow] 直接打英文；只修语法错词，粗口与情绪 100% 保留",
+        "└   (敲 /lingual live-flow 切换；粗口保留，下方中文讲透语法盲点)",
       ],
     },
     tw: {
@@ -1334,10 +1318,10 @@ export function formatReleaseBannerLines(
       rows: [
         "┌ [核心定制中心 · Tuner] 敲 /tuner 直接跟 AI 說話，隨意增刪改模式與提示詞",
         "│   (內置 4 大實戰配裝；想加發推、提交、對線等模式，一句話秒成)",
-        "├ [1 規範直發 · direct]  敲中文，0ms 轉成專業規範英文直發 Agent (/lingual 1)",
+        "├ [規範直發 · direct]    敲中文，0ms 轉成規範技術英文直發 (/lingual direct)",
         "│   (保證代碼和註釋是純英文；適合專注開發、不想費腦憋英語時使用)",
-        "├ [2 實戰狂飆 · live]    直接打英文；只修語法錯詞，粗口與情緒 100% 保留",
-        "└   (想罵就罵，語法自動兜底；下方用中文講透盲點，越用語感越強)",
+        "├ [實戰狂飆 · live-flow] 直接打英文；只修語法錯詞，粗口與情緒 100% 保留",
+        "└   (敲 /lingual live-flow 切換；粗口保留，下方中文講透語法盲點)",
       ],
     },
     ja: {
@@ -1346,10 +1330,10 @@ export function formatReleaseBannerLines(
       rows: [
         "┌ [対話設計 · Tuner]     /tuner でAIと対話し、新モードやプロンプトを即追加",
         "│   (4大プリセット内蔵 · PRレビューやSNS投稿用モードも会話だけで完成)",
-        "├ [1 仕様直行 · direct]  母語入力、0msで規範的英語に整え即送信 (/lingual 1)",
+        "├ [仕様直行 · direct]  母語入力、0msで規範的英語に整え送信 (/lingual direct)",
         "│   (コードとコメントの完全英語化を保証 · 集中して開発を進めたい時に)",
-        "├ [2 実戦疾走 · live]    英語で直接入力；スラング・感情を100%保持し補正",
-        "└   (感情のままに入力可能 · 下部に母語で文法盲点を直感的に解説)",
+        "├ [実戦疾走 · live-flow] 英語で直接入力；スラング・感情を100%保持し補正",
+        "└   (/lingual live-flow で切替 · 感情保持、下部に母語で直感解説)",
       ],
     },
     ko: {
@@ -1358,10 +1342,10 @@ export function formatReleaseBannerLines(
       rows: [
         "┌ [맞춤 설계 · Tuner]    /tuner 로 AI와 대화하며 모드와 프롬프트 자유 추가",
         "│   (4대 프리셋 내장 · PR 검토나 SNS용 모드도 말 한마디로 즉시 생성)",
-        "├ [1 논리정제 · direct]  모국어 입력, 0ms 규격화된 기술 영어로 즉시 전송",
+        "├ [논리정제 · direct]  모국어 입력, 0ms 기술 영어로 전송 (/lingual direct)",
         "│   (코드와 주석의 순수 영어 유지 · 개발에 집중하고 싶을 때 최적)",
-        "├ [2 실전질주 · live]    영어로 직접 작성; 거친 표현 100% 유지하며 교정 전송",
-        "└   (감정 그대로 입력 가능 · 하단에 모국어로 핵심 문법 맹점 복기)",
+        "├ [실전질주 · live-flow] 영어로 직접 작성; 거친 표현 100% 유지하며 교정 전송",
+        "└   (/lingual live-flow 로 전환 · 감정 유지, 하단에 핵심 문법 복기)",
       ],
     },
     es: {
@@ -1370,22 +1354,22 @@ export function formatReleaseBannerLines(
       rows: [
         "┌ [Centro Tuner]   Ejecuta /tuner para crear o cambiar modos con AI",
         "│   (4 recetas listas; añade flujos de PR o Twitter en una frase)",
-        "├ [1 Directo]      Escribe en tu idioma, 0ms a inglés técnico",
+        "├ [Directo · direct]     En tu idioma, 0ms a inglés (/lingual direct)",
         "│   (Mantiene código y comentarios en inglés; avanza rápido)",
-        "├ [2 Live Flow]    Escribe directo en inglés; pasión y tacos intactos",
-        "└   (Pasa tu rabia sin censura; notas abajo para aprender el porqué)",
+        "├ [Live Flow · live-flow] Directo en inglés; pasión y tacos intactos",
+        "└   (Usa /lingual live-flow; sin censura, notas breves abajo)",
       ],
     },
     fr: {
       title: "· [pi-lingual v0.6.0] Duo essentiel et Tuner ouvert (fermé à l'envoi)",
       subtitle: "│ Créez modes et prompts en dialoguant ; configuration locale isolée",
       rows: [
-        "┌ [Centre Tuner]   Tapez /tuner pour créer ou modifier des modes avec l'IA",
-        "│   (4 recettes intégrées ; ajoutez des modes PR en une phrase)",
-        "├ [1 Direct]       Saisie en langue native, 0ms vers l'anglais technique",
+        "┌ [Centre Tuner]   Tapez /tuner pour créer ou modifier des modes",
+        "│   (4 recettes prêtes ; ajoutez des flux PR en une phrase)",
+        "├ [Direct · direct]      Langue native, 0ms vers l'anglais (/lingual direct)",
         "│   (Code et commentaires en anglais pur ; idéal pour coder)",
-        "├ [2 Live Flow]    Saisie directe en anglais ; passion et jurons gardés",
-        "└   (Exprimez-vous sans filtre ; explications claires sous la saisie)",
+        "├ [Live Flow · live-flow] Saisie directe en anglais ; jurons gardés",
+        "└   (Tapez /lingual live-flow ; sans filtre, explications claires en bas)",
       ],
     },
     de: {
@@ -1394,10 +1378,10 @@ export function formatReleaseBannerLines(
       rows: [
         "┌ [Tuner-Zentrale]  /tuner starten, um Modi und Prompts anzupassen",
         "│   (4 Rezepte an Bord; neue PR- oder Twitter-Modi mit einem Satz)",
-        "├ [1 Direkt]        Auf Deutsch tippen, 0ms als klares Englisch",
+        "├ [Direkt · direct] Auf Deutsch, 0ms klares Englisch (/lingual direct)",
         "│   (Hält Code & Kommentare auf Englisch; perfekt für Fokus)",
-        "├ [2 Live Flow]     Direkt auf Englisch tippen; Emotionen 100% erhalten",
-        "└   (Tippen ohne Zensur; kurze muttersprachliche Erklärungen unten)",
+        "├ [Live Flow · live-flow] Direkt auf Englisch; Emotionen 100% erhalten",
+        "└   (Per /lingual live-flow; ohne Zensur, kurze Erklärungen unten)",
       ],
     },
     ru: {
@@ -1406,10 +1390,10 @@ export function formatReleaseBannerLines(
       rows: [
         "┌ [Центр Tuner]    Наберите /tuner для настройки режимов с AI",
         "│   (4 готовых рецепта; режимы создаются в одну фразу)",
-        "├ [1 Прямой поток] Ввод на родном языке, 0мс в четкий тех-английский",
+        "├ [Прямой · direct] Ввод на родном языке в тех-английский (/lingual direct)",
         "│   (Чистый английский в коде и комментариях; для быстрой работы)",
-        "├ [2 Live Flow]    Пишите сразу на английском; сленг и эмоции сохранены",
-        "└   (Ввод без цензуры; внизу понятный разбор правил)",
+        "├ [Live Flow · live-flow] Пишите на английском; сленг и эмоции сохранены",
+        "└   (Через /lingual live-flow; ввод без цензуры, разбор правил)",
       ],
     },
     en: {
@@ -1418,10 +1402,10 @@ export function formatReleaseBannerLines(
       rows: [
         "┌ [Architect Tuner] Run /tuner to add or edit modes with AI",
         "│   (4 tactical loadouts included: spec, commit, oss, yap)",
-        "├ [1 Logical Spec · direct]  Native input ➔ 0ms imperative spec",
+        "├ [Logical Spec · direct]  Native input ➔ 0ms spec (/lingual direct)",
         "│   (Ensures clean English instructions while keeping code untouched)",
-        "├ [2 Live Flow · live]       Draft in English; grammar patched, passion kept",
-        "└   (Vent freely without censorship; takeaway diffs explain rules below)",
+        "├ [Live Flow · live-flow]  Draft in English; grammar patched, passion kept",
+        "└   (Run /lingual live-flow; vent freely, takeaway diffs explain rules)",
       ],
     },
   };

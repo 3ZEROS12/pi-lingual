@@ -7,7 +7,7 @@ Code in your native language. See real-time Silicon Valley spoken phrasing and f
 [![npm version](https://img.shields.io/npm/v/pi-lingual?color=blue)](https://www.npmjs.com/package/pi-lingual)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Built for Pi](https://img.shields.io/badge/Built%20for-Pi%20Coding%20Agent-orange)](https://github.com/earendil-works/pi-coding-agent)
-[![Tests](https://img.shields.io/badge/Tests-131%2F131%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
+[![Tests](https://img.shields.io/badge/Tests-136%2F136%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict%20Zero%20Error-blue)](tsconfig.json)
 
 **English** | [简体中文](./README_zh.md)
@@ -68,7 +68,7 @@ Traditional closed rectangular boxes (`│ ... │`) fracture when character wid
 
 ## Dual-Core Golden Defaults & Declarative Mode Architecture (`Mode as Configuration`)
 
-`pi-lingual` ships with **Dual-Core Golden Defaults** and supports infinite customization via its declarative state machine engine. Press `/lingual` to cycle sequentially through enabled modes and off, or jump directly via `/lingual <id|index>`:
+`pi-lingual` ships with **Dual-Core Golden Defaults** and supports infinite customization via its declarative state machine engine. Press `/lingual` to cycle sequentially through enabled modes and off, or jump directly via `/lingual <id|index>` (mode numbers follow your current local registry order; mode IDs such as `/lingual direct` and `/lingual live-flow` are permanent and always resolve):
 
 | State | CLI ID & Aliases | What You Type | What the Engine Does | Status & UI Feedback | Best For |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -286,7 +286,7 @@ I hope everyone takes the time to tune a prompt that works best for them, catche
 
 ```bash
 npm run typecheck   # Strict tsc --noEmit check (0 errors)
-npm test            # 131/131 test assertions passing (100% green)
+npm test            # 136/136 test assertions passing (100% green)
 npm run build       # Multi-entry compilation via tsup (extension + core engine)
 ```
 

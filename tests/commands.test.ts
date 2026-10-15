@@ -68,11 +68,15 @@ test("extension /lingual - supports explicit mode arguments, 1/2/3/0 jumps, and 
   await registeredCommands["lingual"].handler("2", mockCtx);
   assert.ok(
     notifications[notifications.length - 1].includes("直接改") ||
+      notifications[notifications.length - 1].includes("规范直发") ||
       notifications[notifications.length - 1].toLowerCase().includes("direct")
   );
   assert.ok(
     typeof lastStatusVal === "string" &&
-      (lastStatusVal.includes("直接改") || lastStatusVal.includes("Direct"))
+      (lastStatusVal.includes("直接改") ||
+        lastStatusVal.includes("规范直发") ||
+        lastStatusVal.includes("Direct") ||
+        lastStatusVal.includes("Logical Spec"))
   );
 
   // 2. Explicitly switch to Mode 0 (Off) — status bar badge MUST become undefined (0 visual pixels)
@@ -98,6 +102,7 @@ test("extension /lingual - supports explicit mode arguments, 1/2/3/0 jumps, and 
   await registeredCommands["lingual"].handler("", mockCtx);
   assert.ok(
     notifications[notifications.length - 1].includes("直接改") ||
+      notifications[notifications.length - 1].includes("规范直发") ||
       notifications[notifications.length - 1].toLowerCase().includes("direct")
   );
 
@@ -110,7 +115,9 @@ test("extension /lingual - supports explicit mode arguments, 1/2/3/0 jumps, and 
   await registeredCommands["lingual"].handler("", mockCtx);
   assert.ok(
     notifications[notifications.length - 1].includes("原句修补") ||
-      notifications[notifications.length - 1].toLowerCase().includes("modify")
+      notifications[notifications.length - 1].includes("实战狂飙") ||
+      notifications[notifications.length - 1].toLowerCase().includes("modify") ||
+      notifications[notifications.length - 1].toLowerCase().includes("live-flow")
   );
 
   await registeredCommands["lingual"].handler("", mockCtx);
@@ -697,7 +704,16 @@ test("extension /lingual anti-drift: blocks unrecognized subcommands and support
   // 6. After unlock, bare /lingual cycles mode normally
   notifications.length = 0;
   await registeredCommands["lingual"].handler("", mockCtx);
-  assert.ok(notifications.some((n) => n.msg.includes("直接改") || n.msg.includes("Direct")), "Must cycle to Direct mode after unlock");
+  assert.ok(
+    notifications.some(
+      (n) =>
+        n.msg.includes("直接改") ||
+        n.msg.includes("规范直发") ||
+        n.msg.includes("Direct") ||
+        n.msg.includes("Logical Spec")
+    ),
+    "Must cycle to Direct mode after unlock"
+  );
 });
 
 test("extension Mode 4 Modify - surgically fixes typos in-place and renders Fixed + Native + Fixes card", async () => {

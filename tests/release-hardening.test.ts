@@ -321,3 +321,57 @@ test("/lang command - every advertised code switches without an invalid-language
   assert.equal(status, null, "Unknown codes must never switch the language pair");
   assert.ok(notices.length > 0, "Unknown codes must surface a localized warning");
 });
+
+test("modes: registry-aware mode switch notifications and clean status badge across 9 languages (C8, C9)", async () => {
+  const { default: extensionFactory } = await import("../dist/extension.js");
+  const commands: Record<string, any> = {};
+  extensionFactory({
+    on() {},
+    registerCommand: (name: string, def: any) => (commands[name] = def),
+    registerShortcut() {},
+  } as any);
+
+  const notices: string[] = [];
+  let statusBadge: any = null;
+  const ctx: any = {
+    hasUI: true,
+    ui: {
+      notify: (msg: string) => notices.push(String(msg)),
+      setStatus: (_k: string, v: any) => (statusBadge = v),
+      setWidget() {},
+      theme: { fg: (_c: string, t: string) => t },
+    },
+  };
+
+  for (const lang of SUPPORTED_LANG_CODES) {
+    notices.length = 0;
+    statusBadge = null;
+
+    // Switch language pair
+    await commands["lang"].handler(lang === "en" ? "en ja" : `${lang} en`, ctx);
+
+    // 1. Switch to direct mode
+    notices.length = 0;
+    await commands["lingual"].handler("direct", ctx);
+    const directNotice = notices[notices.length - 1];
+    assert.ok(directNotice, `[${lang}] must surface notification on direct switch`);
+    assert.ok(directNotice.includes("direct"), `[${lang}] notice must include mode id: ${directNotice}`);
+
+    // 2. Switch to live-flow mode
+    notices.length = 0;
+    await commands["lingual"].handler("live-flow", ctx);
+    const liveNotice = notices[notices.length - 1];
+    assert.ok(liveNotice, `[${lang}] must surface notification on live-flow switch`);
+    assert.ok(liveNotice.includes("live-flow"), `[${lang}] notice must include mode id: ${liveNotice}`);
+
+    // 3. Western/Korean languages must have zero Chinese residue in notifications
+    if (!["zh", "tw", "ja"].includes(lang)) {
+      assert.ok(!/[\u4e00-\u9fa5]/.test(directNotice), `[${lang}] direct toast leaked Chinese: ${directNotice}`);
+      assert.ok(!/[\u4e00-\u9fa5]/.test(liveNotice), `[${lang}] live-flow toast leaked Chinese: ${liveNotice}`);
+    }
+
+    // 4. Status badge must never contain no-src noise (C9)
+    assert.ok(statusBadge, `[${lang}] status badge must be active`);
+    assert.ok(!String(statusBadge).includes("no-src"), `[${lang}] status badge contains no-src: ${statusBadge}`);
+  }
+});

@@ -57,6 +57,7 @@ import {
   resolveModesFromConfig,
   normalizeActiveModeId,
   executeModeRunner,
+  defaultSlotsForMode,
   shouldInjectNativeReplyGuard,
   formatNativeReplyGuardHint,
 } from "./engine.js";
@@ -211,61 +212,45 @@ function safeClearWidget(ctx: ExtensionContext | null | undefined) {
 function updateFooter(ctx: ExtensionContext | null | undefined) {
   if (!hasActiveUI(ctx)) return;
   try {
+    if (state.mode === "off") {
+      // Stealth off mode: completely remove status bar badge (0 visual pixels)
+      ctx.ui.setStatus("lingual", undefined as any);
+      return;
+    }
+
     // Normalize status bar badge to clean minimal A ⇄ B (e.g. en ⇄ ja)
     let pair = `${state.sourceLang} ⇄ ${state.targetLang}`;
+    const canonicalId =
+      state.mode === "english" ? "direct" :
+      state.mode === "original" ? "companion" :
+      state.mode === "select" ? "candidates" :
+      state.mode === "modify" ? "live-flow" :
+      state.mode;
+
+    const canonicalKey =
+      canonicalId === "live-flow" ? "modify" : canonicalId;
+
     // The badge summarises the ACTIVE MODE's slot anatomy (mode is the single source of truth),
     // falling back to the global slot set only when the mode carries none.
-    const activeMode = (Array.isArray(state.modes) ? state.modes : []).find((m) => m.id === state.mode);
+    const inMemory = Array.isArray(state.modes) ? state.modes : [];
+    const activeMode =
+      inMemory.find((m) => m.id === state.mode || m.id === canonicalId) ||
+      resolveModesFromConfig(loadUserLingualConfig()).find((m) => m.id === state.mode || m.id === canonicalId);
     const modeSlots = activeMode && Array.isArray(activeMode.slots) ? activeMode.slots : [];
     const enabledSlots = (modeSlots.length > 0 ? modeSlots : state.slots || []).filter((s) => s.enabled !== false);
-    const hasSource = enabledSlots.some((s) => s.role === "source");
     const nonSourceCount = enabledSlots.filter((s) => s.role !== "source").length;
-    
-    if (!hasSource) {
-      pair += ` · no-src`;
-    }
-    if (nonSourceCount !== 2) {
+
+    // Remove `no-src` noise: mode declares its own topology.
+    // Retain slot count indicator only when slot anatomy differs from the 2-slot baseline.
+    if (nonSourceCount !== 2 && enabledSlots.length > 0) {
       pair += ` · ${enabledSlots.length}s`;
     } else if (state.slotPreset) {
       pair += ` · ${state.slotPreset}`;
     }
 
     const modeSpec = resolveModeDisplaySpec(state.sourceLang);
-
-    switch (state.mode) {
-      case "original":
-      case "companion":
-        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", `${pair} · ${modeSpec.companion}`));
-        break;
-      case "english":
-      case "direct":
-      case "lazy":
-        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", `${pair} · ${modeSpec.direct}`));
-        break;
-      case "select":
-      case "candidates":
-        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", `${pair} · ${modeSpec.candidates}`));
-        break;
-      case "modify":
-      case "live-flow":
-      case "raw":
-        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", `${pair} · ${modeSpec.modify}`));
-        break;
-      case "off":
-        // Stealth off mode: completely remove status bar badge (0 visual pixels)
-        ctx.ui.setStatus("lingual", undefined as any);
-        break;
-      default: {
-        // Prefer the in-memory registry (already synced from disk on every input) and only
-        // touch disk when an external writer added a mode we have not seen yet.
-        const inMemory = Array.isArray(state.modes) ? state.modes : [];
-        const custom =
-          inMemory.find((m) => m.id === state.mode) ||
-          resolveModesFromConfig(loadUserLingualConfig()).find((m) => m.id === state.mode);
-        ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", `${pair} · ${custom ? custom.name : state.mode}`));
-        break;
-      }
-    }
+    const modeName = activeMode ? activeMode.name : (modeSpec as any)[canonicalKey] || state.mode;
+    ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", `${pair} · ${modeName}`));
   } catch {
     // Gracefully ignore stale context during session replacement or teardown
   }
@@ -663,56 +648,59 @@ export default function (pi: ExtensionAPI) {
     }
     updateFooter(ctx);
 
-    const activeDirectSlots = resolveDirectSlotsFromConfig({
-      sourceLang: state.sourceLang,
-      directSlots: diskForMode.directSlots ?? state.directSlots,
-    }).filter((s) => s.enabled !== false && s.role !== "vocab");
-    const activeCandidateSlots = resolveCandidateSlotsFromConfig({
-      sourceLang: state.sourceLang,
-      promptSlots: diskForMode.promptSlots ?? state.promptSlots,
-    }).filter((s) => s.enabled !== false && s.role !== "vocab");
-    const activeModifySlots = resolveModifySlotsFromConfig({
-      sourceLang: state.sourceLang,
-      explainLang: diskForMode.explainLang,
-      modifySlots: diskForMode.modifySlots ?? state.modifySlots,
-    }).filter((s) => s.enabled !== false && s.role !== "vocab");
+    const canonicalKey =
+      nextMode === "select" ? "candidates" :
+      nextMode === "english" ? "direct" :
+      nextMode === "original" ? "companion" :
+      nextMode === "modify" || nextMode === "live-flow" ? "modify" :
+      nextMode;
 
-    const targetMode = activeModes.find((m) => m.id === nextMode || m.id === (nextMode === "english" ? "direct" : nextMode === "original" ? "companion" : nextMode === "modify" ? "live-flow" : nextMode === "select" ? "candidates" : nextMode));
+    const canonicalId =
+      nextMode === "select" ? "candidates" :
+      nextMode === "english" ? "direct" :
+      nextMode === "original" ? "companion" :
+      nextMode === "modify" ? "live-flow" :
+      nextMode;
 
-    if (nextMode === "english" || nextMode === "direct") {
-      const firstLabel = targetMode?.slots[0]?.label || activeDirectSlots[0]?.label || "Direct";
-      try {
-        ctx.ui.notify(modeSpec.notifyDirect(pair, firstLabel), "info");
-      } catch {}
-    } else if (nextMode === "select" || nextMode === "candidates") {
-      const slotLabels = targetMode?.slots.filter(s => s.role !== "vocab").map(s => s.label).join(" / ") || activeCandidateSlots.map((s) => s.label).join(" / ");
-      try {
-        ctx.ui.notify(modeSpec.notifyCandidates(pair, slotLabels), "info");
-      } catch {}
-    } else if (nextMode === "modify" || nextMode === "live-flow") {
-      const firstLabel = targetMode?.slots[0]?.label || activeModifySlots[0]?.label || "Fixed";
-      try {
-        ctx.ui.notify(modeSpec.notifyModify(pair, firstLabel), "info");
-      } catch {}
-    } else if (nextMode === "original" || nextMode === "companion") {
-      try {
-        ctx.ui.notify(modeSpec.notifyCompanion(pair), "info");
-      } catch {}
-    } else if (nextMode === "off") {
+    const targetMode = activeModes.find(
+      (m) =>
+        m.id === nextMode ||
+        m.id === canonicalId
+    );
+
+    if (nextMode === "off") {
       try {
         ctx.ui.notify(modeSpec.notifyOff(pair), "info");
       } catch {}
-    } else if (targetMode) {
-      const modeNum = activeModes.indexOf(targetMode) + 1;
-      const firstSlotLabel = targetMode.slots.find((s) => s.role !== "vocab")?.label || targetMode.slots[0]?.label || targetMode.name;
-      const isZh = state.sourceLang === "zh" || state.sourceLang === "tw";
+    } else {
+      const modeIdx = targetMode ? activeModes.indexOf(targetMode) : -1;
+      const modeNum = modeIdx >= 0
+        ? modeIdx + 1
+        : (nextMode === "companion" || nextMode === "original"
+            ? 1
+            : nextMode === "english" || nextMode === "direct"
+              ? 2
+              : nextMode === "select" || nextMode === "candidates"
+                ? 3
+                : nextMode === "modify" || nextMode === "live-flow"
+                  ? 4
+                  : activeModes.length + 1);
+      const modeName = targetMode?.name || (modeSpec as any)[canonicalKey] || nextMode;
+      const firstSlotLabel =
+        targetMode?.slots.find((s) => s.role !== "vocab")?.label ||
+        targetMode?.slots[0]?.label ||
+        modeName;
+      const template =
+        state.labels.modeSwitchedTemplate ||
+        "[{pair}] Switched to [{num}. {name} ({id})] ({slot})";
+      const msg = template
+        .replace("{pair}", pair)
+        .replace("{num}", String(modeNum))
+        .replace("{name}", modeName)
+        .replace("{id}", targetMode?.id || canonicalId)
+        .replace("{slot}", firstSlotLabel);
       try {
-        ctx.ui.notify(
-          isZh
-            ? `[${pair}] 已切换至【${modeNum}. ${targetMode.name} (${targetMode.id})】(${firstSlotLabel})`
-            : `[${pair}] Switched to [${modeNum}. ${targetMode.name} (${targetMode.id})] (${firstSlotLabel})`,
-          "info"
-        );
+        ctx.ui.notify(msg, "info");
       } catch {}
     }
   };
@@ -922,10 +910,8 @@ export default function (pi: ExtensionAPI) {
       const matchDefault = factoryDefaults.find((m) => m.id === activeMode.id);
       if (matchDefault) {
         activeMode.slots = [...matchDefault.slots];
-      } else if (activeMode.flow === "proofread") {
-        activeMode.slots = getDefaultModifySlots(state.sourceLang, disk.explainLang);
       } else {
-        activeMode.slots = getDefaultDirectSlots(state.sourceLang);
+        activeMode.slots = defaultSlotsForMode(activeMode, state.sourceLang, disk.explainLang);
       }
       state.modes = currentModes;
       saveUserLingualConfig({ modes: currentModes });

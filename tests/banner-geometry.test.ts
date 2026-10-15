@@ -19,7 +19,10 @@ const withCols = (cols: number, run: () => void) => {
 test("banner geometry - reserves 2 columns, never the HUD card border reserve of 8", () => {
   withCols(80, () => assert.equal(getBannerMaxCols(), 78));
   withCols(60, () => assert.equal(getBannerMaxCols(), 58));
-  withCols(10, () => assert.equal(getBannerMaxCols(), 25, "Physical minimum of 25 columns must hold"));
+  withCols(40, () => assert.equal(getBannerMaxCols(), 38));
+  withCols(30, () => assert.equal(getBannerMaxCols(), 28));
+  withCols(20, () => assert.equal(getBannerMaxCols(), 20, "Never render wider than live terminal"));
+  withCols(10, () => assert.equal(getBannerMaxCols(), 10, "Never render wider than live terminal"));
 });
 
 test("banner geometry - zero '...' truncation for all 9 languages on a standard 80-column terminal", () => {
@@ -83,24 +86,39 @@ test("narrow terminals - truncateVisual never drops a trailing opener and never 
   assert.ok(getVisualWidth(truncateVisual("中文中文中文中文", 7)) <= 7);
 });
 
-test("narrow terminals - release banner bounds to live budget at 30 and 20 columns across all 9 languages (B1, B6)", () => {
+test("narrow terminals - release banner real path through getBannerMaxCols across 20, 30, 40, 80 columns (C1)", () => {
   const openRegex = /[(\[{（【]/g;
   const closeRegex = /[)\]}）】]/g;
 
-  for (const cols of [30, 20]) {
-    for (const lang of LANGS) {
-      const lines = formatReleaseBannerLines(lang, cols);
-      assert.equal(lines.length, 8, `[${lang} @ ${cols}col] banner must stay at 8 lines`);
-      for (const line of lines) {
-        assert.ok(
-          getVisualWidth(line) <= cols,
-          `[${lang} @ ${cols}col] banner line overflows budget (${getVisualWidth(line)} > ${cols}): ${line}`
-        );
-        const opens = (line.match(openRegex) || []).length;
-        const closes = (line.match(closeRegex) || []).length;
-        assert.equal(opens, closes, `[${lang} @ ${cols}col] unclosed delimiter in clipped line: ${line}`);
+  for (const cols of [20, 30, 40, 80]) {
+    withCols(cols, () => {
+      const budget = getBannerMaxCols();
+      if (cols === 20) assert.equal(budget, 20);
+      if (cols === 30) assert.equal(budget, 28);
+      if (cols === 40) assert.equal(budget, 38);
+      if (cols === 80) assert.equal(budget, 78);
+
+      for (const lang of LANGS) {
+        const lines = formatReleaseBannerLines(lang, budget);
+        assert.equal(lines.length, 8, `[${lang} @ ${cols}col] banner must stay at 8 lines`);
+        for (const line of lines) {
+          assert.ok(
+            getVisualWidth(line) <= budget,
+            `[${lang} @ ${cols}col] banner line overflows real budget (${getVisualWidth(line)} > ${budget}): ${line}`
+          );
+          assert.ok(
+            getVisualWidth(line) <= cols,
+            `[${lang} @ ${cols}col] banner line overflows terminal columns (${getVisualWidth(line)} > ${cols}): ${line}`
+          );
+          if (cols === 80) {
+            assert.ok(!line.endsWith("..."), `[${lang}] must have 0 truncation at 80 cols: ${line}`);
+          }
+          const opens = (line.match(openRegex) || []).length;
+          const closes = (line.match(closeRegex) || []).length;
+          assert.equal(opens, closes, `[${lang} @ ${cols}col] unclosed delimiter in clipped line: ${line}`);
+        }
       }
-    }
+    });
   }
 });
 

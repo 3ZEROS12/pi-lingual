@@ -19,6 +19,7 @@ import {
   PRESET_LOADOUTS,
   getPresetLoadout,
   listPresetLoadouts,
+  defaultSlotsForMode,
 } from "../src/index.js";
 import type { CustomModeConfig } from "../src/types.js";
 import extensionFactory from "../src/extension.js";
@@ -442,4 +443,30 @@ test("modes: reasoning effort level defaults and /lingual reasoning CLI command"
   // Invalid reasoning level error handling
   await registeredCommands["lingual"].handler("reasoning ultra", mockCtx);
   assert.ok(notifications[notifications.length - 1].includes("Invalid reasoning effort"));
+});
+
+test("modes: defaultSlotsForMode produces identical slots across helper, resolveModesFromConfig, and compileModeSystemPrompt (C5)", () => {
+  for (const flow of ["translate", "proofread", "custom"] as const) {
+    for (const action of ["transform", "pass-through"] as const) {
+      const mode = { id: `test-${flow}-${action}`, name: "Test Mode", flow, action, hud: "preview" as const, slots: [] };
+      const helperSlots = defaultSlotsForMode(mode, "zh", "zh");
+      const resolvedModes = resolveModesFromConfig({ sourceLang: "zh", explainLang: "zh", modes: [mode] as any });
+      const resolvedSlots = resolvedModes[0].slots;
+
+      assert.deepEqual(
+        resolvedSlots.map((s) => s.id),
+        helperSlots.map((s) => s.id),
+        `Slots for flow=${flow}, action=${action} must match between helper and resolveModesFromConfig`
+      );
+
+      // Verify compileModeSystemPrompt outputs schema for the exact slot IDs
+      const prompt = compileModeSystemPrompt(mode, { sourceLang: "zh", targetLang: "en", explainLang: "zh" });
+      for (const slot of helperSlots) {
+        assert.ok(
+          prompt.includes(`"${slot.id}"`),
+          `Compiled prompt for flow=${flow}, action=${action} must include slot ${slot.id}`
+        );
+      }
+    }
+  }
 });

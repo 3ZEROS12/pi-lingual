@@ -46,8 +46,9 @@ export function getBannerMaxCols(): number {
   const terminalCols =
     process.stdout?.columns ||
     (process.env.COLUMNS ? parseInt(process.env.COLUMNS, 10) : undefined);
-  const raw = typeof terminalCols === "number" && terminalCols > 0 ? terminalCols - 2 : 78;
-  return Math.max(25, raw);
+  if (typeof terminalCols !== "number" || terminalCols <= 0) return 78;
+  // Never render wider than the live terminal, even below the 25-column HUD floor.
+  return Math.min(terminalCols, Math.max(25, terminalCols - 2));
 }
 
 /**

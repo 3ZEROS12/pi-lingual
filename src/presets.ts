@@ -466,6 +466,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     notifyCompactOff: "[en ⇄ ja] Tree branch mode enabled: full multi-slot view",
     notifyTimeout: "[en ⇄ ja] Prompt rewrite timed out; original prompt passed",
     notifyError: "[en ⇄ ja] Prompt rewrite error; original prompt passed",
+    modeSwitchedTemplate: "[{pair}] Switched to [{num}. {name} ({id})] ({slot})",
 
     cmdDescMode: "Cycle companion mode [en ⇄ ja]: [Companion] ➔ [Direct] ➔ [Off]",
     cmdDescLang: "Switch language pair [en ⇄ ja]: /lang <source> [target]",
@@ -546,6 +547,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     notifyCompactOff: "[zh ⇄ en] 已切换为左导轨树状架构：展示完整多槽与语感",
     notifyTimeout: "[zh ⇄ en] 提示词优化请求未就绪或超时，本次已放行原文",
     notifyError: "[zh ⇄ en] 提示词优化请求异常，本次已放行原文",
+    modeSwitchedTemplate: "[{pair}] 已切换至【{num}. {name} ({id})】({slot})",
 
     cmdDescMode: "切换伴学模式: /lingual",
     cmdDescLang: "切换伴学语言: /lang <code>",
@@ -626,6 +628,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     notifyCompactOff: "[ja ⇄ en] ツリー表示を有効化しました",
     notifyTimeout: "[ja ⇄ en] タイムアウトのため原文を送信しました",
     notifyError: "[ja ⇄ en] エラーのため原文を送信しました",
+    modeSwitchedTemplate: "[{pair}] 【{num}. {name} ({id})】に切り替えました ({slot})",
 
     cmdDescMode: "モード切替: /lingual",
     cmdDescLang: "言語切替: /lang <code>",
@@ -708,6 +711,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     notifySlotSwitched: "[es ⇄ en] Arquitectura de ranuras cambiada a [{preset}]: {desc}",
     notifyTimeout: "[es ⇄ en] La traducción al inglés agotó el tiempo; se envió el texto original",
     notifyError: "[es ⇄ en] Error en la traducción al inglés; se envió el texto original",
+    modeSwitchedTemplate: "[{pair}] Cambiado a [{num}. {name} ({id})] ({slot})",
 
     cmdDescMode: "Cambiar modo [es ⇄ en]: [Original] ➔ [Inglés] ➔ [Apagado]",
     cmdDescStatus: "Mostrar diagnóstico y estado del modelo: /lingual-status",
@@ -810,6 +814,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     notifyCompactOff: "[fr ⇄ en] Mode arborescence complète restauré",
     notifyTimeout: "[fr ⇄ en] La traduction en anglais a expiré ; le prompt original a été transmis",
     notifyError: "[fr ⇄ en] Erreur de traduction en anglais ; le prompt original a été transmis",
+    modeSwitchedTemplate: "[{pair}] Changé en [{num}. {name} ({id})] ({slot})",
 
     cmdDescMode: "Changer de mode [fr ⇄ en]: [Original] ➔ [Anglais] ➔ [Désactivé]",
     cmdDescStatus: "Afficher le rapport d'état et le diagnostic: /lingual-status",
@@ -912,6 +917,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     notifySlotSwitched: "[de ⇄ en] Slot-Architektur auf [{preset}] umgestellt: {desc}",
     notifyTimeout: "[de ⇄ en] Englische Übersetzung hat das Zeitlimit überschritten; Originaltext wurde übergeben",
     notifyError: "[de ⇄ en] Fehler bei der englischen Übersetzung; Originaltext wurde übergeben",
+    modeSwitchedTemplate: "[{pair}] Gewechselt zu [{num}. {name} ({id})] ({slot})",
 
     cmdDescMode: "Modus umschalten [de ⇄ en]: [Original] ➔ [Englisch] ➔ [Aus]",
     cmdDescStatus: "Statusbericht und Modell-Diagnose anzeigen: /lingual-status",
@@ -1014,6 +1020,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     notifyCompactOff: "[ko ⇄ en] 트리 레이아웃 복원됨",
     notifyTimeout: "[ko ⇄ en] 번역 시간 초과; 원문이 그대로 전달되었습니다",
     notifyError: "[ko ⇄ en] 번역 오류; 원문이 그대로 전달되었습니다",
+    modeSwitchedTemplate: "[{pair}] 【{num}. {name} ({id})】(으)로 전환되었습니다 ({slot})",
 
     cmdDescMode: "모드 전환 [ko ⇄ en]: [원문] ➔ [영어] ➔ [끔]",
     cmdDescStatus: "상태 보고서 및 진단 확인: /lingual-status",
@@ -1117,6 +1124,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     notifyCompactOff: "[ru ⇄ en] Полное дерево восстановлено",
     notifyTimeout: "[ru ⇄ en] Время ожидания перевода истекло; передан оригинал",
     notifyError: "[ru ⇄ en] Ошибка перевода; передан оригинал",
+    modeSwitchedTemplate: "[{pair}] Переключено на [{num}. {name} ({id})] ({slot})",
 
     cmdDescMode: "Переключить режим [ru ⇄ en]: [Оригинал] ➔ [Английский] ➔ [Выкл]",
     cmdDescStatus: "Отчет о состоянии и диагностика: /lingual-status",

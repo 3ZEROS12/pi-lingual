@@ -7,7 +7,7 @@
 [![npm version](https://img.shields.io/npm/v/pi-lingual?color=blue)](https://www.npmjs.com/package/pi-lingual)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Built for Pi](https://img.shields.io/badge/Built%20for-Pi%20Coding%20Agent-orange)](https://github.com/earendil-works/pi-coding-agent)
-[![Tests](https://img.shields.io/badge/Tests-131%2F131%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
+[![Tests](https://img.shields.io/badge/Tests-136%2F136%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict%20Zero%20Error-blue)](tsconfig.json)
 
 [English](./README.md) | **简体中文**
@@ -68,7 +68,7 @@ pi install npm:pi-lingual
 
 ## 双核黄金预设与声明式模式架构 (`Mode as Configuration`)
 
-`pi-lingual` 出厂预置**双核黄金基准模式**，并通过通用状态机引擎支持无限自定义。敲 `/lingual` 即可在已启用的模式与已关闭之间平滑循环轮转，或通过 `/lingual <id|序号>` 一步直达：
+`pi-lingual` 出厂预置**双核黄金基准模式**，并通过通用状态机引擎支持无限自定义。敲 `/lingual` 即可在已启用的模式与已关闭之间平滑循环轮转，或通过 `/lingual <id|序号>` 一步直达（提示：数字编号对应当前本地注册表顺序，而模式 ID 如 `/lingual direct` 与 `/lingual live-flow` 永远有效解析）：
 
 | 模式 | 核心命令与别名 | 你输入什么 | 引擎执行逻辑 | 底栏与界面反馈 | 适用场景 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -285,7 +285,7 @@ pi install npm:pi-lingual
 
 ```bash
 npm run typecheck   # TypeScript 严格类型检查 (0 错误)
-npm test            # 全套自动化单元测试 (131/131 全绿通过)
+npm test            # 全套自动化单元测试 (136/136 全绿通过)
 npm run build       # 多入口生产构建 (插件 + 核心语言引擎)
 ```
 

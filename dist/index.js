@@ -1117,6 +1117,7 @@ var LANGUAGE_PRESETS = {
     notifyCompactOff: "[en \u21C4 ja] Tree branch mode enabled: full multi-slot view",
     notifyTimeout: "[en \u21C4 ja] Prompt rewrite timed out; original prompt passed",
     notifyError: "[en \u21C4 ja] Prompt rewrite error; original prompt passed",
+    modeSwitchedTemplate: "[{pair}] Switched to [{num}. {name} ({id})] ({slot})",
     cmdDescMode: "Cycle companion mode [en \u21C4 ja]: [Companion] \u2794 [Direct] \u2794 [Off]",
     cmdDescLang: "Switch language pair [en \u21C4 ja]: /lang <source> [target]",
     cmdDescLast: "Replay previous companion card: /last",
@@ -1189,6 +1190,7 @@ var LANGUAGE_PRESETS = {
     notifyCompactOff: "[zh \u21C4 en] \u5DF2\u5207\u6362\u4E3A\u5DE6\u5BFC\u8F68\u6811\u72B6\u67B6\u6784\uFF1A\u5C55\u793A\u5B8C\u6574\u591A\u69FD\u4E0E\u8BED\u611F",
     notifyTimeout: "[zh \u21C4 en] \u63D0\u793A\u8BCD\u4F18\u5316\u8BF7\u6C42\u672A\u5C31\u7EEA\u6216\u8D85\u65F6\uFF0C\u672C\u6B21\u5DF2\u653E\u884C\u539F\u6587",
     notifyError: "[zh \u21C4 en] \u63D0\u793A\u8BCD\u4F18\u5316\u8BF7\u6C42\u5F02\u5E38\uFF0C\u672C\u6B21\u5DF2\u653E\u884C\u539F\u6587",
+    modeSwitchedTemplate: "[{pair}] \u5DF2\u5207\u6362\u81F3\u3010{num}. {name} ({id})\u3011({slot})",
     cmdDescMode: "\u5207\u6362\u4F34\u5B66\u6A21\u5F0F: /lingual",
     cmdDescLang: "\u5207\u6362\u4F34\u5B66\u8BED\u8A00: /lang <code>",
     cmdDescLast: "\u56DE\u770B\u4E0A\u4E00\u6761\u5361\u7247: /last",
@@ -1261,6 +1263,7 @@ var LANGUAGE_PRESETS = {
     notifyCompactOff: "[ja \u21C4 en] \u30C4\u30EA\u30FC\u8868\u793A\u3092\u6709\u52B9\u5316\u3057\u307E\u3057\u305F",
     notifyTimeout: "[ja \u21C4 en] \u30BF\u30A4\u30E0\u30A2\u30A6\u30C8\u306E\u305F\u3081\u539F\u6587\u3092\u9001\u4FE1\u3057\u307E\u3057\u305F",
     notifyError: "[ja \u21C4 en] \u30A8\u30E9\u30FC\u306E\u305F\u3081\u539F\u6587\u3092\u9001\u4FE1\u3057\u307E\u3057\u305F",
+    modeSwitchedTemplate: "[{pair}] \u3010{num}. {name} ({id})\u3011\u306B\u5207\u308A\u66FF\u3048\u307E\u3057\u305F ({slot})",
     cmdDescMode: "\u30E2\u30FC\u30C9\u5207\u66FF: /lingual",
     cmdDescLang: "\u8A00\u8A9E\u5207\u66FF: /lang <code>",
     cmdDescLast: "\u524D\u56DE\u30AB\u30FC\u30C9\u518D\u8868\u793A: /last",
@@ -1335,6 +1338,7 @@ var LANGUAGE_PRESETS = {
     notifySlotSwitched: "[es \u21C4 en] Arquitectura de ranuras cambiada a [{preset}]: {desc}",
     notifyTimeout: "[es \u21C4 en] La traducci\xF3n al ingl\xE9s agot\xF3 el tiempo; se envi\xF3 el texto original",
     notifyError: "[es \u21C4 en] Error en la traducci\xF3n al ingl\xE9s; se envi\xF3 el texto original",
+    modeSwitchedTemplate: "[{pair}] Cambiado a [{num}. {name} ({id})] ({slot})",
     cmdDescMode: "Cambiar modo [es \u21C4 en]: [Original] \u2794 [Ingl\xE9s] \u2794 [Apagado]",
     cmdDescStatus: "Mostrar diagn\xF3stico y estado del modelo: /lingual-status",
     cmdDescModel: "Consultar o cambiar modelo: /lingual-model [model-id|auto]",
@@ -1430,6 +1434,7 @@ var LANGUAGE_PRESETS = {
     notifyCompactOff: "[fr \u21C4 en] Mode arborescence compl\xE8te restaur\xE9",
     notifyTimeout: "[fr \u21C4 en] La traduction en anglais a expir\xE9 ; le prompt original a \xE9t\xE9 transmis",
     notifyError: "[fr \u21C4 en] Erreur de traduction en anglais ; le prompt original a \xE9t\xE9 transmis",
+    modeSwitchedTemplate: "[{pair}] Chang\xE9 en [{num}. {name} ({id})] ({slot})",
     cmdDescMode: "Changer de mode [fr \u21C4 en]: [Original] \u2794 [Anglais] \u2794 [D\xE9sactiv\xE9]",
     cmdDescStatus: "Afficher le rapport d'\xE9tat et le diagnostic: /lingual-status",
     cmdDescModel: "Consulter ou changer de mod\xE8le: /lingual-model [model-id|auto]",
@@ -1525,6 +1530,7 @@ var LANGUAGE_PRESETS = {
     notifySlotSwitched: "[de \u21C4 en] Slot-Architektur auf [{preset}] umgestellt: {desc}",
     notifyTimeout: "[de \u21C4 en] Englische \xDCbersetzung hat das Zeitlimit \xFCberschritten; Originaltext wurde \xFCbergeben",
     notifyError: "[de \u21C4 en] Fehler bei der englischen \xDCbersetzung; Originaltext wurde \xFCbergeben",
+    modeSwitchedTemplate: "[{pair}] Gewechselt zu [{num}. {name} ({id})] ({slot})",
     cmdDescMode: "Modus umschalten [de \u21C4 en]: [Original] \u2794 [Englisch] \u2794 [Aus]",
     cmdDescStatus: "Statusbericht und Modell-Diagnose anzeigen: /lingual-status",
     cmdDescModel: "Modell pr\xFCfen oder wechseln: /lingual-model [model-id|auto]",
@@ -1620,6 +1626,7 @@ var LANGUAGE_PRESETS = {
     notifyCompactOff: "[ko \u21C4 en] \uD2B8\uB9AC \uB808\uC774\uC544\uC6C3 \uBCF5\uC6D0\uB428",
     notifyTimeout: "[ko \u21C4 en] \uBC88\uC5ED \uC2DC\uAC04 \uCD08\uACFC; \uC6D0\uBB38\uC774 \uADF8\uB300\uB85C \uC804\uB2EC\uB418\uC5C8\uC2B5\uB2C8\uB2E4",
     notifyError: "[ko \u21C4 en] \uBC88\uC5ED \uC624\uB958; \uC6D0\uBB38\uC774 \uADF8\uB300\uB85C \uC804\uB2EC\uB418\uC5C8\uC2B5\uB2C8\uB2E4",
+    modeSwitchedTemplate: "[{pair}] \u3010{num}. {name} ({id})\u3011(\uC73C)\uB85C \uC804\uD658\uB418\uC5C8\uC2B5\uB2C8\uB2E4 ({slot})",
     cmdDescMode: "\uBAA8\uB4DC \uC804\uD658 [ko \u21C4 en]: [\uC6D0\uBB38] \u2794 [\uC601\uC5B4] \u2794 [\uB054]",
     cmdDescStatus: "\uC0C1\uD0DC \uBCF4\uACE0\uC11C \uBC0F \uC9C4\uB2E8 \uD655\uC778: /lingual-status",
     cmdDescModel: "\uBAA8\uB378 \uD655\uC778 \uBC0F \uBCC0\uACBD: /lingual-model [model-id|auto]",
@@ -1716,6 +1723,7 @@ var LANGUAGE_PRESETS = {
     notifyCompactOff: "[ru \u21C4 en] \u041F\u043E\u043B\u043D\u043E\u0435 \u0434\u0435\u0440\u0435\u0432\u043E \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u043E",
     notifyTimeout: "[ru \u21C4 en] \u0412\u0440\u0435\u043C\u044F \u043E\u0436\u0438\u0434\u0430\u043D\u0438\u044F \u043F\u0435\u0440\u0435\u0432\u043E\u0434\u0430 \u0438\u0441\u0442\u0435\u043A\u043B\u043E; \u043F\u0435\u0440\u0435\u0434\u0430\u043D \u043E\u0440\u0438\u0433\u0438\u043D\u0430\u043B",
     notifyError: "[ru \u21C4 en] \u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0435\u0440\u0435\u0432\u043E\u0434\u0430; \u043F\u0435\u0440\u0435\u0434\u0430\u043D \u043E\u0440\u0438\u0433\u0438\u043D\u0430\u043B",
+    modeSwitchedTemplate: "[{pair}] \u041F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0435\u043D\u043E \u043D\u0430 [{num}. {name} ({id})] ({slot})",
     cmdDescMode: "\u041F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0438\u0442\u044C \u0440\u0435\u0436\u0438\u043C [ru \u21C4 en]: [\u041E\u0440\u0438\u0433\u0438\u043D\u0430\u043B] \u2794 [\u0410\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u0438\u0439] \u2794 [\u0412\u044B\u043A\u043B]",
     cmdDescStatus: "\u041E\u0442\u0447\u0435\u0442 \u043E \u0441\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u0438 \u0438 \u0434\u0438\u0430\u0433\u043D\u043E\u0441\u0442\u0438\u043A\u0430: /lingual-status",
     cmdDescModel: "\u041F\u0440\u043E\u0432\u0435\u0440\u0438\u0442\u044C \u0438\u043B\u0438 \u0441\u043C\u0435\u043D\u0438\u0442\u044C \u043C\u043E\u0434\u0435\u043B\u044C: /lingual-model [model-id|auto]",
@@ -2348,8 +2356,8 @@ function getEffectiveMaxCols(requested) {
 var ANSI_ESCAPE_REGEX = /\x1b\[[0-9;?]*[a-zA-Z]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g;
 function getBannerMaxCols() {
   const terminalCols = process.stdout?.columns || (process.env.COLUMNS ? parseInt(process.env.COLUMNS, 10) : void 0);
-  const raw = typeof terminalCols === "number" && terminalCols > 0 ? terminalCols - 2 : 78;
-  return Math.max(25, raw);
+  if (typeof terminalCols !== "number" || terminalCols <= 0) return 78;
+  return Math.min(terminalCols, Math.max(25, terminalCols - 2));
 }
 function getVisualWidth(str) {
   let width = 0;
@@ -3202,8 +3210,7 @@ function saveUserLingualConfig(patch) {
     }
     for (const [k, v] of Object.entries(patch)) {
       const isEmptyArray = Array.isArray(v) && v.length === 0;
-      if (v === void 0 || v === "" || isEmptyArray || v === "auto" || // Intentional revert-to-default semantic: passing "auto" deletes key to restore auto-probing
-      k === "compact" && v === false || k === "modeLocked" && v === false) {
+      if (v === void 0 || v === "" || isEmptyArray || v === "auto" || k === "compact" && v === false || k === "modeLocked" && v === false) {
         delete existing[k];
       } else if (k === "mode") {
         existing[k] = v === "english" ? "direct" : v === "select" ? "candidates" : v;
@@ -3609,15 +3616,17 @@ function resolveModifySlotsFromConfig(cfg) {
   }
   return getDefaultModifySlots(cfg.sourceLang, cfg.explainLang);
 }
+function defaultSlotsForMode(mode, sourceLang, explainLang) {
+  if (mode.action === "pass-through") return [];
+  return mode.flow === "proofread" ? getDefaultModifySlots(sourceLang, explainLang) : getDefaultDirectSlots(sourceLang);
+}
 function resolveModesFromConfig(cfg) {
   if (Array.isArray(cfg.modes) && cfg.modes.length > 0) {
     const sourceLang = cfg.sourceLang || "en";
     const explainLang = cfg.explainLang;
     const valid = cfg.modes.filter((m) => m && typeof m.id === "string" && m.id.trim()).map((m) => {
       if (Array.isArray(m.slots) && m.slots.length > 0) return m;
-      if (m.action === "pass-through") return { ...m, slots: [] };
-      const defaultSlots = m.flow === "proofread" ? getDefaultModifySlots(sourceLang, explainLang) : getDefaultDirectSlots(sourceLang);
-      return { ...m, slots: defaultSlots };
+      return { ...m, slots: defaultSlotsForMode(m, sourceLang, explainLang) };
     });
     if (valid.length > 0) return valid;
   }
@@ -3706,7 +3715,7 @@ function compileModeSystemPrompt(mode, options) {
   const sourceLang = mode.customInputLang || options.sourceLang || "en";
   const targetLang = mode.customOutputLang || options.targetLang || "en";
   const explainLang = options.explainLang || sourceLang;
-  const rawSlots = Array.isArray(mode.slots) && mode.slots.length > 0 ? mode.slots : mode.action === "pass-through" ? [] : mode.flow === "proofread" ? getDefaultModifySlots(sourceLang, explainLang) : getDefaultDirectSlots(sourceLang);
+  const rawSlots = Array.isArray(mode.slots) && mode.slots.length > 0 ? mode.slots : defaultSlotsForMode(mode, sourceLang, explainLang);
   const interpolatedSlots = rawSlots.map((s) => ({
     ...s,
     instruction: s.instruction ? interpolatePromptVariables(s.instruction, {
@@ -3867,10 +3876,6 @@ var MODE_DISPLAY_BY_LANG = {
     candidates: "\u6311\u5019\u9009",
     modify: "\u539F\u53E5\u4FEE\u8865",
     off: "\u5DF2\u5173\u95ED",
-    notifyCompanion: (p) => `[${p}] \u5DF2\u5207\u6362\u81F3\u30101 \u7EAF\u4F34\u5B66 (companion)\u3011\uFF1A\u539F\u8BDD 0ms \u76F4\u53D1 + \u4E0A\u65B9\u6D6E\u73B0\u4F34\u5B66\u5361`,
-    notifyDirect: (p, s1) => `[${p}] \u5DF2\u5207\u6362\u81F3\u30102 \u76F4\u63A5\u6539 (direct)\u3011\uFF1A\u6309\u9996\u69FD [${s1}] 1\u5BF91 \u76F4\u63A5\u6539\u597D\u53D1\u51FA`,
-    notifyCandidates: (p, s) => `[${p}] \u5DF2\u5207\u6362\u81F3\u30103 \u6311\u5019\u9009 (candidates)\u3011\uFF1A\u751F\u6210\u5019\u9009 (${s}) \u6311\u4E00\u53D1\u51FA`,
-    notifyModify: (p, s1) => `[${p}] \u5DF2\u5207\u6362\u81F3\u30104 \u539F\u53E5\u4FEE\u8865 (modify)\u3011\uFF1A\u6781\u7B80\u4FEE\u6B63 [${s1}] \u79D2\u53D1 + \u4E0A\u65B9\u539F\u751F\u5BF9\u7167`,
     notifyOff: (p) => `[${p}] \u5DF2\u5207\u6362\u81F3\u30100 \u5DF2\u5173\u95ED (off)\u3011\uFF1A\u5E95\u680F\u9690\u85CF \xB7 \u76D1\u542C\u5DF2\u5378 \xB7 0 Token \u96F6\u8D1F\u62C5`
   },
   tw: {
@@ -3879,10 +3884,6 @@ var MODE_DISPLAY_BY_LANG = {
     candidates: "\u6311\u5019\u9078",
     modify: "\u539F\u53E5\u4FEE\u88DC",
     off: "\u5DF2\u95DC\u9589",
-    notifyCompanion: (p) => `[${p}] \u5DF2\u5207\u63DB\u81F3\u30101 \u7D14\u4F34\u5B78 (companion)\u3011\uFF1A\u539F\u8A71 0ms \u76F4\u767C + \u4E0A\u65B9\u6D6E\u73FE\u4F34\u5B78\u5361`,
-    notifyDirect: (p, s1) => `[${p}] \u5DF2\u5207\u63DB\u81F3\u30102 \u76F4\u63A5\u6539 (direct)\u3011\uFF1A\u6309\u9996\u69FD [${s1}] 1\u5C0D1 \u76F4\u63A5\u6539\u597D\u767C\u51FA`,
-    notifyCandidates: (p, s) => `[${p}] \u5DF2\u5207\u63DB\u81F3\u30103 \u6311\u5019\u9078 (candidates)\u3011\uFF1A\u751F\u6210\u5019\u9078 (${s}) \u6311\u4E00\u767C\u51FA`,
-    notifyModify: (p, s1) => `[${p}] \u5DF2\u5207\u63DB\u81F3\u30104 \u539F\u53E5\u4FEE\u88DC (modify)\u3011\uFF1A\u6975\u7C21\u4FEE\u6B63 [${s1}] \u79D2\u767C + \u4E0A\u65B9\u539F\u751F\u5C0D\u7167`,
     notifyOff: (p) => `[${p}] \u5DF2\u5207\u63DB\u81F3\u30100 \u5DF2\u95DC\u9589 (off)\u3011\uFF1A\u5E95\u6B04\u96B1\u85CF \xB7 \u76E3\u807D\u5DF2\u5378 \xB7 0 Token \u96F6\u8CA0\u64D4`
   },
   ja: {
@@ -3891,10 +3892,6 @@ var MODE_DISPLAY_BY_LANG = {
     candidates: "\u5019\u88DC\u9078",
     modify: "\u539F\u6587\u4FEE\u6B63",
     off: "\u30AA\u30D5",
-    notifyCompanion: (p) => `[${p}] \u30101 \u4F34\u8D70 (companion)\u3011\u306B\u5207\u66FF\uFF1A\u539F\u65870ms\u9001\u4FE1\uFF0B\u4E0A\u90E8\u306B\u5B66\u7FD2\u30AB\u30FC\u30C9\u8868\u793A`,
-    notifyDirect: (p, s1) => `[${p}] \u30102 \u76F4\u6539 (direct)\u3011\u306B\u5207\u66FF\uFF1A\u7B2C1\u30B9\u30ED\u30C3\u30C8 [${s1}] \u3067\u76F4\u63A5\u66F8\u304D\u63DB\u3048\u3066\u9001\u4FE1`,
-    notifyCandidates: (p, s) => `[${p}] \u30103 \u5019\u88DC\u9078 (candidates)\u3011\u306B\u5207\u66FF\uFF1A\u5019\u88DC (${s}) \u304B\u3089\u9078\u629E\u3057\u3066\u9001\u4FE1`,
-    notifyModify: (p, s1) => `[${p}] \u30104 \u539F\u6587\u4FEE\u6B63 (modify)\u3011\u306B\u5207\u66FF\uFF1A\u6700\u5C0F\u4FEE\u6B63 [${s1}] \u5373\u6642\u9001\u4FE1\uFF0B\u81EA\u7136\u8868\u73FE\u6BD4\u8F03`,
     notifyOff: (p) => `[${p}] \u30100 \u30AA\u30D5 (off)\u3011\uFF1A\u4E0B\u90E8\u30D0\u30FC\u975E\u8868\u793A\u30FB\u76E3\u8996\u505C\u6B62\u30FB0 Token \u7121\u8CA0\u8377`
   },
   en: {
@@ -3903,10 +3900,6 @@ var MODE_DISPLAY_BY_LANG = {
     candidates: "Candidates",
     modify: "Modify",
     off: "Off",
-    notifyCompanion: (p) => `[${p}] Switched to [1 Companion] mode: 0ms raw send + learning card above`,
-    notifyDirect: (p, s1) => `[${p}] Switched to [2 Direct (Prompt)] mode: 1-to-1 send via Slot #1 [${s1}]`,
-    notifyCandidates: (p, s) => `[${p}] Switched to [3 Candidates (select)] mode: Pick from (${s})`,
-    notifyModify: (p, s1) => `[${p}] Switched to [4 Modify (In-Place Fix)] mode: Surgical fix via [${s1}] + native sibling`,
     notifyOff: (p) => `[${p}] Switched to [0 Off] mode: Status hidden \xB7 listeners detached \xB7 0 tokens`
   }
 };
@@ -4032,10 +4025,10 @@ function formatReleaseBannerLines(sourceLang = "en", maxCols = 80, fg = (_c, t) 
       rows: [
         "\u250C [\u6838\u5FC3\u5B9A\u5236\u4E2D\u5FC3 \xB7 Tuner] \u6572 /tuner \u76F4\u63A5\u8DDF AI \u8BF4\u8BDD\uFF0C\u968F\u610F\u589E\u5220\u6539\u6A21\u5F0F\u4E0E\u63D0\u793A\u8BCD",
         "\u2502   (\u5185\u7F6E 4 \u5927\u5B9E\u6218\u914D\u88C5\uFF1B\u60F3\u52A0\u53D1\u63A8\u3001\u63D0\u4EA4\u3001\u5BF9\u7EBF\u7B49\u6A21\u5F0F\uFF0C\u4E00\u53E5\u8BDD\u79D2\u6210)",
-        "\u251C [1 \u89C4\u8303\u76F4\u53D1 \xB7 direct]  \u6572\u4E2D\u6587\uFF0C0ms \u8F6C\u6210\u4E13\u4E1A\u89C4\u8303\u82F1\u6587\u76F4\u53D1 Agent (/lingual 1)",
+        "\u251C [\u89C4\u8303\u76F4\u53D1 \xB7 direct]    \u6572\u4E2D\u6587\uFF0C0ms \u8F6C\u6210\u89C4\u8303\u6280\u672F\u82F1\u6587\u76F4\u53D1 (/lingual direct)",
         "\u2502   (\u4FDD\u8BC1\u4EE3\u7801\u548C\u6CE8\u91CA\u662F\u7EAF\u82F1\u6587\uFF1B\u9002\u5408\u4E13\u6CE8\u5F00\u53D1\u3001\u4E0D\u60F3\u8D39\u8111\u618B\u82F1\u8BED\u65F6\u4F7F\u7528)",
-        "\u251C [2 \u5B9E\u6218\u72C2\u98D9 \xB7 live]    \u76F4\u63A5\u6253\u82F1\u6587\uFF1B\u53EA\u4FEE\u8BED\u6CD5\u9519\u8BCD\uFF0C\u7C97\u53E3\u4E0E\u60C5\u7EEA 100% \u4FDD\u7559",
-        "\u2514   (\u60F3\u9A82\u5C31\u9A82\uFF0C\u8BED\u6CD5\u81EA\u52A8\u515C\u5E95\uFF1B\u4E0B\u65B9\u7528\u4E2D\u6587\u8BB2\u900F\u76F2\u70B9\uFF0C\u8D8A\u7528\u8BED\u611F\u8D8A\u5F3A)"
+        "\u251C [\u5B9E\u6218\u72C2\u98D9 \xB7 live-flow] \u76F4\u63A5\u6253\u82F1\u6587\uFF1B\u53EA\u4FEE\u8BED\u6CD5\u9519\u8BCD\uFF0C\u7C97\u53E3\u4E0E\u60C5\u7EEA 100% \u4FDD\u7559",
+        "\u2514   (\u6572 /lingual live-flow \u5207\u6362\uFF1B\u7C97\u53E3\u4FDD\u7559\uFF0C\u4E0B\u65B9\u4E2D\u6587\u8BB2\u900F\u8BED\u6CD5\u76F2\u70B9)"
       ]
     },
     tw: {
@@ -4044,10 +4037,10 @@ function formatReleaseBannerLines(sourceLang = "en", maxCols = 80, fg = (_c, t) 
       rows: [
         "\u250C [\u6838\u5FC3\u5B9A\u5236\u4E2D\u5FC3 \xB7 Tuner] \u6572 /tuner \u76F4\u63A5\u8DDF AI \u8AAA\u8A71\uFF0C\u96A8\u610F\u589E\u522A\u6539\u6A21\u5F0F\u8207\u63D0\u793A\u8A5E",
         "\u2502   (\u5167\u7F6E 4 \u5927\u5BE6\u6230\u914D\u88DD\uFF1B\u60F3\u52A0\u767C\u63A8\u3001\u63D0\u4EA4\u3001\u5C0D\u7DDA\u7B49\u6A21\u5F0F\uFF0C\u4E00\u53E5\u8A71\u79D2\u6210)",
-        "\u251C [1 \u898F\u7BC4\u76F4\u767C \xB7 direct]  \u6572\u4E2D\u6587\uFF0C0ms \u8F49\u6210\u5C08\u696D\u898F\u7BC4\u82F1\u6587\u76F4\u767C Agent (/lingual 1)",
+        "\u251C [\u898F\u7BC4\u76F4\u767C \xB7 direct]    \u6572\u4E2D\u6587\uFF0C0ms \u8F49\u6210\u898F\u7BC4\u6280\u8853\u82F1\u6587\u76F4\u767C (/lingual direct)",
         "\u2502   (\u4FDD\u8B49\u4EE3\u78BC\u548C\u8A3B\u91CB\u662F\u7D14\u82F1\u6587\uFF1B\u9069\u5408\u5C08\u6CE8\u958B\u767C\u3001\u4E0D\u60F3\u8CBB\u8166\u618B\u82F1\u8A9E\u6642\u4F7F\u7528)",
-        "\u251C [2 \u5BE6\u6230\u72C2\u98C6 \xB7 live]    \u76F4\u63A5\u6253\u82F1\u6587\uFF1B\u53EA\u4FEE\u8A9E\u6CD5\u932F\u8A5E\uFF0C\u7C97\u53E3\u8207\u60C5\u7DD2 100% \u4FDD\u7559",
-        "\u2514   (\u60F3\u7F75\u5C31\u7F75\uFF0C\u8A9E\u6CD5\u81EA\u52D5\u515C\u5E95\uFF1B\u4E0B\u65B9\u7528\u4E2D\u6587\u8B1B\u900F\u76F2\u9EDE\uFF0C\u8D8A\u7528\u8A9E\u611F\u8D8A\u5F37)"
+        "\u251C [\u5BE6\u6230\u72C2\u98C6 \xB7 live-flow] \u76F4\u63A5\u6253\u82F1\u6587\uFF1B\u53EA\u4FEE\u8A9E\u6CD5\u932F\u8A5E\uFF0C\u7C97\u53E3\u8207\u60C5\u7DD2 100% \u4FDD\u7559",
+        "\u2514   (\u6572 /lingual live-flow \u5207\u63DB\uFF1B\u7C97\u53E3\u4FDD\u7559\uFF0C\u4E0B\u65B9\u4E2D\u6587\u8B1B\u900F\u8A9E\u6CD5\u76F2\u9EDE)"
       ]
     },
     ja: {
@@ -4056,10 +4049,10 @@ function formatReleaseBannerLines(sourceLang = "en", maxCols = 80, fg = (_c, t) 
       rows: [
         "\u250C [\u5BFE\u8A71\u8A2D\u8A08 \xB7 Tuner]     /tuner \u3067AI\u3068\u5BFE\u8A71\u3057\u3001\u65B0\u30E2\u30FC\u30C9\u3084\u30D7\u30ED\u30F3\u30D7\u30C8\u3092\u5373\u8FFD\u52A0",
         "\u2502   (4\u5927\u30D7\u30EA\u30BB\u30C3\u30C8\u5185\u8535 \xB7 PR\u30EC\u30D3\u30E5\u30FC\u3084SNS\u6295\u7A3F\u7528\u30E2\u30FC\u30C9\u3082\u4F1A\u8A71\u3060\u3051\u3067\u5B8C\u6210)",
-        "\u251C [1 \u4ED5\u69D8\u76F4\u884C \xB7 direct]  \u6BCD\u8A9E\u5165\u529B\u30010ms\u3067\u898F\u7BC4\u7684\u82F1\u8A9E\u306B\u6574\u3048\u5373\u9001\u4FE1 (/lingual 1)",
+        "\u251C [\u4ED5\u69D8\u76F4\u884C \xB7 direct]  \u6BCD\u8A9E\u5165\u529B\u30010ms\u3067\u898F\u7BC4\u7684\u82F1\u8A9E\u306B\u6574\u3048\u9001\u4FE1 (/lingual direct)",
         "\u2502   (\u30B3\u30FC\u30C9\u3068\u30B3\u30E1\u30F3\u30C8\u306E\u5B8C\u5168\u82F1\u8A9E\u5316\u3092\u4FDD\u8A3C \xB7 \u96C6\u4E2D\u3057\u3066\u958B\u767A\u3092\u9032\u3081\u305F\u3044\u6642\u306B)",
-        "\u251C [2 \u5B9F\u6226\u75BE\u8D70 \xB7 live]    \u82F1\u8A9E\u3067\u76F4\u63A5\u5165\u529B\uFF1B\u30B9\u30E9\u30F3\u30B0\u30FB\u611F\u60C5\u3092100%\u4FDD\u6301\u3057\u88DC\u6B63",
-        "\u2514   (\u611F\u60C5\u306E\u307E\u307E\u306B\u5165\u529B\u53EF\u80FD \xB7 \u4E0B\u90E8\u306B\u6BCD\u8A9E\u3067\u6587\u6CD5\u76F2\u70B9\u3092\u76F4\u611F\u7684\u306B\u89E3\u8AAC)"
+        "\u251C [\u5B9F\u6226\u75BE\u8D70 \xB7 live-flow] \u82F1\u8A9E\u3067\u76F4\u63A5\u5165\u529B\uFF1B\u30B9\u30E9\u30F3\u30B0\u30FB\u611F\u60C5\u3092100%\u4FDD\u6301\u3057\u88DC\u6B63",
+        "\u2514   (/lingual live-flow \u3067\u5207\u66FF \xB7 \u611F\u60C5\u4FDD\u6301\u3001\u4E0B\u90E8\u306B\u6BCD\u8A9E\u3067\u76F4\u611F\u89E3\u8AAC)"
       ]
     },
     ko: {
@@ -4068,10 +4061,10 @@ function formatReleaseBannerLines(sourceLang = "en", maxCols = 80, fg = (_c, t) 
       rows: [
         "\u250C [\uB9DE\uCDA4 \uC124\uACC4 \xB7 Tuner]    /tuner \uB85C AI\uC640 \uB300\uD654\uD558\uBA70 \uBAA8\uB4DC\uC640 \uD504\uB86C\uD504\uD2B8 \uC790\uC720 \uCD94\uAC00",
         "\u2502   (4\uB300 \uD504\uB9AC\uC14B \uB0B4\uC7A5 \xB7 PR \uAC80\uD1A0\uB098 SNS\uC6A9 \uBAA8\uB4DC\uB3C4 \uB9D0 \uD55C\uB9C8\uB514\uB85C \uC989\uC2DC \uC0DD\uC131)",
-        "\u251C [1 \uB17C\uB9AC\uC815\uC81C \xB7 direct]  \uBAA8\uAD6D\uC5B4 \uC785\uB825, 0ms \uADDC\uACA9\uD654\uB41C \uAE30\uC220 \uC601\uC5B4\uB85C \uC989\uC2DC \uC804\uC1A1",
+        "\u251C [\uB17C\uB9AC\uC815\uC81C \xB7 direct]  \uBAA8\uAD6D\uC5B4 \uC785\uB825, 0ms \uAE30\uC220 \uC601\uC5B4\uB85C \uC804\uC1A1 (/lingual direct)",
         "\u2502   (\uCF54\uB4DC\uC640 \uC8FC\uC11D\uC758 \uC21C\uC218 \uC601\uC5B4 \uC720\uC9C0 \xB7 \uAC1C\uBC1C\uC5D0 \uC9D1\uC911\uD558\uACE0 \uC2F6\uC744 \uB54C \uCD5C\uC801)",
-        "\u251C [2 \uC2E4\uC804\uC9C8\uC8FC \xB7 live]    \uC601\uC5B4\uB85C \uC9C1\uC811 \uC791\uC131; \uAC70\uCE5C \uD45C\uD604 100% \uC720\uC9C0\uD558\uBA70 \uAD50\uC815 \uC804\uC1A1",
-        "\u2514   (\uAC10\uC815 \uADF8\uB300\uB85C \uC785\uB825 \uAC00\uB2A5 \xB7 \uD558\uB2E8\uC5D0 \uBAA8\uAD6D\uC5B4\uB85C \uD575\uC2EC \uBB38\uBC95 \uB9F9\uC810 \uBCF5\uAE30)"
+        "\u251C [\uC2E4\uC804\uC9C8\uC8FC \xB7 live-flow] \uC601\uC5B4\uB85C \uC9C1\uC811 \uC791\uC131; \uAC70\uCE5C \uD45C\uD604 100% \uC720\uC9C0\uD558\uBA70 \uAD50\uC815 \uC804\uC1A1",
+        "\u2514   (/lingual live-flow \uB85C \uC804\uD658 \xB7 \uAC10\uC815 \uC720\uC9C0, \uD558\uB2E8\uC5D0 \uD575\uC2EC \uBB38\uBC95 \uBCF5\uAE30)"
       ]
     },
     es: {
@@ -4080,22 +4073,22 @@ function formatReleaseBannerLines(sourceLang = "en", maxCols = 80, fg = (_c, t) 
       rows: [
         "\u250C [Centro Tuner]   Ejecuta /tuner para crear o cambiar modos con AI",
         "\u2502   (4 recetas listas; a\xF1ade flujos de PR o Twitter en una frase)",
-        "\u251C [1 Directo]      Escribe en tu idioma, 0ms a ingl\xE9s t\xE9cnico",
+        "\u251C [Directo \xB7 direct]     En tu idioma, 0ms a ingl\xE9s (/lingual direct)",
         "\u2502   (Mantiene c\xF3digo y comentarios en ingl\xE9s; avanza r\xE1pido)",
-        "\u251C [2 Live Flow]    Escribe directo en ingl\xE9s; pasi\xF3n y tacos intactos",
-        "\u2514   (Pasa tu rabia sin censura; notas abajo para aprender el porqu\xE9)"
+        "\u251C [Live Flow \xB7 live-flow] Directo en ingl\xE9s; pasi\xF3n y tacos intactos",
+        "\u2514   (Usa /lingual live-flow; sin censura, notas breves abajo)"
       ]
     },
     fr: {
       title: "\xB7 [pi-lingual v0.6.0] Duo essentiel et Tuner ouvert (ferm\xE9 \xE0 l'envoi)",
       subtitle: "\u2502 Cr\xE9ez modes et prompts en dialoguant ; configuration locale isol\xE9e",
       rows: [
-        "\u250C [Centre Tuner]   Tapez /tuner pour cr\xE9er ou modifier des modes avec l'IA",
-        "\u2502   (4 recettes int\xE9gr\xE9es ; ajoutez des modes PR en une phrase)",
-        "\u251C [1 Direct]       Saisie en langue native, 0ms vers l'anglais technique",
+        "\u250C [Centre Tuner]   Tapez /tuner pour cr\xE9er ou modifier des modes",
+        "\u2502   (4 recettes pr\xEAtes ; ajoutez des flux PR en une phrase)",
+        "\u251C [Direct \xB7 direct]      Langue native, 0ms vers l'anglais (/lingual direct)",
         "\u2502   (Code et commentaires en anglais pur ; id\xE9al pour coder)",
-        "\u251C [2 Live Flow]    Saisie directe en anglais ; passion et jurons gard\xE9s",
-        "\u2514   (Exprimez-vous sans filtre ; explications claires sous la saisie)"
+        "\u251C [Live Flow \xB7 live-flow] Saisie directe en anglais ; jurons gard\xE9s",
+        "\u2514   (Tapez /lingual live-flow ; sans filtre, explications claires en bas)"
       ]
     },
     de: {
@@ -4104,10 +4097,10 @@ function formatReleaseBannerLines(sourceLang = "en", maxCols = 80, fg = (_c, t) 
       rows: [
         "\u250C [Tuner-Zentrale]  /tuner starten, um Modi und Prompts anzupassen",
         "\u2502   (4 Rezepte an Bord; neue PR- oder Twitter-Modi mit einem Satz)",
-        "\u251C [1 Direkt]        Auf Deutsch tippen, 0ms als klares Englisch",
+        "\u251C [Direkt \xB7 direct] Auf Deutsch, 0ms klares Englisch (/lingual direct)",
         "\u2502   (H\xE4lt Code & Kommentare auf Englisch; perfekt f\xFCr Fokus)",
-        "\u251C [2 Live Flow]     Direkt auf Englisch tippen; Emotionen 100% erhalten",
-        "\u2514   (Tippen ohne Zensur; kurze muttersprachliche Erkl\xE4rungen unten)"
+        "\u251C [Live Flow \xB7 live-flow] Direkt auf Englisch; Emotionen 100% erhalten",
+        "\u2514   (Per /lingual live-flow; ohne Zensur, kurze Erkl\xE4rungen unten)"
       ]
     },
     ru: {
@@ -4116,10 +4109,10 @@ function formatReleaseBannerLines(sourceLang = "en", maxCols = 80, fg = (_c, t) 
       rows: [
         "\u250C [\u0426\u0435\u043D\u0442\u0440 Tuner]    \u041D\u0430\u0431\u0435\u0440\u0438\u0442\u0435 /tuner \u0434\u043B\u044F \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438 \u0440\u0435\u0436\u0438\u043C\u043E\u0432 \u0441 AI",
         "\u2502   (4 \u0433\u043E\u0442\u043E\u0432\u044B\u0445 \u0440\u0435\u0446\u0435\u043F\u0442\u0430; \u0440\u0435\u0436\u0438\u043C\u044B \u0441\u043E\u0437\u0434\u0430\u044E\u0442\u0441\u044F \u0432 \u043E\u0434\u043D\u0443 \u0444\u0440\u0430\u0437\u0443)",
-        "\u251C [1 \u041F\u0440\u044F\u043C\u043E\u0439 \u043F\u043E\u0442\u043E\u043A] \u0412\u0432\u043E\u0434 \u043D\u0430 \u0440\u043E\u0434\u043D\u043E\u043C \u044F\u0437\u044B\u043A\u0435, 0\u043C\u0441 \u0432 \u0447\u0435\u0442\u043A\u0438\u0439 \u0442\u0435\u0445-\u0430\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u0438\u0439",
+        "\u251C [\u041F\u0440\u044F\u043C\u043E\u0439 \xB7 direct] \u0412\u0432\u043E\u0434 \u043D\u0430 \u0440\u043E\u0434\u043D\u043E\u043C \u044F\u0437\u044B\u043A\u0435 \u0432 \u0442\u0435\u0445-\u0430\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u0438\u0439 (/lingual direct)",
         "\u2502   (\u0427\u0438\u0441\u0442\u044B\u0439 \u0430\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u0438\u0439 \u0432 \u043A\u043E\u0434\u0435 \u0438 \u043A\u043E\u043C\u043C\u0435\u043D\u0442\u0430\u0440\u0438\u044F\u0445; \u0434\u043B\u044F \u0431\u044B\u0441\u0442\u0440\u043E\u0439 \u0440\u0430\u0431\u043E\u0442\u044B)",
-        "\u251C [2 Live Flow]    \u041F\u0438\u0448\u0438\u0442\u0435 \u0441\u0440\u0430\u0437\u0443 \u043D\u0430 \u0430\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u043E\u043C; \u0441\u043B\u0435\u043D\u0433 \u0438 \u044D\u043C\u043E\u0446\u0438\u0438 \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u044B",
-        "\u2514   (\u0412\u0432\u043E\u0434 \u0431\u0435\u0437 \u0446\u0435\u043D\u0437\u0443\u0440\u044B; \u0432\u043D\u0438\u0437\u0443 \u043F\u043E\u043D\u044F\u0442\u043D\u044B\u0439 \u0440\u0430\u0437\u0431\u043E\u0440 \u043F\u0440\u0430\u0432\u0438\u043B)"
+        "\u251C [Live Flow \xB7 live-flow] \u041F\u0438\u0448\u0438\u0442\u0435 \u043D\u0430 \u0430\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u043E\u043C; \u0441\u043B\u0435\u043D\u0433 \u0438 \u044D\u043C\u043E\u0446\u0438\u0438 \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u044B",
+        "\u2514   (\u0427\u0435\u0440\u0435\u0437 /lingual live-flow; \u0432\u0432\u043E\u0434 \u0431\u0435\u0437 \u0446\u0435\u043D\u0437\u0443\u0440\u044B, \u0440\u0430\u0437\u0431\u043E\u0440 \u043F\u0440\u0430\u0432\u0438\u043B)"
       ]
     },
     en: {
@@ -4128,10 +4121,10 @@ function formatReleaseBannerLines(sourceLang = "en", maxCols = 80, fg = (_c, t) 
       rows: [
         "\u250C [Architect Tuner] Run /tuner to add or edit modes with AI",
         "\u2502   (4 tactical loadouts included: spec, commit, oss, yap)",
-        "\u251C [1 Logical Spec \xB7 direct]  Native input \u2794 0ms imperative spec",
+        "\u251C [Logical Spec \xB7 direct]  Native input \u2794 0ms spec (/lingual direct)",
         "\u2502   (Ensures clean English instructions while keeping code untouched)",
-        "\u251C [2 Live Flow \xB7 live]       Draft in English; grammar patched, passion kept",
-        "\u2514   (Vent freely without censorship; takeaway diffs explain rules below)"
+        "\u251C [Live Flow \xB7 live-flow]  Draft in English; grammar patched, passion kept",
+        "\u2514   (Run /lingual live-flow; vent freely, takeaway diffs explain rules)"
       ]
     }
   };
@@ -4168,6 +4161,7 @@ export {
   compileKillListInstruction,
   compileModeSystemPrompt,
   createCustomSlot,
+  defaultSlotsForMode,
   executeModeRunner,
   extractVocabPhrases,
   formatCapsuleLine,
