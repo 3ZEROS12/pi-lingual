@@ -1249,12 +1249,8 @@ var LANGUAGE_PRESETS = {
     notifyTimeout: "[en \u21C4 ja] Prompt rewrite timed out; original prompt passed",
     notifyError: "[en \u21C4 ja] Prompt rewrite error; original prompt passed",
     cmdDescMode: "Cycle companion mode [en \u21C4 ja]: [Companion] \u2794 [Direct] \u2794 [Off]",
-    cmdDescStatus: "View companion status and model diagnostics: /lingual-status",
-    cmdDescModel: "Inspect or switch companion model [en \u21C4 ja]: /lingual-model [model-id|auto]",
     cmdDescLang: "Switch language pair [en \u21C4 ja]: /lang <source> [target]",
-    cmdDescCompact: "Toggle single-line capsule mode and full tree layout: /lingual-compact",
     cmdDescLast: "Replay previous companion card: /last",
-    cmdDescAgent: "View companion customization guide: /lingual-agent",
     shortcutNextPage: "Next companion page segment",
     shortcutPrevPage: "Previous companion page segment",
     capsuleSlot1Prefix: "Spk",
@@ -1268,16 +1264,13 @@ var LANGUAGE_PRESETS = {
     statusReportCache: "Cache",
     statusReportLayout: "Layout: Trifecta Minimalist Left-Rail Tree",
     statusReportAuth: "Auth: Pi Native In-Process Credentials",
-    statusReportShortcuts: "Shortcuts: /lingual \xB7 /slots \xB7 /lang \xB7 /lingual-compact",
+    statusReportShortcuts: "Shortcuts: /lingual \xB7 /slots \xB7 /lang \xB7 /last",
     statusReportTuner: "Slot Tuner: Built-in lingual-tuner skill",
     modeDescOriginal: "Companion \xB7 0ms pass-through",
     modeDescEnglish: "Direct \xB7 Deep code reasoning",
     modeDescOff: "Disabled",
     modelCurrentLabel: "Current companion model",
     modelFollowSession: "follow session",
-    modelAvailableListHeader: "Available models (use /lingual-model <id>):",
-    modelAutoFollowDesc: "auto (follow active session model)",
-    modelSelectHint: "Use /lingual-model <model-id> or auto.",
     langUsageHint: "Usage: /lang <source> [target] (e.g. /lang ja en or /lang en zh)",
     langList: ["\u2022 zh", "\u2022 ja", "\u2022 en", "\u2022 es", "\u2022 fr", "\u2022 de", "\u2022 ru", "\u2022 ko"],
     slotsHeader: "Dynamic Slots Architecture",
@@ -1328,12 +1321,8 @@ var LANGUAGE_PRESETS = {
     notifyTimeout: "[zh \u21C4 en] \u63D0\u793A\u8BCD\u4F18\u5316\u8BF7\u6C42\u672A\u5C31\u7EEA\u6216\u8D85\u65F6\uFF0C\u672C\u6B21\u5DF2\u653E\u884C\u539F\u6587",
     notifyError: "[zh \u21C4 en] \u63D0\u793A\u8BCD\u4F18\u5316\u8BF7\u6C42\u5F02\u5E38\uFF0C\u672C\u6B21\u5DF2\u653E\u884C\u539F\u6587",
     cmdDescMode: "\u5207\u6362\u4F34\u5B66\u6A21\u5F0F: /lingual",
-    cmdDescStatus: "\u67E5\u770B\u72B6\u6001\u62A5\u544A: /lingual status",
-    cmdDescModel: "\u5207\u6362\u4F34\u5B66\u6A21\u578B: /lingual model [id]",
     cmdDescLang: "\u5207\u6362\u4F34\u5B66\u8BED\u8A00: /lang <code>",
-    cmdDescCompact: "\u5207\u6362\u80F6\u56CA\u4E0E\u6811\u72B6\u56FE: /lingual compact",
     cmdDescLast: "\u56DE\u770B\u4E0A\u4E00\u6761\u5361\u7247: /last",
-    cmdDescAgent: "\u67E5\u770B\u4F34\u5B66\u6307\u5357: /lingual tuner",
     shortcutNextPage: "\u5207\u6362\u81F3\u4E0B\u4E00\u6BB5\u4F34\u5B66\u5207\u7247",
     shortcutPrevPage: "\u5207\u6362\u81F3\u4E0A\u4E00\u6BB5\u4F34\u5B66\u5207\u7247",
     capsuleSlot1Prefix: "\u53E3",
@@ -1354,9 +1343,6 @@ var LANGUAGE_PRESETS = {
     modeDescOff: "\u5DF2\u5173\u95ED",
     modelCurrentLabel: "\u5F53\u524D\u4F34\u5B66\u6A21\u578B",
     modelFollowSession: "\u8DDF\u968F\u4F1A\u8BDD",
-    modelAvailableListHeader: "\u53EF\u7528\u6A21\u578B (\u8F93\u5165 /lingual model <id> \u5207\u6362):",
-    modelAutoFollowDesc: "auto (\u81EA\u52A8\u8DDF\u968F\u5F53\u524D\u4F1A\u8BDD\u4E3B\u6A21\u578B)",
-    modelSelectHint: "\u53EF\u8F93\u5165 /lingual model <model-id> \u6216 auto \u6307\u5B9A\u6A21\u578B\u3002",
     langUsageHint: "\u7528\u6CD5: /lang <zh|ja|en|es|fr|de> [target] (\u5982 /lang ja \u6216 /lang zh ja)",
     langList: ["\u2022 zh", "\u2022 ja", "\u2022 en", "\u2022 es", "\u2022 fr", "\u2022 de", "\u2022 ko", "\u2022 ru"],
     slotsHeader: "\u52A8\u6001\u69FD\u4F4D\u67B6\u6784",
@@ -1407,12 +1393,8 @@ var LANGUAGE_PRESETS = {
     notifyTimeout: "[ja \u21C4 en] \u30BF\u30A4\u30E0\u30A2\u30A6\u30C8\u306E\u305F\u3081\u539F\u6587\u3092\u9001\u4FE1\u3057\u307E\u3057\u305F",
     notifyError: "[ja \u21C4 en] \u30A8\u30E9\u30FC\u306E\u305F\u3081\u539F\u6587\u3092\u9001\u4FE1\u3057\u307E\u3057\u305F",
     cmdDescMode: "\u30E2\u30FC\u30C9\u5207\u66FF: /lingual",
-    cmdDescStatus: "\u72B6\u614B\u8868\u793A: /lingual status",
-    cmdDescModel: "\u30E2\u30C7\u30EB\u5207\u66FF: /lingual model [id]",
     cmdDescLang: "\u8A00\u8A9E\u5207\u66FF: /lang <code>",
-    cmdDescCompact: "\u8868\u793A\u5207\u66FF: /lingual compact",
     cmdDescLast: "\u524D\u56DE\u30AB\u30FC\u30C9\u518D\u8868\u793A: /last",
-    cmdDescAgent: "\u30AC\u30A4\u30C9\u8868\u793A: /lingual tuner",
     shortcutNextPage: "\u6B21\u306E\u30B9\u30E9\u30A4\u30B9\u3078\u79FB\u52D5",
     shortcutPrevPage: "\u524D\u306E\u30B9\u30E9\u30A4\u30B9\u3078\u79FB\u52D5",
     capsuleSlot1Prefix: "\u53E3",
@@ -1434,8 +1416,6 @@ var LANGUAGE_PRESETS = {
     modelCurrentLabel: "\u73FE\u5728\u306E\u5B66\u7FD2\u30E2\u30C7\u30EB",
     modelFollowSession: "\u30BB\u30C3\u30B7\u30E7\u30F3\u9023\u52D5",
     modelAvailableListHeader: "\u5229\u7528\u53EF\u80FD\u306A\u30E2\u30C7\u30EB:",
-    modelAutoFollowDesc: "auto (\u30BB\u30C3\u30B7\u30E7\u30F3\u9023\u52D5)",
-    modelSelectHint: "/lingual model <id> \u307E\u305F\u306F auto \u3092\u6307\u5B9A\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
     langUsageHint: "\u4F7F\u3044\u65B9: /lang <source> [target] (\u4F8B: /lang ja en)",
     langList: ["\u2022 ja", "\u2022 en", "\u2022 zh", "\u2022 es", "\u2022 fr", "\u2022 de", "\u2022 ko", "\u2022 ru"],
     slotsHeader: "\u30C0\u30A4\u30CA\u30DF\u30C3\u30AF\u30B9\u30ED\u30C3\u30C8",
@@ -3191,15 +3171,7 @@ function shouldInjectNativeReplyGuard(originalText, _sourceLang = "en", enabled 
   return !isEnglishWritingIntent;
 }
 function formatNativeReplyGuardHint(sourceLang = "en") {
-  const langMap = {
-    ja: "Japanese",
-    zh: "Chinese",
-    tw: "Chinese",
-    es: "Spanish",
-    fr: "French",
-    de: "German"
-  };
-  const name = langMap[sourceLang] || "the user's native language";
+  const name = resolveLanguageName(sourceLang);
   return `
 
 (Please reply and explain in ${name}.)`;

@@ -634,7 +634,7 @@ export default function (pi: ExtensionAPI) {
       modifySlots: diskForMode.modifySlots ?? state.modifySlots,
     }).filter((s) => s.enabled !== false && s.role !== "vocab");
 
-    const targetMode = activeModes.find((m) => m.id === nextMode);
+    const targetMode = activeModes.find((m) => m.id === nextMode || m.id === (nextMode === "english" ? "direct" : nextMode === "original" ? "companion" : nextMode === "modify" ? "live-flow" : nextMode === "select" ? "candidates" : nextMode));
 
     if (nextMode === "english" || nextMode === "direct") {
       const firstLabel = targetMode?.slots[0]?.label || activeDirectSlots[0]?.label || "Direct";
@@ -662,8 +662,14 @@ export default function (pi: ExtensionAPI) {
     } else if (targetMode) {
       const modeNum = activeModes.indexOf(targetMode) + 1;
       const firstSlotLabel = targetMode.slots.find((s) => s.role !== "vocab")?.label || targetMode.slots[0]?.label || targetMode.name;
+      const isZh = state.sourceLang === "zh" || state.sourceLang === "tw";
       try {
-        ctx.ui.notify(`[${pair}] [${modeNum}. ${targetMode.name}] (${firstSlotLabel})`, "info");
+        ctx.ui.notify(
+          isZh
+            ? `[${pair}] 已切换至【${modeNum}. ${targetMode.name} (${targetMode.id})】(${firstSlotLabel})`
+            : `[${pair}] Switched to [${modeNum}. ${targetMode.name} (${targetMode.id})] (${firstSlotLabel})`,
+          "info"
+        );
       } catch {}
     }
   };
@@ -2086,31 +2092,6 @@ export default function (pi: ExtensionAPI) {
             title: "✦ 候補を選んで送信",
             keepOrig: "原文のまま",
             hint: `数字 1-${candidates.length} で即送信 · ←→/↑↓ 選択 Enter 確定 · 0/Esc 原文送信`,
-          },
-          ko: {
-            title: "✦ 후보 선택 전송",
-            keepOrig: "원문 그대로",
-            hint: `숫자 1-${candidates.length} 즉시 전송 · ←→/↑↓ 이동 Enter 확인 · 0/Esc 원문 전송`,
-          },
-          es: {
-            title: "✦ Elegir opción",
-            keepOrig: "Original",
-            hint: `1-${candidates.length} enviar · ←→/↑↓ Enter · 0/Esc original`,
-          },
-          fr: {
-            title: "✦ Choisir option",
-            keepOrig: "Original",
-            hint: `1-${candidates.length} envoyer · ←→/↑↓ Entrée · 0/Esc original`,
-          },
-          de: {
-            title: "✦ Option senden",
-            keepOrig: "Original",
-            hint: `1-${candidates.length} senden · ←→/↑↓ Enter · 0/Esc Original`,
-          },
-          ru: {
-            title: "✦ Выбор варианта",
-            keepOrig: "Оригинал",
-            hint: `1-${candidates.length} сразу · ←→/↑↓ Enter · 0/Esc оригинал`,
           },
           en: {
             title: "✦ Pick candidate",

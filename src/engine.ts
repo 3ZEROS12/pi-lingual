@@ -753,15 +753,7 @@ export function shouldInjectNativeReplyGuard(originalText: string, _sourceLang =
 }
 
 export function formatNativeReplyGuardHint(sourceLang = "en"): string {
-  const langMap: Record<string, string> = {
-    ja: "Japanese",
-    zh: "Chinese",
-    tw: "Chinese",
-    es: "Spanish",
-    fr: "French",
-    de: "German",
-  };
-  const name = langMap[sourceLang] || "the user's native language";
+  const name = resolveLanguageName(sourceLang);
   return `\n\n(Please reply and explain in ${name}.)`;
 }
 

@@ -468,12 +468,8 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     notifyError: "[en ⇄ ja] Prompt rewrite error; original prompt passed",
 
     cmdDescMode: "Cycle companion mode [en ⇄ ja]: [Companion] ➔ [Direct] ➔ [Off]",
-    cmdDescStatus: "View companion status and model diagnostics: /lingual-status",
-    cmdDescModel: "Inspect or switch companion model [en ⇄ ja]: /lingual-model [model-id|auto]",
     cmdDescLang: "Switch language pair [en ⇄ ja]: /lang <source> [target]",
-    cmdDescCompact: "Toggle single-line capsule mode and full tree layout: /lingual-compact",
     cmdDescLast: "Replay previous companion card: /last",
-    cmdDescAgent: "View companion customization guide: /lingual-agent",
     shortcutNextPage: "Next companion page segment",
     shortcutPrevPage: "Previous companion page segment",
 
@@ -489,7 +485,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     statusReportCache: "Cache",
     statusReportLayout: "Layout: Trifecta Minimalist Left-Rail Tree",
     statusReportAuth: "Auth: Pi Native In-Process Credentials",
-    statusReportShortcuts: "Shortcuts: /lingual · /slots · /lang · /lingual-compact",
+    statusReportShortcuts: "Shortcuts: /lingual · /slots · /lang · /last",
     statusReportTuner: "Slot Tuner: Built-in lingual-tuner skill",
     modeDescOriginal: "Companion · 0ms pass-through",
     modeDescEnglish: "Direct · Deep code reasoning",
@@ -497,9 +493,6 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
 
     modelCurrentLabel: "Current companion model",
     modelFollowSession: "follow session",
-    modelAvailableListHeader: "Available models (use /lingual-model <id>):",
-    modelAutoFollowDesc: "auto (follow active session model)",
-    modelSelectHint: "Use /lingual-model <model-id> or auto.",
 
     langUsageHint: "Usage: /lang <source> [target] (e.g. /lang ja en or /lang en zh)",
     langList: ["• zh", "• ja", "• en", "• es", "• fr", "• de", "• ru", "• ko"],
@@ -555,12 +548,8 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     notifyError: "[zh ⇄ en] 提示词优化请求异常，本次已放行原文",
 
     cmdDescMode: "切换伴学模式: /lingual",
-    cmdDescStatus: "查看状态报告: /lingual status",
-    cmdDescModel: "切换伴学模型: /lingual model [id]",
     cmdDescLang: "切换伴学语言: /lang <code>",
-    cmdDescCompact: "切换胶囊与树状图: /lingual compact",
     cmdDescLast: "回看上一条卡片: /last",
-    cmdDescAgent: "查看伴学指南: /lingual tuner",
     shortcutNextPage: "切换至下一段伴学切片",
     shortcutPrevPage: "切换至上一段伴学切片",
 
@@ -584,9 +573,6 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
 
     modelCurrentLabel: "当前伴学模型",
     modelFollowSession: "跟随会话",
-    modelAvailableListHeader: "可用模型 (输入 /lingual model <id> 切换):",
-    modelAutoFollowDesc: "auto (自动跟随当前会话主模型)",
-    modelSelectHint: "可输入 /lingual model <model-id> 或 auto 指定模型。",
 
     langUsageHint: "用法: /lang <zh|ja|en|es|fr|de> [target] (如 /lang ja 或 /lang zh ja)",
     langList: ["• zh", "• ja", "• en", "• es", "• fr", "• de", "• ko", "• ru"],
@@ -642,12 +628,8 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     notifyError: "[ja ⇄ en] エラーのため原文を送信しました",
 
     cmdDescMode: "モード切替: /lingual",
-    cmdDescStatus: "状態表示: /lingual status",
-    cmdDescModel: "モデル切替: /lingual model [id]",
     cmdDescLang: "言語切替: /lang <code>",
-    cmdDescCompact: "表示切替: /lingual compact",
     cmdDescLast: "前回カード再表示: /last",
-    cmdDescAgent: "ガイド表示: /lingual tuner",
     shortcutNextPage: "次のスライスへ移動",
     shortcutPrevPage: "前のスライスへ移動",
 
@@ -672,8 +654,6 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     modelCurrentLabel: "現在の学習モデル",
     modelFollowSession: "セッション連動",
     modelAvailableListHeader: "利用可能なモデル:",
-    modelAutoFollowDesc: "auto (セッション連動)",
-    modelSelectHint: "/lingual model <id> または auto を指定してください。",
 
     langUsageHint: "使い方: /lang <source> [target] (例: /lang ja en)",
     langList: ["• ja", "• en", "• zh", "• es", "• fr", "• de", "• ko", "• ru"],
