@@ -25,9 +25,10 @@
   - Eliminated English-only assumptions. The proofreading and prompt compiler dynamically attaches linguistic profiles for English, Chinese, Japanese, and other target languages.
 - **Dynamic Semantic Variable Interpolation (`${sourceLang}`, `${targetLang}`, `${explainLang}`)**:
   - Eliminated all hardcoded Sino-centric or English-only assumptions from generic prompt templates. Prompt slots dynamically expand variables into the user's active native language, target foreign language, and cognitive explanation language.
-- **First-Run Language Handshake (Cold-Boot Zero Residue)**:
-  - When installed on a fresh machine without an existing `lingual.json`, `session_start` sniffs the native OS locale and presents an ephemeral pre-filled input (e.g. `zh en` or `ja en`).
-  - Unmounts with 0 visual residue upon pressing Enter and permanently marks configuration complete so it never prompts again.
+- **Zero-Config Cold Boot (Detected Pair, Zero Writes)**:
+  - On fresh installs without an existing `lingual.json`, `session_start` auto-detects the native OS locale without interactive prompts or popups.
+  - The language pair is activated purely in-memory (abbreviated `zh ⇄ en`, `ja ⇄ en`), defaulting cleanly to `companion` mode.
+  - The configuration file is left untouched on cold boot until the developer explicitly customizes settings via `/lang`, `/lingual`, `/slots`, or `lingual-tuner`. The legacy `configured` flag is no longer written.
 - **Programmatic Mode CRUD API & Geek CLI Commands (`/lingual mode`, `/lingual loadout`)**:
   - Implemented typed, immutable helper functions (`addCustomMode`, `removeCustomMode`, `updateCustomMode`, `toggleCustomMode`, `addSlotToMode`, `removeSlotFromMode`).
   - Added CLI management commands: `/lingual mode [list | add | rm | toggle | reset]` and `/lingual loadout [list | apply <id>]`.

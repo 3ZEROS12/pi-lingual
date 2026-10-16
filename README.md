@@ -33,7 +33,7 @@ Install directly inside Pi Coding Agent:
 pi install npm:pi-lingual
 ```
 
-Works out of the box with your current session model credentials. No extra API keys or setup required.
+Works out of the box with your current session model credentials. Automatically follows your system language (e.g. `zh ⇄ en`, `ja ⇄ en`) on cold boot with zero interactive setup dialogs. No extra API keys or setup required.
 
 > 💡 **Recommended Terminal Mode**:  
 > For companion learning and historical review, we recommend configuring `"tuiMode": "regular"` in `~/.pi/agent/settings.json`. Translation and vocab cards flow naturally with your conversation stream, allowing you to scroll back up anytime to review past expressions without sandbox barriers.

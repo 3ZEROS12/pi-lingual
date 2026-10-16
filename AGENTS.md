@@ -55,9 +55,11 @@ Out of the box, `pi-lingual` ships with exactly three golden baselines (with `0 
   `delve, tapestry, seamless, seamlessly, robust, enhance, streamline, comprehensive, in summary, game-changer, revolutionize, unleash, thrilled to announce, pivotal, holistic, multifaceted`.
 - Transformed outputs must sound like authentic, grounded, human software engineers.
 
-### Invariant 7: First-Run Language Handshake (Cold-Boot Zero Residue)
-- When installed on a fresh machine without an existing `lingual.json`, `session_start` sniffs the native OS locale and presents an ephemeral pre-filled input (e.g. `zh en` or `ja en`).
-- Upon pressing Enter, the handshake immediately unmounts, restoring a pristine terminal screen with **0 visual residue**, writes to `~/.pi/agent/lingual.json`, and permanently freezes so it never prompts again.
+### Invariant 7: Zero-Config Cold Boot (Detected Pair, Zero Writes)
+- On fresh installs without an existing `~/.pi/agent/lingual.json`, `session_start` sniffs the native OS locale and activates the language pair purely in-memory with zero interactive prompt dialogs (`ui.input` is never called).
+- The language pair is displayed uniformly in clean abbreviated notation (`zh ⇄ en`, `ja ⇄ en`).
+- The active mode defaults cleanly to `companion` (pass-through + Left-Rail bilingual card).
+- Zero-Disk-Write Contract: The configuration file on disk is left untouched unless the developer explicitly mutates settings (via `/lang`, `/lingual`, `/slots`, or `lingual-tuner`). The only key written on cold boot is `lastSeenVersion` (gated upon successful delivery of the feature banner). The legacy `configured` flag is no longer written.
 
 ### Invariant 8: Streamlined Command Matrix & Tactical Loadout CLI
 - Registered first-class commands:
