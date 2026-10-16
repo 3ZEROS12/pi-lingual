@@ -185,4 +185,24 @@ test("loading indicators geometry - strictly obeys VisualWidth <= cols across 9 
   }
 });
 
+test("narrow terminals - truncateVisual pairs brackets accurately without cross-species mutation (F4-4)", () => {
+  // Truncating square bracket must close with square bracket ']', never parenthesis ')'
+  const squareSample = " [lingual · zh ⇄ en] 模式切换";
+  const clippedSquare = truncateVisual(squareSample, 18);
+  assert.ok(clippedSquare.endsWith("]..."), `Truncating square bracket must close with ']', got: "${clippedSquare}"`);
+  assert.ok(!clippedSquare.includes(")"), `Must NOT cross-mutate square bracket into parenthesis: "${clippedSquare}"`);
+
+  // Truncating round parenthesis must close with round parenthesis ')'
+  const roundSample = " (some instruction here that overflows) ";
+  const clippedRound = truncateVisual(roundSample, 18);
+  assert.ok(clippedRound.endsWith(")..."), `Truncating round parenthesis must close with ')', got: "${clippedRound}"`);
+
+  // Truncating CJK black lenticular bracket 【 must close with 】
+  const cjkBracket = " 【重要模式说明】长文本超宽截断测试 ";
+  const clippedCjk = truncateVisual(cjkBracket, 16);
+  assert.ok(clippedCjk.includes("】"), `Truncating 【 must close with 】, got: "${clippedCjk}"`);
+  assert.ok(!clippedCjk.includes("）"), `Must NOT cross-mutate 【 into ）, got: "${clippedCjk}"`);
+});
+
+
 

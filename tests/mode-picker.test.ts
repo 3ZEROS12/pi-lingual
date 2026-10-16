@@ -182,3 +182,92 @@ test("mode picker interactive custom UI - arrow navigation and Esc cancellation"
   await cancelPromise;
   assert.equal(notifications.length, prevCount, "Esc cancel must produce zero side effects");
 });
+
+test("mode picker layout - suppresses redundant English tags when option name is already in English (F4-3)", () => {
+  const englishOptions: ModePickerOption[] = [
+    { num: 1, id: "companion", name: "Companion", englishTag: "Companion" },
+    { num: 2, id: "direct", name: "Logical Spec", englishTag: "Logical Spec" },
+    { num: 3, id: "live-flow", name: "Live Flow", englishTag: "Live Flow" },
+    { num: 0, id: "off", name: "Off", englishTag: "Off" },
+  ];
+
+  const lines = formatModePickerLines(
+    "Mode Switch",
+    "Press 1/2/3/0 to switch, Esc to cancel",
+    "en ⇄ ja",
+    englishOptions,
+    0,
+    80
+  );
+
+  const text = lines.join("\n");
+  assert.ok(!text.includes("(Companion)"), "Must not redundantly append (Companion) when name is already Companion");
+  assert.ok(!text.includes("(Logical Spec)"), "Must not redundantly append (Logical Spec)");
+  assert.ok(!text.includes("(Live Flow)"), "Must not redundantly append (Live Flow)");
+  assert.ok(!text.includes("(Off)"), "Must not redundantly append (Off)");
+});
+
+test("mode picker interactive custom UI - Down/Up keys advance and retreat linearly across all items (F4-2)", async () => {
+  const registeredCommands: Record<string, any> = {};
+  const mockPi: any = {
+    on() {},
+    registerCommand(name: string, def: any) {
+      registeredCommands[name] = def;
+    },
+    registerShortcut() {},
+  };
+
+  extensionFactory(mockPi);
+
+  let capturedComponent: any = null;
+  let chosenValue: string | null = null;
+  const mockCtx: any = {
+    hasUI: true,
+    ui: {
+      custom(factory: any) {
+        return new Promise((resolve) => {
+          capturedComponent = factory(
+            { requestRender() {} },
+            { fg: (_c: string, t: string) => t, bold: (t: string) => t },
+            null,
+            (chosen: string | null) => {
+              chosenValue = chosen;
+              resolve(chosen);
+            }
+          );
+        });
+      },
+      notify() {},
+      setStatus() {},
+      setWidget() {},
+      theme: { fg: (_c: string, t: string) => t },
+    },
+  };
+
+  // Ensure clean baseline mode at index 0 (companion)
+  await registeredCommands["lingual"].handler("1", mockCtx);
+
+  // Launch picker
+  registeredCommands["lingual"].handler("", mockCtx);
+
+  // Press Down (\x1b[B) once: from index 0 -> index 1
+  capturedComponent.handleInput("\x1b[B");
+  // Press Enter to confirm: should be option 2 (direct)
+  capturedComponent.handleInput("\r");
+  assert.equal(chosenValue, "direct", "Down key once must move from index 0 to index 1 (direct)");
+
+  // Launch picker again, press Down twice: index 0 -> 1 -> 2
+  registeredCommands["lingual"].handler("", mockCtx);
+  capturedComponent.handleInput("\x1b[B");
+  capturedComponent.handleInput("\x1b[B");
+  capturedComponent.handleInput("\r");
+  assert.equal(chosenValue, "live-flow", "Down key twice must move from index 0 to index 2 (live-flow)");
+
+  // Launch picker again, press Down three times: index 0 -> 1 -> 2 -> 3 (off)
+  registeredCommands["lingual"].handler("", mockCtx);
+  capturedComponent.handleInput("\x1b[B");
+  capturedComponent.handleInput("\x1b[B");
+  capturedComponent.handleInput("\x1b[B");
+  capturedComponent.handleInput("\r");
+  assert.equal(chosenValue, "off", "Down key three times must move from index 0 to index 3 (off)");
+});

@@ -1426,24 +1426,14 @@ export default function (pi: ExtensionAPI) {
                 return;
               }
 
-              // Arrow navigation and vim keys
-              if (data === "\x1b[C" || data === "l" || data === "\t") {
+              // Arrow navigation and vim keys (Down/Right/j/l/Tab advances; Up/Left/k/h retreats)
+              if (data === "\x1b[C" || data === "\x1b[B" || data === "l" || data === "j" || data === "\t") {
                 selectedIndex = (selectedIndex + 1) % options.length;
                 tui?.requestRender?.();
                 return;
               }
-              if (data === "\x1b[D" || data === "h") {
+              if (data === "\x1b[D" || data === "\x1b[A" || data === "h" || data === "k") {
                 selectedIndex = (selectedIndex - 1 + options.length) % options.length;
-                tui?.requestRender?.();
-                return;
-              }
-              if (data === "\x1b[B" || data === "j") {
-                selectedIndex = (selectedIndex + 2) % options.length;
-                tui?.requestRender?.();
-                return;
-              }
-              if (data === "\x1b[A" || data === "k") {
-                selectedIndex = (selectedIndex - 2 + options.length) % options.length;
                 tui?.requestRender?.();
                 return;
               }

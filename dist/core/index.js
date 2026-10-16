@@ -2609,7 +2609,11 @@ function isTargetLanguageOnly(text, sourceLang, targetLang = "en") {
   const normSource = (sourceLang || "zh").toLowerCase().split("-")[0];
   const normTarget = (targetLang || "en").toLowerCase().split("-")[0];
   if (normTarget === "en") {
-    if (normSource !== "en" && hasSourceScript(text, normSource)) {
+    const NON_LATIN_SOURCES = /* @__PURE__ */ new Set(["zh", "tw", "ja", "ko", "ru", "ar"]);
+    if (!NON_LATIN_SOURCES.has(normSource)) {
+      return false;
+    }
+    if (hasSourceScript(text, normSource)) {
       return false;
     }
     const words = text.trim().split(/\s+/).filter((w) => /[a-zA-Z]{2,}/.test(w));

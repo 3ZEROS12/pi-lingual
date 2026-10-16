@@ -98,14 +98,24 @@ export function getVisualWidth(str: string): number {
 
 /** Returns the closing delimiters needed to rebalance a hard-clipped fragment ("" when balanced). */
 function closingDelimitersFor(text: string): string {
-  const deficit = (opens: RegExp, closes: RegExp) => {
-    const o = (text.match(opens) || []).length;
-    const c = (text.match(closes) || []).length;
-    return Math.max(0, o - c);
-  };
-  return (
-    ")".repeat(deficit(/[\(\[\{]/g, /[\)\]\}]/g)) + "）".repeat(deficit(/[（【]/g, /[）】]/g))
-  );
+  const pairs: [RegExp, RegExp, string][] = [
+    [/\(/g, /\)/g, ")"],
+    [/\[/g, /\]/g, "]"],
+    [/\{/g, /\}/g, "}"],
+    [/（/g, /）/g, "）"],
+    [/【/g, /】/g, "】"],
+    [/「/g, /」/g, "」"],
+    [/『/g, /』/g, "』"],
+  ];
+  let closers = "";
+  for (const [openRe, closeRe, closer] of pairs) {
+    const o = (text.match(openRe) || []).length;
+    const c = (text.match(closeRe) || []).length;
+    if (o > c) {
+      closers += closer.repeat(o - c);
+    }
+  }
+  return closers;
 }
 
 /**
@@ -215,7 +225,10 @@ export function formatModePickerLines(
 
   // Determine whether to arrange in 2 columns or 1 column
   const rawCapsules = options.map((opt) => {
-    const tag = opt.englishTag ? ` (${opt.englishTag})` : "";
+    const showTag =
+      opt.englishTag &&
+      opt.englishTag.toLowerCase() !== opt.name.toLowerCase();
+    const tag = showTag ? ` (${opt.englishTag})` : "";
     return `[${opt.num}] ${opt.name}${tag}`;
   });
 

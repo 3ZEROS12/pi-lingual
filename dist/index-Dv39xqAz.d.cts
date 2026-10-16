@@ -461,8 +461,9 @@ declare function shouldShieldBypass(text: string): boolean;
 declare function hasSourceScript(text: string, sourceLang: string): boolean;
 /**
  * Determines whether text is already written directly in the target language (e.g. English).
- * When sourceLang is CJK and input contains 0 CJK characters but >= 2 English words,
+ * When sourceLang is CJK or Cyrillic and input contains 0 native characters but >= 2 English words,
  * the developer is already authoring fluently in the target language.
+ * Latin-to-Latin pairs (e.g. es, fr, de -> en) never bypass here to prevent false positives on unaccented text.
  */
 declare function isTargetLanguageOnly(text: string, sourceLang: string, targetLang?: string): boolean;
 /**

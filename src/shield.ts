@@ -156,8 +156,9 @@ const IMPERATIVE_ENGINEERING_VERBS = new Set([
 
 /**
  * Determines whether text is already written directly in the target language (e.g. English).
- * When sourceLang is CJK and input contains 0 CJK characters but >= 2 English words,
+ * When sourceLang is CJK or Cyrillic and input contains 0 native characters but >= 2 English words,
  * the developer is already authoring fluently in the target language.
+ * Latin-to-Latin pairs (e.g. es, fr, de -> en) never bypass here to prevent false positives on unaccented text.
  */
 export function isTargetLanguageOnly(
   text: string,
@@ -168,7 +169,14 @@ export function isTargetLanguageOnly(
   const normTarget = (targetLang || "en").toLowerCase().split("-")[0];
 
   if (normTarget === "en") {
-    if (normSource !== "en" && hasSourceScript(text, normSource)) {
+    // Target-language auto-bypass is strictly for non-Latin source scripts (CJK & Cyrillic)
+    // where character script boundaries are 100% deterministic.
+    const NON_LATIN_SOURCES = new Set(["zh", "tw", "ja", "ko", "ru", "ar"]);
+    if (!NON_LATIN_SOURCES.has(normSource)) {
+      return false;
+    }
+
+    if (hasSourceScript(text, normSource)) {
       return false;
     }
     const words = text.trim().split(/\s+/).filter((w) => /[a-zA-Z]{2,}/.test(w));

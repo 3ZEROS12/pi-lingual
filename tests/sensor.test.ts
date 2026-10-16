@@ -137,3 +137,26 @@ test("smart language sensor - target language auto-bypass in extension input flo
     "Status badge must indicate spec ok"
   );
 });
+
+test("smart language sensor - Latin source languages (es/fr/de) never falsely trigger auto-bypass on unaccented text (F4-1)", () => {
+  // Spanish sentence with standard unaccented Latin characters
+  assert.equal(
+    isTargetLanguageOnly("crea una nueva clase para el usuario", "es", "en"),
+    false,
+    "Spanish sentence without diacritics must NOT falsely bypass translation"
+  );
+
+  // German sentence with standard ASCII transliteration
+  assert.equal(
+    isTargetLanguageOnly("erstelle eine neue klasse fuer den benutzer", "de", "en"),
+    false,
+    "German sentence without umlauts must NOT falsely bypass translation"
+  );
+
+  // French sentence
+  assert.equal(
+    isTargetLanguageOnly("creer une nouvelle classe pour le projet", "fr", "en"),
+    false,
+    "French sentence without accents must NOT falsely bypass translation"
+  );
+});

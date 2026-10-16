@@ -87,12 +87,24 @@ function getVisualWidth(str) {
   return width;
 }
 function closingDelimitersFor(text) {
-  const deficit = (opens, closes) => {
-    const o = (text.match(opens) || []).length;
-    const c = (text.match(closes) || []).length;
-    return Math.max(0, o - c);
-  };
-  return ")".repeat(deficit(/[\(\[\{]/g, /[\)\]\}]/g)) + "\uFF09".repeat(deficit(/[（【]/g, /[）】]/g));
+  const pairs = [
+    [/\(/g, /\)/g, ")"],
+    [/\[/g, /\]/g, "]"],
+    [/\{/g, /\}/g, "}"],
+    [/（/g, /）/g, "\uFF09"],
+    [/【/g, /】/g, "\u3011"],
+    [/「/g, /」/g, "\u300D"],
+    [/『/g, /』/g, "\u300F"]
+  ];
+  let closers = "";
+  for (const [openRe, closeRe, closer] of pairs) {
+    const o = (text.match(openRe) || []).length;
+    const c = (text.match(closeRe) || []).length;
+    if (o > c) {
+      closers += closer.repeat(o - c);
+    }
+  }
+  return closers;
 }
 function truncateVisual(str, maxVisualCols) {
   if (maxVisualCols <= 0) return "";
@@ -151,7 +163,8 @@ function formatModePickerLines(title, hint, pair, options, selectedIndex, maxCol
   const rawHeader = ` [lingual \xB7 ${pair}] ${title} (${hint})`;
   lines.push(color("muted", truncateVisual(rawHeader, cols)));
   const rawCapsules = options.map((opt) => {
-    const tag = opt.englishTag ? ` (${opt.englishTag})` : "";
+    const showTag = opt.englishTag && opt.englishTag.toLowerCase() !== opt.name.toLowerCase();
+    const tag = showTag ? ` (${opt.englishTag})` : "";
     return `[${opt.num}] ${opt.name}${tag}`;
   });
   const maxRawWidth = Math.max(...rawCapsules.map((c) => getVisualWidth(c)), 15);
@@ -3110,7 +3123,11 @@ function isTargetLanguageOnly(text, sourceLang, targetLang = "en") {
   const normSource = (sourceLang || "zh").toLowerCase().split("-")[0];
   const normTarget = (targetLang || "en").toLowerCase().split("-")[0];
   if (normTarget === "en") {
-    if (normSource !== "en" && hasSourceScript(text, normSource)) {
+    const NON_LATIN_SOURCES = /* @__PURE__ */ new Set(["zh", "tw", "ja", "ko", "ru", "ar"]);
+    if (!NON_LATIN_SOURCES.has(normSource)) {
+      return false;
+    }
+    if (hasSourceScript(text, normSource)) {
       return false;
     }
     const words = text.trim().split(/\s+/).filter((w) => /[a-zA-Z]{2,}/.test(w));
@@ -5573,23 +5590,13 @@ Usage: /lingual loadout [list | apply <id>] (e.g. /lingual loadout apply spec)`;
                 done(null);
                 return;
               }
-              if (data === "\x1B[C" || data === "l" || data === "	") {
+              if (data === "\x1B[C" || data === "\x1B[B" || data === "l" || data === "j" || data === "	") {
                 selectedIndex = (selectedIndex + 1) % options.length;
                 tui?.requestRender?.();
                 return;
               }
-              if (data === "\x1B[D" || data === "h") {
+              if (data === "\x1B[D" || data === "\x1B[A" || data === "h" || data === "k") {
                 selectedIndex = (selectedIndex - 1 + options.length) % options.length;
-                tui?.requestRender?.();
-                return;
-              }
-              if (data === "\x1B[B" || data === "j") {
-                selectedIndex = (selectedIndex + 2) % options.length;
-                tui?.requestRender?.();
-                return;
-              }
-              if (data === "\x1B[A" || data === "k") {
-                selectedIndex = (selectedIndex - 2 + options.length) % options.length;
                 tui?.requestRender?.();
                 return;
               }
