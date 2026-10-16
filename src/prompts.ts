@@ -655,7 +655,7 @@ export const LANGUAGE_PAIR_ANCHORS: Record<string, LanguageAnchor[]> = {
       vocab: "過剰設計 (over-engineering) · 標準ライブラリ (standard library) · 実装を推奨 (recommend implementation)",
     },
     {
-      input: "Totally on board with that, let's ship it.",
+      input: "Sounds good, let's ship it.",
       spoken: "大賛成です、早速リリースしましょう！",
       spoken_meaning: "Clear approval to release immediately.",
       written: "承認いたしました。本番環境へのデプロイを進行します。",
@@ -712,27 +712,27 @@ export function resolveLanguagePairAnchors(
 ): LanguageAnchor[] {
   const normSource = (sourceLang || "en").toLowerCase().split("-")[0];
   const normTarget = (targetLang || "en").toLowerCase().split("-")[0];
-
-  // 1. English developer baseline (source: "en") - clean English anchors with zero foreign residue
-  if (normSource === "en") {
-    return LANGUAGE_SPECS.en?.anchors || [];
-  }
-
-  // 2. Exact cross-lingual pair (e.g. zh->ja, ja->zh)
   const pairKey = `${normSource}->${normTarget}`;
+
+  // 1. Direct cross-lingual pair match (e.g. en->ja, en->zh, zh->ja, ja->zh)
   if (LANGUAGE_PAIR_ANCHORS[pairKey] && LANGUAGE_PAIR_ANCHORS[pairKey].length > 0) {
     return LANGUAGE_PAIR_ANCHORS[pairKey];
   }
 
-  // 3. Target English (* -> en): return source language anchors
+  // 2. Target English (* -> en): return source language anchors
   if (normTarget === "en" && LANGUAGE_SPECS[normSource]?.anchors?.length > 0) {
     return LANGUAGE_SPECS[normSource].anchors;
   }
 
-  // 4. Fallback for Traditional Chinese (tw)
+  // 3. Fallback for Traditional Chinese (tw)
   if (normSource === "tw") {
     const zhKey = `zh->${normTarget}`;
     if (LANGUAGE_PAIR_ANCHORS[zhKey]) return LANGUAGE_PAIR_ANCHORS[zhKey];
+  }
+
+  // 4. English source fallback when translating to other targets (e.g. en->de, en->fr)
+  if (normSource === "en") {
+    return LANGUAGE_SPECS.en?.anchors || [];
   }
 
   return [];
@@ -793,7 +793,7 @@ export function interpolatePromptVariables(
 
 export function resolvePromptTargetLangName(
   sourceLang = "en",
-  targetLang = "ja",
+  targetLang = "en",
   promptLang?: string
 ): { code: string; name: string } {
   if (promptLang && promptLang.trim()) {
@@ -801,8 +801,9 @@ export function resolvePromptTargetLangName(
     return { code: clean, name: resolveLanguageName(clean) };
   }
   const s = (sourceLang || "en").toLowerCase().split("-")[0];
-  const t = (targetLang || "en").toLowerCase().split("-")[0];
-  const outCode = s === "en" ? t : "en";
+  const t = (targetLang || "").toLowerCase().split("-")[0];
+  // Target language takes precedence if provided; otherwise if source is English default to Japanese, else English
+  const outCode = t ? t : (s === "en" ? "ja" : "en");
   return { code: outCode, name: resolveLanguageName(outCode) };
 }
 
@@ -1040,9 +1041,10 @@ export function buildDirectRewriteSystemPrompt(options: {
   context?: string;
 }): string {
   const normSource = (options.sourceLang || "en").toLowerCase().split("-")[0];
+  const defaultTarget = normSource === "en" ? "ja" : "en";
   const { name: outLangName } = resolvePromptTargetLangName(
     options.sourceLang || "en",
-    options.targetLang || "ja",
+    options.targetLang || defaultTarget,
     options.promptLang
   );
   const spec = LANGUAGE_SPECS[normSource] || LANGUAGE_SPECS.en;
@@ -1070,15 +1072,22 @@ CRITICAL: Use this context strictly to resolve anaphoric pronouns ("here", "this
     ? `{\n  "prompt": "...",\n  "vocab": "term1 (...) · term2 (...)"\n}`
     : `{\n  "prompt": "..."\n}`;
 
-  const anchorBlock = outLangName === "English"
-    ? `[GOLDEN FEW-SHOT ANCHORS (Target: ${outLangName})]:
+  let anchorBlock = "";
+  if (outLangName === "English") {
+    anchorBlock = `[GOLDEN FEW-SHOT ANCHORS (Target: ${outLangName})]:
 - Input: "刚才登录接口报500了，排查一下src/auth.ts里的token过期逻辑，别动数据库配置，改动尽量小"
   Output in ${outLangName}: "Diagnose and fix the 500 error on the login endpoint by inspecting the token expiration logic in \`src/auth.ts\`. Keep the diff minimal, leave unrelated code untouched, and do not modify any database configurations."
 - Input: "把这个函数改成异步的，顺便跑一下测试确保别挂了"
   Output in ${outLangName}: "Refactor the function to be asynchronous while preserving its existing contract and behavior. Run the existing test suite to verify zero regressions."
 - Input: "The login session drops on page refresh, check if cookie expiration in src/auth.ts is wrong, keep diff minimal"
-  Output in ${outLangName}: "Inspect \`src/auth.ts\` to diagnose and fix session loss on page refresh, specifically checking cookie expiration settings while keeping the diff minimal and leaving unrelated code untouched."`
-    : "";
+  Output in ${outLangName}: "Inspect \`src/auth.ts\` to diagnose and fix session loss on page refresh, specifically checking cookie expiration settings while keeping the diff minimal and leaving unrelated code untouched."`;
+  } else if (outLangName === "Japanese") {
+    anchorBlock = `[GOLDEN FEW-SHOT ANCHORS (Target: ${outLangName})]:
+- Input: "刚才登录接口报500了，排查一下src/auth.ts里的token过期逻辑，别动数据库配置，改动尽量小"
+  Output in ${outLangName}: "ログインエンドポイントの500エラーを解消するため、\`src/auth.ts\`のトークン失効ロジックを調査・修正してください。差分は最小限にとどめ、関連のないコードやデータベース設定には一切触れないでください。"
+- Input: "把这个函数改成异步的，顺便跑一下测试确保别挂了"
+  Output in ${outLangName}: "既存の仕様および動作を維持したまま、この関数を非同期（async）にリファクタリングしてください。完了後は既存のテストを実行し、リグレッションがないことを確認してください。"`;
+  }
 
   // Note: Model-facing few-shot mapping anchor for the LLM prompt compiler (not user-facing UI chrome).
   // When target language is English, English imperative verbs are deliberate targets regardless of input language.

@@ -30,7 +30,8 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 // src/extension.ts
 var extension_exports = {};
 __export(extension_exports, {
-  default: () => extension_default
+  default: () => extension_default,
+  extractRecentContextAnchor: () => extractRecentContextAnchor
 });
 module.exports = __toCommonJS(extension_exports);
 var import_node_child_process = require("child_process");
@@ -1244,7 +1245,7 @@ var LANGUAGE_PAIR_ANCHORS = {
       vocab: "\u904E\u5270\u8A2D\u8A08 (over-engineering) \xB7 \u6A19\u6E96\u30E9\u30A4\u30D6\u30E9\u30EA (standard library) \xB7 \u5B9F\u88C5\u3092\u63A8\u5968 (recommend implementation)"
     },
     {
-      input: "Totally on board with that, let's ship it.",
+      input: "Sounds good, let's ship it.",
       spoken: "\u5927\u8CDB\u6210\u3067\u3059\u3001\u65E9\u901F\u30EA\u30EA\u30FC\u30B9\u3057\u307E\u3057\u3087\u3046\uFF01",
       spoken_meaning: "Clear approval to release immediately.",
       written: "\u627F\u8A8D\u3044\u305F\u3057\u307E\u3057\u305F\u3002\u672C\u756A\u74B0\u5883\u3078\u306E\u30C7\u30D7\u30ED\u30A4\u3092\u9032\u884C\u3057\u307E\u3059\u3002",
@@ -1293,9 +1294,6 @@ var LANGUAGE_PAIR_ANCHORS = {
 function resolveLanguagePairAnchors(sourceLang = "en", targetLang = "en") {
   const normSource = (sourceLang || "en").toLowerCase().split("-")[0];
   const normTarget = (targetLang || "en").toLowerCase().split("-")[0];
-  if (normSource === "en") {
-    return LANGUAGE_SPECS.en?.anchors || [];
-  }
   const pairKey = `${normSource}->${normTarget}`;
   if (LANGUAGE_PAIR_ANCHORS[pairKey] && LANGUAGE_PAIR_ANCHORS[pairKey].length > 0) {
     return LANGUAGE_PAIR_ANCHORS[pairKey];
@@ -1306,6 +1304,9 @@ function resolveLanguagePairAnchors(sourceLang = "en", targetLang = "en") {
   if (normSource === "tw") {
     const zhKey = `zh->${normTarget}`;
     if (LANGUAGE_PAIR_ANCHORS[zhKey]) return LANGUAGE_PAIR_ANCHORS[zhKey];
+  }
+  if (normSource === "en") {
+    return LANGUAGE_SPECS.en?.anchors || [];
   }
   return [];
 }
@@ -1340,14 +1341,14 @@ function interpolatePromptVariables(template, vars) {
   const eName = resolveLanguageName(eCode);
   return template.replace(/\$\{sourceLang\}/g, sName).replace(/\$\{targetLang\}/g, tName).replace(/\$\{explainLang\}/g, eName).replace(/\$\{sourceLangCode\}/g, sCode).replace(/\$\{targetLangCode\}/g, tCode).replace(/\$\{explainLangCode\}/g, eCode);
 }
-function resolvePromptTargetLangName(sourceLang = "en", targetLang = "ja", promptLang) {
+function resolvePromptTargetLangName(sourceLang = "en", targetLang = "en", promptLang) {
   if (promptLang && promptLang.trim()) {
     const clean = promptLang.trim().toLowerCase().split("-")[0];
     return { code: clean, name: resolveLanguageName(clean) };
   }
   const s = (sourceLang || "en").toLowerCase().split("-")[0];
-  const t = (targetLang || "en").toLowerCase().split("-")[0];
-  const outCode = s === "en" ? t : "en";
+  const t = (targetLang || "").toLowerCase().split("-")[0];
+  const outCode = t ? t : s === "en" ? "ja" : "en";
   return { code: outCode, name: resolveLanguageName(outCode) };
 }
 var PROMPT_RULE_PRESETS = {
@@ -4812,6 +4813,20 @@ function extractRecentContextAnchor(ctx) {
   if (!ctx) return "";
   try {
     const entries = ctx?.sessionManager?.getEntries?.() || [];
+    const conversationalClosers = [
+      /let me know/i,
+      /hope this helps/i,
+      /feel free to/i,
+      /anything else/i,
+      /happy to help/i,
+      /还有什么/i,
+      /随时告诉我/i,
+      /请随时/i,
+      /如有疑问/i,
+      /需要我继续/i,
+      /お気軽に/i,
+      /他にご質問/i
+    ];
     for (let i = entries.length - 1; i >= 0; i--) {
       const entry = entries[i];
       if (entry?.type === "message" && entry?.message?.role === "assistant") {
@@ -4822,11 +4837,24 @@ function extractRecentContextAnchor(ctx) {
         } else if (Array.isArray(content)) {
           text = content.filter((c) => c?.type === "text" && typeof c.text === "string").map((c) => c.text).join(" ");
         }
-        if (text && text.trim()) {
-          const lines = text.trim().split("\n").filter((l) => l.trim().length > 0);
-          const lastLine = lines[lines.length - 1] || "";
-          return lastLine.slice(0, 160);
+        if (!text || !text.trim()) continue;
+        const rawLines = text.trim().split("\n").map((l) => l.trim()).filter((l) => l.length > 0 && !/^```/.test(l) && !/^\|[-:\s|]+\|$/.test(l));
+        if (rawLines.length === 0) continue;
+        for (let j = rawLines.length - 1; j >= 0; j--) {
+          const line = rawLines[j];
+          if (conversationalClosers.some((re) => re.test(line))) continue;
+          const isTechnical = /`[^`]+`/.test(line) || /[\/\\]/.test(line) || /\.[a-z0-9_-]{2,4}\b/i.test(line) || /[a-z0-9_]\.[a-z0-9_]/i.test(line) || /[_#]/.test(line) || /\b(function|class|const|def|return|import|error|bug|test|file|path|route|api)\b/i.test(line);
+          if (isTechnical && line.length >= 10) {
+            return line.replace(/^[-*•\d\.\s]+/, "").slice(0, 160);
+          }
         }
+        for (let j = rawLines.length - 1; j >= 0; j--) {
+          const line = rawLines[j];
+          if (!conversationalClosers.some((re) => re.test(line)) && line.length >= 8) {
+            return line.replace(/^[-*•\d\.\s]+/, "").slice(0, 160);
+          }
+        }
+        return rawLines[rawLines.length - 1].slice(0, 160);
       }
     }
   } catch {
@@ -6610,3 +6638,7 @@ ${sanitized.rawPayload}` : chosenText;
     }
   });
 }
+// Annotate the CommonJS export names for ESM import in node:
+0 && (module.exports = {
+  extractRecentContextAnchor
+});

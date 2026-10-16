@@ -196,10 +196,11 @@ test("Visual Consistency - Source line tag matches [Original] format and aligns 
 });
 
 test("English Developer Sovereignty - Zero Chinese residue across en ⇄ ja, en ⇄ zh, en ⇄ es, en ⇄ de", () => {
-  // English-speaking developer persona (sourceLang: "en") learning or translating to foreign targets
-  const targets = ["ja", "es", "de", "fr", "ko"];
+  // English-speaking developer persona (sourceLang: "en") translating to Latin/Cyrillic/Korean targets:
+  // Must have ZERO Chinese characters (no Hanzi/Kanji bleed)
+  const nonCjkTargets = ["es", "de", "fr", "ko"];
 
-  for (const target of targets) {
+  for (const target of nonCjkTargets) {
     // 1. Mode 1 Companion System Prompt for English developer
     const enSys = buildSystemPrompt("en", target, false, undefined, "general", getDefaultSlots("en"));
     assert.ok(
@@ -241,6 +242,20 @@ test("English Developer Sovereignty - Zero Chinese residue across en ⇄ ja, en 
       `Mode 3 promptSlots for English developer must have ZERO Chinese characters`
     );
   }
+
+  // Authentic Japanese Target (en ➔ ja):
+  // Must embed authentic Japanese Kana/Kanji anchors, but ZERO Chinese vocabulary/phrasing
+  const enJaSys = buildSystemPrompt("en", "ja", false, undefined, "general", getDefaultSlots("en"));
+  assert.ok(enJaSys.includes("native English (language A)"));
+  assert.ok(/[\u3040-\u30ff]/.test(enJaSys), "en ➔ ja prompt must contain authentic Japanese Kana");
+  assert.ok(!enJaSys.includes("认同，开始吧"), "en ➔ ja prompt must not contain Chinese anchors");
+  assert.ok(!enJaSys.includes("过度设计"), "en ➔ ja prompt must not contain Simplified Chinese vocabulary");
+
+  // Authentic Chinese Target (en ➔ zh):
+  // English developer learning Chinese must get authentic Chinese anchors
+  const enZhSys = buildSystemPrompt("en", "zh", false, undefined, "general", getDefaultSlots("en"));
+  assert.ok(enZhSys.includes("native English (language A)"));
+  assert.ok(enZhSys.includes("过度设计"), "en ➔ zh prompt must contain authentic Chinese anchors");
 });
 
 test("Tuner Skill Guardrails - Zero desktop office fluff & zero Sino-centric assumptions in SKILL.md", () => {

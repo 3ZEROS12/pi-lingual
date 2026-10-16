@@ -588,7 +588,7 @@ var LANGUAGE_PAIR_ANCHORS = {
       vocab: "\u904E\u5270\u8A2D\u8A08 (over-engineering) \xB7 \u6A19\u6E96\u30E9\u30A4\u30D6\u30E9\u30EA (standard library) \xB7 \u5B9F\u88C5\u3092\u63A8\u5968 (recommend implementation)"
     },
     {
-      input: "Totally on board with that, let's ship it.",
+      input: "Sounds good, let's ship it.",
       spoken: "\u5927\u8CDB\u6210\u3067\u3059\u3001\u65E9\u901F\u30EA\u30EA\u30FC\u30B9\u3057\u307E\u3057\u3087\u3046\uFF01",
       spoken_meaning: "Clear approval to release immediately.",
       written: "\u627F\u8A8D\u3044\u305F\u3057\u307E\u3057\u305F\u3002\u672C\u756A\u74B0\u5883\u3078\u306E\u30C7\u30D7\u30ED\u30A4\u3092\u9032\u884C\u3057\u307E\u3059\u3002",
@@ -637,9 +637,6 @@ var LANGUAGE_PAIR_ANCHORS = {
 function resolveLanguagePairAnchors(sourceLang = "en", targetLang = "en") {
   const normSource = (sourceLang || "en").toLowerCase().split("-")[0];
   const normTarget = (targetLang || "en").toLowerCase().split("-")[0];
-  if (normSource === "en") {
-    return LANGUAGE_SPECS.en?.anchors || [];
-  }
   const pairKey = `${normSource}->${normTarget}`;
   if (LANGUAGE_PAIR_ANCHORS[pairKey] && LANGUAGE_PAIR_ANCHORS[pairKey].length > 0) {
     return LANGUAGE_PAIR_ANCHORS[pairKey];
@@ -650,6 +647,9 @@ function resolveLanguagePairAnchors(sourceLang = "en", targetLang = "en") {
   if (normSource === "tw") {
     const zhKey = `zh->${normTarget}`;
     if (LANGUAGE_PAIR_ANCHORS[zhKey]) return LANGUAGE_PAIR_ANCHORS[zhKey];
+  }
+  if (normSource === "en") {
+    return LANGUAGE_SPECS.en?.anchors || [];
   }
   return [];
 }
@@ -684,14 +684,14 @@ function interpolatePromptVariables(template, vars) {
   const eName = resolveLanguageName(eCode);
   return template.replace(/\$\{sourceLang\}/g, sName).replace(/\$\{targetLang\}/g, tName).replace(/\$\{explainLang\}/g, eName).replace(/\$\{sourceLangCode\}/g, sCode).replace(/\$\{targetLangCode\}/g, tCode).replace(/\$\{explainLangCode\}/g, eCode);
 }
-function resolvePromptTargetLangName(sourceLang = "en", targetLang = "ja", promptLang) {
+function resolvePromptTargetLangName(sourceLang = "en", targetLang = "en", promptLang) {
   if (promptLang && promptLang.trim()) {
     const clean = promptLang.trim().toLowerCase().split("-")[0];
     return { code: clean, name: resolveLanguageName(clean) };
   }
   const s = (sourceLang || "en").toLowerCase().split("-")[0];
-  const t = (targetLang || "en").toLowerCase().split("-")[0];
-  const outCode = s === "en" ? t : "en";
+  const t = (targetLang || "").toLowerCase().split("-")[0];
+  const outCode = t ? t : s === "en" ? "ja" : "en";
   return { code: outCode, name: resolveLanguageName(outCode) };
 }
 var PROMPT_RULE_PRESETS = {
@@ -880,9 +880,10 @@ Output valid JSON ONLY. Never output markdown code fences, backticks, quotes, or
 }
 function buildDirectRewriteSystemPrompt(options) {
   const normSource = (options.sourceLang || "en").toLowerCase().split("-")[0];
+  const defaultTarget = normSource === "en" ? "ja" : "en";
   const { name: outLangName } = resolvePromptTargetLangName(
     options.sourceLang || "en",
-    options.targetLang || "ja",
+    options.targetLang || defaultTarget,
     options.promptLang
   );
   const spec = LANGUAGE_SPECS[normSource] || LANGUAGE_SPECS.en;
@@ -907,13 +908,22 @@ CRITICAL: Use this context strictly to resolve anaphoric pronouns ("here", "this
 }` : `{
   "prompt": "..."
 }`;
-  const anchorBlock = outLangName === "English" ? `[GOLDEN FEW-SHOT ANCHORS (Target: ${outLangName})]:
+  let anchorBlock = "";
+  if (outLangName === "English") {
+    anchorBlock = `[GOLDEN FEW-SHOT ANCHORS (Target: ${outLangName})]:
 - Input: "\u521A\u624D\u767B\u5F55\u63A5\u53E3\u62A5500\u4E86\uFF0C\u6392\u67E5\u4E00\u4E0Bsrc/auth.ts\u91CC\u7684token\u8FC7\u671F\u903B\u8F91\uFF0C\u522B\u52A8\u6570\u636E\u5E93\u914D\u7F6E\uFF0C\u6539\u52A8\u5C3D\u91CF\u5C0F"
   Output in ${outLangName}: "Diagnose and fix the 500 error on the login endpoint by inspecting the token expiration logic in \`src/auth.ts\`. Keep the diff minimal, leave unrelated code untouched, and do not modify any database configurations."
 - Input: "\u628A\u8FD9\u4E2A\u51FD\u6570\u6539\u6210\u5F02\u6B65\u7684\uFF0C\u987A\u4FBF\u8DD1\u4E00\u4E0B\u6D4B\u8BD5\u786E\u4FDD\u522B\u6302\u4E86"
   Output in ${outLangName}: "Refactor the function to be asynchronous while preserving its existing contract and behavior. Run the existing test suite to verify zero regressions."
 - Input: "The login session drops on page refresh, check if cookie expiration in src/auth.ts is wrong, keep diff minimal"
-  Output in ${outLangName}: "Inspect \`src/auth.ts\` to diagnose and fix session loss on page refresh, specifically checking cookie expiration settings while keeping the diff minimal and leaving unrelated code untouched."` : "";
+  Output in ${outLangName}: "Inspect \`src/auth.ts\` to diagnose and fix session loss on page refresh, specifically checking cookie expiration settings while keeping the diff minimal and leaving unrelated code untouched."`;
+  } else if (outLangName === "Japanese") {
+    anchorBlock = `[GOLDEN FEW-SHOT ANCHORS (Target: ${outLangName})]:
+- Input: "\u521A\u624D\u767B\u5F55\u63A5\u53E3\u62A5500\u4E86\uFF0C\u6392\u67E5\u4E00\u4E0Bsrc/auth.ts\u91CC\u7684token\u8FC7\u671F\u903B\u8F91\uFF0C\u522B\u52A8\u6570\u636E\u5E93\u914D\u7F6E\uFF0C\u6539\u52A8\u5C3D\u91CF\u5C0F"
+  Output in ${outLangName}: "\u30ED\u30B0\u30A4\u30F3\u30A8\u30F3\u30C9\u30DD\u30A4\u30F3\u30C8\u306E500\u30A8\u30E9\u30FC\u3092\u89E3\u6D88\u3059\u308B\u305F\u3081\u3001\`src/auth.ts\`\u306E\u30C8\u30FC\u30AF\u30F3\u5931\u52B9\u30ED\u30B8\u30C3\u30AF\u3092\u8ABF\u67FB\u30FB\u4FEE\u6B63\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u5DEE\u5206\u306F\u6700\u5C0F\u9650\u306B\u3068\u3069\u3081\u3001\u95A2\u9023\u306E\u306A\u3044\u30B3\u30FC\u30C9\u3084\u30C7\u30FC\u30BF\u30D9\u30FC\u30B9\u8A2D\u5B9A\u306B\u306F\u4E00\u5207\u89E6\u308C\u306A\u3044\u3067\u304F\u3060\u3055\u3044\u3002"
+- Input: "\u628A\u8FD9\u4E2A\u51FD\u6570\u6539\u6210\u5F02\u6B65\u7684\uFF0C\u987A\u4FBF\u8DD1\u4E00\u4E0B\u6D4B\u8BD5\u786E\u4FDD\u522B\u6302\u4E86"
+  Output in ${outLangName}: "\u65E2\u5B58\u306E\u4ED5\u69D8\u304A\u3088\u3073\u52D5\u4F5C\u3092\u7DAD\u6301\u3057\u305F\u307E\u307E\u3001\u3053\u306E\u95A2\u6570\u3092\u975E\u540C\u671F\uFF08async\uFF09\u306B\u30EA\u30D5\u30A1\u30AF\u30BF\u30EA\u30F3\u30B0\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u5B8C\u4E86\u5F8C\u306F\u65E2\u5B58\u306E\u30C6\u30B9\u30C8\u3092\u5B9F\u884C\u3057\u3001\u30EA\u30B0\u30EC\u30C3\u30B7\u30E7\u30F3\u304C\u306A\u3044\u3053\u3068\u3092\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044\u3002"`;
+  }
   const isZhSource = normSource === "zh" || normSource === "tw";
   const verbExamples = isZhSource ? `"look into / check / \u770B\u770B / \u6392\u67E5" \u2794 "Inspect" / "Diagnose" / "Trace"; "clean up / tweak / \u6539\u6539 / \u91CD\u6784" \u2794 "Refactor" / "Streamline" / "Harden"; "add / create / \u52A0\u4E0A / \u505A\u4E2A" \u2794 "Implement" / "Scaffold" / "Wire up"; "remove / drop / \u5220\u6389" \u2794 "Prune" / "Deprecate" / "Strip"; "fix / \u641E\u597D" \u2794 "Fix" / "Resolve"` : `"look into / check" \u2794 "Inspect" / "Diagnose" / "Trace"; "clean up / tweak" \u2794 "Refactor" / "Streamline" / "Harden"; "add / create" \u2794 "Implement" / "Scaffold" / "Wire up"; "remove / drop" \u2794 "Prune" / "Deprecate" / "Strip"; "fix" \u2794 "Fix" / "Resolve"`;
   return `You are an elite AI Coding Intent Compiler & Prompt Architect.

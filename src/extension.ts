@@ -169,11 +169,27 @@ function hasActiveUI(ctx: ExtensionContext | null | undefined): ctx is Extension
 /**
  * Lightweight Context Siphon: extracts recent assistant turn's anchor line (up to 160 chars)
  * strictly for pronoun/anaphora resolution ("here", "this function", "as discussed") and domain terminology.
+ * Skips conversational boilerplate and targets lines with concrete technical density (paths, code, identifiers).
  */
-function extractRecentContextAnchor(ctx: ExtensionContext | null | undefined): string {
+export function extractRecentContextAnchor(ctx: ExtensionContext | null | undefined): string {
   if (!ctx) return "";
   try {
     const entries = (ctx as any)?.sessionManager?.getEntries?.() || [];
+    const conversationalClosers = [
+      /let me know/i,
+      /hope this helps/i,
+      /feel free to/i,
+      /anything else/i,
+      /happy to help/i,
+      /还有什么/i,
+      /随时告诉我/i,
+      /请随时/i,
+      /如有疑问/i,
+      /需要我继续/i,
+      /お気軽に/i,
+      /他にご質問/i,
+    ];
+
     for (let i = entries.length - 1; i >= 0; i--) {
       const entry = entries[i];
       if (entry?.type === "message" && entry?.message?.role === "assistant") {
@@ -187,11 +203,44 @@ function extractRecentContextAnchor(ctx: ExtensionContext | null | undefined): s
             .map((c: any) => c.text)
             .join(" ");
         }
-        if (text && text.trim()) {
-          const lines = text.trim().split("\n").filter((l: string) => l.trim().length > 0);
-          const lastLine = lines[lines.length - 1] || "";
-          return lastLine.slice(0, 160);
+        if (!text || !text.trim()) continue;
+
+        const rawLines = text
+          .trim()
+          .split("\n")
+          .map((l: string) => l.trim())
+          .filter((l: string) => l.length > 0 && !/^```/.test(l) && !/^\|[-:\s|]+\|$/.test(l));
+
+        if (rawLines.length === 0) continue;
+
+        // 1. High priority: backwards scan for lines with technical density (paths, code blocks, functions, flags)
+        for (let j = rawLines.length - 1; j >= 0; j--) {
+          const line = rawLines[j];
+          if (conversationalClosers.some((re) => re.test(line))) continue;
+
+          const isTechnical =
+            /`[^`]+`/.test(line) ||
+            /[\/\\]/.test(line) ||
+            /\.[a-z0-9_-]{2,4}\b/i.test(line) ||
+            /[a-z0-9_]\.[a-z0-9_]/i.test(line) ||
+            /[_#]/.test(line) ||
+            /\b(function|class|const|def|return|import|error|bug|test|file|path|route|api)\b/i.test(line);
+
+          if (isTechnical && line.length >= 10) {
+            return line.replace(/^[-*•\d\.\s]+/, "").slice(0, 160);
+          }
         }
+
+        // 2. Medium priority: first non-boilerplate line from the bottom
+        for (let j = rawLines.length - 1; j >= 0; j--) {
+          const line = rawLines[j];
+          if (!conversationalClosers.some((re) => re.test(line)) && line.length >= 8) {
+            return line.replace(/^[-*•\d\.\s]+/, "").slice(0, 160);
+          }
+        }
+
+        // 3. Fallback: last non-empty line
+        return rawLines[rawLines.length - 1].slice(0, 160);
       }
     }
   } catch {}

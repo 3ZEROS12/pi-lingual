@@ -12,7 +12,9 @@ import {
   getDefaultModifySlots,
   resolveLanguagePairAnchors,
   buildSystemPrompt,
+  buildDirectRewriteSystemPrompt,
 } from "../src/index.js";
+import { extractRecentContextAnchor } from "../src/extension.js";
 
 // Whitelist of legitimate language-neutral keys or shared linguistic cognates
 const ALLOW_EQUAL_EN: Record<string, Set<string>> = {
@@ -218,5 +220,49 @@ test("i18n invariant (d): Dynamic Symmetric Polyglot Anchor Matrix covers cross-
       `buildSystemPrompt("${src}", "${tgt}") must embed pair-specific anchor block`
     );
   }
+});
+
+test("Mode 2 Intent Compiler - Generates authentic Japanese few-shot anchors when targeting Japanese", () => {
+  const jaPrompt = buildDirectRewriteSystemPrompt({ sourceLang: "zh", targetLang: "ja" });
+  assert.ok(jaPrompt.includes("[GOLDEN FEW-SHOT ANCHORS (Target: Japanese)]"));
+  assert.ok(jaPrompt.includes("ログインエンドポイントの500エラー"));
+  assert.ok(jaPrompt.includes("リファクタリング"));
+  assert.ok(jaPrompt.includes("非同期（async）"));
+});
+
+test("Context Siphon - extractRecentContextAnchor skips pleasantries and isolates technical density", () => {
+  // Mock assistant message with conversational pleasantries at the end
+  const mockCtx = {
+    sessionManager: {
+      getEntries: () => [
+        {
+          type: "message",
+          message: {
+            role: "assistant",
+            content: `I've analyzed the issue.
+In \`src/auth.ts\`, the function \`validateToken()\` was expiring sessions prematurely.
+We fixed the cookie expiration header.
+
+Let me know if you need any other changes!
+Hope this helps.`,
+          },
+        },
+      ],
+    },
+  };
+
+  const anchor = extractRecentContextAnchor(mockCtx as any);
+  assert.ok(
+    !anchor.includes("Hope this helps"),
+    "Must not extract trailing conversational pleasantries"
+  );
+  assert.ok(
+    !anchor.includes("Let me know"),
+    "Must not extract trailing conversational closing lines"
+  );
+  assert.ok(
+    anchor.includes("src/auth.ts") || anchor.includes("validateToken()"),
+    `Must extract high-density technical line, got: "${anchor}"`
+  );
 });
 
