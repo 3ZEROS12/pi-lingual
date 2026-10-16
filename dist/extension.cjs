@@ -4820,17 +4820,17 @@ function extension_default(pi) {
     if (diskCfg.labels) {
       state.labels = resolveLabelsForLang(state.sourceLang, diskCfg.labels, state.targetLang);
     }
-    if (diskCfg.mode) {
-      state.mode = diskCfg.mode;
-    }
     if (Array.isArray(diskCfg.modes) && diskCfg.modes.length > 0) {
       state.modes = diskCfg.modes;
     } else {
       state.modes = resolveModesFromConfig(diskCfg, state.sourceLang);
     }
-    if (diskCfg.activeModeId && !state.modeLocked) {
-      state.activeModeId = diskCfg.activeModeId;
-    }
+    const rawDiskMode = diskCfg.activeModeId || diskCfg.mode || "companion";
+    state.mode = normalizeActiveModeId(
+      { mode: rawDiskMode, activeModeId: rawDiskMode },
+      state.modes
+    );
+    state.activeModeId = state.mode;
     if (diskCfg.slots && Array.isArray(diskCfg.slots) && diskCfg.slots.length > 0) {
       state.slots = diskCfg.slots;
     }
@@ -4841,11 +4841,6 @@ function extension_default(pi) {
       state.promptSlots = diskCfg.promptSlots;
     }
     syncResizeListener();
-    state.mode = normalizeActiveModeId(
-      { mode: state.mode, activeModeId: state.activeModeId || diskCfg.activeModeId },
-      state.modes
-    );
-    state.activeModeId = state.mode;
     if (hasActiveUI(ctx)) {
       safeClearWidget(ctx);
       if (state.mode !== "off" && !isTestEnvironment() && event?.reason !== "resume" && diskCfg.lastSeenVersion !== CURRENT_FEATURE_BANNER_VERSION) {
@@ -4912,6 +4907,15 @@ function extension_default(pi) {
         nextMode = trimmed;
       }
     } else {
+      if (state.modeLocked) {
+        const currentModeObj = activeModes.find((m) => m.id === state.mode);
+        const currentName = currentModeObj ? currentModeObj.name : state.mode === "off" ? modeSpec.off : state.mode;
+        try {
+          ctx.ui.notify(`[lingual] mode locked to [${currentName}]. Run /lingual unlock to release.`, "warning");
+        } catch {
+        }
+        return;
+      }
       if (hasCustomModesOnDisk) {
         const cycleList = [...activeModes.map((m) => m.id), "off"];
         const currentIdx = cycleList.indexOf(state.mode);
@@ -4921,17 +4925,6 @@ function extension_default(pi) {
       }
     }
     const canonical = nextMode === "original" ? "companion" : nextMode === "english" ? "direct" : nextMode === "select" ? "candidates" : nextMode === "modify" ? "live-flow" : nextMode;
-    if (state.modeLocked && canonical !== state.mode && nextMode !== state.mode) {
-      const currentModeObj = activeModes.find((m) => m.id === state.mode);
-      const currentName = currentModeObj ? currentModeObj.name : state.mode === "off" ? modeSpec.off : state.mode;
-      const template2 = state.labels.notifyModeLockedCycleBlocked || "[{pair}] Mode is locked to [{mode}]. Run /lingual unlock to cycle modes or specify mode directly.";
-      const lockWarning = template2.replace("{pair}", pair).replace("{mode}", currentName);
-      try {
-        ctx.ui.notify(lockWarning, "warning");
-      } catch {
-      }
-      return;
-    }
     if (nextMode === "off") {
       state.mode = "off";
       state.activeModeId = "off";
@@ -4943,17 +4936,15 @@ function extension_default(pi) {
       safeClearWidget(ctx);
       updateFooter(ctx);
       try {
-        ctx.ui.notify(modeSpec.notifyOff(pair), "info");
+        ctx.ui.notify("[lingual: off]", "info");
       } catch {
       }
       return;
     }
     const targetMode = activeModes.find((m) => m.id === canonical || m.id === nextMode);
     if (!targetMode) {
-      const notFoundTemplate = state.labels.notifyModeNotFound || "[{pair}] Mode [{mode}] is not in your active registry. Run /lingual mode list to view available modes.";
-      const msg2 = notFoundTemplate.replace("{pair}", pair).replace("{mode}", trimmed || nextMode);
       try {
-        ctx.ui.notify(msg2, "info");
+        ctx.ui.notify(`[lingual] mode [${trimmed || nextMode}] not in your active registry. Run /lingual mode list to view available modes.`, "warning");
       } catch {
       }
       return;
@@ -4967,11 +4958,8 @@ function extension_default(pi) {
     const modeIdx = activeModes.indexOf(targetMode);
     const modeNum = modeIdx >= 0 ? modeIdx + 1 : 1;
     const modeName = targetMode.name;
-    const firstSlotLabel = targetMode.slots.find((s) => s.role !== "vocab")?.label || targetMode.slots[0]?.label || modeName;
-    const template = state.labels.modeSwitchedTemplate || "[{pair}] Switched to [{num}. {name} ({id})] ({slot})";
-    const msg = template.replace("{pair}", pair).replace("{num}", String(modeNum)).replace("{name}", modeName).replace("{id}", finalId).replace("{slot}", firstSlotLabel);
     try {
-      ctx.ui.notify(msg, "info");
+      ctx.ui.notify(`[${pair}] ${modeNum}. ${modeName} (${finalId})`, "info");
     } catch {
     }
   };
@@ -4988,9 +4976,7 @@ function extension_default(pi) {
     }
     state.selectedModel = trimmed;
     saveUserLingualConfig({ selectedModel: trimmed });
-    const switchTemplate = state.labels.notifyModelSwitched || "Companion model switched to: {model}";
-    const switchedMsg = `[${state.labels.hudTitle}] ` + switchTemplate.replace("{model}", trimmed);
-    ctx.ui.notify(switchedMsg, "info");
+    ctx.ui.notify(`[lingual] model: ${trimmed}`, "info");
   };
   const switchLangHandler = async (args, ctx) => {
     const pair = state.labels.hudTitle || `${state.sourceLang} \u21C4 ${state.targetLang}`;
@@ -4999,8 +4985,8 @@ function extension_default(pi) {
     const trimmed = args.trim().toLowerCase();
     if (!trimmed || trimmed === "list" || trimmed === "help" || trimmed === "?") {
       const flowText2 = `${state.sourceLang} \u2794 ${state.targetLang}`;
-      const template2 = state.labels.langHelpText || "[Companion Language: {flow}]\n\u2022 Quick switch: /lang ja (target Japanese) \xB7 /lang en (target English)\n\u2022 Pair switch: /lang en ja \xB7 /lang ja en \xB7 /lang es en\n\u2022 Supported codes: zh, tw, ja, ko, en, es, fr, de, ru";
-      const helpMsg = template2.replace("{flow}", flowText2).replace("{pair}", pair);
+      const template = state.labels.langHelpText || "[Companion Language: {flow}]\n\u2022 Quick switch: /lang ja (target Japanese) \xB7 /lang en (target English)\n\u2022 Pair switch: /lang en ja \xB7 /lang ja en \xB7 /lang es en\n\u2022 Supported codes: zh, tw, ja, ko, en, es, fr, de, ru";
+      const helpMsg = template.replace("{flow}", flowText2).replace("{pair}", pair);
       ctx.ui.notify(helpMsg, "info");
       return;
     }
@@ -5011,7 +4997,7 @@ function extension_default(pi) {
       const code = normalizeLangCode(parts[0]);
       if (!isSupportedLangCode(code)) {
         ctx.ui.notify(
-          state.labels.notifyLangInvalid || "Invalid language code. Supported: zh, tw, ja, ko, en, es, fr, de, ru",
+          "[lingual] invalid language code. supported: zh, tw, ja, ko, en, es, fr, de, ru",
           "warning"
         );
         return;
@@ -5026,7 +5012,7 @@ function extension_default(pi) {
       newTarget = normalizeLangCode(parts[1]);
       if (!isSupportedLangCode(newSource)) {
         ctx.ui.notify(
-          state.labels.notifyLangInvalid || "Invalid language code. Supported: zh, tw, ja, ko, en, es, fr, de, ru",
+          "[lingual] invalid language code. supported: zh, tw, ja, ko, en, es, fr, de, ru",
           "warning"
         );
         return;
@@ -5073,15 +5059,14 @@ function extension_default(pi) {
     globalLingualCache.clear();
     updateFooter(ctx);
     const isTargetOnly = newSource === previousSource && newTarget !== previousTarget;
-    const template = isTargetOnly ? state.labels.notifyTargetSwitched || "Target language switched to: {target} (native {source} unchanged)" : state.labels.notifyLangSwitched || "Native language switched to: {lang}";
     const flowText = `${newSource} \u21C4 ${newTarget}`;
-    const msg = isTargetOnly ? `[${flowText}] ` + template.replace("{target}", newTarget).replace("{source}", newSource) : `[${flowText}] ` + template.replace("{lang}", flowText);
+    const msg = isTargetOnly ? `[${flowText}] Target language switched to: ${newTarget} (${newSource} unchanged)` : `[${flowText}]`;
     ctx.ui.notify(msg, "info");
   };
   const toggleCompactHandler = async (_args, ctx) => {
     state.compact = !state.compact;
     saveUserLingualConfig({ compact: state.compact });
-    const msg = state.compact ? state.labels.notifyCompactOn || `[${state.labels.hudTitle}] Single-line capsule mode enabled` : state.labels.notifyCompactOff || `[${state.labels.hudTitle}] Full tree layout restored`;
+    const msg = state.compact ? "[lingual: Capsule mode enabled]" : "[lingual: tree HUD mode restored]";
     ctx.ui.notify(msg, "info");
     if (session.getReadyPages().length > 0) {
       renderActiveCard(ctx);
@@ -5287,9 +5272,7 @@ Usage:
       state.slots = resolveSlotsForPreset(subCmd, state.sourceLang);
       saveUserLingualConfig({ slotPreset: subCmd === "developer" ? void 0 : subCmd, slots: state.slots });
       globalLingualCache.clear();
-      const template = lbl.notifySlotSwitched || "[{pair}] Applied preset [{preset}]: {desc}";
-      const notifyMsg = template.replace("{pair}", lbl.hudTitle).replace("{preset}", subCmd).replace("{desc}", matchedPreset.description);
-      ctx.ui.notify(notifyMsg, "info");
+      ctx.ui.notify(`[lingual] applied preset [${subCmd}]: ${matchedPreset.description}`, "info");
       updateFooter(ctx);
       refreshActiveView(ctx);
       return;
@@ -5324,12 +5307,14 @@ Usage:
   const showLastHandler = async (_args, ctx) => {
     if (session.getReadyPages().length > 0) {
       renderActiveCard(ctx);
-      ctx.ui.notify(state.labels.notifyHistoryRestored || `[${state.labels.hudTitle}] Restored previous companion card`, "info");
       return;
     }
     const last = session.getLastResult();
     if (!last) {
-      ctx.ui.notify(state.labels.notifyNoHistory || `[${state.labels.hudTitle}] No previous companion card recorded`, "info");
+      try {
+        ctx.ui.notify("[lingual] no previous card", "info");
+      } catch {
+      }
       return;
     }
     renderHudWidget(
@@ -5344,7 +5329,6 @@ Usage:
       last.slotOutputs,
       last.slots
     );
-    ctx.ui.notify(state.labels.notifyHistoryRestored || `[${state.labels.hudTitle}] Restored previous companion card`, "info");
   };
   const manageModesHandler = async (args, ctx) => {
     const trimmed = args.trim();
@@ -5748,14 +5732,10 @@ Usage: /lingual loadout [list | apply <id>] (e.g. /lingual loadout apply spec)`;
     if (sub === "lock") {
       state.modeLocked = true;
       saveUserLingualConfig({ modeLocked: true });
-      const pair2 = state.labels.hudTitle || `${state.sourceLang} \u21C4 ${state.targetLang}`;
-      const modeSpec = resolveModeDisplaySpec(state.sourceLang);
       const activeObj = state.modes.find((m) => m.id === state.mode);
-      const currentName = activeObj ? activeObj.name : state.mode === "off" ? modeSpec.off : state.mode;
-      const template2 = state.labels.notifyModeLockedSuccess || "[{pair}] Session mode locked to [{mode}]. Mode cycling is blocked. Run /lingual unlock to release.";
-      const lockMsg = template2.replace("{pair}", pair2).replace("{mode}", currentName);
+      const currentName = activeObj ? activeObj.name : state.mode;
       try {
-        ctx.ui.notify(lockMsg, "info");
+        ctx.ui.notify(`[lingual] mode locked to [${currentName}]`, "info");
       } catch {
       }
       updateFooter(ctx);
@@ -5764,11 +5744,8 @@ Usage: /lingual loadout [list | apply <id>] (e.g. /lingual loadout apply spec)`;
     if (sub === "unlock") {
       state.modeLocked = false;
       saveUserLingualConfig({ modeLocked: false });
-      const pair2 = state.labels.hudTitle || `${state.sourceLang} \u21C4 ${state.targetLang}`;
-      const template2 = state.labels.notifyModeUnlockedSuccess || "[{pair}] Mode lock released. Free mode cycling and configuration sync restored.";
-      const unlockMsg = template2.replace("{pair}", pair2);
       try {
-        ctx.ui.notify(unlockMsg, "info");
+        ctx.ui.notify("[lingual] mode unlocked", "info");
       } catch {
       }
       updateFooter(ctx);
@@ -5790,11 +5767,8 @@ Usage: /lingual loadout [list | apply <id>] (e.g. /lingual loadout apply spec)`;
       await switchLangHandler(trimmed, ctx);
       return;
     }
-    const pair = state.labels.hudTitle || `${state.sourceLang} \u21C4 ${state.targetLang}`;
-    const template = state.labels.notifyUnrecognizedSubcommand || '[{pair}] Unrecognized subcommand: "{cmd}". Current mode unchanged. Available: /lingual [1|2|3|0|on|off|lang|last|lock|status] or /l';
-    const unrecMsg = template.replace("{pair}", pair).replace("{cmd}", trimmed);
     try {
-      ctx.ui.notify(unrecMsg, "warning");
+      ctx.ui.notify(`[lingual] unknown: "${trimmed}". run /lingual for help`, "warning");
     } catch {
     }
   };
@@ -5911,33 +5885,20 @@ Usage: /lingual loadout [list | apply <id>] (e.g. /lingual loadout apply spec)`;
     if (latestDisk.modeLocked !== void 0 && latestDisk.modeLocked !== state.modeLocked) {
       state.modeLocked = latestDisk.modeLocked;
     }
-    if (latestDisk.mode && latestDisk.mode !== state.mode) {
-      if (state.modeLocked) {
-      } else {
-        state.mode = latestDisk.mode;
-        syncResizeListener();
-        footerNeedsRefresh = true;
-      }
-    }
-    if (footerNeedsRefresh && hasActiveUI(ctx)) {
-      updateFooter(ctx);
-    }
-    if (latestDisk.slots && Array.isArray(latestDisk.slots)) {
-      state.slots = latestDisk.slots;
-    }
-    if (latestDisk.directSlots && Array.isArray(latestDisk.directSlots)) {
-      state.directSlots = latestDisk.directSlots;
-    }
-    if (latestDisk.promptSlots && Array.isArray(latestDisk.promptSlots)) {
-      state.promptSlots = latestDisk.promptSlots;
-    }
     if (Array.isArray(latestDisk.modes) && latestDisk.modes.length > 0) {
       state.modes = latestDisk.modes;
     } else if (!state.modes || state.modes.length === 0) {
       state.modes = resolveModesFromConfig(latestDisk);
     }
-    if (latestDisk.activeModeId && !state.modeLocked) {
-      state.activeModeId = latestDisk.activeModeId;
+    const rawDiskMode = latestDisk.activeModeId || latestDisk.mode;
+    if (rawDiskMode && rawDiskMode !== state.mode) {
+      state.mode = normalizeActiveModeId({ mode: rawDiskMode, activeModeId: rawDiskMode }, state.modes);
+      state.activeModeId = state.mode;
+      syncResizeListener();
+      footerNeedsRefresh = true;
+    }
+    if (footerNeedsRefresh && hasActiveUI(ctx)) {
+      updateFooter(ctx);
     }
     if (state.mode === "off") return { action: "continue" };
     const raw = event.text.trim();
@@ -5952,10 +5913,9 @@ Usage: /lingual loadout [list | apply <id>] (e.g. /lingual loadout apply spec)`;
         if (isFactory) {
           state.modes = getDefaultFactoryModes(state.sourceLang, state.targetLang);
         }
+        saveUserLingualConfig({ sourceLang: state.sourceLang, targetLang: state.targetLang });
         if (hasActiveUI(ctx)) {
           updateFooter(ctx);
-          const adaptNotice = state.labels.notifyLangSwitched ? state.labels.notifyLangSwitched.replace("{lang}", `${state.sourceLang} \u21C4 ${state.targetLang}`) : `[lingual] Adapted language pair to ${state.sourceLang} \u21C4 ${state.targetLang}`;
-          ctx.ui.notify(ctx.ui.theme.fg("accent", adaptNotice));
         }
       }
     }
@@ -5984,7 +5944,7 @@ Usage: /lingual loadout [list | apply <id>] (e.g. /lingual loadout apply spec)`;
         session.clearPagination();
         if (hasActiveUI(ctx)) {
           safeClearWidget(ctx);
-          ctx.ui.setStatus("lingual", ctx.ui.theme.fg("muted", `[${state.targetLang} \xB7 direct send]`));
+          ctx.ui.setStatus("lingual", ctx.ui.theme.fg("muted", `[${state.targetLang} \xB7 direct]`));
         }
         return { action: "continue" };
       }
@@ -6168,8 +6128,7 @@ Usage: /lingual loadout [list | apply <id>] (e.g. /lingual loadout apply spec)`;
           safeClearWidget(ctx);
           if (currentMode.action === "transform") {
             try {
-              const timeoutTemplate = state.labels.notifyTimeout || "[{pair}] Prompt rewrite timed out or not ready; original prompt passed";
-              ctx.ui.notify(timeoutTemplate.replace("{pair}", state.labels.hudTitle), "warning");
+              ctx.ui.notify("[lingual] prompt rewrite timed out; original prompt passed", "warning");
             } catch {
             }
           }
@@ -6372,8 +6331,7 @@ ${sanitized.rawPayload}` : chosenText;
       if (currentMode.target === "clipboard") {
         copyToClipboard(finalText);
         if (hasActiveUI(ctx)) {
-          const template = state.labels.notifyClipboardCopied || "Copied to clipboard (prompt intercepted - not sent to agent). Ready to paste into GitHub, PR, or X.";
-          ctx.ui.notify(`[${state.labels.hudTitle}] ` + template, "info");
+          ctx.ui.notify("[lingual] Copied to clipboard", "info");
         }
         return { action: "handled" };
       }
@@ -6387,8 +6345,7 @@ ${sanitized.rawPayload}` : chosenText;
         safeClearWidget(ctx);
         if (currentMode.action === "transform") {
           try {
-            const errTemplate = state.labels.notifyError || "[{pair}] Prompt rewrite error; original prompt passed";
-            ctx.ui.notify(errTemplate.replace("{pair}", state.labels.hudTitle), "warning");
+            ctx.ui.notify("[lingual] prompt rewrite error; original prompt passed", "warning");
           } catch {
           }
         }

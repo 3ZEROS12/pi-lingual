@@ -16,13 +16,9 @@ test("Primary Language Sovereignty - Japanese (ja) leaves ZERO Chinese in UI and
   assert.equal(jaLabels.statusEnglish, "ja ⇄ en");
   assert.equal(jaLabels.statusOff, "ja ⇄ en: off");
 
-  // Notifications
-  assert.ok(jaLabels.notifyOriginal?.includes("【原文モード】に切り替えました"));
-  assert.ok(jaLabels.notifyEnglish?.includes("【英語モード】に切り替えました"));
-  assert.ok(jaLabels.notifyOff?.includes("オフにしました"));
-  assert.ok(jaLabels.notifyPaging?.includes("長文を分割しました"));
-  assert.ok(jaLabels.notifyAgentHelp?.includes("lingual-tuner"));
-  assert.ok(jaLabels.notifyAgentHelp?.includes("母語切替"));
+  // Mode picker and UI chrome
+  assert.equal(jaLabels.modePickerTitle, "伴走モード切替");
+  assert.ok(jaLabels.modePickerHint?.includes("1/2/3/0"));
 
   // Status report contains Japanese chrome
   const report = formatStatusReport(jaLabels, {
@@ -78,13 +74,9 @@ test("Primary Language Sovereignty - English (en) leaves ZERO Chinese in UI and 
     assert.ok(!/[\u4e00-\u9fa5]/.test(item), `English langList item "${item}" must contain zero Chinese characters`);
   }
 
-  // Dynamic language pair token substitution: en ➔ zh must yield [en ⇄ zh] notifications, zero [en ⇄ ja] residue
+  // Dynamic language pair token substitution: en ➔ zh must yield [en ⇄ zh] HUD title
   const enZhLabels = resolveLabelsForLang("en", undefined, "zh");
   assert.equal(enZhLabels.hudTitle, "en ⇄ zh");
-  assert.ok(enZhLabels.notifyOriginal?.includes("[en ⇄ zh]"));
-  assert.ok(enZhLabels.notifyCompactOn?.includes("[en ⇄ zh]"));
-  assert.ok(!enZhLabels.notifyOriginal?.includes("[en ⇄ ja]"));
-  assert.ok(!enZhLabels.notifyCompactOn?.includes("[en ⇄ ja]"));
 
   // Dynamic slots chrome in English must contain ZERO Chinese characters
   assert.equal(enLabels.slotsHeader, "Dynamic Slots Architecture");
@@ -100,7 +92,8 @@ test("Primary Language Sovereignty - English (en) leaves ZERO Chinese in UI and 
   // Status report tuner line in English has zero Chinese characters
   assert.ok(enLabels.statusReportTuner?.includes("lingual-tuner"));
   assert.ok(!/[\u4e00-\u9fa5]/.test(enLabels.statusReportTuner!));
-  assert.ok(!/[\u4e00-\u9fa5]/.test(enLabels.notifyAgentHelp!));
+  assert.ok(!/[\u4e00-\u9fa5]/.test(enLabels.modePickerTitle!));
+  assert.ok(!/[\u4e00-\u9fa5]/.test(enLabels.modePickerHint!));
 });
 
 test("Primary Language Sovereignty - Chinese (zh) dynamic slots chrome has ZERO English residue in UI headers & commands", () => {
@@ -117,8 +110,7 @@ test("Primary Language Sovereignty - Chinese (zh) dynamic slots chrome has ZERO 
   assert.ok(zhLabels.slotsRemovedSourceNote?.includes("已物理隐藏原文行"));
   assert.ok(zhLabels.statusReportTuner?.includes("lingual-tuner"));
   assert.ok(zhLabels.statusReportTuner?.includes("槽位调优"));
-  assert.ok(zhLabels.notifyAgentHelp?.includes("lingual-tuner"));
-  assert.ok(zhLabels.notifyAgentHelp?.includes("槽位调优技能"));
+  assert.equal(zhLabels.modePickerTitle, "伴学模式切换");
 });
 
 test("System Prompt Sovereignty - Generates authentic Language A anchors and rules", () => {

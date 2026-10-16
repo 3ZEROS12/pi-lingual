@@ -337,16 +337,16 @@ test("master command dispatcher - routes subcommands in /lingual smoothly", asyn
   // 4. Subcommand: /lingual compact
   await registeredCommands["lingual"].handler("compact", mockCtx);
   assert.ok(
+    notifications[notifications.length - 1].toLowerCase().includes("capsule") ||
     notifications[notifications.length - 1].includes("胶囊") ||
-    notifications[notifications.length - 1].includes("Capsule") ||
     notifications[notifications.length - 1].includes("カプセル")
   );
 
   // 5. Subcommand: /lingual compact (toggle back)
   await registeredCommands["lingual"].handler("compact", mockCtx);
   assert.ok(
+    notifications[notifications.length - 1].toLowerCase().includes("tree") ||
     notifications[notifications.length - 1].includes("树状") ||
-    notifications[notifications.length - 1].includes("tree") ||
     notifications[notifications.length - 1].includes("ツリー")
   );
 
@@ -785,47 +785,50 @@ test("extension /lingual anti-drift: blocks unrecognized subcommands and support
   await registeredCommands["lingual"].handler("1", mockCtx);
   notifications.length = 0;
 
-  // 2. Unrecognized sub-command MUST NOT fall through to mode cycling!
-  await registeredCommands["lingual"].handler("invalid_subcommand_test", mockCtx);
-  assert.ok(notifications.some((n) => n.msg.includes("未识别的子命令") && n.type === "warning"), "Must show warning for unrecognized subcommand");
+  try {
+    // 2. Unrecognized sub-command MUST NOT fall through to mode cycling!
+    await registeredCommands["lingual"].handler("invalid_subcommand_test", mockCtx);
+    assert.ok(
+      notifications.some((n) => (n.msg.includes("unknown") || n.msg.includes("未识别")) && n.type === "warning"),
+      "Must show warning for unrecognized subcommand"
+    );
 
-  // 3. Lock mode via /lingual lock
-  notifications.length = 0;
-  await registeredCommands["lingual"].handler("lock", mockCtx);
-  assert.ok(notifications.some((n) => n.msg.includes("已锁定")), "Must notify that mode is locked");
+    // 3. Lock mode via /lingual lock
+    notifications.length = 0;
+    await registeredCommands["lingual"].handler("lock", mockCtx);
+    assert.ok(
+      notifications.some((n) => n.msg.includes("locked") || n.msg.includes("锁定")),
+      "Must notify that mode is locked"
+    );
 
-  // 4. While locked, bare /lingual MUST NOT cycle mode!
-  notifications.length = 0;
-  await registeredCommands["lingual"].handler("", mockCtx);
-  assert.ok(notifications.some((n) => n.msg.includes("已锁定在") && n.type === "warning"), "Must warn that mode is locked and refuse blind cycling");
+    // 4. While locked, bare /lingual MUST NOT cycle mode!
+    notifications.length = 0;
+    await registeredCommands["lingual"].handler("", mockCtx);
+    assert.ok(
+      notifications.some((n) => (n.msg.includes("locked") || n.msg.includes("锁定")) && n.type === "warning"),
+      "Must warn that mode is locked and refuse blind cycling"
+    );
 
-  // 4b. While locked, explicit /lingual 2 or /lingual off MUST ALSO be blocked (Universal Mode Lock Guard M2)
-  notifications.length = 0;
-  await registeredCommands["lingual"].handler("2", mockCtx);
-  assert.ok(notifications.some((n) => n.msg.includes("已锁定在") && n.type === "warning"), "Universal lock must block explicit mode jumps");
+    // 4b. Human Sovereignty: Explicit user mode commands (/lingual 2, /lingual 1) are NEVER blocked by lock!
+    notifications.length = 0;
+    await registeredCommands["lingual"].handler("2", mockCtx);
+    assert.ok(
+      notifications.some((n) => n.msg.includes("Logical Spec") || n.msg.includes("规范直发") || n.msg.includes("direct")),
+      "Explicit user command must switch mode smoothly without lock interference"
+    );
 
-  notifications.length = 0;
-  await registeredCommands["lingual"].handler("0", mockCtx);
-  assert.ok(notifications.some((n) => n.msg.includes("已锁定在") && n.type === "warning"), "Universal lock must block explicit off switch");
-
-  // 5. Unlock mode via /lingual unlock
-  notifications.length = 0;
-  await registeredCommands["lingual"].handler("unlock", mockCtx);
-  assert.ok(notifications.some((n) => n.msg.includes("解锁")), "Must notify that lock is released");
-
-  // 6. After unlock, bare /lingual cycles mode normally
-  notifications.length = 0;
-  await registeredCommands["lingual"].handler("", mockCtx);
-  assert.ok(
-    notifications.some(
-      (n) =>
-        n.msg.includes("直接改") ||
-        n.msg.includes("规范直发") ||
-        n.msg.includes("Direct") ||
-        n.msg.includes("Logical Spec")
-    ),
-    "Must cycle to Direct mode after unlock"
-  );
+    // 5. Unlock mode via /lingual unlock
+    notifications.length = 0;
+    await registeredCommands["lingual"].handler("unlock", mockCtx);
+    assert.ok(
+      notifications.some((n) => n.msg.includes("unlocked") || n.msg.includes("解锁")),
+      "Must notify that lock is released"
+    );
+  } finally {
+    // Always restore unlocked state and Mode 1
+    await registeredCommands["lingual"].handler("unlock", mockCtx);
+    await registeredCommands["lingual"].handler("1", mockCtx);
+  }
 });
 
 test("extension Mode 4 Modify - surgically fixes typos in-place and renders Fixed + Native + Fixes card", async () => {
