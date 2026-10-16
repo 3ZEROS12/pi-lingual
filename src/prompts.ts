@@ -1125,9 +1125,10 @@ export function buildPromptCandidatesSystemPrompt(options: {
   context?: string;
 }): string {
   const normSource = (options.sourceLang || "en").toLowerCase().split("-")[0];
+  const defaultTarget = normSource === "en" ? "ja" : "en";
   const { name: outLangName } = resolvePromptTargetLangName(
     options.sourceLang || "en",
-    options.targetLang || "ja",
+    options.targetLang || defaultTarget,
     options.promptLang
   );
   const spec = LANGUAGE_SPECS[normSource] || LANGUAGE_SPECS.en;
