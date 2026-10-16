@@ -1896,20 +1896,20 @@ export default function (pi: ExtensionAPI) {
     if (hasActiveUI(ctx) && currentMode.hud !== "none") {
       try {
         const loadingMsg = isModifyMode
-          ? "  ⋯ ⚡ [lingual] fixing syntax & typos..."
+          ? (state.labels.loadingFixSyntax || "  ⋯ [lingual] fixing syntax & typos...")
           : isDirectMode
-            ? "  ⋯ ⚡ [lingual] optimizing prompt..."
-            : "  ⋯ ✦ [lingual] generating prompt candidates...";
+            ? (state.labels.loadingOptimizePrompt || "  ⋯ [lingual] optimizing prompt...")
+            : (state.labels.loadingCandidates || "  ⋯ [lingual] generating prompt candidates...");
         ctx.ui.setWidget("lingual_hud", [ctx.ui.theme.fg("muted", loadingMsg)], { placement: "aboveEditor" });
         ctx.ui.setStatus(
           "lingual",
           ctx.ui.theme.fg(
             "accent",
             isModifyMode
-              ? "⚡ [lingual] fixing..."
+              ? (state.labels.statusLoadingFix || "[lingual] fixing...")
               : isDirectMode
-                ? "⚡ [lingual] optimizing..."
-                : "✦ [lingual] generating candidates..."
+                ? (state.labels.statusLoadingOptimize || "[lingual] optimizing...")
+                : (state.labels.statusLoadingCandidates || "[lingual] generating candidates...")
           )
         );
       } catch {}

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { e2eEnabled, e2eFullEnabled, isPiAvailable, runModel, withSandbox } from "./lib/driver.mjs";
+import { e2eEnabled, e2eFullEnabled, isPiAvailable, runModel, withSandbox } from "./lib/driver.js";
 import { resolveModesFromConfig, repairAndParseJsonObject } from "../../dist/index.js";
 import extensionFactory from "../../dist/extension.js";
 
@@ -28,7 +28,7 @@ test("L4a: Tuner contract test (real model config synthesis)", async (t) => {
     "Output valid JSON ONLY. No explanations, no markdown fences.",
   ].join("\n\n");
 
-  const { out, status } = runModel(sysPrompt, "Add a mode called pr-review for pull request code review comments");
+  const { out, status } = runModel(sysPrompt, "Add a mode called pr-review for pull request code review comments", { label: "L4a: Tuner Contract" });
   assert.equal(status, 0);
 
   const parsed = repairAndParseJsonObject(out);
@@ -76,7 +76,7 @@ test("L4b: Full tuner agent loop (optional, PI_LINGUAL_E2E_FULL=1)", async (t) =
   }
 
   // Tested in sandboxed HOME: verifies agent can write valid lingual.json when given tuner skill
-  withSandbox((home) => {
+  withSandbox((home: string) => {
     const agentDir = path.join(home, ".pi", "agent");
     fs.mkdirSync(agentDir, { recursive: true });
 

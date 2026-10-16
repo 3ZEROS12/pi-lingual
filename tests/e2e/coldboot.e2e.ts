@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { e2eEnabled, withSandbox } from "./lib/driver.mjs";
+import { e2eEnabled, withSandbox } from "./lib/driver.js";
 import { getDefaultFactoryModes, SUPPORTED_LANG_CODES } from "../../dist/index.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -30,7 +30,7 @@ test("L7: Zero-config cold boot & sandbox hygiene across 9 languages", async (t)
   }
 
   for (const lang of SUPPORTED_LANG_CODES) {
-    withSandbox((home) => {
+    withSandbox((home: string) => {
       const env: Record<string, string | undefined> = {
         ...process.env,
         SANDBOX_HOME: home,
@@ -81,7 +81,7 @@ test("L8: Persistent config adherence & banner suppression on second boot", asyn
     return;
   }
 
-  withSandbox((home) => {
+  withSandbox((home: string) => {
     const agentDir = path.join(home, ".pi", "agent");
     fs.mkdirSync(agentDir, { recursive: true });
     const cfgFile = path.join(agentDir, "lingual.json");

@@ -1,5 +1,5 @@
 // Quality assertion helpers for real model outputs
-export const KILL_LIST = [
+export const KILL_LIST: string[] = [
   "delve",
   "tapestry",
   "seamless",
@@ -15,7 +15,7 @@ export const KILL_LIST = [
   "thrilled to announce",
 ];
 
-export const IMPERATIVE_VERBS = [
+export const IMPERATIVE_VERBS: string[] = [
   "Inspect",
   "Refactor",
   "Implement",
@@ -42,7 +42,7 @@ export const IMPERATIVE_VERBS = [
   "Avoid",
 ];
 
-export const ACADEMIC_DOWNGRADE_LIST = [
+export const ACADEMIC_DOWNGRADE_LIST: string[] = [
   "utilize",
   "facilitate",
   "leverage",
@@ -52,7 +52,7 @@ export const ACADEMIC_DOWNGRADE_LIST = [
   "subsequently",
 ];
 
-export function assertNoKillListWords(text) {
+export function assertNoKillListWords(text: string): void {
   const lower = text.toLowerCase();
   for (const word of KILL_LIST) {
     if (new RegExp(`\\b${word}\\b`, "i").test(lower)) {
@@ -61,7 +61,7 @@ export function assertNoKillListWords(text) {
   }
 }
 
-export function assertStartsImperative(text) {
+export function assertStartsImperative(text: string): void {
   const clean = text.trim().replace(/^[`'"]+/, "");
   const firstWord = (clean.split(/\s+/)[0] || "").replace(/[^a-zA-Z]/g, "");
   const matched = IMPERATIVE_VERBS.some(
@@ -72,13 +72,17 @@ export function assertStartsImperative(text) {
   }
 }
 
-export function assertNoChineseResidue(text) {
+export function assertNoChineseResidue(text: string): void {
   if (/[\u4e00-\u9fa5]/.test(text)) {
     throw new Error(`Output leaked Chinese characters: ${text}`);
   }
 }
 
-export function assertProfanityPreserved(input, output, words = ["fuck", "damn", "shit", "suck"]) {
+export function assertProfanityPreserved(
+  input: string,
+  output: string,
+  words: string[] = ["fuck", "damn", "shit", "suck"]
+): void {
   const inLower = input.toLowerCase();
   const outLower = output.toLowerCase();
   for (const w of words) {
@@ -88,7 +92,7 @@ export function assertProfanityPreserved(input, output, words = ["fuck", "damn",
   }
 }
 
-export function calculateJaccardSimilarity(strA, strB) {
+export function calculateJaccardSimilarity(strA: string, strB: string): number {
   const tokensA = new Set(strA.toLowerCase().split(/\W+/).filter(Boolean));
   const tokensB = new Set(strB.toLowerCase().split(/\W+/).filter(Boolean));
   if (tokensA.size === 0 && tokensB.size === 0) return 1.0;

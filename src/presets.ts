@@ -178,9 +178,19 @@ export function resolveModeDisplayName(modeId: string, lang = "en"): string {
     case "select":
       return n.candidates;
     case "off": {
-      const isZh = lang === "zh" || lang === "tw";
-      const isJa = lang === "ja";
-      return isZh ? "已关闭" : isJa ? "オフ" : "Off";
+      const OFF_MAP: Record<string, string> = {
+        zh: "已关闭",
+        tw: "已關閉",
+        ja: "オフ",
+        ko: "꺼짐",
+        es: "Apagado",
+        fr: "Désactivé",
+        de: "Aus",
+        ru: "Выкл",
+        en: "Off",
+      };
+      const norm = (lang || "en").toLowerCase().split("-")[0];
+      return OFF_MAP[norm] || OFF_MAP.en;
     }
     default:
       return modeId;
@@ -649,6 +659,12 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     notifyTargetSwitched: "Target language switched to: {target} (native {source} unchanged)",
     langHelpText: "[Companion Language: {flow}]\n• Quick switch: /lang ja (target Japanese) · /lang en (target English)\n• Pair switch: /lang en ja · /lang ja en · /lang es en\n• Supported codes: zh, tw, ja, ko, en, es, fr, de, ru",
     modeSwitchedTemplate: "[{pair}] Switched to [{num}. {name} ({id})] ({slot})",
+    loadingOptimizePrompt: "  ⋯ [lingual] optimizing prompt...",
+    loadingFixSyntax: "  ⋯ [lingual] fixing syntax & typos...",
+    loadingCandidates: "  ⋯ [lingual] generating prompt candidates...",
+    statusLoadingOptimize: "[lingual] optimizing...",
+    statusLoadingFix: "[lingual] fixing...",
+    statusLoadingCandidates: "[lingual] generating candidates...",
 
     cmdDescMode: "Cycle companion mode [en ⇄ ja]: [1:Companion] ➔ [2:Direct] ➔ [3:Live-Flow] ➔ [0:Off]",
     cmdDescLang: "Switch language pair [en ⇄ ja]: /lang <source> [target]",
@@ -738,6 +754,12 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     notifyTargetSwitched: "目标语言已切换为: {target}（母语 {source} 保持不变）",
     langHelpText: "[当前伴学语言: {flow}]\n• 常用切换: /lang ja (切换目标为日语) · /lang en (切换目标为英语)\n• 双向切换: /lang zh ja · /lang ja en · /lang en zh\n• 支持语种: zh (中文), tw (繁中), ja (日语), ko (韩语), en (英语), es (西语), fr (法语), de (德语), ru (俄语)",
     modeSwitchedTemplate: "[{pair}] 已切换至【{num}. {name} ({id})】({slot})",
+    loadingOptimizePrompt: "  ⋯ [lingual] 规范优化提示词中...",
+    loadingFixSyntax: "  ⋯ [lingual] 修补语法与错词中...",
+    loadingCandidates: "  ⋯ [lingual] 生成候选提示词中...",
+    statusLoadingOptimize: "[lingual] 优化中...",
+    statusLoadingFix: "[lingual] 修补中...",
+    statusLoadingCandidates: "[lingual] 候选生成中...",
 
     cmdDescMode: "切换伴学模式: [1:纯伴学] ➔ [2:规范直发] ➔ [3:实战狂飙] ➔ [0:关闭]",
     cmdDescLang: "切换伴学语言: /lang <code>",
@@ -827,6 +849,12 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     notifyTargetSwitched: "目標語言已切換為: {target}（母語 {source} 保持不變）",
     langHelpText: "[當前伴學語言: {flow}]\n• 常用切換: /lang ja (切換目標為日語) · /lang en (切換目標為英語)\n• 雙向切換: /lang tw ja · /lang ja en · /lang en zh\n• 支援語種: zh (中文), tw (繁中), ja (日語), ko (韓語), en (英語), es (西語), fr (法語), de (德語), ru (俄語)",
     modeSwitchedTemplate: "[{pair}] 已切換至【{num}. {name} ({id})】({slot})",
+    loadingOptimizePrompt: "  ⋯ [lingual] 規範優化提示詞中...",
+    loadingFixSyntax: "  ⋯ [lingual] 修補語法與錯詞中...",
+    loadingCandidates: "  ⋯ [lingual] 生成候選提示詞中...",
+    statusLoadingOptimize: "[lingual] 優化中...",
+    statusLoadingFix: "[lingual] 修補中...",
+    statusLoadingCandidates: "[lingual] 候選生成中...",
 
     cmdDescMode: "切換伴學模式: [1:純伴學] ➔ [2:規範直發] ➔ [3:實戰狂飆] ➔ [0:關閉]",
     cmdDescLang: "切換伴學語言: /lang <code>",
@@ -916,6 +944,12 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     notifyTargetSwitched: "ターゲット言語を {target} に変更しました（母語 {source} は維持）",
     langHelpText: "[現在の言語ペア: {flow}]\n• クイック切替: /lang en (英語へ) · /lang ja (日本語へ)\n• 双方向切替: /lang ja en · /lang en ja · /lang ja zh\n• 対応コード: zh, tw, ja, ko, en, es, fr, de, ru",
     modeSwitchedTemplate: "[{pair}] 【{num}. {name} ({id})】に切り替えました ({slot})",
+    loadingOptimizePrompt: "  ⋯ [lingual] プロンプト最適化中...",
+    loadingFixSyntax: "  ⋯ [lingual] 構文・誤字を修正中...",
+    loadingCandidates: "  ⋯ [lingual] 候補プロンプト生成中...",
+    statusLoadingOptimize: "[lingual] 最適化中...",
+    statusLoadingFix: "[lingual] 修正中...",
+    statusLoadingCandidates: "[lingual] 候補生成中...",
 
     cmdDescMode: "モード切替: [1:伴走] ➔ [2:仕様直行] ➔ [3:実戦疾走] ➔ [0:オフ]",
     cmdDescLang: "言語切替: /lang <code>",
@@ -975,7 +1009,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
   es: {
     slot1Label: "Coloquial",
     slot2Label: "Escrito",
-    vocabLabel: "Vocab",
+    vocabLabel: "Vocabulario",
     sourceLabel: "Original",
     hudTitle: "es ⇄ en",
     statusOriginal: "es ⇄ en",
@@ -1007,6 +1041,12 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     notifyTargetSwitched: "Idioma de destino cambiado a: {target} (nativo {source} sin cambios)",
     langHelpText: "[Idioma de asistencia: {flow}]\n• Cambio rápido: /lang ja (japonés) · /lang en (inglés)\n• Cambio de par: /lang es en · /lang en es · /lang es ja\n• Códigos admitidos: zh, tw, ja, ko, en, es, fr, de, ru",
     modeSwitchedTemplate: "[{pair}] Cambiado a [{num}. {name} ({id})] ({slot})",
+    loadingOptimizePrompt: "  ⋯ [lingual] optimizando prompt...",
+    loadingFixSyntax: "  ⋯ [lingual] corrigiendo sintaxis y erratas...",
+    loadingCandidates: "  ⋯ [lingual] generando candidatos de prompt...",
+    statusLoadingOptimize: "[lingual] optimizando...",
+    statusLoadingFix: "[lingual] corrigiendo...",
+    statusLoadingCandidates: "[lingual] generando...",
 
     cmdDescMode: "Cambiar modo: [1:Aprendizaje] ➔ [2:Directo Lógico] ➔ [3:Live Flow] ➔ [0:Apagado]",
     cmdDescStatus: "Mostrar diagnóstico y estado del modelo: /lingual-status",
@@ -1083,11 +1123,14 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     slotsUsageRm: "Uso: /slots rm <id_ranura>",
     slotsUsageToggle: "Uso: /slots toggle <id_ranura>",
     slotsUnknown: "[{pair}] Comando o ajuste preestablecido desconocido \"{cmd}\". Escriba /slots para ver la ayuda",
+
+    spokenLabel: "Coloquial",
+    writtenLabel: "Escrito",
   },
   fr: {
     slot1Label: "Oral",
     slot2Label: "Écrit",
-    vocabLabel: "Vocab",
+    vocabLabel: "Vocabulaire",
     sourceLabel: "Source",
     hudTitle: "fr ⇄ en",
     statusOriginal: "fr ⇄ en",
@@ -1118,6 +1161,12 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     notifyTargetSwitched: "Langue cible changée en : {target} (langue native {source} inchangée)",
     langHelpText: "[Paire de langues : {flow}]\n• Changement rapide : /lang ja (japonais) · /lang en (anglais)\n• Changement de paire : /lang fr en · /lang en fr\n• Codes pris en charge : zh, tw, ja, ko, en, es, fr, de, ru",
     modeSwitchedTemplate: "[{pair}] Changé en [{num}. {name} ({id})] ({slot})",
+    loadingOptimizePrompt: "  ⋯ [lingual] optimisation du prompt...",
+    loadingFixSyntax: "  ⋯ [lingual] correction de la syntaxe et des fautes...",
+    loadingCandidates: "  ⋯ [lingual] génération des variantes de prompt...",
+    statusLoadingOptimize: "[lingual] optimisation...",
+    statusLoadingFix: "[lingual] correction...",
+    statusLoadingCandidates: "[lingual] génération...",
 
     cmdDescMode: "Changer de mode : [1:Compagnon] ➔ [2:Direct Logique] ➔ [3:Live Flow] ➔ [0:Désactivé]",
     cmdDescStatus: "Afficher le rapport d'état et le diagnostic: /lingual-status",
@@ -1193,6 +1242,9 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     slotsUsageRm: "Utilisation : /slots rm <id_emplacement>",
     slotsUsageToggle: "Utilisation : /slots toggle <id_emplacement>",
     slotsUnknown: "[{pair}] Commande ou préréglage inconnu \"{cmd}\". Tapez /slots pour afficher l'aide",
+
+    spokenLabel: "Oral",
+    writtenLabel: "Écrit",
   },
   de: {
     slot1Label: "Gesprochen",
@@ -1229,6 +1281,12 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     notifyTargetSwitched: "Zielsprache geändert zu: {target} (Muttersprache {source} unverändert)",
     langHelpText: "[Sprachpaar: {flow}]\n• Schneller Wechsel: /lang ja (Japanisch) · /lang en (Englisch)\n• Paar-Wechsel: /lang de en · /lang en de\n• Unterstützte Codes: zh, tw, ja, ko, en, es, fr, de, ru",
     modeSwitchedTemplate: "[{pair}] Gewechselt zu [{num}. {name} ({id})] ({slot})",
+    loadingOptimizePrompt: "  ⋯ [lingual] Optimiere Prompt...",
+    loadingFixSyntax: "  ⋯ [lingual] Korrigiere Syntax & Tippfehler...",
+    loadingCandidates: "  ⋯ [lingual] Generiere Prompt-Varianten...",
+    statusLoadingOptimize: "[lingual] optimieren...",
+    statusLoadingFix: "[lingual] korrigieren...",
+    statusLoadingCandidates: "[lingual] generieren...",
 
     cmdDescMode: "Modus umschalten: [1:Begleitung] ➔ [2:Direkte Logik] ➔ [3:Live Flow] ➔ [0:Aus]",
     cmdDescStatus: "Statusbericht und Modell-Diagnose anzeigen: /lingual-status",
@@ -1305,6 +1363,9 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     slotsUsageRm: "Verwendung: /slots rm <Slot-ID>",
     slotsUsageToggle: "Verwendung: /slots toggle <Slot-ID>",
     slotsUnknown: "[{pair}] Unbekannter Befehl oder Preset \"{cmd}\". /slots für Hilfe eingeben",
+
+    spokenLabel: "Gesprochen",
+    writtenLabel: "Schriftlich",
   },
   ko: {
     slot1Label: "구어체",
@@ -1340,6 +1401,12 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     notifyTargetSwitched: "목표 언어가 {target}(으)로 변경되었습니다 (모국어 {source} 유지)",
     langHelpText: "[현재 동반 언어: {flow}]\n• 빠른 전환: /lang ja (일본어로) · /lang en (영어로)\n• 양방향 전환: /lang ko en · /lang en ko · /lang ko ja\n• 지원 코드: zh, tw, ja, ko, en, es, fr, de, ru",
     modeSwitchedTemplate: "[{pair}] 【{num}. {name} ({id})】(으)로 전환되었습니다 ({slot})",
+    loadingOptimizePrompt: "  ⋯ [lingual] 프롬프트 최적화 중...",
+    loadingFixSyntax: "  ⋯ [lingual] 문법 및 오타 수정 중...",
+    loadingCandidates: "  ⋯ [lingual] 후보 프롬프트 생성 중...",
+    statusLoadingOptimize: "[lingual] 최적화 중...",
+    statusLoadingFix: "[lingual] 수정 중...",
+    statusLoadingCandidates: "[lingual] 생성 중...",
 
     cmdDescMode: "모드 전환: [1:동행학습] ➔ [2:논리정제] ➔ [3:실전질주] ➔ [0:꺼짐]",
     cmdDescStatus: "상태 보고서 및 진단 확인: /lingual-status",
@@ -1417,6 +1484,9 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     slotsUsageRm: "사용법: /slots rm <슬롯_id>",
     slotsUsageToggle: "사용법: /slots toggle <슬롯_id>",
     slotsUnknown: "[{pair}] 알 수 없는 명령어 \"{cmd}\". /slots 도움말 참조",
+
+    spokenLabel: "구어",
+    writtenLabel: "문어",
   },
   ru: {
     slot1Label: "Разговорный",
@@ -1452,6 +1522,12 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     notifyTargetSwitched: "Целевой язык переключен на: {target} (родной {source} без изменений)",
     langHelpText: "[Языковая пара: {flow}]\n• Быстрое переключение: /lang ja (японский) · /lang en (английский)\n• Смена пары: /lang ru en · /lang en ru\n• Поддерживаемые коды: zh, tw, ja, ko, en, es, fr, de, ru",
     modeSwitchedTemplate: "[{pair}] Переключено на [{num}. {name} ({id})] ({slot})",
+    loadingOptimizePrompt: "  ⋯ [lingual] оптимизация промпта...",
+    loadingFixSyntax: "  ⋯ [lingual] исправление синтаксиса и опечаток...",
+    loadingCandidates: "  ⋯ [lingual] генерация вариантов промпта...",
+    statusLoadingOptimize: "[lingual] оптимизация...",
+    statusLoadingFix: "[lingual] исправление...",
+    statusLoadingCandidates: "[lingual] генерация...",
 
     cmdDescMode: "Переключить режим: [1:Сопровождение] ➔ [2:Прямой поток] ➔ [3:Live Flow] ➔ [0:Выкл]",
     cmdDescStatus: "Отчет о состоянии и диагностика: /lingual-status",
@@ -1529,6 +1605,9 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     slotsUsageRm: "Использование: /slots rm <id_слота>",
     slotsUsageToggle: "Использование: /slots toggle <id_слота>",
     slotsUnknown: "[{pair}] Неизвестная команда \"{cmd}\". Введите /slots для справки",
+
+    spokenLabel: "Разговорный",
+    writtenLabel: "Деловой",
   },
 };
 

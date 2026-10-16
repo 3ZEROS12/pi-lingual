@@ -7,7 +7,7 @@ Code in your native language. See real-time Silicon Valley spoken phrasing and f
 [![npm version](https://img.shields.io/npm/v/pi-lingual?color=blue)](https://www.npmjs.com/package/pi-lingual)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Built for Pi](https://img.shields.io/badge/Built%20for-Pi%20Coding%20Agent-orange)](https://github.com/earendil-works/pi-coding-agent)
-[![Tests](https://img.shields.io/badge/Tests-152%2F152%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
+[![Tests](https://img.shields.io/badge/Tests-155%2F155%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict%20Zero%20Error-blue)](tsconfig.json)
 
 **English** | [简体中文](./README_zh.md)
@@ -37,6 +37,8 @@ Works out of the box with your current session model credentials. Automatically 
 
 > 💡 **Recommended Terminal Mode**:  
 > For companion learning and historical review, we recommend configuring `"tuiMode": "regular"` in `~/.pi/agent/settings.json`. Translation and vocab cards flow naturally with your conversation stream, allowing you to scroll back up anytime to review past expressions without sandbox barriers.
+>
+> ⚡ **Latency Profile**: In factory default Companion mode, prompt delivery is 0ms (pass-through directly to the coding agent without delay). In rewriting modes (`direct`, `live-flow`), prompt transformation executes a single model call depending on provider speed.
 
 ---
 
@@ -201,7 +203,7 @@ To keep Pi's `/` autocomplete menu clean, `pi-lingual` registers only **4 top-le
 | Core Command | Subcommands / Arguments | Description |
 | :--- | :--- | :--- |
 | **`/lingual`** | `/lingual [id\|index\|off]` | Smoothly cycles enabled modes; jump directly by number or ID |
-| ↳ Reasoning Effort | `/lingual reasoning [low\|medium\|high]` | Switch model reasoning depth (`low` for instant ~200ms utility, `medium` for complex `spec`) |
+| ↳ Reasoning Effort | `/lingual reasoning [low\|medium\|high]` | Switch model reasoning depth (`low` for fast execution, `medium` for complex `spec`) |
 | ↳ Mode Registry | `/lingual mode [list\|add\|rm\|toggle\|reset]` | Manage custom modes, flow directions, and slots via CLI |
 | ↳ Loadouts | `/lingual loadout [list\|apply <id>]` | Inspect or apply tactical loadouts (`spec`, `commit`, `oss`, `yap`) |
 | ↳ Subcommands | `/lingual compact` \| `model` \| `status` \| `news` \| `lock` | Toggle capsule, switch model, inspect cache, view news, or lock mode |
@@ -234,7 +236,7 @@ Never get locked into rigid, hardcoded templates. Every slot on your companion c
 ### Configurable Reasoning Effort (`/lingual reasoning`)
 Instead of swapping models for different tasks, `pi-lingual` dynamically adjusts the reasoning effort level per mode:
 ```bash
-/lingual reasoning low       # Ultra-fast (~200ms) execution for daily direct & live-flow rewriting
+/lingual reasoning low       # Fast low-latency execution for daily direct & live-flow rewriting
 /lingual reasoning medium    # Deeper structural thinking for complex loadouts (e.g. Brain-Dump to Spec)
 /lingual reasoning high      # Maximum reasoning depth for intricate multi-constraint requirements
 ```

@@ -118,6 +118,12 @@ interface LingualI18nLabels {
     notifyUnrecognizedSubcommand?: string;
     notifyClipboardCopied?: string;
     notifyTargetSwitched?: string;
+    loadingOptimizePrompt?: string;
+    loadingFixSyntax?: string;
+    loadingCandidates?: string;
+    statusLoadingOptimize?: string;
+    statusLoadingFix?: string;
+    statusLoadingCandidates?: string;
     langHelpText?: string;
     modeSwitchedTemplate?: string;
     cmdDescMode?: string;

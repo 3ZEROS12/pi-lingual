@@ -3,14 +3,14 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { e2eEnabled, isPiAvailable, runModel } from "./lib/driver.mjs";
+import { e2eEnabled, isPiAvailable, runModel } from "./lib/driver.js";
 import {
   assertNoKillListWords,
   assertStartsImperative,
   assertNoChineseResidue,
   assertProfanityPreserved,
   calculateJaccardSimilarity,
-} from "./lib/asserts.mjs";
+} from "./lib/asserts.js";
 import {
   compileModeSystemPrompt,
   getDefaultFactoryModes,
@@ -39,7 +39,7 @@ test("L1: Logical Spec quality (real model execution)", async (t) => {
   });
 
   const input = promptsData.logical_spec_zh[0];
-  const { out, status, ms } = runModel(sysPrompt, input);
+  const { out, status, ms } = runModel(sysPrompt, input, { label: "L1: Logical Spec" });
 
   assert.equal(status, 0, `pi execution failed: ${out}`);
   assert.ok(out.length > 0 && out.length <= 1200, "Length budget check");
@@ -69,7 +69,7 @@ test("L2: Live Flow quality (real model execution)", async (t) => {
   });
 
   const input = promptsData.live_flow_en[0];
-  const { out, status } = runModel(sysPrompt, input);
+  const { out, status } = runModel(sysPrompt, input, { label: "L2: Live Flow" });
 
   assert.equal(status, 0);
   const parsed = repairAndParseJsonObject(out) || {};
@@ -99,16 +99,17 @@ test("L3: Companion card duality quality (real model execution)", async (t) => {
   });
 
   const input = promptsData.companion_zh[0];
-  const { out, status } = runModel(sysPrompt, input);
+  const { out, status } = runModel(sysPrompt, input, { label: "L3: Companion Duality" });
 
   assert.equal(status, 0);
   const parsed = repairAndParseJsonObject(out) || {};
 
   if (parsed.spoken && parsed.written) {
     const similarity = calculateJaccardSimilarity(parsed.spoken, parsed.written);
+    console.log(`\n[L3 Companion Duality] Measured Jaccard similarity: ${similarity.toFixed(4)}`);
     assert.ok(
-      similarity <= 0.7,
-      `Spoken and written registers must be differentiated (similarity: ${similarity})`
+      similarity <= 0.6,
+      `Spoken and written registers must be differentiated (similarity: ${similarity} > 0.6)`
     );
   }
 });

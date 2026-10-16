@@ -853,6 +853,8 @@ ${rules.map((r, i) => `(${i + 1}) ${r}`).join("\n")}`
   Output in ${outLangName}: "Inspect \`src/auth.ts\` to diagnose and fix session loss on page refresh, specifically checking cookie expiration settings while keeping the diff minimal and leaving unrelated code untouched."`
     : "";
 
+  // Note: Model-facing few-shot mapping anchor for the LLM prompt compiler (not user-facing UI chrome).
+  // When target language is English, English imperative verbs are deliberate targets regardless of input language.
   const isZhSource = normSource === "zh" || normSource === "tw";
   const verbExamples = isZhSource
     ? `"look into / check / 看看 / 排查" ➔ "Inspect" / "Diagnose" / "Trace"; "clean up / tweak / 改改 / 重构" ➔ "Refactor" / "Streamline" / "Harden"; "add / create / 加上 / 做个" ➔ "Implement" / "Scaffold" / "Wire up"; "remove / drop / 删掉" ➔ "Prune" / "Deprecate" / "Strip"; "fix / 搞好" ➔ "Fix" / "Resolve"`

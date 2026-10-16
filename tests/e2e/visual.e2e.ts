@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import os from "node:os";
 import { spawnSync } from "node:child_process";
-import { e2eEnabled, isPiAvailable } from "./lib/driver.mjs";
+import { e2eEnabled, isPiAvailable } from "./lib/driver.js";
 import { formatReleaseBannerLines } from "../../dist/index.js";
 import { getVisualWidth } from "../../dist/index.js";
 

@@ -110,7 +110,7 @@ Out of the box, `pi-lingual` ships with exactly three golden baselines (with `0 
   npm test
   # or from workspace root: node .scripts/fleet.mjs test pi-lingual
   ```
-  *Executes 152 test suites covering banner geometry, cache, chunker, commands, engine, layout, modes, prompts, sanitizer, shield, slots, sovereignty, and sandboxed cold-boot upgrades (100% green).*
+  *Executes 155 test suites covering banner geometry, cache, chunker, commands, engine, layout, modes, prompts, sanitizer, shield, slots, sovereignty, and sandboxed cold-boot upgrades (100% green).*
 
 - **Build Distribution Bundles**:
   ```bash

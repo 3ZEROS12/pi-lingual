@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import os from "node:os";
 import { execSync, spawnSync } from "node:child_process";
-import { e2eEnabled, isPiAvailable, runModel } from "./lib/driver.mjs";
+import { e2eEnabled, isPiAvailable, runModel } from "./lib/driver.js";
 import { getPresetLoadout, compileModeSystemPrompt, repairAndParseJsonObject } from "../../dist/index.js";
 
 test("L5: Clipboard loadouts (commit dehydrator on Windows)", async (t) => {
@@ -26,7 +26,7 @@ test("L5: Clipboard loadouts (commit dehydrator on Windows)", async (t) => {
   });
 
   const userInput = "修复了登录页面刷新后偶尔丢失 session 状态的问题，排查发现是 cookie 的 samesite 和 expire 计算有偏差";
-  const { out, status } = runModel(sysPrompt, userInput);
+  const { out, status } = runModel(sysPrompt, userInput, { label: "L5: Clipboard Commit" });
   assert.equal(status, 0);
 
   const parsed = repairAndParseJsonObject(out) || {};

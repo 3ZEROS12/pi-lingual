@@ -1011,9 +1011,19 @@ function resolveModeDisplayName(modeId, lang = "en") {
     case "select":
       return n.candidates;
     case "off": {
-      const isZh = lang === "zh" || lang === "tw";
-      const isJa = lang === "ja";
-      return isZh ? "\u5DF2\u5173\u95ED" : isJa ? "\u30AA\u30D5" : "Off";
+      const OFF_MAP = {
+        zh: "\u5DF2\u5173\u95ED",
+        tw: "\u5DF2\u95DC\u9589",
+        ja: "\u30AA\u30D5",
+        ko: "\uAEBC\uC9D0",
+        es: "Apagado",
+        fr: "D\xE9sactiv\xE9",
+        de: "Aus",
+        ru: "\u0412\u044B\u043A\u043B",
+        en: "Off"
+      };
+      const norm2 = (lang || "en").toLowerCase().split("-")[0];
+      return OFF_MAP[norm2] || OFF_MAP.en;
     }
     default:
       return modeId;
@@ -1424,6 +1434,12 @@ var LANGUAGE_PRESETS = {
     notifyTargetSwitched: "Target language switched to: {target} (native {source} unchanged)",
     langHelpText: "[Companion Language: {flow}]\n\u2022 Quick switch: /lang ja (target Japanese) \xB7 /lang en (target English)\n\u2022 Pair switch: /lang en ja \xB7 /lang ja en \xB7 /lang es en\n\u2022 Supported codes: zh, tw, ja, ko, en, es, fr, de, ru",
     modeSwitchedTemplate: "[{pair}] Switched to [{num}. {name} ({id})] ({slot})",
+    loadingOptimizePrompt: "  \u22EF [lingual] optimizing prompt...",
+    loadingFixSyntax: "  \u22EF [lingual] fixing syntax & typos...",
+    loadingCandidates: "  \u22EF [lingual] generating prompt candidates...",
+    statusLoadingOptimize: "[lingual] optimizing...",
+    statusLoadingFix: "[lingual] fixing...",
+    statusLoadingCandidates: "[lingual] generating candidates...",
     cmdDescMode: "Cycle companion mode [en \u21C4 ja]: [1:Companion] \u2794 [2:Direct] \u2794 [3:Live-Flow] \u2794 [0:Off]",
     cmdDescLang: "Switch language pair [en \u21C4 ja]: /lang <source> [target]",
     cmdDescLast: "Replay previous companion card: /last",
@@ -1505,6 +1521,12 @@ var LANGUAGE_PRESETS = {
     notifyTargetSwitched: "\u76EE\u6807\u8BED\u8A00\u5DF2\u5207\u6362\u4E3A: {target}\uFF08\u6BCD\u8BED {source} \u4FDD\u6301\u4E0D\u53D8\uFF09",
     langHelpText: "[\u5F53\u524D\u4F34\u5B66\u8BED\u8A00: {flow}]\n\u2022 \u5E38\u7528\u5207\u6362: /lang ja (\u5207\u6362\u76EE\u6807\u4E3A\u65E5\u8BED) \xB7 /lang en (\u5207\u6362\u76EE\u6807\u4E3A\u82F1\u8BED)\n\u2022 \u53CC\u5411\u5207\u6362: /lang zh ja \xB7 /lang ja en \xB7 /lang en zh\n\u2022 \u652F\u6301\u8BED\u79CD: zh (\u4E2D\u6587), tw (\u7E41\u4E2D), ja (\u65E5\u8BED), ko (\u97E9\u8BED), en (\u82F1\u8BED), es (\u897F\u8BED), fr (\u6CD5\u8BED), de (\u5FB7\u8BED), ru (\u4FC4\u8BED)",
     modeSwitchedTemplate: "[{pair}] \u5DF2\u5207\u6362\u81F3\u3010{num}. {name} ({id})\u3011({slot})",
+    loadingOptimizePrompt: "  \u22EF [lingual] \u89C4\u8303\u4F18\u5316\u63D0\u793A\u8BCD\u4E2D...",
+    loadingFixSyntax: "  \u22EF [lingual] \u4FEE\u8865\u8BED\u6CD5\u4E0E\u9519\u8BCD\u4E2D...",
+    loadingCandidates: "  \u22EF [lingual] \u751F\u6210\u5019\u9009\u63D0\u793A\u8BCD\u4E2D...",
+    statusLoadingOptimize: "[lingual] \u4F18\u5316\u4E2D...",
+    statusLoadingFix: "[lingual] \u4FEE\u8865\u4E2D...",
+    statusLoadingCandidates: "[lingual] \u5019\u9009\u751F\u6210\u4E2D...",
     cmdDescMode: "\u5207\u6362\u4F34\u5B66\u6A21\u5F0F: [1:\u7EAF\u4F34\u5B66] \u2794 [2:\u89C4\u8303\u76F4\u53D1] \u2794 [3:\u5B9E\u6218\u72C2\u98D9] \u2794 [0:\u5173\u95ED]",
     cmdDescLang: "\u5207\u6362\u4F34\u5B66\u8BED\u8A00: /lang <code>",
     cmdDescLast: "\u56DE\u770B\u4E0A\u4E00\u6761\u5361\u7247: /last",
@@ -1586,6 +1608,12 @@ var LANGUAGE_PRESETS = {
     notifyTargetSwitched: "\u76EE\u6A19\u8A9E\u8A00\u5DF2\u5207\u63DB\u70BA: {target}\uFF08\u6BCD\u8A9E {source} \u4FDD\u6301\u4E0D\u8B8A\uFF09",
     langHelpText: "[\u7576\u524D\u4F34\u5B78\u8A9E\u8A00: {flow}]\n\u2022 \u5E38\u7528\u5207\u63DB: /lang ja (\u5207\u63DB\u76EE\u6A19\u70BA\u65E5\u8A9E) \xB7 /lang en (\u5207\u63DB\u76EE\u6A19\u70BA\u82F1\u8A9E)\n\u2022 \u96D9\u5411\u5207\u63DB: /lang tw ja \xB7 /lang ja en \xB7 /lang en zh\n\u2022 \u652F\u63F4\u8A9E\u7A2E: zh (\u4E2D\u6587), tw (\u7E41\u4E2D), ja (\u65E5\u8A9E), ko (\u97D3\u8A9E), en (\u82F1\u8A9E), es (\u897F\u8A9E), fr (\u6CD5\u8A9E), de (\u5FB7\u8A9E), ru (\u4FC4\u8A9E)",
     modeSwitchedTemplate: "[{pair}] \u5DF2\u5207\u63DB\u81F3\u3010{num}. {name} ({id})\u3011({slot})",
+    loadingOptimizePrompt: "  \u22EF [lingual] \u898F\u7BC4\u512A\u5316\u63D0\u793A\u8A5E\u4E2D...",
+    loadingFixSyntax: "  \u22EF [lingual] \u4FEE\u88DC\u8A9E\u6CD5\u8207\u932F\u8A5E\u4E2D...",
+    loadingCandidates: "  \u22EF [lingual] \u751F\u6210\u5019\u9078\u63D0\u793A\u8A5E\u4E2D...",
+    statusLoadingOptimize: "[lingual] \u512A\u5316\u4E2D...",
+    statusLoadingFix: "[lingual] \u4FEE\u88DC\u4E2D...",
+    statusLoadingCandidates: "[lingual] \u5019\u9078\u751F\u6210\u4E2D...",
     cmdDescMode: "\u5207\u63DB\u4F34\u5B78\u6A21\u5F0F: [1:\u7D14\u4F34\u5B78] \u2794 [2:\u898F\u7BC4\u76F4\u767C] \u2794 [3:\u5BE6\u6230\u72C2\u98C6] \u2794 [0:\u95DC\u9589]",
     cmdDescLang: "\u5207\u63DB\u4F34\u5B78\u8A9E\u8A00: /lang <code>",
     cmdDescLast: "\u56DE\u770B\u4E0A\u4E00\u689D\u5361\u7247: /last",
@@ -1667,6 +1695,12 @@ var LANGUAGE_PRESETS = {
     notifyTargetSwitched: "\u30BF\u30FC\u30B2\u30C3\u30C8\u8A00\u8A9E\u3092 {target} \u306B\u5909\u66F4\u3057\u307E\u3057\u305F\uFF08\u6BCD\u8A9E {source} \u306F\u7DAD\u6301\uFF09",
     langHelpText: "[\u73FE\u5728\u306E\u8A00\u8A9E\u30DA\u30A2: {flow}]\n\u2022 \u30AF\u30A4\u30C3\u30AF\u5207\u66FF: /lang en (\u82F1\u8A9E\u3078) \xB7 /lang ja (\u65E5\u672C\u8A9E\u3078)\n\u2022 \u53CC\u65B9\u5411\u5207\u66FF: /lang ja en \xB7 /lang en ja \xB7 /lang ja zh\n\u2022 \u5BFE\u5FDC\u30B3\u30FC\u30C9: zh, tw, ja, ko, en, es, fr, de, ru",
     modeSwitchedTemplate: "[{pair}] \u3010{num}. {name} ({id})\u3011\u306B\u5207\u308A\u66FF\u3048\u307E\u3057\u305F ({slot})",
+    loadingOptimizePrompt: "  \u22EF [lingual] \u30D7\u30ED\u30F3\u30D7\u30C8\u6700\u9069\u5316\u4E2D...",
+    loadingFixSyntax: "  \u22EF [lingual] \u69CB\u6587\u30FB\u8AA4\u5B57\u3092\u4FEE\u6B63\u4E2D...",
+    loadingCandidates: "  \u22EF [lingual] \u5019\u88DC\u30D7\u30ED\u30F3\u30D7\u30C8\u751F\u6210\u4E2D...",
+    statusLoadingOptimize: "[lingual] \u6700\u9069\u5316\u4E2D...",
+    statusLoadingFix: "[lingual] \u4FEE\u6B63\u4E2D...",
+    statusLoadingCandidates: "[lingual] \u5019\u88DC\u751F\u6210\u4E2D...",
     cmdDescMode: "\u30E2\u30FC\u30C9\u5207\u66FF: [1:\u4F34\u8D70] \u2794 [2:\u4ED5\u69D8\u76F4\u884C] \u2794 [3:\u5B9F\u6226\u75BE\u8D70] \u2794 [0:\u30AA\u30D5]",
     cmdDescLang: "\u8A00\u8A9E\u5207\u66FF: /lang <code>",
     cmdDescLast: "\u524D\u56DE\u30AB\u30FC\u30C9\u518D\u8868\u793A: /last",
@@ -1719,7 +1753,7 @@ var LANGUAGE_PRESETS = {
   es: {
     slot1Label: "Coloquial",
     slot2Label: "Escrito",
-    vocabLabel: "Vocab",
+    vocabLabel: "Vocabulario",
     sourceLabel: "Original",
     hudTitle: "es \u21C4 en",
     statusOriginal: "es \u21C4 en",
@@ -1750,6 +1784,12 @@ var LANGUAGE_PRESETS = {
     notifyTargetSwitched: "Idioma de destino cambiado a: {target} (nativo {source} sin cambios)",
     langHelpText: "[Idioma de asistencia: {flow}]\n\u2022 Cambio r\xE1pido: /lang ja (japon\xE9s) \xB7 /lang en (ingl\xE9s)\n\u2022 Cambio de par: /lang es en \xB7 /lang en es \xB7 /lang es ja\n\u2022 C\xF3digos admitidos: zh, tw, ja, ko, en, es, fr, de, ru",
     modeSwitchedTemplate: "[{pair}] Cambiado a [{num}. {name} ({id})] ({slot})",
+    loadingOptimizePrompt: "  \u22EF [lingual] optimizando prompt...",
+    loadingFixSyntax: "  \u22EF [lingual] corrigiendo sintaxis y erratas...",
+    loadingCandidates: "  \u22EF [lingual] generando candidatos de prompt...",
+    statusLoadingOptimize: "[lingual] optimizando...",
+    statusLoadingFix: "[lingual] corrigiendo...",
+    statusLoadingCandidates: "[lingual] generando...",
     cmdDescMode: "Cambiar modo: [1:Aprendizaje] \u2794 [2:Directo L\xF3gico] \u2794 [3:Live Flow] \u2794 [0:Apagado]",
     cmdDescStatus: "Mostrar diagn\xF3stico y estado del modelo: /lingual-status",
     cmdDescModel: "Consultar o cambiar modelo: /lingual-model [model-id|auto]",
@@ -1819,12 +1859,14 @@ var LANGUAGE_PRESETS = {
     slotsUsageAdd: "Uso: /slots add <id> <etiqueta> [instrucci\xF3n...]",
     slotsUsageRm: "Uso: /slots rm <id_ranura>",
     slotsUsageToggle: "Uso: /slots toggle <id_ranura>",
-    slotsUnknown: '[{pair}] Comando o ajuste preestablecido desconocido "{cmd}". Escriba /slots para ver la ayuda'
+    slotsUnknown: '[{pair}] Comando o ajuste preestablecido desconocido "{cmd}". Escriba /slots para ver la ayuda',
+    spokenLabel: "Coloquial",
+    writtenLabel: "Escrito"
   },
   fr: {
     slot1Label: "Oral",
     slot2Label: "\xC9crit",
-    vocabLabel: "Vocab",
+    vocabLabel: "Vocabulaire",
     sourceLabel: "Source",
     hudTitle: "fr \u21C4 en",
     statusOriginal: "fr \u21C4 en",
@@ -1854,6 +1896,12 @@ var LANGUAGE_PRESETS = {
     notifyTargetSwitched: "Langue cible chang\xE9e en : {target} (langue native {source} inchang\xE9e)",
     langHelpText: "[Paire de langues : {flow}]\n\u2022 Changement rapide : /lang ja (japonais) \xB7 /lang en (anglais)\n\u2022 Changement de paire : /lang fr en \xB7 /lang en fr\n\u2022 Codes pris en charge : zh, tw, ja, ko, en, es, fr, de, ru",
     modeSwitchedTemplate: "[{pair}] Chang\xE9 en [{num}. {name} ({id})] ({slot})",
+    loadingOptimizePrompt: "  \u22EF [lingual] optimisation du prompt...",
+    loadingFixSyntax: "  \u22EF [lingual] correction de la syntaxe et des fautes...",
+    loadingCandidates: "  \u22EF [lingual] g\xE9n\xE9ration des variantes de prompt...",
+    statusLoadingOptimize: "[lingual] optimisation...",
+    statusLoadingFix: "[lingual] correction...",
+    statusLoadingCandidates: "[lingual] g\xE9n\xE9ration...",
     cmdDescMode: "Changer de mode : [1:Compagnon] \u2794 [2:Direct Logique] \u2794 [3:Live Flow] \u2794 [0:D\xE9sactiv\xE9]",
     cmdDescStatus: "Afficher le rapport d'\xE9tat et le diagnostic: /lingual-status",
     cmdDescModel: "Consulter ou changer de mod\xE8le: /lingual-model [model-id|auto]",
@@ -1922,7 +1970,9 @@ var LANGUAGE_PRESETS = {
     slotsUsageAdd: "Utilisation : /slots add <id> <\xE9tiquette> [instruction...]",
     slotsUsageRm: "Utilisation : /slots rm <id_emplacement>",
     slotsUsageToggle: "Utilisation : /slots toggle <id_emplacement>",
-    slotsUnknown: `[{pair}] Commande ou pr\xE9r\xE9glage inconnu "{cmd}". Tapez /slots pour afficher l'aide`
+    slotsUnknown: `[{pair}] Commande ou pr\xE9r\xE9glage inconnu "{cmd}". Tapez /slots pour afficher l'aide`,
+    spokenLabel: "Oral",
+    writtenLabel: "\xC9crit"
   },
   de: {
     slot1Label: "Gesprochen",
@@ -1958,6 +2008,12 @@ var LANGUAGE_PRESETS = {
     notifyTargetSwitched: "Zielsprache ge\xE4ndert zu: {target} (Muttersprache {source} unver\xE4ndert)",
     langHelpText: "[Sprachpaar: {flow}]\n\u2022 Schneller Wechsel: /lang ja (Japanisch) \xB7 /lang en (Englisch)\n\u2022 Paar-Wechsel: /lang de en \xB7 /lang en de\n\u2022 Unterst\xFCtzte Codes: zh, tw, ja, ko, en, es, fr, de, ru",
     modeSwitchedTemplate: "[{pair}] Gewechselt zu [{num}. {name} ({id})] ({slot})",
+    loadingOptimizePrompt: "  \u22EF [lingual] Optimiere Prompt...",
+    loadingFixSyntax: "  \u22EF [lingual] Korrigiere Syntax & Tippfehler...",
+    loadingCandidates: "  \u22EF [lingual] Generiere Prompt-Varianten...",
+    statusLoadingOptimize: "[lingual] optimieren...",
+    statusLoadingFix: "[lingual] korrigieren...",
+    statusLoadingCandidates: "[lingual] generieren...",
     cmdDescMode: "Modus umschalten: [1:Begleitung] \u2794 [2:Direkte Logik] \u2794 [3:Live Flow] \u2794 [0:Aus]",
     cmdDescStatus: "Statusbericht und Modell-Diagnose anzeigen: /lingual-status",
     cmdDescModel: "Modell pr\xFCfen oder wechseln: /lingual-model [model-id|auto]",
@@ -2027,7 +2083,9 @@ var LANGUAGE_PRESETS = {
     slotsUsageAdd: "Verwendung: /slots add <id> <Label> [Anweisung...]",
     slotsUsageRm: "Verwendung: /slots rm <Slot-ID>",
     slotsUsageToggle: "Verwendung: /slots toggle <Slot-ID>",
-    slotsUnknown: '[{pair}] Unbekannter Befehl oder Preset "{cmd}". /slots f\xFCr Hilfe eingeben'
+    slotsUnknown: '[{pair}] Unbekannter Befehl oder Preset "{cmd}". /slots f\xFCr Hilfe eingeben',
+    spokenLabel: "Gesprochen",
+    writtenLabel: "Schriftlich"
   },
   ko: {
     slot1Label: "\uAD6C\uC5B4\uCCB4",
@@ -2062,6 +2120,12 @@ var LANGUAGE_PRESETS = {
     notifyTargetSwitched: "\uBAA9\uD45C \uC5B8\uC5B4\uAC00 {target}(\uC73C)\uB85C \uBCC0\uACBD\uB418\uC5C8\uC2B5\uB2C8\uB2E4 (\uBAA8\uAD6D\uC5B4 {source} \uC720\uC9C0)",
     langHelpText: "[\uD604\uC7AC \uB3D9\uBC18 \uC5B8\uC5B4: {flow}]\n\u2022 \uBE60\uB978 \uC804\uD658: /lang ja (\uC77C\uBCF8\uC5B4\uB85C) \xB7 /lang en (\uC601\uC5B4\uB85C)\n\u2022 \uC591\uBC29\uD5A5 \uC804\uD658: /lang ko en \xB7 /lang en ko \xB7 /lang ko ja\n\u2022 \uC9C0\uC6D0 \uCF54\uB4DC: zh, tw, ja, ko, en, es, fr, de, ru",
     modeSwitchedTemplate: "[{pair}] \u3010{num}. {name} ({id})\u3011(\uC73C)\uB85C \uC804\uD658\uB418\uC5C8\uC2B5\uB2C8\uB2E4 ({slot})",
+    loadingOptimizePrompt: "  \u22EF [lingual] \uD504\uB86C\uD504\uD2B8 \uCD5C\uC801\uD654 \uC911...",
+    loadingFixSyntax: "  \u22EF [lingual] \uBB38\uBC95 \uBC0F \uC624\uD0C0 \uC218\uC815 \uC911...",
+    loadingCandidates: "  \u22EF [lingual] \uD6C4\uBCF4 \uD504\uB86C\uD504\uD2B8 \uC0DD\uC131 \uC911...",
+    statusLoadingOptimize: "[lingual] \uCD5C\uC801\uD654 \uC911...",
+    statusLoadingFix: "[lingual] \uC218\uC815 \uC911...",
+    statusLoadingCandidates: "[lingual] \uC0DD\uC131 \uC911...",
     cmdDescMode: "\uBAA8\uB4DC \uC804\uD658: [1:\uB3D9\uD589\uD559\uC2B5] \u2794 [2:\uB17C\uB9AC\uC815\uC81C] \u2794 [3:\uC2E4\uC804\uC9C8\uC8FC] \u2794 [0:\uAEBC\uC9D0]",
     cmdDescStatus: "\uC0C1\uD0DC \uBCF4\uACE0\uC11C \uBC0F \uC9C4\uB2E8 \uD655\uC778: /lingual-status",
     cmdDescModel: "\uBAA8\uB378 \uD655\uC778 \uBC0F \uBCC0\uACBD: /lingual-model [model-id|auto]",
@@ -2132,7 +2196,9 @@ var LANGUAGE_PRESETS = {
     slotsUsageAdd: "\uC0AC\uC6A9\uBC95: /slots add <id> <\uB77C\uBCA8> [\uD504\uB86C\uD504\uD2B8...]",
     slotsUsageRm: "\uC0AC\uC6A9\uBC95: /slots rm <\uC2AC\uB86F_id>",
     slotsUsageToggle: "\uC0AC\uC6A9\uBC95: /slots toggle <\uC2AC\uB86F_id>",
-    slotsUnknown: '[{pair}] \uC54C \uC218 \uC5C6\uB294 \uBA85\uB839\uC5B4 "{cmd}". /slots \uB3C4\uC6C0\uB9D0 \uCC38\uC870'
+    slotsUnknown: '[{pair}] \uC54C \uC218 \uC5C6\uB294 \uBA85\uB839\uC5B4 "{cmd}". /slots \uB3C4\uC6C0\uB9D0 \uCC38\uC870',
+    spokenLabel: "\uAD6C\uC5B4",
+    writtenLabel: "\uBB38\uC5B4"
   },
   ru: {
     slot1Label: "\u0420\u0430\u0437\u0433\u043E\u0432\u043E\u0440\u043D\u044B\u0439",
@@ -2167,6 +2233,12 @@ var LANGUAGE_PRESETS = {
     notifyTargetSwitched: "\u0426\u0435\u043B\u0435\u0432\u043E\u0439 \u044F\u0437\u044B\u043A \u043F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0435\u043D \u043D\u0430: {target} (\u0440\u043E\u0434\u043D\u043E\u0439 {source} \u0431\u0435\u0437 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0439)",
     langHelpText: "[\u042F\u0437\u044B\u043A\u043E\u0432\u0430\u044F \u043F\u0430\u0440\u0430: {flow}]\n\u2022 \u0411\u044B\u0441\u0442\u0440\u043E\u0435 \u043F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0435: /lang ja (\u044F\u043F\u043E\u043D\u0441\u043A\u0438\u0439) \xB7 /lang en (\u0430\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u0438\u0439)\n\u2022 \u0421\u043C\u0435\u043D\u0430 \u043F\u0430\u0440\u044B: /lang ru en \xB7 /lang en ru\n\u2022 \u041F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u043C\u044B\u0435 \u043A\u043E\u0434\u044B: zh, tw, ja, ko, en, es, fr, de, ru",
     modeSwitchedTemplate: "[{pair}] \u041F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0435\u043D\u043E \u043D\u0430 [{num}. {name} ({id})] ({slot})",
+    loadingOptimizePrompt: "  \u22EF [lingual] \u043E\u043F\u0442\u0438\u043C\u0438\u0437\u0430\u0446\u0438\u044F \u043F\u0440\u043E\u043C\u043F\u0442\u0430...",
+    loadingFixSyntax: "  \u22EF [lingual] \u0438\u0441\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u0435 \u0441\u0438\u043D\u0442\u0430\u043A\u0441\u0438\u0441\u0430 \u0438 \u043E\u043F\u0435\u0447\u0430\u0442\u043E\u043A...",
+    loadingCandidates: "  \u22EF [lingual] \u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0438\u044F \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u043E\u0432 \u043F\u0440\u043E\u043C\u043F\u0442\u0430...",
+    statusLoadingOptimize: "[lingual] \u043E\u043F\u0442\u0438\u043C\u0438\u0437\u0430\u0446\u0438\u044F...",
+    statusLoadingFix: "[lingual] \u0438\u0441\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u0438\u0435...",
+    statusLoadingCandidates: "[lingual] \u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0438\u044F...",
     cmdDescMode: "\u041F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0438\u0442\u044C \u0440\u0435\u0436\u0438\u043C: [1:\u0421\u043E\u043F\u0440\u043E\u0432\u043E\u0436\u0434\u0435\u043D\u0438\u0435] \u2794 [2:\u041F\u0440\u044F\u043C\u043E\u0439 \u043F\u043E\u0442\u043E\u043A] \u2794 [3:Live Flow] \u2794 [0:\u0412\u044B\u043A\u043B]",
     cmdDescStatus: "\u041E\u0442\u0447\u0435\u0442 \u043E \u0441\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u0438 \u0438 \u0434\u0438\u0430\u0433\u043D\u043E\u0441\u0442\u0438\u043A\u0430: /lingual-status",
     cmdDescModel: "\u041F\u0440\u043E\u0432\u0435\u0440\u0438\u0442\u044C \u0438\u043B\u0438 \u0441\u043C\u0435\u043D\u0438\u0442\u044C \u043C\u043E\u0434\u0435\u043B\u044C: /lingual-model [model-id|auto]",
@@ -2237,7 +2309,9 @@ var LANGUAGE_PRESETS = {
     slotsUsageAdd: "\u0418\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u043D\u0438\u0435: /slots add <id> <\u043C\u0435\u0442\u043A\u0430> [\u0438\u043D\u0441\u0442\u0440\u0443\u043A\u0446\u0438\u044F...]",
     slotsUsageRm: "\u0418\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u043D\u0438\u0435: /slots rm <id_\u0441\u043B\u043E\u0442\u0430>",
     slotsUsageToggle: "\u0418\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u043D\u0438\u0435: /slots toggle <id_\u0441\u043B\u043E\u0442\u0430>",
-    slotsUnknown: '[{pair}] \u041D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u0430\u044F \u043A\u043E\u043C\u0430\u043D\u0434\u0430 "{cmd}". \u0412\u0432\u0435\u0434\u0438\u0442\u0435 /slots \u0434\u043B\u044F \u0441\u043F\u0440\u0430\u0432\u043A\u0438'
+    slotsUnknown: '[{pair}] \u041D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u0430\u044F \u043A\u043E\u043C\u0430\u043D\u0434\u0430 "{cmd}". \u0412\u0432\u0435\u0434\u0438\u0442\u0435 /slots \u0434\u043B\u044F \u0441\u043F\u0440\u0430\u0432\u043A\u0438',
+    spokenLabel: "\u0420\u0430\u0437\u0433\u043E\u0432\u043E\u0440\u043D\u044B\u0439",
+    writtenLabel: "\u0414\u0435\u043B\u043E\u0432\u043E\u0439"
   }
 };
 var SUPPORTED_LANG_CODES = ["zh", "tw", "ja", "ko", "en", "es", "fr", "de", "ru"];

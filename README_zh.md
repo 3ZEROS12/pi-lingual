@@ -7,7 +7,7 @@
 [![npm version](https://img.shields.io/npm/v/pi-lingual?color=blue)](https://www.npmjs.com/package/pi-lingual)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Built for Pi](https://img.shields.io/badge/Built%20for-Pi%20Coding%20Agent-orange)](https://github.com/earendil-works/pi-coding-agent)
-[![Tests](https://img.shields.io/badge/Tests-152%2F152%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
+[![Tests](https://img.shields.io/badge/Tests-155%2F155%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict%20Zero%20Error-blue)](tsconfig.json)
 
 [English](./README.md) | **简体中文**
@@ -37,6 +37,8 @@ pi install npm:pi-lingual
 
 > 💡 **终端模式建议 (Terminal Mode)**：  
 > `pi-lingual` 作为伴学与语感积累工具，建议在 `~/.pi/agent/settings.json` 中配置 `"tuiMode": "regular"`（传统滚动终端模式）。伴学卡片会自然随会话流留存在原生终端历史中，随时可以用鼠标滚轮向上回溯翻阅。
+>
+> ⚡ **延迟分层说明**：出厂默认纯伴学模式（Companion）下 0ms 原样直发，零排队延迟；改写类模式（规范直发与实战狂飙）按需进行单次模型调用，耗时随当前所选模型与网络波动。
 
 ---
 
@@ -233,7 +235,7 @@ pi install npm:pi-lingual
 ### 可配置思考深度 (`/lingual reasoning`)
 无需为不同任务频繁切换模型，`pi-lingual` 支持声明式调节每个模式的推理思考深度（Reasoning Effort）：
 ```bash
-/lingual reasoning low       # 极速（~200ms）执行，适合日常规范直发与实战狂飙
+/lingual reasoning low       # 低延迟极速执行，适合日常规范直发与实战狂飙
 /lingual reasoning medium    # 深度结构化推演，适合复杂工程规范压铸（Brain-Dump to Spec）
 /lingual reasoning high      # 高难度多约束场景深度推理
 ```
