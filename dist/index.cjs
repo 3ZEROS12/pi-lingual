@@ -4561,28 +4561,31 @@ function resolveModesFromConfig(cfg, fallbackSourceLang = "en") {
   return getDefaultFactoryModes(sourceLang, explainLang);
 }
 function normalizeActiveModeId(cfg, modes) {
-  if (cfg.mode === "off") return "off";
+  if (cfg.mode === "off" || cfg.activeModeId === "off") return "off";
   const activeModes = modes.filter((m) => m.enabled !== false);
-  if (cfg.activeModeId && activeModes.some((m) => m.id === cfg.activeModeId)) {
-    return cfg.activeModeId;
+  const targetId = cfg.activeModeId || cfg.mode;
+  if (!targetId) {
+    return activeModes[0]?.id || "companion";
   }
-  if (cfg.mode) {
-    const legacyMap = {
-      original: "companion",
-      companion: "companion",
-      english: "direct",
-      direct: "direct",
-      lazy: "direct",
-      select: "candidates",
-      candidates: "candidates",
-      modify: "live-flow",
-      "live-flow": "live-flow",
-      raw: "live-flow"
-    };
-    const mappedId = legacyMap[cfg.mode] || cfg.mode;
-    if (activeModes.some((m) => m.id === mappedId)) {
-      return mappedId;
-    }
+  const legacyMap = {
+    original: "companion",
+    companion: "companion",
+    english: "direct",
+    direct: "direct",
+    lazy: "direct",
+    select: "candidates",
+    candidates: "candidates",
+    modify: "live-flow",
+    "live-flow": "live-flow",
+    raw: "live-flow",
+    polish: "live-flow"
+  };
+  const mappedId = legacyMap[targetId] || targetId;
+  if (activeModes.some((m) => m.id === mappedId)) {
+    return mappedId;
+  }
+  if (activeModes.some((m) => m.id === targetId)) {
+    return targetId;
   }
   return activeModes[0]?.id || "companion";
 }

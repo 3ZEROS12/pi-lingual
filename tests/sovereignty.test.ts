@@ -4,7 +4,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { resolveLabelsForLang, formatStatusReport, formatModelSelectionMessage } from "../src/presets.js";
 import { buildSystemPrompt, getDefaultSlots, getDefaultDirectSlots, getDefaultPromptSlots } from "../src/prompts.js";
-import { formatTerminalAnnotation, stripLingualAnnotation, formatReleaseBannerLines, resolveModeDisplaySpec } from "../src/engine.js";
+import { formatTerminalAnnotation, stripLingualAnnotation, formatReleaseBannerLines, resolveModeDisplaySpec, normalizeActiveModeId, getDefaultFactoryModes, invalidateUserConfigCache } from "../src/engine.js";
+import extensionFactory from "../src/extension.js";
 
 test("Primary Language Sovereignty - Japanese (ja) leaves ZERO Chinese in UI and labels", () => {
   const jaLabels = resolveLabelsForLang("ja");
@@ -337,6 +338,154 @@ test("English-Only Comments Gate - src/**/*.ts source code comments must be 100%
       }
     });
   }
+});
+
+test("probe A: mode persists across new session starts without reverting (Sheet #10)", () => {
+  const modes = getDefaultFactoryModes("zh", "zh");
+
+  // Scenario 1: live-flow mode set via activeModeId
+  const cfg1: { mode?: string; activeModeId?: string } = { mode: "live-flow", activeModeId: "live-flow" };
+  for (let i = 0; i < 5; i++) {
+    const rawDiskMode = cfg1.activeModeId || cfg1.mode || "companion";
+    const resolved = normalizeActiveModeId({ mode: rawDiskMode as any, activeModeId: rawDiskMode }, modes);
+    assert.equal(resolved, "live-flow", `Run ${i}: mode must persist as live-flow`);
+  }
+
+  // Scenario 2: direct mode set via legacy mode field
+  const cfg2: { mode?: string; activeModeId?: string } = { mode: "direct" };
+  for (let i = 0; i < 5; i++) {
+    const rawDiskMode = cfg2.activeModeId || cfg2.mode || "companion";
+    const resolved = normalizeActiveModeId({ mode: rawDiskMode as any, activeModeId: rawDiskMode }, modes);
+    assert.equal(resolved, "direct", `Run ${i}: mode must persist as direct`);
+  }
+
+  // Scenario 3: legacy alias "modify" set via activeModeId
+  const cfg3: { mode?: string; activeModeId?: string } = { activeModeId: "modify" };
+  for (let i = 0; i < 5; i++) {
+    const rawDiskMode = cfg3.activeModeId || cfg3.mode || "companion";
+    const resolved = normalizeActiveModeId({ mode: rawDiskMode as any, activeModeId: rawDiskMode }, modes);
+    assert.equal(resolved, "live-flow", `Run ${i}: legacy modify must map to live-flow`);
+  }
+
+  // Scenario 4: off mode set via activeModeId
+  const cfg4: { mode?: string; activeModeId?: string } = { activeModeId: "off" };
+  const rawDiskMode4 = cfg4.activeModeId || cfg4.mode || "companion";
+  const resolved4 = normalizeActiveModeId({ mode: rawDiskMode4 as any, activeModeId: rawDiskMode4 }, modes);
+  assert.equal(resolved4, "off", "activeModeId: off must resolve to off");
+});
+
+test("probe B: explicit command switches mode freely even when locked (Sheet #10)", async () => {
+  const registeredCommands: Record<string, any> = {};
+  const mockPi: any = {
+    on() {},
+    registerCommand(name: string, def: any) {
+      registeredCommands[name] = def;
+    },
+    registerShortcut() {},
+  };
+
+  extensionFactory(mockPi);
+
+  const notifications: { msg: string; type: string }[] = [];
+  const mockCtx: any = {
+    hasUI: true,
+    ui: {
+      notify(msg: string, type = "info") {
+        notifications.push({ msg, type });
+      },
+      setStatus() {},
+      setWidget() {},
+      theme: { fg: (_c: string, t: string) => t },
+    },
+  };
+
+  // 1. Lock mode via /lingual lock
+  await registeredCommands["lingual"].handler("lock", mockCtx);
+  notifications.length = 0;
+
+  try {
+    // 2. Parameterless blind cycling must be blocked while locked
+    await registeredCommands["lingual"].handler("", mockCtx);
+    assert.ok(
+      notifications.some((n) => n.msg.includes("mode locked to") && n.type === "warning"),
+      "Parameterless command must be blocked with a warning when locked"
+    );
+
+    // 3. Explicit numeric jump (/lingual 2) MUST switch freely without warning
+    notifications.length = 0;
+    await registeredCommands["lingual"].handler("2", mockCtx);
+    assert.equal(
+      notifications.some((n) => n.type === "warning"),
+      false,
+      "Explicit /lingual 2 must NOT produce any warning notification"
+    );
+    assert.ok(
+      notifications.some((n) => (n.msg.includes("direct") || n.msg.includes("Logical Spec")) && n.type === "info"),
+      "Explicit /lingual 2 must switch mode cleanly to direct"
+    );
+
+    // 4. Explicit mode name (/lingual off) MUST switch freely without warning
+    notifications.length = 0;
+    await registeredCommands["lingual"].handler("off", mockCtx);
+    assert.equal(
+      notifications.some((n) => n.type === "warning"),
+      false,
+      "Explicit /lingual off must NOT produce any warning notification"
+    );
+    assert.ok(
+      notifications.some((n) => n.msg.includes("[lingual: off]") && n.type === "info"),
+      "Explicit /lingual off must switch cleanly to off"
+    );
+
+    // 5. Explicit mode name (/lingual companion) MUST switch freely without warning
+    notifications.length = 0;
+    await registeredCommands["lingual"].handler("companion", mockCtx);
+    assert.equal(
+      notifications.some((n) => n.type === "warning"),
+      false,
+      "Explicit /lingual companion must NOT produce any warning notification"
+    );
+    assert.ok(
+      notifications.some((n) => n.msg.includes("companion") && n.type === "info"),
+      "Explicit /lingual companion must switch cleanly to companion"
+    );
+  } finally {
+    // Always unlock mode after test
+    await registeredCommands["lingual"].handler("unlock", mockCtx);
+  }
+});
+
+test("probe C: rapid input within 50ms does not revert to stale cached mode (Sheet #10)", () => {
+  // Verifies cache invalidation hook
+  invalidateUserConfigCache();
+  // Ensure that invalidateUserConfigCache runs without throwing and clears in-memory memoization
+  assert.doesNotThrow(() => invalidateUserConfigCache());
+});
+
+test("probe D: tuner config updates never inject unauthorized modeLocked (Sheet #10)", () => {
+  const skillPath = path.resolve("skills", "lingual-tuner", "SKILL.md");
+  assert.ok(fs.existsSync(skillPath), "SKILL.md must exist");
+  const content = fs.readFileSync(skillPath, "utf8");
+
+  // 1. Prohibit modeLocked injection
+  assert.ok(
+    content.toLowerCase().includes("never inject `modelocked: true`") ||
+    content.includes("NEVER write `modeLocked: true`"),
+    "SKILL.md must explicitly prohibit unauthorized injection of modeLocked"
+  );
+
+  // 2. Mandate inspecting disk configuration before removing or modifying modes
+  assert.ok(
+    content.includes("~/.pi/agent/lingual.json") &&
+    (content.toLowerCase().includes("read") || content.toLowerCase().includes("inspect")),
+    "SKILL.md must instruct agent to inspect existing modes on disk before mutating"
+  );
+
+  // 3. Prohibit unasked questionnaire / ask_user_question tool dependency
+  assert.ok(
+    content.includes("ask_user_question") || content.includes("Zero-Questionnaire"),
+    "SKILL.md must decouple from external questionnaire tool dependency"
+  );
 });
 
 

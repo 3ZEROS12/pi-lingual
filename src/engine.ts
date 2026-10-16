@@ -911,30 +911,36 @@ export function resolveModesFromConfig(cfg: Partial<LingualConfig>, fallbackSour
 }
 
 export function normalizeActiveModeId(cfg: Partial<LingualConfig>, modes: CustomModeConfig[]): string {
-  if (cfg.mode === "off") return "off";
+  if (cfg.mode === "off" || cfg.activeModeId === "off") return "off";
   const activeModes = modes.filter((m) => m.enabled !== false);
-  if (cfg.activeModeId && activeModes.some((m) => m.id === cfg.activeModeId)) {
-    return cfg.activeModeId;
+  const targetId = cfg.activeModeId || cfg.mode;
+  if (!targetId) {
+    return activeModes[0]?.id || "companion";
   }
-  // Legacy mode mapping
-  if (cfg.mode) {
-    const legacyMap: Record<string, string> = {
-      original: "companion",
-      companion: "companion",
-      english: "direct",
-      direct: "direct",
-      lazy: "direct",
-      select: "candidates",
-      candidates: "candidates",
-      modify: "live-flow",
-      "live-flow": "live-flow",
-      raw: "live-flow",
-    };
-    const mappedId = legacyMap[cfg.mode] || cfg.mode;
-    if (activeModes.some((m) => m.id === mappedId)) {
-      return mappedId;
-    }
+
+  // Legacy mode mapping applied to targetId (supports both mode and activeModeId legacy aliases)
+  const legacyMap: Record<string, string> = {
+    original: "companion",
+    companion: "companion",
+    english: "direct",
+    direct: "direct",
+    lazy: "direct",
+    select: "candidates",
+    candidates: "candidates",
+    modify: "live-flow",
+    "live-flow": "live-flow",
+    raw: "live-flow",
+    polish: "live-flow",
+  };
+
+  const mappedId = legacyMap[targetId] || targetId;
+  if (activeModes.some((m) => m.id === mappedId)) {
+    return mappedId;
   }
+  if (activeModes.some((m) => m.id === targetId)) {
+    return targetId;
+  }
+
   return activeModes[0]?.id || "companion";
 }
 
