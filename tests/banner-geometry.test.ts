@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { formatReleaseBannerLines } from "../src/engine.js";
 import { getBannerMaxCols, truncateVisual, getVisualWidth } from "../src/layout.js";
+import { getDefaultFactoryModes, SUPPORTED_LANG_CODES } from "../src/presets.js";
 
 const LANGS = ["zh", "tw", "ja", "ko", "es", "fr", "de", "ru", "en"];
 
@@ -119,6 +120,26 @@ test("narrow terminals - release banner real path through getBannerMaxCols acros
         }
       }
     });
+  }
+});
+
+test("banner geometry - banner lines accurately embed factory registry mode names without desync (D3)", () => {
+  for (const lang of SUPPORTED_LANG_CODES) {
+    const lines = formatReleaseBannerLines(lang, 78);
+    assert.equal(lines.length, 8, `[${lang}] banner must have 8 lines`);
+    const names = getDefaultFactoryModes(lang, lang).map((m) => m.name);
+    assert.equal(names.length, 3, `[${lang}] must have 3 factory modes`);
+    names.forEach((name, i) => {
+      const bannerRow = lines[4 + i];
+      assert.ok(
+        bannerRow.includes(name),
+        `[${lang}] banner row ${4 + i} must contain registry mode name "${name}": ${bannerRow}`
+      );
+    });
+    for (const line of lines) {
+      assert.ok(getVisualWidth(line) <= 78, `[${lang}] line > 78 cols: ${line}`);
+      assert.ok(!line.endsWith("..."), `[${lang}] clipped at 78 cols: ${line}`);
+    }
   }
 });
 

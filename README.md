@@ -7,7 +7,7 @@ Code in your native language. See real-time Silicon Valley spoken phrasing and f
 [![npm version](https://img.shields.io/npm/v/pi-lingual?color=blue)](https://www.npmjs.com/package/pi-lingual)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Built for Pi](https://img.shields.io/badge/Built%20for-Pi%20Coding%20Agent-orange)](https://github.com/earendil-works/pi-coding-agent)
-[![Tests](https://img.shields.io/badge/Tests-136%2F136%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
+[![Tests](https://img.shields.io/badge/Tests-138%2F138%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict%20Zero%20Error-blue)](tsconfig.json)
 
 **English** | [简体中文](./README_zh.md)
@@ -66,14 +66,15 @@ Traditional closed rectangular boxes (`│ ... │`) fracture when character wid
 
 ---
 
-## Dual-Core Golden Defaults & Declarative Mode Architecture (`Mode as Configuration`)
+## Three-Core Golden Defaults & Declarative Mode Architecture (`Mode as Configuration`)
 
-`pi-lingual` ships with **Dual-Core Golden Defaults** and supports infinite customization via its declarative state machine engine. Press `/lingual` to cycle sequentially through enabled modes and off, or jump directly via `/lingual <id|index>` (mode numbers follow your current local registry order; mode IDs such as `/lingual direct` and `/lingual live-flow` are permanent and always resolve):
+`pi-lingual` ships with **Three-Core Golden Defaults** and supports infinite customization via its declarative state machine engine. Press `/lingual` to cycle sequentially through enabled modes and off, or jump directly via `/lingual <id|index>` (mode numbers follow your current local registry order; mode IDs such as `/lingual companion`, `/lingual direct`, and `/lingual live-flow` are permanent and always resolve):
 
 | State | CLI ID & Aliases | What You Type | What the Engine Does | Status & UI Feedback | Best For |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **`[1] Logical Spec`** | `direct` *(alias: `lazy`)* | Native Language *(e.g. Chinese / Japanese)* | **Restructures thoughts into imperative engineering specs with active verbs** | `zh ⇄ en · Logical Spec` + Clean preview | 1-to-1 imperative prompt structuring on Enter, keeping codebases & commits 100% pure English |
-| **`[2] Live Flow`** | `live-flow` *(alias: `raw`)* | Foreign Draft / Raw Venting | **Surgically patches typos & prepositions, preserves profanity/heat, sends to AI** | `zh ⇄ en · Live Flow` + Adaptive takeaway card | Taking the steering wheel directly in English with zero tone-sanitization and native takeaway diffs |
+| **`[1] Companion`** | `companion` *(alias: `original`)* | Native Language | **Passes your text through untouched at 0ms and renders the bilingual card above the prompt** | `zh ⇄ en · 4s · Companion` + 4-slot tree card | The 5-15 s generation gap becomes a low-load window to pick up authentic phrasing |
+| **`[2] Logical Spec`** | `direct` *(alias: `lazy`)* | Native Language *(e.g. Chinese / Japanese)* | **Restructures thoughts into imperative engineering specs with active verbs** | `zh ⇄ en · Logical Spec` + Clean preview | 1-to-1 imperative prompt structuring on Enter, keeping codebases & commits 100% pure English |
+| **`[3] Live Flow`** | `live-flow` *(alias: `raw`)* | Foreign Draft / Raw Venting | **Surgically patches typos & prepositions, preserves profanity/heat, sends to AI** | `zh ⇄ en · Live Flow` + Adaptive takeaway card | Taking the steering wheel directly in English with zero tone-sanitization and native takeaway diffs |
 | **`[0] Off`** | `off` | Any Text | **Hides status bar badge (`undefined`), detaches resize listeners & strips skill block** | **0 pixels, 0 listeners, 0 tokens** — completely invisible inside Pi | Pure coding or screen recording with zero visual or context footprint |
 
 ---
@@ -286,7 +287,7 @@ I hope everyone takes the time to tune a prompt that works best for them, catche
 
 ```bash
 npm run typecheck   # Strict tsc --noEmit check (0 errors)
-npm test            # 136/136 test assertions passing (100% green)
+npm test            # 138/138 test assertions passing (100% green)
 npm run build       # Multi-entry compilation via tsup (extension + core engine)
 ```
 

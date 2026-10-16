@@ -819,6 +819,7 @@ export function defaultSlotsForMode(
   explainLang?: string
 ): SlotConfig[] {
   if (mode.action === "pass-through") return [];
+  if (mode.action === "select") return getDefaultPromptSlots(sourceLang);
   return mode.flow === "proofread"
     ? getDefaultModifySlots(sourceLang, explainLang)
     : getDefaultDirectSlots(sourceLang);
@@ -929,7 +930,7 @@ export function normalizeActiveModeId(cfg: Partial<LingualConfig>, modes: Custom
       return mappedId;
     }
   }
-  return activeModes[0]?.id || "direct";
+  return activeModes[0]?.id || "companion";
 }
 
 export function compileModeSystemPrompt(
@@ -1301,111 +1302,111 @@ export function formatReleaseBannerLines(
 
   const copyByLang: Record<string, BannerSpec> = {
     zh: {
-      title: "· [pi-lingual v0.6.0] 极简双核模式上线 & Tuner 完全开放 (发消息自动收起)",
-      subtitle: "│ 一切模式与提示词皆可对话定制；出厂精简为两大核心；配置永久独立",
+      title: "· [pi-lingual v0.6.0] 三核出厂：伴学 · 规范直发 · 实战狂飙",
+      subtitle: "│ 在 AI 生成的 5-15 秒间隙顺手捡语感；提示词始终纯净英文",
       rows: [
-        "┌ [核心定制中心 · Tuner] 敲 /tuner 直接跟 AI 说话，随意增删改模式与提示词",
-        "│   (内置 4 大实战配装；想加发推、提交、对线等模式，一句话秒成)",
-        "├ [规范直发 · direct]    敲中文，0ms 转成规范技术英文直发 (/lingual direct)",
-        "│   (保证代码和注释是纯英文；适合专注开发、不想费脑憋英语时使用)",
-        "├ [实战狂飙 · live-flow] 直接打英文；只修语法错词，粗口与情绪 100% 保留",
-        "└   (敲 /lingual live-flow 切换；粗口保留，下方中文讲透语法盲点)",
+        "┌ [定制中心 · Tuner] 敲 /tuner 跟 AI 说话，随意增删改模式",
+        "│   (4 大配装就绪：spec 压铸 · commit 脱水 · oss 对线 · yap 发推)",
+        "├ [1 纯伴学 · companion] 中文原样直发；上方浮出双语对照卡",
+        "├ [2 规范直发 · direct] 敲中文，0ms 转成规范英文工程指令",
+        "├ [3 实战狂飙 · live-flow] 打英文；只修错词，粗口情绪 100% 保留",
+        "└   (/lingual 1|2|3 按注册表顺序；/lingual <id> 永远有效)",
       ],
     },
     tw: {
-      title: "· [pi-lingual v0.6.0] 極簡雙核模式上線 & Tuner 完全開放 (發訊息自動收起)",
-      subtitle: "│ 一切模式與提示詞皆可對話定制；出廠精簡為兩大核心；設定永久獨立",
+      title: "· [pi-lingual v0.6.0] 三核出廠：純伴學 · 規範直發 · 實戰狂飆",
+      subtitle: "│ 在 AI 生成的 5-15 秒間隙順手撿語感；提示詞始終純淨英文",
       rows: [
-        "┌ [核心定制中心 · Tuner] 敲 /tuner 直接跟 AI 說話，隨意增刪改模式與提示詞",
-        "│   (內置 4 大實戰配裝；想加發推、提交、對線等模式，一句話秒成)",
-        "├ [規範直發 · direct]    敲中文，0ms 轉成規範技術英文直發 (/lingual direct)",
-        "│   (保證代碼和註釋是純英文；適合專注開發、不想費腦憋英語時使用)",
-        "├ [實戰狂飆 · live-flow] 直接打英文；只修語法錯詞，粗口與情緒 100% 保留",
-        "└   (敲 /lingual live-flow 切換；粗口保留，下方中文講透語法盲點)",
+        "┌ [定製中心 · Tuner] 敲 /tuner 跟 AI 說話，隨意增刪改模式",
+        "│   (4 大配裝就緒：spec 壓鑄 · commit 脫水 · oss 對線 · yap 發推)",
+        "├ [1 純伴學 · companion] 中文原樣直發；上方浮出雙語對照卡",
+        "├ [2 規範直發 · direct] 敲中文，0ms 轉成規範英文工程指令",
+        "├ [3 實戰狂飆 · live-flow] 打英文；只修錯詞，粗口情緒 100% 保留",
+        "└   (/lingual 1|2|3 按註冊表順序；/lingual <id> 永遠有效)",
       ],
     },
     ja: {
-      title: "· [pi-lingual v0.6.0] コア2モード刷新 & Tuner 全面開放 (送信で閉じる)",
-      subtitle: "│ 全モードとプロンプトを対話で自在に設計；設定は永久ローカル保持",
+      title: "· [pi-lingual v0.6.0] 3コア：伴走 · 仕様直行 · 実戦疾走",
+      subtitle: "│ AI 生成の 5-15 秒に語感を拾う；プロンプトは常に純英語",
       rows: [
-        "┌ [対話設計 · Tuner]     /tuner でAIと対話し、新モードやプロンプトを即追加",
-        "│   (4大プリセット内蔵 · PRレビューやSNS投稿用モードも会話だけで完成)",
-        "├ [仕様直行 · direct]  母語入力、0msで規範的英語に整え送信 (/lingual direct)",
-        "│   (コードとコメントの完全英語化を保証 · 集中して開発を進めたい時に)",
-        "├ [実戦疾走 · live-flow] 英語で直接入力；スラング・感情を100%保持し補正",
-        "└   (/lingual live-flow で切替 · 感情保持、下部に母語で直感解説)",
+        "┌ [設計センター · Tuner] /tuner で AI と対話しモードを編集",
+        "│   (4大レシピ：spec 圧縮 · commit 脱水 · oss 対論 · yap 投稿)",
+        "├ [1 伴走 · companion] 母語をそのまま送信；上部に二言語カード",
+        "├ [2 仕様直行 · direct] 0ms で母語 ➔ 規範的な英語仕様に整形",
+        "├ [3 実戦疾走 · live-flow] 英語入力；誤字のみ修正、感情は保持",
+        "└   (/lingual 1|2|3 は登録順；/lingual <id> は常に有効)",
       ],
     },
     ko: {
-      title: "· [pi-lingual v0.6.0] 듀얼 코어 모드 & Tuner 전면 개방 (입력 시 닫힘)",
-      subtitle: "│ 모든 모드와 프롬프트를 대화로 맞춤 설정; 설정은 로컬에 영구 보존",
+      title: "· [pi-lingual v0.6.0] 3코어: 동행학습 · 논리정제 · 실전질주",
+      subtitle: "│ AI 생성 5-15초에 어감을 줍는다; 프롬프트는 순수 영어",
       rows: [
-        "┌ [맞춤 설계 · Tuner]    /tuner 로 AI와 대화하며 모드와 프롬프트 자유 추가",
-        "│   (4대 프리셋 내장 · PR 검토나 SNS용 모드도 말 한마디로 즉시 생성)",
-        "├ [논리정제 · direct]  모국어 입력, 0ms 기술 영어로 전송 (/lingual direct)",
-        "│   (코드와 주석의 순수 영어 유지 · 개발에 집중하고 싶을 때 최적)",
-        "├ [실전질주 · live-flow] 영어로 직접 작성; 거친 표현 100% 유지하며 교정 전송",
-        "└   (/lingual live-flow 로 전환 · 감정 유지, 하단에 핵심 문법 복기)",
+        "┌ [설계 센터 · Tuner] /tuner 로 AI 와 모드를 편집",
+        "│   (4대 레시피: spec · commit · oss · yap)",
+        "├ [1 동행학습 · companion] 모국어 원문 전송; 이중언어 카드",
+        "├ [2 논리정제 · direct] 0ms 로 모국어 ➔ 규격 영어 사양",
+        "├ [3 실전질주 · live-flow] 영어 입력; 오타만 수정, 감정 유지",
+        "└   (/lingual 1|2|3 은 등록 순서; /lingual <id> 는 항상 유효)",
       ],
     },
     es: {
-      title: "· [pi-lingual v0.6.0] Dúo esencial y Tuner abierto (cierra al enviar)",
-      subtitle: "│ Diseña modos y prompts conversando; configuración aislada en local",
+      title: "· [pi-lingual v0.6.0] Tres núcleos: Compañero · Directo · Live Flow",
+      subtitle: "│ Aprovecha los 5-15 s; tu prompt siempre en inglés limpio",
       rows: [
-        "┌ [Centro Tuner]   Ejecuta /tuner para crear o cambiar modos con AI",
-        "│   (4 recetas listas; añade flujos de PR o Twitter en una frase)",
-        "├ [Directo · direct]     En tu idioma, 0ms a inglés (/lingual direct)",
-        "│   (Mantiene código y comentarios en inglés; avanza rápido)",
-        "├ [Live Flow · live-flow] Directo en inglés; pasión y tacos intactos",
-        "└   (Usa /lingual live-flow; sin censura, notas breves abajo)",
+        "┌ [Centro Tuner] /tuner para crear o editar modos con AI",
+        "│   (4 recetas: spec · commit · oss · yap)",
+        "├ [1 Aprendizaje · companion] Idioma nativo intacto; tarjeta arriba",
+        "├ [2 Directo Lógico · direct] 0ms nativo ➔ especificación inglesa",
+        "├ [3 Live Flow · live-flow] Escribe en inglés; solo corrige erratas",
+        "└   (/lingual 1|2|3 por registro; /lingual <id> siempre funciona)",
       ],
     },
     fr: {
-      title: "· [pi-lingual v0.6.0] Duo essentiel et Tuner ouvert (fermé à l'envoi)",
-      subtitle: "│ Créez modes et prompts en dialoguant ; configuration locale isolée",
+      title: "· [pi-lingual v0.6.0] Trois cœurs : Compagnon · Direct · Live Flow",
+      subtitle: "│ Profitez des 5-15 s ; prompt toujours en anglais propre",
       rows: [
         "┌ [Centre Tuner]   Tapez /tuner pour créer ou modifier des modes",
-        "│   (4 recettes prêtes ; ajoutez des flux PR en une phrase)",
-        "├ [Direct · direct]      Langue native, 0ms vers l'anglais (/lingual direct)",
-        "│   (Code et commentaires en anglais pur ; idéal pour coder)",
-        "├ [Live Flow · live-flow] Saisie directe en anglais ; jurons gardés",
-        "└   (Tapez /lingual live-flow ; sans filtre, explications claires en bas)",
+        "│   (4 recettes : spec · commit · oss · yap)",
+        "├ [1 Compagnon · companion] Langue native brute ; carte au-dessus",
+        "├ [2 Direct Logique · direct] 0ms natif ➔ spec anglaise structurée",
+        "├ [3 Live Flow · live-flow] Écrivez en anglais ; seules fautes corrigées",
+        "└   (/lingual 1|2|3 selon registre ; /lingual <id> marche toujours)",
       ],
     },
     de: {
-      title: "· [pi-lingual v0.6.0] 2 Kern-Modi & Tuner offen (schließt bei Senden)",
-      subtitle: "│ Modi & Prompts per Chat anpassen; Konfiguration dauerhaft isoliert",
+      title: "· [pi-lingual v0.6.0] Drei Kerne: Begleitung · Logik · Live Flow",
+      subtitle: "│ Nutze die 5-15 s; Prompt bleibt klares Englisch",
       rows: [
-        "┌ [Tuner-Zentrale]  /tuner starten, um Modi und Prompts anzupassen",
-        "│   (4 Rezepte an Bord; neue PR- oder Twitter-Modi mit einem Satz)",
-        "├ [Direkt · direct] Auf Deutsch, 0ms klares Englisch (/lingual direct)",
-        "│   (Hält Code & Kommentare auf Englisch; perfekt für Fokus)",
-        "├ [Live Flow · live-flow] Direkt auf Englisch; Emotionen 100% erhalten",
-        "└   (Per /lingual live-flow; ohne Zensur, kurze Erklärungen unten)",
+        "┌ [Tuner-Zentrale]  /tuner für Modi im Gespräch",
+        "│   (4 Rezepte: spec · commit · oss · yap)",
+        "├ [1 Begleitung · companion] Muttersprache roh; Karte darüber",
+        "├ [2 Direkte Logik · direct] 0ms nativ ➔ englische Spezifikation",
+        "├ [3 Live Flow · live-flow] Englisch tippen; nur Fehler korrigiert",
+        "└   (/lingual 1|2|3 nach Registry; /lingual <id> löst immer auf)",
       ],
     },
     ru: {
-      title: "· [pi-lingual v0.6.0] 2 главных режима и Tuner (закроется при вводе)",
-      subtitle: "│ Настройка режимов и промптов через AI; конфиг изолирован локально",
+      title: "· [pi-lingual v0.6.0] Три ядра: Сопровождение · Логика · Live Flow",
+      subtitle: "│ Ловите язык в паузе 5-15 с; промпт — чистый английский",
       rows: [
-        "┌ [Центр Tuner]    Наберите /tuner для настройки режимов с AI",
-        "│   (4 готовых рецепта; режимы создаются в одну фразу)",
-        "├ [Прямой · direct] Ввод на родном языке в тех-английский (/lingual direct)",
-        "│   (Чистый английский в коде и комментариях; для быстрой работы)",
-        "├ [Live Flow · live-flow] Пишите на английском; сленг и эмоции сохранены",
-        "└   (Через /lingual live-flow; ввод без цензуры, разбор правил)",
+        "┌ [Центр Tuner]    /tuner — правьте режимы в диалоге",
+        "│   (4 рецепта: spec · commit · oss · yap)",
+        "├ [1 Сопровождение · companion] Родной текст как есть; карточка",
+        "├ [2 Прямой поток · direct] 0ms родной ➔ англ. спецификация",
+        "├ [3 Live Flow · live-flow] English-ввод; правятся только опечатки",
+        "└   (/lingual 1|2|3 по реестру; /lingual <id> всегда работает)",
       ],
     },
     en: {
-      title: "· [pi-lingual v0.6.0] Dual-Core Golden Defaults & Tuner (auto-dismiss)",
-      subtitle: "│ Pure declarative modes & slots; customize via natural language",
+      title: "· [pi-lingual v0.6.0] Three cores: Companion · Spec · Live Flow",
+      subtitle: "│ Catch phrasing in the 5-15 s gap; prompts stay clean English",
       rows: [
         "┌ [Architect Tuner] Run /tuner to add or edit modes with AI",
-        "│   (4 tactical loadouts included: spec, commit, oss, yap)",
-        "├ [Logical Spec · direct]  Native input ➔ 0ms spec (/lingual direct)",
-        "│   (Ensures clean English instructions while keeping code untouched)",
-        "├ [Live Flow · live-flow]  Draft in English; grammar patched, passion kept",
-        "└   (Run /lingual live-flow; vent freely, takeaway diffs explain rules)",
+        "│   (4 tactical loadouts: spec · commit · oss · yap)",
+        "├ [1 Companion · companion] Native text sent raw; card above",
+        "├ [2 Logical Spec · direct] 0ms native ➔ imperative English spec",
+        "├ [3 Live Flow · live-flow] Draft English; only typos fixed, tone kept",
+        "└   (/lingual 1|2|3 = registry order; /lingual <id> always works)",
       ],
     },
   };

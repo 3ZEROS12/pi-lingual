@@ -1258,18 +1258,30 @@ Output valid JSON ONLY. Never output markdown code fences or explanations.`;
 function getDefaultFactoryModes(sourceLang = "en", explainLang) {
   const norm = (sourceLang || "en").toLowerCase().split("-")[0];
   const SEED_NAMES = {
-    en: { direct: "Logical Spec", liveFlow: "Live Flow", vocab: "Key Terms", fixed: "Fixed", native: "Native", takeaway: "Takeaways" },
-    zh: { direct: "\u89C4\u8303\u76F4\u53D1", liveFlow: "\u5B9E\u6218\u72C2\u98D9", vocab: "\u6838\u5FC3\u8868\u8FBE", fixed: "\u539F\u53E5\u4FEE\u8865", native: "\u5730\u9053\u8868\u8FBE", takeaway: "\u6536\u83B7\u590D\u76D8" },
-    tw: { direct: "\u898F\u7BC4\u76F4\u767C", liveFlow: "\u5BE6\u6230\u72C2\u98C6", vocab: "\u6838\u5FC3\u8868\u9054", fixed: "\u539F\u53E5\u4FEE\u88DC", native: "\u9053\u5730\u8868\u9054", takeaway: "\u6536\u7A6B\u8907\u76E4" },
-    ja: { direct: "\u4ED5\u69D8\u76F4\u884C", liveFlow: "\u5B9F\u6226\u75BE\u8D70", vocab: "\u91CD\u8981\u8A9E\u5F59", fixed: "\u539F\u6587\u4FEE\u6B63", native: "\u81EA\u7136\u8868\u73FE", takeaway: "\u91CD\u8981\u30DD\u30A4\u30F3\u30C8" },
-    ko: { direct: "\uB17C\uB9AC\uC815\uC81C", liveFlow: "\uC2E4\uC804\uC9C8\uC8FC", vocab: "\uD575\uC2EC\uC5B4\uD718", fixed: "\uC6D0\uBB38\uC218\uC815", native: "\uC790\uC5F0\uC2A4\uB7EC\uC6B4\uD45C\uD604", takeaway: "\uD575\uC2EC\uD3EC\uC778\uD2B8" },
-    es: { direct: "Directo L\xF3gico", liveFlow: "Live Flow", vocab: "T\xE9rminos clave", fixed: "Corregido", native: "Nativo", takeaway: "Puntos clave" },
-    fr: { direct: "Direct Logique", liveFlow: "Live Flow", vocab: "Termes cl\xE9s", fixed: "Corrig\xE9", native: "Naturel", takeaway: "Points cl\xE9s" },
-    de: { direct: "Direkte Logik", liveFlow: "Live Flow", vocab: "Schl\xFCsselbegriffe", fixed: "Korrigiert", native: "Nativ", takeaway: "Wichtige Punkte" },
-    ru: { direct: "\u041F\u0440\u044F\u043C\u043E\u0439 \u043F\u043E\u0442\u043E\u043A", liveFlow: "Live Flow", vocab: "\u041A\u043B\u044E\u0447\u0435\u0432\u044B\u0435 \u0441\u043B\u043E\u0432\u0430", fixed: "\u0418\u0441\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u043E", native: "\u041D\u0430\u0442\u0438\u0432\u043D\u044B\u0439", takeaway: "\u0413\u043B\u0430\u0432\u043D\u043E\u0435" }
+    en: { companion: "Companion", direct: "Logical Spec", liveFlow: "Live Flow", vocab: "Key Terms", fixed: "Fixed", native: "Native", takeaway: "Takeaways" },
+    zh: { companion: "\u7EAF\u4F34\u5B66", direct: "\u89C4\u8303\u76F4\u53D1", liveFlow: "\u5B9E\u6218\u72C2\u98D9", vocab: "\u6838\u5FC3\u8868\u8FBE", fixed: "\u539F\u53E5\u4FEE\u8865", native: "\u5730\u9053\u8868\u8FBE", takeaway: "\u6536\u83B7\u590D\u76D8" },
+    tw: { companion: "\u7D14\u4F34\u5B78", direct: "\u898F\u7BC4\u76F4\u767C", liveFlow: "\u5BE6\u6230\u72C2\u98C6", vocab: "\u6838\u5FC3\u8868\u9054", fixed: "\u539F\u53E5\u4FEE\u88DC", native: "\u9053\u5730\u8868\u9054", takeaway: "\u6536\u7A6B\u8907\u76E4" },
+    ja: { companion: "\u4F34\u8D70", direct: "\u4ED5\u69D8\u76F4\u884C", liveFlow: "\u5B9F\u6226\u75BE\u8D70", vocab: "\u91CD\u8981\u8A9E\u5F59", fixed: "\u539F\u6587\u4FEE\u6B63", native: "\u81EA\u7136\u8868\u73FE", takeaway: "\u91CD\u8981\u30DD\u30A4\u30F3\u30C8" },
+    ko: { companion: "\uB3D9\uD589\uD559\uC2B5", direct: "\uB17C\uB9AC\uC815\uC81C", liveFlow: "\uC2E4\uC804\uC9C8\uC8FC", vocab: "\uD575\uC2EC\uC5B4\uD718", fixed: "\uC6D0\uBB38\uC218\uC815", native: "\uC790\uC5F0\uC2A4\uB7EC\uC6B4\uD45C\uD604", takeaway: "\uD575\uC2EC\uD3EC\uC778\uD2B8" },
+    es: { companion: "Aprendizaje", direct: "Directo L\xF3gico", liveFlow: "Live Flow", vocab: "T\xE9rminos clave", fixed: "Corregido", native: "Nativo", takeaway: "Puntos clave" },
+    fr: { companion: "Compagnon", direct: "Direct Logique", liveFlow: "Live Flow", vocab: "Termes cl\xE9s", fixed: "Corrig\xE9", native: "Naturel", takeaway: "Points cl\xE9s" },
+    de: { companion: "Begleitung", direct: "Direkte Logik", liveFlow: "Live Flow", vocab: "Schl\xFCsselbegriffe", fixed: "Korrigiert", native: "Nativ", takeaway: "Wichtige Punkte" },
+    ru: { companion: "\u0421\u043E\u043F\u0440\u043E\u0432\u043E\u0436\u0434\u0435\u043D\u0438\u0435", direct: "\u041F\u0440\u044F\u043C\u043E\u0439 \u043F\u043E\u0442\u043E\u043A", liveFlow: "Live Flow", vocab: "\u041A\u043B\u044E\u0447\u0435\u0432\u044B\u0435 \u0441\u043B\u043E\u0432\u0430", fixed: "\u0418\u0441\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u043E", native: "\u041D\u0430\u0442\u0438\u0432\u043D\u044B\u0439", takeaway: "\u0413\u043B\u0430\u0432\u043D\u043E\u0435" }
   };
   const n = SEED_NAMES[norm] || SEED_NAMES.en;
   return [
+    // Archetype 1: Companion (pass-through) keeps the 5-second-gap learning card alive out of the box.
+    {
+      id: "companion",
+      name: n.companion,
+      aliases: ["original"],
+      flow: "translate",
+      action: "pass-through",
+      hud: "tree",
+      reasoning: "low",
+      slots: getDefaultSlots(sourceLang),
+      enabled: true
+    },
     {
       id: "direct",
       name: n.direct,
@@ -2274,15 +2286,6 @@ function normalizeLangCode(input) {
   if (s === "ru" || s === "russian" || s === "\u0440\u0443\u0441\u0441\u043A\u0438\u0439" || s === "\u4FC4\u8BED" || s === "\u4FC4\u6587") return "ru";
   return s;
 }
-function resolveLangPair(input, fallbackPair) {
-  const [fallbackSource, fallbackTarget] = (fallbackPair || "en ja").trim().split(/\s+/);
-  const [rawSource, rawTarget] = (input || "").trim().split(/\s+/);
-  const normalizedSource = normalizeLangCode(rawSource || "");
-  const normalizedTarget = normalizeLangCode(rawTarget || "");
-  const source = isSupportedLangCode(normalizedSource) ? normalizedSource : fallbackSource || "en";
-  const target = isSupportedLangCode(normalizedTarget) ? normalizedTarget : source === "en" ? fallbackTarget && isSupportedLangCode(fallbackTarget) && fallbackTarget !== "en" ? fallbackTarget : "ja" : "en";
-  return { source, target: target === source ? source === "en" ? "ja" : "en" : target };
-}
 function resolveLabelsForLang(lang = "en", overrides, targetLang) {
   const norm = (lang || "en").toLowerCase().split("-")[0];
   const presetKey = norm === "tw" ? "zh" : norm;
@@ -2538,20 +2541,6 @@ function invalidateUserConfigCache() {
 }
 function isTestEnvironment() {
   return process.env.NODE_ENV === "test" || process.env.NODE_TEST_CONTEXT !== void 0 || process.execArgv.some((a) => a.startsWith("--test") || a === "--test") || process.argv.some((a) => a === "--test" || a.startsWith("--test=") || /\.(?:test|spec)\.[cm]?[jt]s$/i.test(a)) || process.env.npm_lifecycle_event === "test";
-}
-function isUserLingualConfigured() {
-  if (isTestEnvironment()) return true;
-  const agentDir = import_node_path.default.join(import_node_os.default.homedir(), ".pi", "agent");
-  const lingualFile = import_node_path.default.join(agentDir, "lingual.json");
-  if (!import_node_fs.default.existsSync(lingualFile)) return false;
-  try {
-    const raw = import_node_fs.default.readFileSync(lingualFile, "utf8");
-    const parsed = JSON.parse(raw);
-    const inner = parsed && (parsed["pi-lingual"] || parsed);
-    return Boolean(inner && (inner.configured || inner.sourceLang && inner.targetLang));
-  } catch {
-    return false;
-  }
 }
 function loadUserLingualConfig() {
   if (isTestEnvironment()) {
@@ -2966,6 +2955,7 @@ function resolveModifySlotsFromConfig(cfg) {
 }
 function defaultSlotsForMode(mode, sourceLang, explainLang) {
   if (mode.action === "pass-through") return [];
+  if (mode.action === "select") return getDefaultPromptSlots(sourceLang);
   return mode.flow === "proofread" ? getDefaultModifySlots(sourceLang, explainLang) : getDefaultDirectSlots(sourceLang);
 }
 function resolveModesFromConfig(cfg) {
@@ -3057,7 +3047,7 @@ function normalizeActiveModeId(cfg, modes) {
       return mappedId;
     }
   }
-  return activeModes[0]?.id || "direct";
+  return activeModes[0]?.id || "companion";
 }
 function compileModeSystemPrompt(mode, options) {
   const sourceLang = mode.customInputLang || options.sourceLang || "en";
@@ -3338,111 +3328,111 @@ function formatReleaseBannerLines(sourceLang = "en", maxCols = 80, fg = (_c, t) 
   const effectiveCols = typeof maxCols === "number" && maxCols > 0 ? maxCols : 80;
   const copyByLang = {
     zh: {
-      title: "\xB7 [pi-lingual v0.6.0] \u6781\u7B80\u53CC\u6838\u6A21\u5F0F\u4E0A\u7EBF & Tuner \u5B8C\u5168\u5F00\u653E (\u53D1\u6D88\u606F\u81EA\u52A8\u6536\u8D77)",
-      subtitle: "\u2502 \u4E00\u5207\u6A21\u5F0F\u4E0E\u63D0\u793A\u8BCD\u7686\u53EF\u5BF9\u8BDD\u5B9A\u5236\uFF1B\u51FA\u5382\u7CBE\u7B80\u4E3A\u4E24\u5927\u6838\u5FC3\uFF1B\u914D\u7F6E\u6C38\u4E45\u72EC\u7ACB",
+      title: "\xB7 [pi-lingual v0.6.0] \u4E09\u6838\u51FA\u5382\uFF1A\u4F34\u5B66 \xB7 \u89C4\u8303\u76F4\u53D1 \xB7 \u5B9E\u6218\u72C2\u98D9",
+      subtitle: "\u2502 \u5728 AI \u751F\u6210\u7684 5-15 \u79D2\u95F4\u9699\u987A\u624B\u6361\u8BED\u611F\uFF1B\u63D0\u793A\u8BCD\u59CB\u7EC8\u7EAF\u51C0\u82F1\u6587",
       rows: [
-        "\u250C [\u6838\u5FC3\u5B9A\u5236\u4E2D\u5FC3 \xB7 Tuner] \u6572 /tuner \u76F4\u63A5\u8DDF AI \u8BF4\u8BDD\uFF0C\u968F\u610F\u589E\u5220\u6539\u6A21\u5F0F\u4E0E\u63D0\u793A\u8BCD",
-        "\u2502   (\u5185\u7F6E 4 \u5927\u5B9E\u6218\u914D\u88C5\uFF1B\u60F3\u52A0\u53D1\u63A8\u3001\u63D0\u4EA4\u3001\u5BF9\u7EBF\u7B49\u6A21\u5F0F\uFF0C\u4E00\u53E5\u8BDD\u79D2\u6210)",
-        "\u251C [\u89C4\u8303\u76F4\u53D1 \xB7 direct]    \u6572\u4E2D\u6587\uFF0C0ms \u8F6C\u6210\u89C4\u8303\u6280\u672F\u82F1\u6587\u76F4\u53D1 (/lingual direct)",
-        "\u2502   (\u4FDD\u8BC1\u4EE3\u7801\u548C\u6CE8\u91CA\u662F\u7EAF\u82F1\u6587\uFF1B\u9002\u5408\u4E13\u6CE8\u5F00\u53D1\u3001\u4E0D\u60F3\u8D39\u8111\u618B\u82F1\u8BED\u65F6\u4F7F\u7528)",
-        "\u251C [\u5B9E\u6218\u72C2\u98D9 \xB7 live-flow] \u76F4\u63A5\u6253\u82F1\u6587\uFF1B\u53EA\u4FEE\u8BED\u6CD5\u9519\u8BCD\uFF0C\u7C97\u53E3\u4E0E\u60C5\u7EEA 100% \u4FDD\u7559",
-        "\u2514   (\u6572 /lingual live-flow \u5207\u6362\uFF1B\u7C97\u53E3\u4FDD\u7559\uFF0C\u4E0B\u65B9\u4E2D\u6587\u8BB2\u900F\u8BED\u6CD5\u76F2\u70B9)"
+        "\u250C [\u5B9A\u5236\u4E2D\u5FC3 \xB7 Tuner] \u6572 /tuner \u8DDF AI \u8BF4\u8BDD\uFF0C\u968F\u610F\u589E\u5220\u6539\u6A21\u5F0F",
+        "\u2502   (4 \u5927\u914D\u88C5\u5C31\u7EEA\uFF1Aspec \u538B\u94F8 \xB7 commit \u8131\u6C34 \xB7 oss \u5BF9\u7EBF \xB7 yap \u53D1\u63A8)",
+        "\u251C [1 \u7EAF\u4F34\u5B66 \xB7 companion] \u4E2D\u6587\u539F\u6837\u76F4\u53D1\uFF1B\u4E0A\u65B9\u6D6E\u51FA\u53CC\u8BED\u5BF9\u7167\u5361",
+        "\u251C [2 \u89C4\u8303\u76F4\u53D1 \xB7 direct] \u6572\u4E2D\u6587\uFF0C0ms \u8F6C\u6210\u89C4\u8303\u82F1\u6587\u5DE5\u7A0B\u6307\u4EE4",
+        "\u251C [3 \u5B9E\u6218\u72C2\u98D9 \xB7 live-flow] \u6253\u82F1\u6587\uFF1B\u53EA\u4FEE\u9519\u8BCD\uFF0C\u7C97\u53E3\u60C5\u7EEA 100% \u4FDD\u7559",
+        "\u2514   (/lingual 1|2|3 \u6309\u6CE8\u518C\u8868\u987A\u5E8F\uFF1B/lingual <id> \u6C38\u8FDC\u6709\u6548)"
       ]
     },
     tw: {
-      title: "\xB7 [pi-lingual v0.6.0] \u6975\u7C21\u96D9\u6838\u6A21\u5F0F\u4E0A\u7DDA & Tuner \u5B8C\u5168\u958B\u653E (\u767C\u8A0A\u606F\u81EA\u52D5\u6536\u8D77)",
-      subtitle: "\u2502 \u4E00\u5207\u6A21\u5F0F\u8207\u63D0\u793A\u8A5E\u7686\u53EF\u5C0D\u8A71\u5B9A\u5236\uFF1B\u51FA\u5EE0\u7CBE\u7C21\u70BA\u5169\u5927\u6838\u5FC3\uFF1B\u8A2D\u5B9A\u6C38\u4E45\u7368\u7ACB",
+      title: "\xB7 [pi-lingual v0.6.0] \u4E09\u6838\u51FA\u5EE0\uFF1A\u7D14\u4F34\u5B78 \xB7 \u898F\u7BC4\u76F4\u767C \xB7 \u5BE6\u6230\u72C2\u98C6",
+      subtitle: "\u2502 \u5728 AI \u751F\u6210\u7684 5-15 \u79D2\u9593\u9699\u9806\u624B\u64BF\u8A9E\u611F\uFF1B\u63D0\u793A\u8A5E\u59CB\u7D42\u7D14\u6DE8\u82F1\u6587",
       rows: [
-        "\u250C [\u6838\u5FC3\u5B9A\u5236\u4E2D\u5FC3 \xB7 Tuner] \u6572 /tuner \u76F4\u63A5\u8DDF AI \u8AAA\u8A71\uFF0C\u96A8\u610F\u589E\u522A\u6539\u6A21\u5F0F\u8207\u63D0\u793A\u8A5E",
-        "\u2502   (\u5167\u7F6E 4 \u5927\u5BE6\u6230\u914D\u88DD\uFF1B\u60F3\u52A0\u767C\u63A8\u3001\u63D0\u4EA4\u3001\u5C0D\u7DDA\u7B49\u6A21\u5F0F\uFF0C\u4E00\u53E5\u8A71\u79D2\u6210)",
-        "\u251C [\u898F\u7BC4\u76F4\u767C \xB7 direct]    \u6572\u4E2D\u6587\uFF0C0ms \u8F49\u6210\u898F\u7BC4\u6280\u8853\u82F1\u6587\u76F4\u767C (/lingual direct)",
-        "\u2502   (\u4FDD\u8B49\u4EE3\u78BC\u548C\u8A3B\u91CB\u662F\u7D14\u82F1\u6587\uFF1B\u9069\u5408\u5C08\u6CE8\u958B\u767C\u3001\u4E0D\u60F3\u8CBB\u8166\u618B\u82F1\u8A9E\u6642\u4F7F\u7528)",
-        "\u251C [\u5BE6\u6230\u72C2\u98C6 \xB7 live-flow] \u76F4\u63A5\u6253\u82F1\u6587\uFF1B\u53EA\u4FEE\u8A9E\u6CD5\u932F\u8A5E\uFF0C\u7C97\u53E3\u8207\u60C5\u7DD2 100% \u4FDD\u7559",
-        "\u2514   (\u6572 /lingual live-flow \u5207\u63DB\uFF1B\u7C97\u53E3\u4FDD\u7559\uFF0C\u4E0B\u65B9\u4E2D\u6587\u8B1B\u900F\u8A9E\u6CD5\u76F2\u9EDE)"
+        "\u250C [\u5B9A\u88FD\u4E2D\u5FC3 \xB7 Tuner] \u6572 /tuner \u8DDF AI \u8AAA\u8A71\uFF0C\u96A8\u610F\u589E\u522A\u6539\u6A21\u5F0F",
+        "\u2502   (4 \u5927\u914D\u88DD\u5C31\u7DD2\uFF1Aspec \u58D3\u9444 \xB7 commit \u812B\u6C34 \xB7 oss \u5C0D\u7DDA \xB7 yap \u767C\u63A8)",
+        "\u251C [1 \u7D14\u4F34\u5B78 \xB7 companion] \u4E2D\u6587\u539F\u6A23\u76F4\u767C\uFF1B\u4E0A\u65B9\u6D6E\u51FA\u96D9\u8A9E\u5C0D\u7167\u5361",
+        "\u251C [2 \u898F\u7BC4\u76F4\u767C \xB7 direct] \u6572\u4E2D\u6587\uFF0C0ms \u8F49\u6210\u898F\u7BC4\u82F1\u6587\u5DE5\u7A0B\u6307\u4EE4",
+        "\u251C [3 \u5BE6\u6230\u72C2\u98C6 \xB7 live-flow] \u6253\u82F1\u6587\uFF1B\u53EA\u4FEE\u932F\u8A5E\uFF0C\u7C97\u53E3\u60C5\u7DD2 100% \u4FDD\u7559",
+        "\u2514   (/lingual 1|2|3 \u6309\u8A3B\u518A\u8868\u9806\u5E8F\uFF1B/lingual <id> \u6C38\u9060\u6709\u6548)"
       ]
     },
     ja: {
-      title: "\xB7 [pi-lingual v0.6.0] \u30B3\u30A22\u30E2\u30FC\u30C9\u5237\u65B0 & Tuner \u5168\u9762\u958B\u653E (\u9001\u4FE1\u3067\u9589\u3058\u308B)",
-      subtitle: "\u2502 \u5168\u30E2\u30FC\u30C9\u3068\u30D7\u30ED\u30F3\u30D7\u30C8\u3092\u5BFE\u8A71\u3067\u81EA\u5728\u306B\u8A2D\u8A08\uFF1B\u8A2D\u5B9A\u306F\u6C38\u4E45\u30ED\u30FC\u30AB\u30EB\u4FDD\u6301",
+      title: "\xB7 [pi-lingual v0.6.0] 3\u30B3\u30A2\uFF1A\u4F34\u8D70 \xB7 \u4ED5\u69D8\u76F4\u884C \xB7 \u5B9F\u6226\u75BE\u8D70",
+      subtitle: "\u2502 AI \u751F\u6210\u306E 5-15 \u79D2\u306B\u8A9E\u611F\u3092\u62FE\u3046\uFF1B\u30D7\u30ED\u30F3\u30D7\u30C8\u306F\u5E38\u306B\u7D14\u82F1\u8A9E",
       rows: [
-        "\u250C [\u5BFE\u8A71\u8A2D\u8A08 \xB7 Tuner]     /tuner \u3067AI\u3068\u5BFE\u8A71\u3057\u3001\u65B0\u30E2\u30FC\u30C9\u3084\u30D7\u30ED\u30F3\u30D7\u30C8\u3092\u5373\u8FFD\u52A0",
-        "\u2502   (4\u5927\u30D7\u30EA\u30BB\u30C3\u30C8\u5185\u8535 \xB7 PR\u30EC\u30D3\u30E5\u30FC\u3084SNS\u6295\u7A3F\u7528\u30E2\u30FC\u30C9\u3082\u4F1A\u8A71\u3060\u3051\u3067\u5B8C\u6210)",
-        "\u251C [\u4ED5\u69D8\u76F4\u884C \xB7 direct]  \u6BCD\u8A9E\u5165\u529B\u30010ms\u3067\u898F\u7BC4\u7684\u82F1\u8A9E\u306B\u6574\u3048\u9001\u4FE1 (/lingual direct)",
-        "\u2502   (\u30B3\u30FC\u30C9\u3068\u30B3\u30E1\u30F3\u30C8\u306E\u5B8C\u5168\u82F1\u8A9E\u5316\u3092\u4FDD\u8A3C \xB7 \u96C6\u4E2D\u3057\u3066\u958B\u767A\u3092\u9032\u3081\u305F\u3044\u6642\u306B)",
-        "\u251C [\u5B9F\u6226\u75BE\u8D70 \xB7 live-flow] \u82F1\u8A9E\u3067\u76F4\u63A5\u5165\u529B\uFF1B\u30B9\u30E9\u30F3\u30B0\u30FB\u611F\u60C5\u3092100%\u4FDD\u6301\u3057\u88DC\u6B63",
-        "\u2514   (/lingual live-flow \u3067\u5207\u66FF \xB7 \u611F\u60C5\u4FDD\u6301\u3001\u4E0B\u90E8\u306B\u6BCD\u8A9E\u3067\u76F4\u611F\u89E3\u8AAC)"
+        "\u250C [\u8A2D\u8A08\u30BB\u30F3\u30BF\u30FC \xB7 Tuner] /tuner \u3067 AI \u3068\u5BFE\u8A71\u3057\u30E2\u30FC\u30C9\u3092\u7DE8\u96C6",
+        "\u2502   (4\u5927\u30EC\u30B7\u30D4\uFF1Aspec \u5727\u7E2E \xB7 commit \u8131\u6C34 \xB7 oss \u5BFE\u8AD6 \xB7 yap \u6295\u7A3F)",
+        "\u251C [1 \u4F34\u8D70 \xB7 companion] \u6BCD\u8A9E\u3092\u305D\u306E\u307E\u307E\u9001\u4FE1\uFF1B\u4E0A\u90E8\u306B\u4E8C\u8A00\u8A9E\u30AB\u30FC\u30C9",
+        "\u251C [2 \u4ED5\u69D8\u76F4\u884C \xB7 direct] 0ms \u3067\u6BCD\u8A9E \u2794 \u898F\u7BC4\u7684\u306A\u82F1\u8A9E\u4ED5\u69D8\u306B\u6574\u5F62",
+        "\u251C [3 \u5B9F\u6226\u75BE\u8D70 \xB7 live-flow] \u82F1\u8A9E\u5165\u529B\uFF1B\u8AA4\u5B57\u306E\u307F\u4FEE\u6B63\u3001\u611F\u60C5\u306F\u4FDD\u6301",
+        "\u2514   (/lingual 1|2|3 \u306F\u767B\u9332\u9806\uFF1B/lingual <id> \u306F\u5E38\u306B\u6709\u52B9)"
       ]
     },
     ko: {
-      title: "\xB7 [pi-lingual v0.6.0] \uB4C0\uC5BC \uCF54\uC5B4 \uBAA8\uB4DC & Tuner \uC804\uBA74 \uAC1C\uBC29 (\uC785\uB825 \uC2DC \uB2EB\uD798)",
-      subtitle: "\u2502 \uBAA8\uB4E0 \uBAA8\uB4DC\uC640 \uD504\uB86C\uD504\uD2B8\uB97C \uB300\uD654\uB85C \uB9DE\uCDA4 \uC124\uC815; \uC124\uC815\uC740 \uB85C\uCEEC\uC5D0 \uC601\uAD6C \uBCF4\uC874",
+      title: "\xB7 [pi-lingual v0.6.0] 3\uCF54\uC5B4: \uB3D9\uD589\uD559\uC2B5 \xB7 \uB17C\uB9AC\uC815\uC81C \xB7 \uC2E4\uC804\uC9C8\uC8FC",
+      subtitle: "\u2502 AI \uC0DD\uC131 5-15\uCD08\uC5D0 \uC5B4\uAC10\uC744 \uC90D\uB294\uB2E4; \uD504\uB86C\uD504\uD2B8\uB294 \uC21C\uC218 \uC601\uC5B4",
       rows: [
-        "\u250C [\uB9DE\uCDA4 \uC124\uACC4 \xB7 Tuner]    /tuner \uB85C AI\uC640 \uB300\uD654\uD558\uBA70 \uBAA8\uB4DC\uC640 \uD504\uB86C\uD504\uD2B8 \uC790\uC720 \uCD94\uAC00",
-        "\u2502   (4\uB300 \uD504\uB9AC\uC14B \uB0B4\uC7A5 \xB7 PR \uAC80\uD1A0\uB098 SNS\uC6A9 \uBAA8\uB4DC\uB3C4 \uB9D0 \uD55C\uB9C8\uB514\uB85C \uC989\uC2DC \uC0DD\uC131)",
-        "\u251C [\uB17C\uB9AC\uC815\uC81C \xB7 direct]  \uBAA8\uAD6D\uC5B4 \uC785\uB825, 0ms \uAE30\uC220 \uC601\uC5B4\uB85C \uC804\uC1A1 (/lingual direct)",
-        "\u2502   (\uCF54\uB4DC\uC640 \uC8FC\uC11D\uC758 \uC21C\uC218 \uC601\uC5B4 \uC720\uC9C0 \xB7 \uAC1C\uBC1C\uC5D0 \uC9D1\uC911\uD558\uACE0 \uC2F6\uC744 \uB54C \uCD5C\uC801)",
-        "\u251C [\uC2E4\uC804\uC9C8\uC8FC \xB7 live-flow] \uC601\uC5B4\uB85C \uC9C1\uC811 \uC791\uC131; \uAC70\uCE5C \uD45C\uD604 100% \uC720\uC9C0\uD558\uBA70 \uAD50\uC815 \uC804\uC1A1",
-        "\u2514   (/lingual live-flow \uB85C \uC804\uD658 \xB7 \uAC10\uC815 \uC720\uC9C0, \uD558\uB2E8\uC5D0 \uD575\uC2EC \uBB38\uBC95 \uBCF5\uAE30)"
+        "\u250C [\uC124\uACC4 \uC13C\uD130 \xB7 Tuner] /tuner \uB85C AI \uC640 \uBAA8\uB4DC\uB97C \uD3B8\uC9D1",
+        "\u2502   (4\uB300 \uB808\uC2DC\uD53C: spec \xB7 commit \xB7 oss \xB7 yap)",
+        "\u251C [1 \uB3D9\uD589\uD559\uC2B5 \xB7 companion] \uBAA8\uAD6D\uC5B4 \uC6D0\uBB38 \uC804\uC1A1; \uC774\uC911\uC5B8\uC5B4 \uCE74\uB4DC",
+        "\u251C [2 \uB17C\uB9AC\uC815\uC81C \xB7 direct] 0ms \uB85C \uBAA8\uAD6D\uC5B4 \u2794 \uADDC\uACA9 \uC601\uC5B4 \uC0AC\uC591",
+        "\u251C [3 \uC2E4\uC804\uC9C8\uC8FC \xB7 live-flow] \uC601\uC5B4 \uC785\uB825; \uC624\uD0C0\uB9CC \uC218\uC815, \uAC10\uC815 \uC720\uC9C0",
+        "\u2514   (/lingual 1|2|3 \uC740 \uB4F1\uB85D \uC21C\uC11C; /lingual <id> \uB294 \uD56D\uC0C1 \uC720\uD6A8)"
       ]
     },
     es: {
-      title: "\xB7 [pi-lingual v0.6.0] D\xFAo esencial y Tuner abierto (cierra al enviar)",
-      subtitle: "\u2502 Dise\xF1a modos y prompts conversando; configuraci\xF3n aislada en local",
+      title: "\xB7 [pi-lingual v0.6.0] Tres n\xFAcleos: Compa\xF1ero \xB7 Directo \xB7 Live Flow",
+      subtitle: "\u2502 Aprovecha los 5-15 s; tu prompt siempre en ingl\xE9s limpio",
       rows: [
-        "\u250C [Centro Tuner]   Ejecuta /tuner para crear o cambiar modos con AI",
-        "\u2502   (4 recetas listas; a\xF1ade flujos de PR o Twitter en una frase)",
-        "\u251C [Directo \xB7 direct]     En tu idioma, 0ms a ingl\xE9s (/lingual direct)",
-        "\u2502   (Mantiene c\xF3digo y comentarios en ingl\xE9s; avanza r\xE1pido)",
-        "\u251C [Live Flow \xB7 live-flow] Directo en ingl\xE9s; pasi\xF3n y tacos intactos",
-        "\u2514   (Usa /lingual live-flow; sin censura, notas breves abajo)"
+        "\u250C [Centro Tuner] /tuner para crear o editar modos con AI",
+        "\u2502   (4 recetas: spec \xB7 commit \xB7 oss \xB7 yap)",
+        "\u251C [1 Aprendizaje \xB7 companion] Idioma nativo intacto; tarjeta arriba",
+        "\u251C [2 Directo L\xF3gico \xB7 direct] 0ms nativo \u2794 especificaci\xF3n inglesa",
+        "\u251C [3 Live Flow \xB7 live-flow] Escribe en ingl\xE9s; solo corrige erratas",
+        "\u2514   (/lingual 1|2|3 por registro; /lingual <id> siempre funciona)"
       ]
     },
     fr: {
-      title: "\xB7 [pi-lingual v0.6.0] Duo essentiel et Tuner ouvert (ferm\xE9 \xE0 l'envoi)",
-      subtitle: "\u2502 Cr\xE9ez modes et prompts en dialoguant ; configuration locale isol\xE9e",
+      title: "\xB7 [pi-lingual v0.6.0] Trois c\u0153urs : Compagnon \xB7 Direct \xB7 Live Flow",
+      subtitle: "\u2502 Profitez des 5-15 s ; prompt toujours en anglais propre",
       rows: [
         "\u250C [Centre Tuner]   Tapez /tuner pour cr\xE9er ou modifier des modes",
-        "\u2502   (4 recettes pr\xEAtes ; ajoutez des flux PR en une phrase)",
-        "\u251C [Direct \xB7 direct]      Langue native, 0ms vers l'anglais (/lingual direct)",
-        "\u2502   (Code et commentaires en anglais pur ; id\xE9al pour coder)",
-        "\u251C [Live Flow \xB7 live-flow] Saisie directe en anglais ; jurons gard\xE9s",
-        "\u2514   (Tapez /lingual live-flow ; sans filtre, explications claires en bas)"
+        "\u2502   (4 recettes : spec \xB7 commit \xB7 oss \xB7 yap)",
+        "\u251C [1 Compagnon \xB7 companion] Langue native brute ; carte au-dessus",
+        "\u251C [2 Direct Logique \xB7 direct] 0ms natif \u2794 spec anglaise structur\xE9e",
+        "\u251C [3 Live Flow \xB7 live-flow] \xC9crivez en anglais ; seules fautes corrig\xE9es",
+        "\u2514   (/lingual 1|2|3 selon registre ; /lingual <id> marche toujours)"
       ]
     },
     de: {
-      title: "\xB7 [pi-lingual v0.6.0] 2 Kern-Modi & Tuner offen (schlie\xDFt bei Senden)",
-      subtitle: "\u2502 Modi & Prompts per Chat anpassen; Konfiguration dauerhaft isoliert",
+      title: "\xB7 [pi-lingual v0.6.0] Drei Kerne: Begleitung \xB7 Logik \xB7 Live Flow",
+      subtitle: "\u2502 Nutze die 5-15 s; Prompt bleibt klares Englisch",
       rows: [
-        "\u250C [Tuner-Zentrale]  /tuner starten, um Modi und Prompts anzupassen",
-        "\u2502   (4 Rezepte an Bord; neue PR- oder Twitter-Modi mit einem Satz)",
-        "\u251C [Direkt \xB7 direct] Auf Deutsch, 0ms klares Englisch (/lingual direct)",
-        "\u2502   (H\xE4lt Code & Kommentare auf Englisch; perfekt f\xFCr Fokus)",
-        "\u251C [Live Flow \xB7 live-flow] Direkt auf Englisch; Emotionen 100% erhalten",
-        "\u2514   (Per /lingual live-flow; ohne Zensur, kurze Erkl\xE4rungen unten)"
+        "\u250C [Tuner-Zentrale]  /tuner f\xFCr Modi im Gespr\xE4ch",
+        "\u2502   (4 Rezepte: spec \xB7 commit \xB7 oss \xB7 yap)",
+        "\u251C [1 Begleitung \xB7 companion] Muttersprache roh; Karte dar\xFCber",
+        "\u251C [2 Direkte Logik \xB7 direct] 0ms nativ \u2794 englische Spezifikation",
+        "\u251C [3 Live Flow \xB7 live-flow] Englisch tippen; nur Fehler korrigiert",
+        "\u2514   (/lingual 1|2|3 nach Registry; /lingual <id> l\xF6st immer auf)"
       ]
     },
     ru: {
-      title: "\xB7 [pi-lingual v0.6.0] 2 \u0433\u043B\u0430\u0432\u043D\u044B\u0445 \u0440\u0435\u0436\u0438\u043C\u0430 \u0438 Tuner (\u0437\u0430\u043A\u0440\u043E\u0435\u0442\u0441\u044F \u043F\u0440\u0438 \u0432\u0432\u043E\u0434\u0435)",
-      subtitle: "\u2502 \u041D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0430 \u0440\u0435\u0436\u0438\u043C\u043E\u0432 \u0438 \u043F\u0440\u043E\u043C\u043F\u0442\u043E\u0432 \u0447\u0435\u0440\u0435\u0437 AI; \u043A\u043E\u043D\u0444\u0438\u0433 \u0438\u0437\u043E\u043B\u0438\u0440\u043E\u0432\u0430\u043D \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u043E",
+      title: "\xB7 [pi-lingual v0.6.0] \u0422\u0440\u0438 \u044F\u0434\u0440\u0430: \u0421\u043E\u043F\u0440\u043E\u0432\u043E\u0436\u0434\u0435\u043D\u0438\u0435 \xB7 \u041B\u043E\u0433\u0438\u043A\u0430 \xB7 Live Flow",
+      subtitle: "\u2502 \u041B\u043E\u0432\u0438\u0442\u0435 \u044F\u0437\u044B\u043A \u0432 \u043F\u0430\u0443\u0437\u0435 5-15 \u0441; \u043F\u0440\u043E\u043C\u043F\u0442 \u2014 \u0447\u0438\u0441\u0442\u044B\u0439 \u0430\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u0438\u0439",
       rows: [
-        "\u250C [\u0426\u0435\u043D\u0442\u0440 Tuner]    \u041D\u0430\u0431\u0435\u0440\u0438\u0442\u0435 /tuner \u0434\u043B\u044F \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438 \u0440\u0435\u0436\u0438\u043C\u043E\u0432 \u0441 AI",
-        "\u2502   (4 \u0433\u043E\u0442\u043E\u0432\u044B\u0445 \u0440\u0435\u0446\u0435\u043F\u0442\u0430; \u0440\u0435\u0436\u0438\u043C\u044B \u0441\u043E\u0437\u0434\u0430\u044E\u0442\u0441\u044F \u0432 \u043E\u0434\u043D\u0443 \u0444\u0440\u0430\u0437\u0443)",
-        "\u251C [\u041F\u0440\u044F\u043C\u043E\u0439 \xB7 direct] \u0412\u0432\u043E\u0434 \u043D\u0430 \u0440\u043E\u0434\u043D\u043E\u043C \u044F\u0437\u044B\u043A\u0435 \u0432 \u0442\u0435\u0445-\u0430\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u0438\u0439 (/lingual direct)",
-        "\u2502   (\u0427\u0438\u0441\u0442\u044B\u0439 \u0430\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u0438\u0439 \u0432 \u043A\u043E\u0434\u0435 \u0438 \u043A\u043E\u043C\u043C\u0435\u043D\u0442\u0430\u0440\u0438\u044F\u0445; \u0434\u043B\u044F \u0431\u044B\u0441\u0442\u0440\u043E\u0439 \u0440\u0430\u0431\u043E\u0442\u044B)",
-        "\u251C [Live Flow \xB7 live-flow] \u041F\u0438\u0448\u0438\u0442\u0435 \u043D\u0430 \u0430\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u043E\u043C; \u0441\u043B\u0435\u043D\u0433 \u0438 \u044D\u043C\u043E\u0446\u0438\u0438 \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u044B",
-        "\u2514   (\u0427\u0435\u0440\u0435\u0437 /lingual live-flow; \u0432\u0432\u043E\u0434 \u0431\u0435\u0437 \u0446\u0435\u043D\u0437\u0443\u0440\u044B, \u0440\u0430\u0437\u0431\u043E\u0440 \u043F\u0440\u0430\u0432\u0438\u043B)"
+        "\u250C [\u0426\u0435\u043D\u0442\u0440 Tuner]    /tuner \u2014 \u043F\u0440\u0430\u0432\u044C\u0442\u0435 \u0440\u0435\u0436\u0438\u043C\u044B \u0432 \u0434\u0438\u0430\u043B\u043E\u0433\u0435",
+        "\u2502   (4 \u0440\u0435\u0446\u0435\u043F\u0442\u0430: spec \xB7 commit \xB7 oss \xB7 yap)",
+        "\u251C [1 \u0421\u043E\u043F\u0440\u043E\u0432\u043E\u0436\u0434\u0435\u043D\u0438\u0435 \xB7 companion] \u0420\u043E\u0434\u043D\u043E\u0439 \u0442\u0435\u043A\u0441\u0442 \u043A\u0430\u043A \u0435\u0441\u0442\u044C; \u043A\u0430\u0440\u0442\u043E\u0447\u043A\u0430",
+        "\u251C [2 \u041F\u0440\u044F\u043C\u043E\u0439 \u043F\u043E\u0442\u043E\u043A \xB7 direct] 0ms \u0440\u043E\u0434\u043D\u043E\u0439 \u2794 \u0430\u043D\u0433\u043B. \u0441\u043F\u0435\u0446\u0438\u0444\u0438\u043A\u0430\u0446\u0438\u044F",
+        "\u251C [3 Live Flow \xB7 live-flow] English-\u0432\u0432\u043E\u0434; \u043F\u0440\u0430\u0432\u044F\u0442\u0441\u044F \u0442\u043E\u043B\u044C\u043A\u043E \u043E\u043F\u0435\u0447\u0430\u0442\u043A\u0438",
+        "\u2514   (/lingual 1|2|3 \u043F\u043E \u0440\u0435\u0435\u0441\u0442\u0440\u0443; /lingual <id> \u0432\u0441\u0435\u0433\u0434\u0430 \u0440\u0430\u0431\u043E\u0442\u0430\u0435\u0442)"
       ]
     },
     en: {
-      title: "\xB7 [pi-lingual v0.6.0] Dual-Core Golden Defaults & Tuner (auto-dismiss)",
-      subtitle: "\u2502 Pure declarative modes & slots; customize via natural language",
+      title: "\xB7 [pi-lingual v0.6.0] Three cores: Companion \xB7 Spec \xB7 Live Flow",
+      subtitle: "\u2502 Catch phrasing in the 5-15 s gap; prompts stay clean English",
       rows: [
         "\u250C [Architect Tuner] Run /tuner to add or edit modes with AI",
-        "\u2502   (4 tactical loadouts included: spec, commit, oss, yap)",
-        "\u251C [Logical Spec \xB7 direct]  Native input \u2794 0ms spec (/lingual direct)",
-        "\u2502   (Ensures clean English instructions while keeping code untouched)",
-        "\u251C [Live Flow \xB7 live-flow]  Draft in English; grammar patched, passion kept",
-        "\u2514   (Run /lingual live-flow; vent freely, takeaway diffs explain rules)"
+        "\u2502   (4 tactical loadouts: spec \xB7 commit \xB7 oss \xB7 yap)",
+        "\u251C [1 Companion \xB7 companion] Native text sent raw; card above",
+        "\u251C [2 Logical Spec \xB7 direct] 0ms native \u2794 imperative English spec",
+        "\u251C [3 Live Flow \xB7 live-flow] Draft English; only typos fixed, tone kept",
+        "\u2514   (/lingual 1|2|3 = registry order; /lingual <id> always works)"
       ]
     }
   };
@@ -4002,45 +3992,30 @@ function extension_default(pi) {
     lastContext = ctx;
     showingReleaseBanner = false;
     let diskCfg = loadUserLingualConfig();
-    let handshakeLang;
-    if (!isUserLingualConfigured() && hasActiveUI(ctx) && !isTestEnvironment() && event?.reason !== "resume" && typeof ctx.ui.input === "function") {
+    let detectedLang;
+    if (!diskCfg.sourceLang) {
       const detected = resolveReleaseBannerLang();
-      handshakeLang = detected;
-      const defaultPair = detected === "zh" || detected === "tw" ? "zh en" : detected === "ja" ? "ja en" : detected === "ko" ? "ko en" : detected === "es" ? "es en" : detected === "fr" ? "fr en" : detected === "de" ? "de en" : detected === "ru" ? "ru en" : "en ja";
-      try {
-        const userInput = await ctx.ui.input(
-          `\u2726 [pi-lingual Setup] Native \u21C4 Target language (detected: ${detected}):`,
-          defaultPair
-        );
-        safeClearWidget(ctx);
-        const chosen = (typeof userInput === "string" ? userInput.trim() : "") || defaultPair;
-        const { source: pickedSource, target: pickedTarget } = resolveLangPair(chosen, defaultPair);
-        if (pickedSource) {
-          state.sourceLang = pickedSource;
-          state.targetLang = pickedTarget;
-          state.labels = resolveLabelsForLang(state.sourceLang, diskCfg.labels, state.targetLang);
-          state.modes = getDefaultFactoryModes(state.sourceLang, state.sourceLang);
-          state.slots = getDefaultSlots(state.sourceLang);
-          state.directSlots = getDefaultDirectSlots(state.sourceLang);
-          state.promptSlots = getDefaultPromptSlots(state.sourceLang);
-          state.modifySlots = getDefaultModifySlots(state.sourceLang, state.sourceLang);
-          const factorySeed = state.modes[0]?.id || "direct";
-          state.mode = factorySeed;
-          state.activeModeId = factorySeed;
-          saveUserLingualConfig({
-            sourceLang: state.sourceLang,
-            targetLang: state.targetLang,
-            explainLang: state.sourceLang,
-            modes: state.modes,
-            mode: factorySeed,
-            activeModeId: factorySeed,
-            configured: true
-          });
-          diskCfg = loadUserLingualConfig();
-        }
-      } catch {
-        safeClearWidget(ctx);
-      }
+      detectedLang = detected;
+      const detectedSource = isSupportedLangCode(detected) ? detected : "en";
+      state.sourceLang = detectedSource;
+      state.targetLang = detectedSource === "en" ? "ja" : "en";
+      state.labels = resolveLabelsForLang(state.sourceLang, diskCfg.labels, state.targetLang);
+      state.modes = getDefaultFactoryModes(state.sourceLang, state.sourceLang);
+      state.slots = getDefaultSlots(state.sourceLang);
+      state.directSlots = getDefaultDirectSlots(state.sourceLang);
+      state.promptSlots = getDefaultPromptSlots(state.sourceLang);
+      state.modifySlots = getDefaultModifySlots(state.sourceLang, state.sourceLang);
+      state.mode = state.modes[0]?.id || "companion";
+      state.activeModeId = state.mode;
+    }
+    if (diskCfg.sourceLang) {
+      state.sourceLang = diskCfg.sourceLang;
+    }
+    if (diskCfg.targetLang) {
+      state.targetLang = diskCfg.targetLang;
+    }
+    if (diskCfg.labels) {
+      state.labels = resolveLabelsForLang(state.sourceLang, diskCfg.labels, state.targetLang);
     }
     if (diskCfg.mode) {
       state.mode = diskCfg.mode;
@@ -4071,7 +4046,7 @@ function extension_default(pi) {
     if (hasActiveUI(ctx)) {
       safeClearWidget(ctx);
       if (state.mode !== "off" && !isTestEnvironment() && event?.reason !== "resume" && diskCfg.lastSeenVersion !== CURRENT_FEATURE_BANNER_VERSION) {
-        if (renderReleaseBanner(ctx, handshakeLang || diskCfg.sourceLang)) {
+        if (renderReleaseBanner(ctx, detectedLang || diskCfg.sourceLang)) {
           saveUserLingualConfig({ lastSeenVersion: CURRENT_FEATURE_BANNER_VERSION });
         }
       }
@@ -4124,14 +4099,14 @@ function extension_default(pi) {
       );
       const numIdx = parseInt(trimmed, 10);
       const isNum = !isNaN(numIdx) && String(numIdx) === trimmed;
-      if (matched) {
-        nextMode = matched.id;
-      } else if (hasCustomModesOnDisk && isNum && numIdx >= 1 && numIdx <= activeModes.length) {
+      if (isNum && numIdx >= 1 && numIdx <= activeModes.length) {
         nextMode = activeModes[numIdx - 1].id;
+      } else if (matched) {
+        nextMode = matched.id;
       } else if (explicitLegacy) {
         nextMode = explicitLegacy;
       } else {
-        nextMode = activeModes[0]?.id || "direct";
+        nextMode = activeModes[0]?.id || "companion";
       }
     } else {
       if (state.modeLocked) {
@@ -4148,9 +4123,9 @@ function extension_default(pi) {
       if (hasCustomModesOnDisk) {
         const cycleList = [...activeModes.map((m) => m.id), "off"];
         const currentIdx = cycleList.indexOf(state.mode);
-        nextMode = cycleList[(currentIdx + 1) % cycleList.length] || activeModes[0]?.id || "direct";
+        nextMode = cycleList[(currentIdx + 1) % cycleList.length] || activeModes[0]?.id || "companion";
       } else {
-        nextMode = state.mode === "original" || state.mode === "companion" ? "english" : state.mode === "english" || state.mode === "direct" ? "select" : state.mode === "select" || state.mode === "candidates" ? "modify" : state.mode === "modify" || state.mode === "live-flow" ? "off" : "original";
+        nextMode = state.mode === "original" || state.mode === "companion" ? "direct" : state.mode === "english" || state.mode === "direct" ? "live-flow" : state.mode === "select" || state.mode === "candidates" ? "live-flow" : state.mode === "modify" || state.mode === "live-flow" ? "off" : "companion";
       }
     }
     state.mode = nextMode;
@@ -4633,7 +4608,7 @@ Usage: /lingual mode [list | add <id> <name> [flow] [action] [hud] | rm <id> | t
         flow: flow === "proofread" || flow === "custom" ? flow : "translate",
         action: action === "pass-through" || action === "select" ? action : "transform",
         hud: hud === "tree" || hud === "adaptive-takeaway" || hud === "none" ? hud : "preview",
-        slots: [
+        slots: action === "select" ? getDefaultPromptSlots(state.sourceLang) : [
           {
             id: `${id}_slot`,
             label: name,

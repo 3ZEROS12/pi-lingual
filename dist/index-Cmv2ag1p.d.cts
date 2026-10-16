@@ -328,7 +328,7 @@ interface SlotPresetDefinition {
 }
 
 /**
- * Returns dual-core factory golden defaults (v0.6.0+ Dual-Core Baselines: 1. Logical Spec + 2. Live Flow).
+ * Returns three-core factory golden defaults (v0.6.0 Three-Core Baselines: 1. Companion + 2. Logical Spec + 3. Live Flow).
  */
 declare function getDefaultFactoryModes(sourceLang?: string, explainLang?: string): CustomModeConfig[];
 interface LoadoutDefinition {

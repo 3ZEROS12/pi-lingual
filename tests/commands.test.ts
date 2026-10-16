@@ -98,18 +98,12 @@ test("extension /lingual - supports explicit mode arguments, 1/2/3/0 jumps, and 
       (String(lastStatusVal).includes("纯伴学") || String(lastStatusVal).includes("Companion"))
   );
 
-  // 4. Cycle without arguments: companion (1) -> direct (2) -> candidates (3) -> modify (4) -> off (0) -> companion (1)
+  // 4. Cycle without arguments: companion (1) -> direct (2) -> live-flow (3) -> off (0) -> companion (1)
   await registeredCommands["lingual"].handler("", mockCtx);
   assert.ok(
     notifications[notifications.length - 1].includes("直接改") ||
       notifications[notifications.length - 1].includes("规范直发") ||
       notifications[notifications.length - 1].toLowerCase().includes("direct")
-  );
-
-  await registeredCommands["lingual"].handler("", mockCtx);
-  assert.ok(
-    notifications[notifications.length - 1].includes("挑候选") ||
-      notifications[notifications.length - 1].toLowerCase().includes("candidates")
   );
 
   await registeredCommands["lingual"].handler("", mockCtx);
@@ -124,6 +118,76 @@ test("extension /lingual - supports explicit mode arguments, 1/2/3/0 jumps, and 
   assert.equal(lastStatusVal, undefined, "Cycling into off mode must clear status bar badge");
 
   // Teardown: back to companion
+  await registeredCommands["lingual"].handler("1", mockCtx);
+  assert.ok(
+    notifications[notifications.length - 1].includes("纯伴学") ||
+      notifications[notifications.length - 1].toLowerCase().includes("companion")
+  );
+});
+
+test("extension /lingual - positional numerals 1, 2, 3 and legacy 4/0 alias fallback (D2)", async () => {
+  const registeredCommands: Record<string, any> = {};
+  const mockPi: any = {
+    on() {},
+    registerCommand(name: string, def: any) {
+      registeredCommands[name] = def;
+    },
+    registerShortcut() {},
+  };
+  extensionFactory(mockPi);
+
+  const notifications: string[] = [];
+  let statusVal: any = null;
+  const mockCtx: any = {
+    hasUI: true,
+    ui: {
+      notify(msg: string) {
+        notifications.push(msg);
+      },
+      setStatus(_k: string, v: any) {
+        statusVal = v;
+      },
+      theme: { fg: (_c: string, t: string) => t },
+    },
+  };
+
+  // Positional 1 -> companion
+  await registeredCommands["lingual"].handler("1", mockCtx);
+  assert.ok(
+    notifications[notifications.length - 1].toLowerCase().includes("companion") ||
+      notifications[notifications.length - 1].includes("纯伴学")
+  );
+
+  // Positional 2 -> direct
+  await registeredCommands["lingual"].handler("2", mockCtx);
+  assert.ok(
+    notifications[notifications.length - 1].toLowerCase().includes("direct") ||
+      notifications[notifications.length - 1].includes("规范直发")
+  );
+
+  // Positional 3 -> live-flow
+  await registeredCommands["lingual"].handler("3", mockCtx);
+  assert.ok(
+    notifications[notifications.length - 1].toLowerCase().includes("live-flow") ||
+      notifications[notifications.length - 1].includes("实战狂飙")
+  );
+
+  // 0 -> off
+  await registeredCommands["lingual"].handler("0", mockCtx);
+  assert.ok(
+    notifications[notifications.length - 1].toLowerCase().includes("off") ||
+      notifications[notifications.length - 1].includes("已关闭")
+  );
+  assert.equal(statusVal, undefined);
+
+  // 4 (out of bounds in 3-mode factory) -> fallback to legacy alias modify / live-flow
+  await registeredCommands["lingual"].handler("4", mockCtx);
+  assert.ok(
+    notifications[notifications.length - 1].toLowerCase().includes("live-flow") ||
+      notifications[notifications.length - 1].includes("实战狂飙")
+  );
+
+  // Teardown
   await registeredCommands["lingual"].handler("1", mockCtx);
 });
 
@@ -634,7 +698,8 @@ test("Session Feedback Regression: 3-Way Mode Isolation (Zero Leakage), faithful
     },
   };
 
-  await registeredCommands["lingual"].handler("3", mockCtx);
+  await registeredCommands["lingual"].handler("mode add candidates Candidates translate select tree", mockCtx);
+  await registeredCommands["lingual"].handler("candidates", mockCtx);
   const resPick2 = await inputHandler({ type: "input", text: "测试一下多语言候选直发", source: "interactive" }, mockCtx);
   assert.equal(resPick2.action, "transform");
   assert.equal(resPick2.text, "Candidate Two Full Sentence Output", "Pressing key '2' must immediately send Candidate #2 without Enter");
@@ -651,6 +716,10 @@ test("Session Feedback Regression: 3-Way Mode Isolation (Zero Leakage), faithful
   keyToPress = "0";
   const resPick0 = await inputHandler({ type: "input", text: "测试按0原话直发", source: "interactive" }, mockCtx);
   assert.equal(resPick0.action, "continue", "Pressing key '0' must immediately send original raw text");
+
+  // Teardown: Reset modes registry to clean factory 3-core defaults
+  await registeredCommands["lingual"].handler("mode reset", mockCtx);
+  await registeredCommands["lingual"].handler("1", mockCtx);
 });
 
 test("extension /lingual anti-drift: blocks unrecognized subcommands and supports /lingual lock & unlock", async () => {

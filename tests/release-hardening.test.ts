@@ -11,8 +11,14 @@ import {
   normalizeLangCode,
   resolveLangPair,
   resolveLabelsForLang,
+  getDefaultFactoryModes,
 } from "../src/presets.js";
-import { resolveModesFromConfig, resolveReleaseBannerLang, compileModeSystemPrompt } from "../src/engine.js";
+import {
+  resolveModesFromConfig,
+  resolveReleaseBannerLang,
+  compileModeSystemPrompt,
+  normalizeActiveModeId,
+} from "../src/engine.js";
 import { getBannerMaxCols, getVisualWidth } from "../src/layout.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -32,15 +38,15 @@ const LOCALES: Record<string, string> = {
 };
 
 const MARKERS: Record<string, string> = {
-  zh: "极简双核模式上线",
-  tw: "極簡雙核模式上線",
-  ja: "コア2モード刷新",
-  ko: "듀얼 코어 모드",
-  es: "Dúo esencial",
-  fr: "Duo essentiel",
-  de: "2 Kern-Modi",
-  ru: "2 главных режима",
-  en: "Dual-Core Golden Defaults",
+  zh: "三核出厂",
+  tw: "三核出廠",
+  ja: "3コア",
+  ko: "3코어",
+  es: "Tres núcleos",
+  fr: "Trois cœurs",
+  de: "Drei Kerne",
+  ru: "Три ядра",
+  en: "Three cores",
 };
 
 after(() => {
@@ -162,7 +168,20 @@ test("legacy config bridge - user modes are never dropped for a missing slots ar
   assert.ok(!compiled.includes('"deep"'), "Must NOT fall back to deep candidate slot");
 
   const factory = resolveModesFromConfig({ sourceLang: "zh" } as any);
-  assert.deepEqual(factory.map((m) => m.id), ["direct", "live-flow"], "Factory dual-core defaults stay intact");
+  assert.deepEqual(factory.map((m) => m.id), ["companion", "direct", "live-flow"], "Factory three-core defaults stay intact");
+
+  // D1.4 9-language factory assertion
+  for (const lang of SUPPORTED_LANG_CODES) {
+    const ids = getDefaultFactoryModes(lang, lang).map((m) => m.id);
+    assert.deepEqual(ids, ["companion", "direct", "live-flow"], `[${lang}] factory ids must be 3 cores`);
+  }
+  const companion = getDefaultFactoryModes("zh", "zh")[0];
+  assert.equal(companion.action, "pass-through");
+  assert.equal(companion.hud, "tree");
+  assert.deepEqual(companion.slots.map((s) => s.id), ["source", "spoken", "written", "vocab"]);
+  assert.deepEqual(resolveModesFromConfig({}).map((m) => m.id), ["companion", "direct", "live-flow"]);
+  assert.equal(normalizeActiveModeId({ mode: "original" }, getDefaultFactoryModes("zh", "zh")), "companion");
+  assert.equal(normalizeActiveModeId({ mode: "english" }, getDefaultFactoryModes("zh", "zh")), "direct");
 });
 
 test("banner language - POSIX `zh_TW` locales resolve to Traditional Chinese copy", () => {
@@ -192,7 +211,7 @@ test("release banner - 9 sandboxed cold boots render natively with zero 80-col c
   for (const lang of SUPPORTED_LANG_CODES) {
     const out = bootInSandbox(lang, "fresh");
     assert.deepEqual(out.errors, [], `[${lang}] cold boot must not raise runtime errors`);
-    assert.equal(out.inputPrompted, true, `[${lang}] first-run handshake must prompt once`);
+    assert.equal(out.inputPrompted, false, `[${lang}] cold boot must never prompt`);
     assert.equal(out.bannerLines.length, 8, `[${lang}] banner must stay at 8 lines`);
     assert.equal(out.bannerPlacement, "aboveEditor", `[${lang}] banner must mount above the editor`);
 
@@ -212,16 +231,11 @@ test("release banner - 9 sandboxed cold boots render natively with zero 80-col c
       );
     }
 
-    // Traditional Chinese keeps the shared Chinese config code while the banner renders tw copy.
-    assert.equal(
-      out.configAfter.sourceLang,
-      lang === "tw" ? "zh" : lang,
-      `[${lang}] handshake must persist the detected language`
-    );
-    assert.equal(out.configAfter.mode, "direct", `[${lang}] handshake must persist the flagship factory mode`);
-    assert.equal(out.configAfter.activeModeId, "direct", `[${lang}] active mode must be a real registry id`);
-    assert.deepEqual(out.configAfter.modes.map((m: any) => m.id), ["direct", "live-flow"]);
+    // Zero-Config Cold Boot: only lastSeenVersion is persisted after banner delivery; zero prompt; zero extra keys.
     assert.equal(out.configAfter.lastSeenVersion, "0.6.0", `[${lang}] banner delivery must be recorded`);
+    assert.equal(out.configAfter.sourceLang, undefined, `[${lang}] sourceLang must not be written to disk on cold boot`);
+    assert.equal(out.configAfter.mode, undefined, `[${lang}] mode must not be written to disk on cold boot`);
+    assert.equal(out.configAfter.configured, undefined, `[${lang}] configured key must not be written`);
     assert.equal(out.secondStartBanner, false, `[${lang}] banner must never repeat on the second boot`);
     assert.equal(out.clearedAfterInput, true, `[${lang}] first user input must dismiss the banner`);
   }
@@ -250,7 +264,6 @@ test("release banner - a permission-denied config degrades gracefully and never 
 test("release banner - a rejected render never burns the one-time notification", () => {
   const out = bootInSandbox("en", "throwy");
   assert.deepEqual(out.errors, [], "A host-rejected widget must be swallowed, not escalated");
-  assert.equal(out.configAfter.configured, true, "The handshake decision is still persisted");
   assert.notEqual(
     out.configAfter.lastSeenVersion,
     "0.6.0",
@@ -261,11 +274,8 @@ test("release banner - a rejected render never burns the one-time notification",
 test("release banner - a corrupt lingual.json self-heals instead of taking the session down", () => {
   const out = bootInSandbox("zh", "corrupt");
   assert.deepEqual(out.errors, [], "Invalid JSON must never raise an unhandled error");
-  assert.equal(out.inputPrompted, true, "A corrupt config is treated as unconfigured and re-runs the handshake");
+  assert.equal(out.inputPrompted, false, "A corrupt config degrades gracefully without prompting");
   assert.equal(out.bannerLines.length, 8);
-  assert.equal(typeof out.configAfter, "object");
-  assert.ok(!out.configAfter.__unreadable, "The config file must be rewritten as valid JSON");
-  assert.equal(out.configAfter.configured, true);
 });
 
 test("release banner - narrow terminals degrade cleanly with closed delimiters", () => {

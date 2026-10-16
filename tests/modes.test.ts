@@ -57,18 +57,25 @@ test("modes: interpolatePromptVariables expands semantic language variables dyna
   assert.equal(zhToEn, "Translate from Chinese (Simplified) into English. Takeaways in Chinese (Simplified).");
 });
 
-test("modes: getDefaultFactoryModes returns dual-core golden defaults with zero hardcoded assumptions", () => {
+test("modes: getDefaultFactoryModes returns three-core golden defaults with zero hardcoded assumptions (D1)", () => {
   const modes = getDefaultFactoryModes("en", "ja");
-  assert.equal(modes.length, 2, "Default factory modes must have exactly 2 dual-core modes");
+  assert.equal(modes.length, 3, "Default factory modes must have exactly 3 three-core modes");
 
-  const direct = modes[0];
+  const companion = modes[0];
+  assert.equal(companion.id, "companion");
+  assert.equal(companion.flow, "translate");
+  assert.equal(companion.action, "pass-through");
+  assert.equal(companion.hud, "tree");
+  assert.deepEqual(companion.slots.map((s) => s.id), ["source", "spoken", "written", "vocab"]);
+
+  const direct = modes[1];
   assert.equal(direct.id, "direct");
   assert.equal(direct.flow, "translate");
   assert.equal(direct.action, "transform");
   assert.equal(direct.hud, "preview");
   assert.ok(direct.slots.some((s) => (s.instruction || "").includes("${targetLang}")));
 
-  const liveFlow = modes[1];
+  const liveFlow = modes[2];
   assert.equal(liveFlow.id, "live-flow");
   assert.equal(liveFlow.flow, "proofread");
   assert.equal(liveFlow.action, "transform");
@@ -98,7 +105,7 @@ test("modes: programmatic CRUD API manages custom modes and slots with pure immu
     enabled: true,
   };
   const withTweet = addCustomMode(initial, tweetMode);
-  assert.equal(withTweet.length, 3);
+  assert.equal(withTweet.length, 4);
   assert.ok(withTweet.some((m) => m.id === "tweet"));
 
   // 2. Add slot to mode
@@ -129,7 +136,7 @@ test("modes: programmatic CRUD API manages custom modes and slots with pure immu
 
   // 6. Remove mode
   const removed = removeCustomMode(updated, "tweet");
-  assert.equal(removed.length, 2);
+  assert.equal(removed.length, 3);
   assert.ok(!removed.some((m) => m.id === "tweet"));
 });
 

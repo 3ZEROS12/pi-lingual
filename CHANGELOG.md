@@ -2,6 +2,7 @@
 
 ## 0.6.0
 
+- **Three-Core Factory Defaults**: the registry now ships `companion` (pass-through + bilingual card) alongside `Logical Spec` and `Live Flow`, so the 5-second-gap companion experience from the project's origin story works on a fresh install. Bar numerals resolve positionally from the active registry, and the release banner names each shipped mode.
 - **Mode as Configuration (模式即配置 · Declarative Architecture)**:
   - Transitioned the entire extension architecture from hardcoded mode conditionals into a user-governed declarative state machine engine (`CustomModeConfig`).
   - Modes, actions (`pass-through`, `transform`, `select`), HUD styles (`preview`, `adaptive-takeaway`, `tree`, `none`), flow directions (`translate`, `proofread`, `custom`), output targets (`agent` vs `clipboard`), and prompt slots are 100% defined and persisted in `~/.pi/agent/lingual.json`.

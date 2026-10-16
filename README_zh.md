@@ -7,7 +7,7 @@
 [![npm version](https://img.shields.io/npm/v/pi-lingual?color=blue)](https://www.npmjs.com/package/pi-lingual)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Built for Pi](https://img.shields.io/badge/Built%20for-Pi%20Coding%20Agent-orange)](https://github.com/earendil-works/pi-coding-agent)
-[![Tests](https://img.shields.io/badge/Tests-136%2F136%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
+[![Tests](https://img.shields.io/badge/Tests-138%2F138%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict%20Zero%20Error-blue)](tsconfig.json)
 
 [English](./README.md) | **简体中文**
@@ -66,14 +66,15 @@ pi install npm:pi-lingual
 
 ---
 
-## 双核黄金预设与声明式模式架构 (`Mode as Configuration`)
+## 三核黄金预设与声明式模式架构 (`Mode as Configuration`)
 
-`pi-lingual` 出厂预置**双核黄金基准模式**，并通过通用状态机引擎支持无限自定义。敲 `/lingual` 即可在已启用的模式与已关闭之间平滑循环轮转，或通过 `/lingual <id|序号>` 一步直达（提示：数字编号对应当前本地注册表顺序，而模式 ID 如 `/lingual direct` 与 `/lingual live-flow` 永远有效解析）：
+`pi-lingual` 出厂预置**三核黄金基准模式**，并通过通用状态机引擎支持无限自定义。敲 `/lingual` 即可在已启用的模式与已关闭之间平滑循环轮转，或通过 `/lingual <id|序号>` 一步直达（提示：数字编号对应当前本地注册表顺序，而模式 ID 如 `/lingual companion`、`/lingual direct` 与 `/lingual live-flow` 永远有效解析）：
 
 | 模式 | 核心命令与别名 | 你输入什么 | 引擎执行逻辑 | 底栏与界面反馈 | 适用场景 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **`[1] 规范直发`** | `direct` *(别名: `lazy`)* | 母语自由输入 *(如中文/日文)* | **自动转化成规范英文工程指令直发 Agent** | 底栏 `zh ⇄ en · 规范直发` + 顶部转换预览 | 回车自动 1 对 1 结构化规范直发，保证代码库与注释 100% 纯英文 |
-| **`[2] 实战狂飙`** | `live-flow` *(别名: `raw`)* | 英文草稿 / 粗口狂飙 | **只修错词/介词/句法，保留粗口情绪，直发 Agent** | 底栏 `zh ⇄ en · 实战狂飙` + 顶部自适应复盘卡 | 亲自坐上驾驶位直接飙外语，错词自动兜底，下方中文讲透盲点 |
+| **`[1] 纯伴学`** | `companion` *(别名: `original`)* | 任意母语 | **0ms 原样直发，提示词上方浮出双语对照卡** | 底栏 `zh ⇄ en · 纯伴学` + 四槽树状卡 | 把 AI 生成代码的 5-15 秒间隙，变成低负担的语感拾取窗口 |
+| **`[2] 规范直发`** | `direct` *(别名: `lazy`)* | 母语输入 | **把口语化想法重构成祈使句工程指令** | 底栏 `zh ⇄ en · 规范直发` + 极简预览 | 回车即 1:1 规范英文，代码/注释/提交保持纯英文 |
+| **`[3] 实战狂飙`** | `live-flow` *(别名: `raw`)* | 英文草稿 / 粗口狂飙 | **只修错词/介词/句法，保留粗口情绪，直发 Agent** | 底栏 `zh ⇄ en · 实战狂飙` + 自适应复盘卡 | 亲自坐上驾驶位直接飙外语，下方母语讲透盲点 |
 | **`[0] 已关闭`** | `off` | 任意输入 | **隐藏底栏徽标 (`undefined`)、卸载终端监听、剥离技能块** | **0 像素、0 监听、0 Token**，彻底无痕 | 纯沉浸编码或录屏演示，不留任何视觉与上下文痕迹 |
 
 ---
@@ -285,7 +286,7 @@ pi install npm:pi-lingual
 
 ```bash
 npm run typecheck   # TypeScript 严格类型检查 (0 错误)
-npm test            # 全套自动化单元测试 (136/136 全绿通过)
+npm test            # 全套自动化单元测试 (138/138 全绿通过)
 npm run build       # 多入口生产构建 (插件 + 核心语言引擎)
 ```
 

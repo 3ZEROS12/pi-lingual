@@ -70,13 +70,16 @@ const pi = {
   registerShortcut() {},
 };
 
+let lastStatusVal = null;
 const makeCtx = () => ({
   hasUI: true,
   model: { id: "mock", provider: "mock" },
   modelRegistry: { getAvailable: () => [] },
   sessionManager: { getEntries: () => [] },
   ui: {
-    setStatus() {},
+    setStatus(_key, val) {
+      lastStatusVal = val;
+    },
     setWidget(key, content, opts) {
       if (widgetThrows && Array.isArray(content)) throw new Error("setWidget rejected by host");
       widgetOps.push({ key, content: content === undefined ? null : content, opts });
@@ -137,6 +140,7 @@ console.log(
     secondStartBanner,
     clearedAfterInput,
     inputPrompted,
+    effectiveStatus: lastStatusVal,
     configAfter,
     errors,
   })

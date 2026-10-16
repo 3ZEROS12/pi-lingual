@@ -412,75 +412,36 @@ export default function (pi: ExtensionAPI) {
     lastContext = ctx;
     showingReleaseBanner = false;
     let diskCfg = loadUserLingualConfig();
-    // Native language detected by the cold-boot handshake (kept for banner chrome, e.g. zh_TW -> tw copy).
-    let handshakeLang: string | undefined;
+    // Native language detected by cold-boot probing (kept for banner chrome, e.g. zh_TW -> tw copy).
+    let detectedLang: string | undefined;
 
-    // First-Run Language Handshake: interactive setup on cold boot when unconfigured
-    if (
-      !isUserLingualConfigured() &&
-      hasActiveUI(ctx) &&
-      !isTestEnvironment() &&
-      event?.reason !== "resume" &&
-      typeof (ctx.ui as any).input === "function"
-    ) {
+    // Zero-Config Cold Boot (D6): Auto-detect OS/shell locale without prompt dialog.
+    // If not configured on disk, adopt detected native language in memory without writing to disk.
+    if (!diskCfg.sourceLang) {
       const detected = resolveReleaseBannerLang();
-      handshakeLang = detected;
-      const defaultPair =
-        detected === "zh" || detected === "tw"
-          ? "zh en"
-          : detected === "ja"
-            ? "ja en"
-            : detected === "ko"
-              ? "ko en"
-              : detected === "es"
-                ? "es en"
-                : detected === "fr"
-                  ? "fr en"
-                  : detected === "de"
-                    ? "de en"
-                    : detected === "ru"
-                      ? "ru en"
-                      : "en ja";
-
-      try {
-        const userInput = await (ctx.ui as any).input(
-          `✦ [pi-lingual Setup] Native ⇄ Target language (detected: ${detected}):`,
-          defaultPair
-        );
-        safeClearWidget(ctx);
-        const chosen = (typeof userInput === "string" ? userInput.trim() : "") || defaultPair;
-        // Reject unvalidated free text so a stray keystroke can never poison lingual.json.
-        const { source: pickedSource, target: pickedTarget } = resolveLangPair(chosen, defaultPair);
-        if (pickedSource) {
-          state.sourceLang = pickedSource;
-          state.targetLang = pickedTarget;
-          state.labels = resolveLabelsForLang(state.sourceLang, diskCfg.labels, state.targetLang);
-          state.modes = getDefaultFactoryModes(state.sourceLang, state.sourceLang);
-          state.slots = getDefaultSlots(state.sourceLang);
-          state.directSlots = getDefaultDirectSlots(state.sourceLang);
-          state.promptSlots = getDefaultPromptSlots(state.sourceLang);
-          state.modifySlots = getDefaultModifySlots(state.sourceLang, state.sourceLang);
-          // Persist the flagship factory mode so a restart never lands on a stale legacy id.
-          const factorySeed = state.modes[0]?.id || "direct";
-          state.mode = factorySeed;
-          state.activeModeId = factorySeed;
-          saveUserLingualConfig({
-            sourceLang: state.sourceLang,
-            targetLang: state.targetLang,
-            explainLang: state.sourceLang,
-            modes: state.modes,
-            mode: factorySeed,
-            activeModeId: factorySeed,
-            configured: true,
-          });
-          // The pre-handshake snapshot is now stale; re-read before applying config below.
-          diskCfg = loadUserLingualConfig();
-        }
-      } catch {
-        safeClearWidget(ctx);
-      }
+      detectedLang = detected;
+      const detectedSource = isSupportedLangCode(detected) ? detected : "en";
+      state.sourceLang = detectedSource;
+      state.targetLang = detectedSource === "en" ? "ja" : "en";
+      state.labels = resolveLabelsForLang(state.sourceLang, diskCfg.labels, state.targetLang);
+      state.modes = getDefaultFactoryModes(state.sourceLang, state.sourceLang);
+      state.slots = getDefaultSlots(state.sourceLang);
+      state.directSlots = getDefaultDirectSlots(state.sourceLang);
+      state.promptSlots = getDefaultPromptSlots(state.sourceLang);
+      state.modifySlots = getDefaultModifySlots(state.sourceLang, state.sourceLang);
+      state.mode = state.modes[0]?.id as any || "companion";
+      state.activeModeId = state.mode;
     }
 
+    if (diskCfg.sourceLang) {
+      state.sourceLang = diskCfg.sourceLang;
+    }
+    if (diskCfg.targetLang) {
+      state.targetLang = diskCfg.targetLang;
+    }
+    if (diskCfg.labels) {
+      state.labels = resolveLabelsForLang(state.sourceLang, diskCfg.labels, state.targetLang);
+    }
     if (diskCfg.mode) {
       state.mode = diskCfg.mode;
     }
@@ -520,7 +481,7 @@ export default function (pi: ExtensionAPI) {
       ) {
         // Persist only after the banner is physically delivered, so a stale or failed
         // render never burns the one-time notification permanently.
-        if (renderReleaseBanner(ctx, handshakeLang || diskCfg.sourceLang)) {
+        if (renderReleaseBanner(ctx, detectedLang || diskCfg.sourceLang)) {
           saveUserLingualConfig({ lastSeenVersion: CURRENT_FEATURE_BANNER_VERSION });
         }
       }
@@ -588,14 +549,15 @@ export default function (pi: ExtensionAPI) {
       );
       const numIdx = parseInt(trimmed, 10);
       const isNum = !isNaN(numIdx) && String(numIdx) === trimmed;
-      if (matched) {
-        nextMode = matched.id;
-      } else if (hasCustomModesOnDisk && isNum && numIdx >= 1 && numIdx <= activeModes.length) {
+      if (isNum && numIdx >= 1 && numIdx <= activeModes.length) {
+        // Numerals always resolve positionally from the live registry (one rule, always matches the badge/toast).
         nextMode = activeModes[numIdx - 1].id;
+      } else if (matched) {
+        nextMode = matched.id;
       } else if (explicitLegacy) {
         nextMode = explicitLegacy;
       } else {
-        nextMode = activeModes[0]?.id || "direct";
+        nextMode = activeModes[0]?.id || "companion";
       }
     } else {
       // Check if active mode is locked
@@ -619,19 +581,19 @@ export default function (pi: ExtensionAPI) {
       if (hasCustomModesOnDisk) {
         const cycleList = [...activeModes.map((m) => m.id), "off"];
         const currentIdx = cycleList.indexOf(state.mode);
-        nextMode = cycleList[(currentIdx + 1) % cycleList.length] || activeModes[0]?.id || "direct";
+        nextMode = cycleList[(currentIdx + 1) % cycleList.length] || activeModes[0]?.id || "companion";
       } else {
-        // Default mode cycle: companion -> direct -> candidates -> modify -> off
+        // Default mode cycle: companion -> direct -> live-flow -> off -> companion
         nextMode =
           state.mode === "original" || state.mode === "companion"
-            ? "english"
+            ? "direct"
             : state.mode === "english" || state.mode === "direct"
-              ? "select"
+              ? "live-flow"
               : state.mode === "select" || state.mode === "candidates"
-                ? "modify"
+                ? "live-flow"
                 : state.mode === "modify" || state.mode === "live-flow"
                   ? "off"
-                  : "original";
+                  : "companion";
       }
     }
 
@@ -1219,15 +1181,17 @@ export default function (pi: ExtensionAPI) {
         flow: flow === "proofread" || flow === "custom" ? flow : "translate",
         action: action === "pass-through" || action === "select" ? action : "transform",
         hud: hud === "tree" || hud === "adaptive-takeaway" || hud === "none" ? hud : "preview",
-        slots: [
-          {
-            id: `${id}_slot`,
-            label: name,
-            role: "rewrite",
-            instruction: customInstruction || `Translate and polish from \${sourceLang} into \${targetLang} matching ${name} style.`,
-            enabled: true,
-          },
-        ],
+        slots: action === "select"
+          ? getDefaultPromptSlots(state.sourceLang)
+          : [
+              {
+                id: `${id}_slot`,
+                label: name,
+                role: "rewrite",
+                instruction: customInstruction || `Translate and polish from \${sourceLang} into \${targetLang} matching ${name} style.`,
+                enabled: true,
+              },
+            ],
         enabled: true,
       };
       const updated = addCustomMode(currentModes, newMode);

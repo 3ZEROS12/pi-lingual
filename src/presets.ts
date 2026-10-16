@@ -11,27 +11,39 @@ export { getDefaultSlots, getDefaultDirectSlots, getDefaultModifySlots } from ".
 import { getDefaultDirectSlots, getDefaultModifySlots, getDefaultSlots } from "./prompts.js";
 
 /**
- * Returns dual-core factory golden defaults (v0.6.0+ Dual-Core Baselines: 1. Logical Spec + 2. Live Flow).
+ * Returns three-core factory golden defaults (v0.6.0 Three-Core Baselines: 1. Companion + 2. Logical Spec + 3. Live Flow).
  */
 export function getDefaultFactoryModes(sourceLang = "en", explainLang?: string): CustomModeConfig[] {
   const norm = (sourceLang || "en").toLowerCase().split("-")[0];
   const SEED_NAMES: Record<
     string,
-    { direct: string; liveFlow: string; vocab: string; fixed: string; native: string; takeaway: string }
+    { companion: string; direct: string; liveFlow: string; vocab: string; fixed: string; native: string; takeaway: string }
   > = {
-    en: { direct: "Logical Spec", liveFlow: "Live Flow", vocab: "Key Terms", fixed: "Fixed", native: "Native", takeaway: "Takeaways" },
-    zh: { direct: "规范直发", liveFlow: "实战狂飙", vocab: "核心表达", fixed: "原句修补", native: "地道表达", takeaway: "收获复盘" },
-    tw: { direct: "規範直發", liveFlow: "實戰狂飆", vocab: "核心表達", fixed: "原句修補", native: "道地表達", takeaway: "收穫複盤" },
-    ja: { direct: "仕様直行", liveFlow: "実戦疾走", vocab: "重要語彙", fixed: "原文修正", native: "自然表現", takeaway: "重要ポイント" },
-    ko: { direct: "논리정제", liveFlow: "실전질주", vocab: "핵심어휘", fixed: "원문수정", native: "자연스러운표현", takeaway: "핵심포인트" },
-    es: { direct: "Directo Lógico", liveFlow: "Live Flow", vocab: "Términos clave", fixed: "Corregido", native: "Nativo", takeaway: "Puntos clave" },
-    fr: { direct: "Direct Logique", liveFlow: "Live Flow", vocab: "Termes clés", fixed: "Corrigé", native: "Naturel", takeaway: "Points clés" },
-    de: { direct: "Direkte Logik", liveFlow: "Live Flow", vocab: "Schlüsselbegriffe", fixed: "Korrigiert", native: "Nativ", takeaway: "Wichtige Punkte" },
-    ru: { direct: "Прямой поток", liveFlow: "Live Flow", vocab: "Ключевые слова", fixed: "Исправлено", native: "Нативный", takeaway: "Главное" },
+    en: { companion: "Companion", direct: "Logical Spec", liveFlow: "Live Flow", vocab: "Key Terms", fixed: "Fixed", native: "Native", takeaway: "Takeaways" },
+    zh: { companion: "纯伴学", direct: "规范直发", liveFlow: "实战狂飙", vocab: "核心表达", fixed: "原句修补", native: "地道表达", takeaway: "收获复盘" },
+    tw: { companion: "純伴學", direct: "規範直發", liveFlow: "實戰狂飆", vocab: "核心表達", fixed: "原句修補", native: "道地表達", takeaway: "收穫複盤" },
+    ja: { companion: "伴走", direct: "仕様直行", liveFlow: "実戦疾走", vocab: "重要語彙", fixed: "原文修正", native: "自然表現", takeaway: "重要ポイント" },
+    ko: { companion: "동행학습", direct: "논리정제", liveFlow: "실전질주", vocab: "핵심어휘", fixed: "원문수정", native: "자연스러운표현", takeaway: "핵심포인트" },
+    es: { companion: "Aprendizaje", direct: "Directo Lógico", liveFlow: "Live Flow", vocab: "Términos clave", fixed: "Corregido", native: "Nativo", takeaway: "Puntos clave" },
+    fr: { companion: "Compagnon", direct: "Direct Logique", liveFlow: "Live Flow", vocab: "Termes clés", fixed: "Corrigé", native: "Naturel", takeaway: "Points clés" },
+    de: { companion: "Begleitung", direct: "Direkte Logik", liveFlow: "Live Flow", vocab: "Schlüsselbegriffe", fixed: "Korrigiert", native: "Nativ", takeaway: "Wichtige Punkte" },
+    ru: { companion: "Сопровождение", direct: "Прямой поток", liveFlow: "Live Flow", vocab: "Ключевые слова", fixed: "Исправлено", native: "Нативный", takeaway: "Главное" },
   };
   const n = SEED_NAMES[norm] || SEED_NAMES.en;
 
   return [
+    // Archetype 1: Companion (pass-through) keeps the 5-second-gap learning card alive out of the box.
+    {
+      id: "companion",
+      name: n.companion,
+      aliases: ["original"],
+      flow: "translate",
+      action: "pass-through",
+      hud: "tree",
+      reasoning: "low",
+      slots: getDefaultSlots(sourceLang),
+      enabled: true,
+    },
     {
       id: "direct",
       name: n.direct,

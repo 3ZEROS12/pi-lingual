@@ -44,20 +44,22 @@ An on-demand configuration skill for `pi-lingual`. By default, `pi-lingual` stri
 6. **Confusion Circuit Breaker (Human Empathy Safeguard)**:
    - If user types: *"not sure"*, *"simple"*, *"default"*, *"不清楚"*, or cancels with `Esc`:
    - **IMMEDIATELY CANCEL any further questioning!**
-   - Fall back instantly: apply the dual-core golden defaults (`lazy` / `direct` + `raw` / `live-flow`), report clean confirmation, and return immediately.
+   - Fall back instantly: apply the three-core golden defaults (`companion` + `direct` + `live-flow`), report clean confirmation, and return immediately.
 
 ---
 
 ## 2. Official Mode Archetypes & Tactical Loadouts
 
-`pi-lingual` provides **4 Official Mode Archetypes** (numbered 1, 2, 3, 4 + 0 Off) and **4 Tactical Loadouts**:
+`pi-lingual` provides **Three-Core Factory Archetypes** (`1 companion` · `2 direct` · `3 live-flow` + `0 off`), one **Optional Archetype** (`candidates`), and **4 Tactical Loadouts**:
 
-### The 4 Official Base Mode Archetypes:
-1. **`[1] Companion (纯伴学 · companion)`**: `flow: "translate"` · `action: "pass-through"` · `hud: "tree"`. Sends raw input to the AI Coding Agent in 0ms while displaying a rich Left-Rail bilingual companion card above the editor.
+### The Three Factory Base Mode Archetypes:
+1. **`[1] Companion (纯伴学 · companion)`**: `flow: "translate"` · `action: "pass-through"` · `hud: "tree"`. Sends raw input to the AI Coding Agent in 0ms while displaying a rich Left-Rail bilingual companion card above the editor. Factory default mode for new installs.
 2. **`[2] Logical Spec (规范直发 · direct / lazy)`**: `flow: "translate"` · `action: "transform"` · `hud: "preview"`. Transforms colloquial or fragmented thoughts into high-precision, imperative engineering specifications.
-3. **`[3] Candidates (挑候选 · candidates / select)`**: `flow: "translate"` · `action: "select"` · `hud: "tree"`. Generates multiple prompt variations (Concise, Structured, Deep) with an interactive 1..N hotkey bar.
-4. **`[4] Live Flow (实战狂飙 · live-flow / raw)`**: `flow: "proofread"` · `action: "transform"` · `hud: "adaptive-takeaway"`. Direct drafting in target language with surgical syntax/typo repair, 100% profanity/heat preserved, and native takeaway diffs.
-5. **`[0] Off (已关闭 · off)`**: Completely detached (0 tokens, 0 listeners, status hidden).
+3. **`[3] Live Flow (实战狂飙 · live-flow / raw)`**: `flow: "proofread"` · `action: "transform"` · `hud: "adaptive-takeaway"`. Direct drafting in target language with surgical syntax/typo repair, 100% profanity/heat preserved, and native takeaway diffs.
+4. **`[0] Off (已关闭 · off)`**: Completely detached (0 tokens, 0 listeners, status hidden).
+
+### Optional Archetype:
+- **`Candidates (挑候选 · candidates / select)`**: `flow: "translate"` · `action: "select"` · `hud: "tree"`. Generates multiple prompt variations (Concise, Structured, Deep) with an interactive 1..N hotkey bar. Configured only when explicitly requested by user.
 
 *(Note: When helping users add, delete, or modify modes in `~/.pi/agent/lingual.json`, always distinguish between the user's currently installed modes on disk and these official base archetypes!)*
 

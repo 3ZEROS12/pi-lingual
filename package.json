@@ -49,6 +49,7 @@
     "typecheck": "tsc --noEmit",
     "pretest": "npm run build",
     "test": "npx tsx --test --test-concurrency=1 tests/**/*.test.ts",
+    "e2e": "npx tsx --test --test-concurrency=1 tests/e2e/*.e2e.ts",
     "prepack": "npm run build"
   },
   "keywords": [

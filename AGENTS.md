@@ -29,11 +29,12 @@
   - `target`: `"agent"` (sent directly to coding agent) or `"clipboard"` (copied to system clipboard with 0 prompt mutation).
   - `killList`: string array of blacklisted AI clichés (`delve`, `tapestry`, `seamless`, `robust`, etc.).
 
-### Invariant 3: Dual-Core Factory Golden Defaults
-Out of the box, `pi-lingual` ships with exactly two golden baselines (with `0 Off`):
-1. **`[1] Logical Spec` (`direct` / `lazy`)**: Transforms raw thoughts from `${sourceLang}` into imperative, unambiguous `${targetLang}` engineering specifications for AI coding agents.
-2. **`[2] Live Flow` (`live-flow` / `raw`)**: Direct foreign language drafting in `${targetLang}`. Surgically patches typos, prepositions, and syntax; 100% preserves passion and profanity (`fuck`, `suck`, `shit`); provides `${explainLang}` takeaway diffs.
-3. **`[0] Off` (`off`)**: 0 pixels, 0 listeners, 0 tokens (completely detached).
+### Invariant 3: Three-Core Factory Golden Defaults
+Out of the box, `pi-lingual` ships with exactly three golden baselines (with `0 Off`):
+1. **[1] Companion (`companion` / `original`)**: `action: "pass-through"`, `hud: "tree"` — raw text sent at 0ms while the bilingual card renders above the editor. This is the factory default mode for a fresh install.
+2. **[2] Logical Spec (`direct` / `lazy`)**: `action: "transform"`, `hud: "preview"` — imperative engineering specs.
+3. **[3] Live Flow (`live-flow` / `raw`)**: `flow: "proofread"`, `hud: "adaptive-takeaway"` — profanity/heat preserved, i18n takeaway diffs.
+4. **[0] Off (`off`)**: 0 pixels, 0 listeners, 0 tokens.
 
 ### Invariant 4: Dynamic Semantic Variable Interpolation (`${sourceLang}`, `${targetLang}`, `${explainLang}`)
 - All mode instructions, slot descriptions, and prompt templates MUST use semantic variables rather than hardcoded language names:
@@ -69,6 +70,7 @@ Out of the box, `pi-lingual` ships with exactly two golden baselines (with `0 Of
   - `/lingual mode [list | add <id> <name> | rm <id> | toggle <id> | reset]`
   - `/lingual loadout [list | apply <spec|commit|oss|yap>]`
   - `/lingual lock` / `/lingual unlock`
+- **Positional Numeral Resolution (RFC 2119)**: Bare numerals (`/lingual 1|2|3`) ALWAYS resolve positionally within `1..activeModes.length` from the live registry. `MODE_ALIAS_MAP` serves strictly as out-of-bounds legacy fallback; factory seeds MUST NEVER hardcode numeral aliases.
 
 ### Invariant 9: 3-Second Glanceability & Kinetic Budget Guard
 - HUD feedback cards MUST follow the 3-second glanceability rule:
@@ -106,7 +108,7 @@ Out of the box, `pi-lingual` ships with exactly two golden baselines (with `0 Of
   npm test
   # or from workspace root: node .scripts/fleet.mjs test pi-lingual
   ```
-  *Executes 136 test suites covering banner geometry, cache, chunker, commands, engine, layout, modes, prompts, sanitizer, shield, slots, sovereignty, and sandboxed cold-boot upgrades (100% green).*
+  *Executes 138 test suites covering banner geometry, cache, chunker, commands, engine, layout, modes, prompts, sanitizer, shield, slots, sovereignty, and sandboxed cold-boot upgrades (100% green).*
 
 - **Build Distribution Bundles**:
   ```bash

@@ -1,0 +1,14 @@
+{
+  "logical_spec_zh": [
+    "这个方案过度设计了，直接用标准库吧，顺便把那个重复的工具函数合并一下",
+    "帮我排查一下为什么刷新页面后登录状态会丢失，重点看一下 cookie 的过期策略，保持最小改动面",
+    "把数据导出的逻辑重构一下，加上超时取消和内存防溢出，不要碰现有的数据表定义"
+  ],
+  "live_flow_en": [
+    "i want that you can fix this damn flaky test, it already fuck me twice today",
+    "this api sucks so much, why the hell is it returning 200 with an error object inside the body"
+  ],
+  "companion_zh": [
+    "这个分布式锁的续期逻辑写得太绕了，看半天才明白作者想干嘛，直接用看门狗机制重写算了"
+  ]
+}
