@@ -1,8 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { formatReleaseBannerLines } from "../src/engine.js";
-import { getBannerMaxCols, truncateVisual, getVisualWidth } from "../src/layout.js";
-import { getDefaultFactoryModes, SUPPORTED_LANG_CODES } from "../src/presets.js";
+import { getBannerMaxCols, truncateVisual, getVisualWidth, formatLoadingMessage } from "../src/layout.js";
+import { getDefaultFactoryModes, SUPPORTED_LANG_CODES, LANGUAGE_PRESETS } from "../src/presets.js";
 
 const LANGS = ["zh", "tw", "ja", "ko", "es", "fr", "de", "ru", "en"];
 
@@ -142,4 +142,47 @@ test("banner geometry - banner lines accurately embed factory registry mode name
     }
   }
 });
+
+test("loading indicators geometry - strictly obeys VisualWidth <= cols across 9 languages and viewports (F3-1)", () => {
+  const openRegex = /[(\[{（【]/g;
+  const closeRegex = /[)\]}）】]/g;
+
+  for (const cols of [20, 30, 40, 80]) {
+    for (const lang of SUPPORTED_LANG_CODES) {
+      const preset = LANGUAGE_PRESETS[lang];
+      const msgs = [
+        preset.loadingOptimizePrompt,
+        preset.loadingFixSyntax,
+        preset.loadingCandidates,
+      ];
+
+      for (const msg of msgs) {
+        assert.ok(msg && msg.length > 0, `[${lang}] loading message must be non-empty`);
+        const bounded = formatLoadingMessage(msg, cols);
+        const w = getVisualWidth(bounded);
+        assert.ok(
+          w <= cols,
+          `[${lang} @ ${cols}col] loading line overflows column budget (${w} > ${cols}): "${bounded}"`
+        );
+
+        if (cols === 80) {
+          assert.equal(
+            bounded,
+            msg,
+            `[${lang} @ 80col] loading line must not be truncated on standard 80-col terminal: "${bounded}"`
+          );
+        }
+
+        const opens = (bounded.match(openRegex) || []).length;
+        const closes = (bounded.match(closeRegex) || []).length;
+        assert.equal(
+          opens,
+          closes,
+          `[${lang} @ ${cols}col] unclosed delimiter survived clipping in loading line: "${bounded}"`
+        );
+      }
+    }
+  }
+});
+
 

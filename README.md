@@ -7,17 +7,17 @@ Code in your native language. See real-time Silicon Valley spoken phrasing and f
 [![npm version](https://img.shields.io/npm/v/pi-lingual?color=blue)](https://www.npmjs.com/package/pi-lingual)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Built for Pi](https://img.shields.io/badge/Built%20for-Pi%20Coding%20Agent-orange)](https://github.com/earendil-works/pi-coding-agent)
-[![Tests](https://img.shields.io/badge/Tests-155%2F155%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
+[![Tests](https://img.shields.io/badge/Tests-156%2F156%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict%20Zero%20Error-blue)](tsconfig.json)
 
 **English** | [简体中文](./README_zh.md)
 
 <p align="center">
-  <img src="assets/demo.gif" alt="pi-lingual Terminal Companion HUD Experience" width="840">
+  <img src="https://raw.githubusercontent.com/3ZEROS12/pi-lingual/main/assets/demo.gif" alt="pi-lingual Terminal Companion HUD Experience" width="840">
 </p>
 
 ```text
-  · [Original] 这个方案有点过度设计了，不如直接用标准库实现
+  · [Source]   这个方案有点过度设计了，不如直接用标准库实现
   ┌ [Spoken]   This feels a bit over-engineered; we'd be much better off sticking with the standard library.
   │            (感觉有点过度设计了，用标准库划算得多)
   ├ [Written]  The proposed approach introduces unnecessary complexity. Leveraging native standard library implementations is preferred.
@@ -124,7 +124,7 @@ In prompt transform mode, pasting code blocks or error logs never translates the
 Memorizing isolated vocabulary lists does not build expressive capability. Real software engineering naturally divides into two distinct registers:
 
 ```text
-  · [Original] 这个方案有点过度设计了，不如直接用标准库实现
+  · [Source]   这个方案有点过度设计了，不如直接用标准库实现
   ┌ [Spoken]   This feels a bit over-engineered; we'd be much better off sticking with the standard library.
   │            (感觉有点过度设计了，用标准库划算得多)
   ├ [Written]  The proposed approach introduces unnecessary complexity. Leveraging native standard library implementations is preferred.
@@ -236,11 +236,11 @@ Never get locked into rigid, hardcoded templates. Every slot on your companion c
 ### Configurable Reasoning Effort (`/lingual reasoning`)
 Instead of swapping models for different tasks, `pi-lingual` dynamically adjusts the reasoning effort level per mode:
 ```bash
-/lingual reasoning low       # Fast low-latency execution for daily direct & live-flow rewriting
+/lingual reasoning low       # Fast low-latency execution for daily rewriting (provider-dependent)
 /lingual reasoning medium    # Deeper structural thinking for complex loadouts (e.g. Brain-Dump to Spec)
 /lingual reasoning high      # Maximum reasoning depth for intricate multi-constraint requirements
 ```
-- Daily modes (`direct`/`lazy`, `live-flow`/`raw`, `commit`, `oss`, `yap`) default to `"low"` for near-instant latency.
+- Daily modes (`direct`/`lazy`, `live-flow`/`raw`, `commit`, `oss`, `yap`) default to `"low"` for responsive execution (provider-dependent).
 - Complex architectural loadouts (`spec`) default to `"medium"` to structure exhaustive specifications without hallucinating.
 
 ### Protecting High-Tier Reasoning Quotas

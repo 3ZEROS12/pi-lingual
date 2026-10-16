@@ -161,7 +161,7 @@
       <tspan fill="#859289">[session-model]  [thinking: low]  [context: 12.4k / 4.2%]</tspan>
     </text>
 
-    <text x="840" y="449" text-anchor="end" font-size="11.5" class="status-badge">
+    <text x="540" y="449" font-size="11.5" class="status-badge">
       <tspan fill="#a7c080" font-weight="bold">ja ⇄ en · 4s · 伴走</tspan>
       <tspan fill="#7a8478"> (type /lingual to cycle)</tspan>
     </text>

@@ -40,7 +40,7 @@
       </text>
       <text x="0" y="24">
         <tspan fill="#7a8478">  · </tspan>
-        <tspan fill="#859289">[Original] </tspan>
+        <tspan fill="#859289">[Source] </tspan>
         <tspan fill="#d3c6aa">这个方案有点过度设计了，不如直接用标准库实现</tspan>
       </text>
       <text x="0" y="46">
@@ -80,7 +80,7 @@
       </text>
       <text x="0" y="24">
         <tspan fill="#7a8478">  · </tspan>
-        <tspan fill="#859289">[Original] </tspan>
+        <tspan fill="#859289">[Source] </tspan>
         <tspan fill="#d3c6aa">メモリリークの可能性があるので、クリーンアップ処理を追加してください</tspan>
       </text>
       <text x="0" y="46">
@@ -118,7 +118,7 @@
       </text>
       <text x="0" y="24">
         <tspan fill="#7a8478">  · </tspan>
-        <tspan fill="#859289">[Original] </tspan>
+        <tspan fill="#859289">[Source] </tspan>
         <tspan fill="#d3c6aa">El PR es demasiado grande, sugiero dividirlo en dos cambios atómicos</tspan>
       </text>
       <text x="0" y="46">
@@ -156,7 +156,7 @@
       </text>
       <text x="0" y="24">
         <tspan fill="#7a8478">  · </tspan>
-        <tspan fill="#859289">[Original] </tspan>
+        <tspan fill="#859289">[Source] </tspan>
         <tspan fill="#d3c6aa">Wir müssen sicherstellen, dass diese Schnittstelle idempotent ist</tspan>
       </text>
       <text x="0" y="46">

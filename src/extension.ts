@@ -32,6 +32,7 @@ import {
   wrapVisualText,
   formatVocabItemsAtomic,
   renderCardLayout,
+  formatLoadingMessage,
 } from "./layout.js";
 import {
   translatePrompt,
@@ -1895,11 +1896,12 @@ export default function (pi: ExtensionAPI) {
 
     if (hasActiveUI(ctx) && currentMode.hud !== "none") {
       try {
-        const loadingMsg = isModifyMode
+        const rawLoadingMsg = isModifyMode
           ? (state.labels.loadingFixSyntax || "  ⋯ [lingual] fixing syntax & typos...")
           : isDirectMode
             ? (state.labels.loadingOptimizePrompt || "  ⋯ [lingual] optimizing prompt...")
             : (state.labels.loadingCandidates || "  ⋯ [lingual] generating prompt candidates...");
+        const loadingMsg = formatLoadingMessage(rawLoadingMsg);
         ctx.ui.setWidget("lingual_hud", [ctx.ui.theme.fg("muted", loadingMsg)], { placement: "aboveEditor" });
         ctx.ui.setStatus(
           "lingual",

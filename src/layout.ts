@@ -163,6 +163,20 @@ export function truncateVisual(str: string, maxVisualCols: number): string {
 }
 
 /**
+ * Formats and bounds an in-flight loading notification line to the live terminal column budget.
+ * Invariant 12: VisualWidth <= live columns under any terminal geometry down to extreme viewports.
+ */
+export function formatLoadingMessage(
+  rawMsg: string,
+  maxCols: number = getBannerMaxCols()
+): string {
+  if (maxCols <= 0) return "";
+  const clean = rawMsg.replace(/[\r\n\t]+/g, " ");
+  if (getVisualWidth(clean) <= maxCols) return clean;
+  return truncateVisual(clean, maxCols);
+}
+
+/**
  * Visual text wrapping algorithm bounded by punctuation Kinsoku Shori and max visual width.
  */
 export function wrapVisualText(text: string, maxWidth: number): string[] {

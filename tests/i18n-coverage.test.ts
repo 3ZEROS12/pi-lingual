@@ -117,12 +117,22 @@ test("i18n invariant (b): all language-to-string tables cover all 9 languages wi
 });
 
 test("i18n invariant (c): Traditional Chinese (tw) contains zero Simplified Chinese characters", () => {
-  const SIMPLIFIED_CHARS = ["码", "语", "写", "进", "错", "补", "点", "发", "现", "择", "认", "证", "预", "设"];
+  // Layer 1: Comprehensive Simplified-only characters blacklist (94 characters)
+  const STRICTLY_SIMPLIFIED_CHARS = [
+    // Audit-specified core characters:
+    "选", "词", "优", "时", "开", "关", "变", "现", "进", "击", "产", "写", "读", "点", "确", "认", "设", "预", "证", "择",
+    // Core technical UI vocabulary simplified forms:
+    "码", "语", "错", "补", "发", "备", "单", "键", "换", "实", "战", "装", "联", "动", "极", "专", "标", "准",
+    "构", "规", "范", "数", "据", "转", "复", "机", "项", "简", "体", "验",
+    "仅", "适", "会", "话", "说", "导", "对", "齐", "隐", "显", "帮", "执", "删", "创", "当", "态", "录", "调", "锁",
+    "输", "释", "义", "历", "页", "载", "库", "贴", "拦", "杂", "并", "询", "问", "宽", "栏", "两", "类", "归", "签", "随",
+    "统", "计", "总", "误", "经"
+  ];
   const twPreset = LANGUAGE_PRESETS.tw;
   assert.ok(twPreset, "tw preset must exist");
 
   const twTextDump = JSON.stringify(twPreset);
-  for (const char of SIMPLIFIED_CHARS) {
+  for (const char of STRICTLY_SIMPLIFIED_CHARS) {
     assert.ok(
       !twTextDump.includes(char),
       `Traditional Chinese preset leaked Simplified Chinese character "${char}"`
@@ -130,10 +140,37 @@ test("i18n invariant (c): Traditional Chinese (tw) contains zero Simplified Chin
   }
 
   const twSeedDump = JSON.stringify(SEED_NAMES.tw);
-  for (const char of SIMPLIFIED_CHARS) {
+  for (const char of STRICTLY_SIMPLIFIED_CHARS) {
     assert.ok(
       !twSeedDump.includes(char),
       `Traditional Chinese SEED_NAMES leaked Simplified Chinese character "${char}"`
     );
+  }
+
+  // Layer 2: Reverse assertion — tw[key] === zh[key] with CJK must be in explicit homoglyph whitelist
+  const zhPreset = LANGUAGE_PRESETS.zh;
+  assert.ok(zhPreset, "zh preset must exist");
+
+  const ALLOWED_TW_ZH_IDENTICAL_CJK_KEYS = new Set([
+    "sourceLabel", // "原文" (identical glyph in Traditional and Simplified)
+    "capsuleSlot1Prefix", // "口" (identical glyph in Traditional and Simplified)
+    "slotsRemovedSuccess", // "[{pair}] 已移除槽位 [{id}] (\"{label}\")" (已/移/除/槽/位 all identical glyphs)
+    "slotsUsageAdd", // "用法: /slots add <id> <label> [instruction...]" (用法 identical glyphs)
+    "slotsUsageRm", // "用法: /slots rm <slot-id>"
+    "slotsUsageToggle", // "用法: /slots toggle <slot-id>"
+  ]);
+
+  for (const key of Object.keys(zhPreset) as (keyof typeof zhPreset)[]) {
+    const zhVal = (zhPreset as any)[key];
+    const twVal = (twPreset as any)[key];
+    const rawStr = typeof twVal === "string" ? twVal : JSON.stringify(twVal);
+    const hasCjk = /[\u4e00-\u9fa5]/.test(rawStr);
+
+    if (JSON.stringify(zhVal) === JSON.stringify(twVal) && hasCjk) {
+      assert.ok(
+        ALLOWED_TW_ZH_IDENTICAL_CJK_KEYS.has(key),
+        `[${key}] in tw preset is identical to zh preset ("${rawStr}") but is not in ALLOWED_TW_ZH_IDENTICAL_CJK_KEYS whitelist; must provide authentic Traditional Chinese translation.`
+      );
+    }
   }
 });

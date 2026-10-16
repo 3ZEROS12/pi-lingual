@@ -38,6 +38,11 @@ declare function getVisualWidth(str: string): number;
  */
 declare function truncateVisual(str: string, maxVisualCols: number): string;
 /**
+ * Formats and bounds an in-flight loading notification line to the live terminal column budget.
+ * Invariant 12: VisualWidth <= live columns under any terminal geometry down to extreme viewports.
+ */
+declare function formatLoadingMessage(rawMsg: string, maxCols?: number): string;
+/**
  * Visual text wrapping algorithm bounded by punctuation Kinsoku Shori and max visual width.
  */
 declare function wrapVisualText(text: string, maxWidth: number): string[];
@@ -207,4 +212,4 @@ declare class LingualSessionController {
     reset(): void;
 }
 
-export { CANNOT_START_LINE_CHARS, LingualI18nLabels, LingualResult, LingualSessionController, type PaginationSnapshot, type SessionRequestToken, SlotConfig, extractVocabPhrases, formatCapsuleLine, formatSubRail, formatTerminalAnnotation, formatTreeBranch, formatVocabItemsAtomic, getBannerMaxCols, getEffectiveMaxCols, getVisualWidth, renderCardLayout, splitSemanticChunks, spotlightPhrases, truncateVisual, wrapVisualText };
+export { CANNOT_START_LINE_CHARS, LingualI18nLabels, LingualResult, LingualSessionController, type PaginationSnapshot, type SessionRequestToken, SlotConfig, extractVocabPhrases, formatCapsuleLine, formatLoadingMessage, formatSubRail, formatTerminalAnnotation, formatTreeBranch, formatVocabItemsAtomic, getBannerMaxCols, getEffectiveMaxCols, getVisualWidth, renderCardLayout, splitSemanticChunks, spotlightPhrases, truncateVisual, wrapVisualText };

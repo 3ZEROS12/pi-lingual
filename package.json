@@ -23,7 +23,7 @@
     "src",
     "bin",
     "skills",
-    "assets",
+    "assets/*.svg",
     "README.md",
     "README_zh.md",
     "CHANGELOG.md",

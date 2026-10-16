@@ -7,13 +7,13 @@
 [![npm version](https://img.shields.io/npm/v/pi-lingual?color=blue)](https://www.npmjs.com/package/pi-lingual)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Built for Pi](https://img.shields.io/badge/Built%20for-Pi%20Coding%20Agent-orange)](https://github.com/earendil-works/pi-coding-agent)
-[![Tests](https://img.shields.io/badge/Tests-155%2F155%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
+[![Tests](https://img.shields.io/badge/Tests-156%2F156%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict%20Zero%20Error-blue)](tsconfig.json)
 
 [English](./README.md) | **简体中文**
 
 <p align="center">
-  <img src="assets/demo.gif" alt="pi-lingual 终端伴学视窗交互实录" width="840">
+  <img src="https://raw.githubusercontent.com/3ZEROS12/pi-lingual/main/assets/demo.gif" alt="pi-lingual 终端伴学视窗交互实录" width="840">
 </p>
 
 ```text
@@ -235,11 +235,11 @@ pi install npm:pi-lingual
 ### 可配置思考深度 (`/lingual reasoning`)
 无需为不同任务频繁切换模型，`pi-lingual` 支持声明式调节每个模式的推理思考深度（Reasoning Effort）：
 ```bash
-/lingual reasoning low       # 低延迟极速执行，适合日常规范直发与实战狂飙
+/lingual reasoning low       # 低延迟快速执行（取决于模型提供商），适合日常规范直发与实战狂飙
 /lingual reasoning medium    # 深度结构化推演，适合复杂工程规范压铸（Brain-Dump to Spec）
 /lingual reasoning high      # 高难度多约束场景深度推理
 ```
-- 日常模式（`direct`/`lazy`、`live-flow`/`raw`、`commit`、`oss`、`yap`）出厂默认 `"low"`，兼顾极致响应速度；
+- 日常模式（`direct`/`lazy`、`live-flow`/`raw`、`commit`、`oss`、`yap`）出厂默认 `"low"`，兼顾敏捷响应（取决于模型提供商）；
 - 结构化压铸配装（`spec`）出厂默认 `"medium"`，确保目标、约束边界与勿碰模块逻辑缜密、零幻觉。
 
 ### 保护主力模型额度

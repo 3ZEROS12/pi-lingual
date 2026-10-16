@@ -96,7 +96,7 @@
       <!-- Source Text Anchor -->
       <text x="45" y="180">
         <tspan fill="#7a8478">  · </tspan>
-        <tspan fill="#859289">[Original] </tspan>
+        <tspan fill="#859289">[原文] </tspan>
         <tspan fill="#d3c6aa">这个方案有点过度设计了，不如直接用标准库实现</tspan>
       </text>
 
@@ -165,7 +165,7 @@
       <tspan fill="#859289">[session-model]  [thinking: low]  [context: 12.4k / 4.2%]</tspan>
     </text>
 
-    <text x="840" y="449" text-anchor="end" font-size="11.5" class="status-badge">
+    <text x="535" y="449" font-size="11.5" class="status-badge">
       <tspan fill="#a7c080" font-weight="bold">zh ⇄ en · 4s · 纯伴学</tspan>
       <tspan fill="#7a8478"> (输入 /lingual 切换模式)</tspan>
     </text>
