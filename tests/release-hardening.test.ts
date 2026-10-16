@@ -12,12 +12,17 @@ import {
   resolveLangPair,
   resolveLabelsForLang,
   getDefaultFactoryModes,
+  getDefaultSlots,
+  getDefaultDirectSlots,
+  getDefaultPromptSlots,
+  getDefaultModifySlots,
 } from "../src/presets.js";
 import {
   resolveModesFromConfig,
   resolveReleaseBannerLang,
   compileModeSystemPrompt,
   normalizeActiveModeId,
+  resolveSelectPrompts,
 } from "../src/engine.js";
 import { getBannerMaxCols, getVisualWidth } from "../src/layout.js";
 
@@ -122,8 +127,8 @@ test("language coverage - Traditional Chinese aliases and chrome baseline", () =
   assert.equal(normalizeLangCode("日本語"), "ja");
 
   const twLabels = resolveLabelsForLang("tw", undefined, "en");
-  const zhLabels = resolveLabelsForLang("zh", undefined, "en");
-  assert.equal(twLabels.slot1Label, zhLabels.slot1Label, "Traditional Chinese shares the Chinese chrome baseline");
+  assert.equal(twLabels.slot1Label, "口語", "Traditional Chinese uses authentic Traditional Chinese chrome");
+  assert.equal(twLabels.slot2Label, "寫作", "Traditional Chinese uses authentic Traditional Chinese chrome");
   assert.ok(!/[\u4e00-\u9fa5]/.test(resolveLabelsForLang("es", undefined, "en").hudTitle));
 });
 
@@ -501,4 +506,241 @@ test("/lingual alias and out-of-bounds mode switching safety (R3)", async () => 
 
   // Teardown back to 1
   await commands["lingual"].handler("1", ctx);
+});
+
+test("candidate picker UI covers all 9 languages without falling back to English (F2-1)", () => {
+  const en = resolveSelectPrompts("en", 3);
+  for (const lang of SUPPORTED_LANG_CODES) {
+    const sp = resolveSelectPrompts(lang, 3);
+    assert.ok(sp.title, `[${lang}] title must exist`);
+    assert.ok(sp.keepOrig, `[${lang}] keepOrig must exist`);
+    if (lang !== "en") {
+      assert.notEqual(sp.title, en.title, `[${lang}] title must not fall back to English`);
+      assert.notEqual(sp.keepOrig, en.keepOrig, `[${lang}] keepOrig must not fall back to English`);
+    }
+  }
+});
+
+test("system messages cover all 9 languages without falling back to English (F2-2)", () => {
+  const enLabels = resolveLabelsForLang("en");
+  const keys = [
+    "notifyModeLockedCycleBlocked",
+    "langHelpText",
+    "notifyModeLockedSuccess",
+    "notifyModeUnlockedSuccess",
+    "notifyUnrecognizedSubcommand",
+  ] as const;
+
+  for (const lang of SUPPORTED_LANG_CODES) {
+    const labels = resolveLabelsForLang(lang);
+    for (const key of keys) {
+      const val = labels[key];
+      assert.ok(val, `[${lang}] "${key}" must be defined and non-empty`);
+      if (lang !== "en") {
+        assert.notEqual(val, enLabels[key], `[${lang}] "${key}" must not equal English value`);
+      }
+    }
+
+    // Script sampling verification
+    if (lang === "ja") {
+      assert.ok(/[\u3040-\u30ff]/.test(labels.notifyModeLockedCycleBlocked!), "ja must contain kana");
+    } else if (lang === "ko") {
+      assert.ok(/[\uac00-\ud7af]/.test(labels.notifyModeLockedCycleBlocked!), "ko must contain hangul");
+    } else if (lang === "ru") {
+      assert.ok(/[\u0400-\u04ff]/.test(labels.notifyModeLockedCycleBlocked!), "ru must contain cyrillic");
+    } else if (lang === "tw") {
+      assert.ok(labels.notifyModeLockedCycleBlocked!.includes("鎖定"), "tw must contain Traditional Chinese 鎖定");
+    }
+  }
+});
+
+test("commit loadout first line limit is strictly 72 characters across all specs and docs (F2-3)", () => {
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+  const readmeEn = fs.readFileSync(path.join(root, "README.md"), "utf8");
+  const readmeZh = fs.readFileSync(path.join(root, "README_zh.md"), "utf8");
+  const presetsTs = fs.readFileSync(path.join(root, "src/presets.ts"), "utf8");
+  const skillMd = fs.readFileSync(path.join(root, "skills/lingual-tuner/SKILL.md"), "utf8");
+  const clipboardE2e = fs.readFileSync(path.join(root, "tests/e2e/clipboard.e2e.ts"), "utf8");
+
+  assert.ok(readmeEn.includes("\\le 72"), "README.md must specify <= 72 characters");
+  assert.ok(readmeZh.includes("\\le 72"), "README_zh.md must specify <= 72 characters");
+  assert.ok(presetsTs.includes("<=72 chars"), "presets.ts description must specify <=72 chars");
+  assert.ok(presetsTs.includes("<= 72 characters"), "presets.ts instruction must specify <= 72 characters");
+  assert.ok(skillMd.includes("<=72 chars"), "SKILL.md must specify <=72 chars");
+  assert.ok(clipboardE2e.includes("<= 72"), "clipboard.e2e.ts must assert <= 72 characters");
+
+  // Zero occurrences of legacy 50-char limit for commit loadout
+  assert.ok(!readmeEn.includes("first line $\\le 50$"), "README.md must not contain legacy 50-char limit");
+  assert.ok(!readmeZh.includes("首行 $\\le 50$"), "README_zh.md must not contain legacy 50-char limit");
+  assert.ok(!presetsTs.includes("first line <=50 chars"), "presets.ts must not contain legacy 50-char limit");
+});
+
+test("slot labels cover all 9 languages natively and tw is authentic Traditional Chinese (F2-4)", () => {
+  const enSlots = getDefaultSlots("en");
+  const enDirect = getDefaultDirectSlots("en");
+  const enPrompt = getDefaultPromptSlots("en");
+  const enModify = getDefaultModifySlots("en");
+
+  // 1. tw must be authentic Traditional Chinese, never Simplified Chinese
+  const twSlots = getDefaultSlots("tw");
+  assert.equal(twSlots.find((s) => s.id === "spoken")?.label, "口語");
+  assert.equal(twSlots.find((s) => s.id === "written")?.label, "寫作");
+  assert.equal(twSlots.find((s) => s.id === "vocab")?.label, "重點");
+
+  const twDirect = getDefaultDirectSlots("tw");
+  assert.equal(twDirect.find((s) => s.id === "en_direct")?.label, "規範英文");
+  assert.equal(twDirect.find((s) => s.id === "vocab")?.label, "核心表達");
+
+  const twPrompt = getDefaultPromptSlots("tw");
+  assert.equal(twPrompt.find((s) => s.id === "concise")?.label, "極簡行動");
+  assert.equal(twPrompt.find((s) => s.id === "spec")?.label, "結構規範");
+
+  const twModify = getDefaultModifySlots("tw");
+  assert.equal(twModify.find((s) => s.id === "fixed")?.label, "原句修補");
+  assert.equal(twModify.find((s) => s.id === "native")?.label, "道地表達");
+  assert.equal(twModify.find((s) => s.id === "fixes")?.label, "收穫複盤");
+
+  // 2. All 9 languages: non-en slot labels must NOT equal English
+  for (const lang of SUPPORTED_LANG_CODES) {
+    if (lang === "en") continue;
+    const slots = getDefaultSlots(lang);
+    for (const s of slots) {
+      if (s.id === "source" && ["es", "fr", "de"].includes(lang)) {
+        // "Original" is internationally shared across Spanish/French/German
+        continue;
+      }
+      const enLabel = enSlots.find((e) => e.id === s.id)?.label;
+      assert.notEqual(s.label, enLabel, `[${lang}] slot "${s.id}" label must not fall back to English "${enLabel}"`);
+    }
+
+    const direct = getDefaultDirectSlots(lang);
+    for (const s of direct) {
+      const enLabel = enDirect.find((e) => e.id === s.id)?.label;
+      assert.notEqual(s.label, enLabel, `[${lang}] direct slot "${s.id}" label must not fall back to English`);
+    }
+
+    const prompt = getDefaultPromptSlots(lang);
+    for (const s of prompt) {
+      const enLabel = enPrompt.find((e) => e.id === s.id)?.label;
+      assert.notEqual(s.label, enLabel, `[${lang}] prompt slot "${s.id}" label must not fall back to English`);
+    }
+
+    const modify = getDefaultModifySlots(lang);
+    for (const s of modify) {
+      const enLabel = enModify.find((e) => e.id === s.id)?.label;
+      assert.notEqual(s.label, enLabel, `[${lang}] modify slot "${s.id}" label must not fall back to English`);
+    }
+  }
+});
+
+test("clipboard success notification is localized and contains zero emojis (F2-5)", () => {
+  const enLabels = resolveLabelsForLang("en");
+  const enMsg = enLabels.notifyClipboardCopied;
+  assert.ok(enMsg, "en must have notifyClipboardCopied defined");
+  assert.ok(!/[\u{1F300}-\u{1FAFF}]/u.test(enMsg), "en message must contain zero emojis");
+
+  for (const lang of SUPPORTED_LANG_CODES) {
+    const labels = resolveLabelsForLang(lang);
+    const msg = labels.notifyClipboardCopied;
+    assert.ok(msg, `[${lang}] notifyClipboardCopied must be defined`);
+    assert.ok(!/[\u{1F300}-\u{1FAFF}]/u.test(msg), `[${lang}] message must contain zero emojis`);
+    if (lang !== "en") {
+      assert.notEqual(msg, enMsg, `[${lang}] notifyClipboardCopied must not fall back to English`);
+    }
+  }
+});
+
+test("custom mode cycle fallback handles deleted or unknown current mode gracefully (F2-6)", async () => {
+  const { default: extensionFactory } = await import("../dist/extension.js");
+  const commands: Record<string, any> = {};
+  extensionFactory({
+    on() {},
+    registerCommand: (name: string, def: any) => (commands[name] = def),
+    registerShortcut() {},
+  } as any);
+
+  let currentBadge = "";
+  const ctx: any = {
+    hasUI: true,
+    ui: {
+      notify() {},
+      setStatus: (_k: string, v: any) => (currentBadge = v),
+      setWidget() {},
+      theme: { fg: (_c: string, t: string) => t },
+    },
+  };
+
+  // Add a temporary mode and switch to it
+  await commands["lingual"].handler("mode add temp_mode Temp translate transform preview", ctx);
+  await commands["lingual"].handler("temp_mode", ctx);
+  assert.ok(String(currentBadge).includes("Temp"), "Must be on Temp mode");
+
+  // Remove the active mode while standing on it
+  await commands["lingual"].handler("mode rm temp_mode", ctx);
+
+  // Now cycling without args: currentIdx is -1, must safely land on activeModes[0].id (companion)
+  await commands["lingual"].handler("", ctx);
+  assert.ok(String(currentBadge).includes("纯伴学") || String(currentBadge).includes("Companion"));
+
+  // Cycling from last mode must land on off without throwing
+  await commands["lingual"].handler("mode reset", ctx);
+  await commands["lingual"].handler("1", ctx);
+});
+
+test("/lang target switch notification differs from full pair switch (F2-7)", async () => {
+  const { default: extensionFactory } = await import("../dist/extension.js");
+  const commands: Record<string, any> = {};
+  extensionFactory({
+    on() {},
+    registerCommand: (name: string, def: any) => (commands[name] = def),
+    registerShortcut() {},
+  } as any);
+
+  const notices: string[] = [];
+  const ctx: any = {
+    hasUI: true,
+    ui: {
+      notify: (msg: string) => notices.push(String(msg)),
+      setStatus() {},
+      setWidget() {},
+      theme: { fg: (_c: string, t: string) => t },
+    },
+  };
+
+  // 1. Full pair switch
+  notices.length = 0;
+  await commands["lang"].handler("zh ja", ctx);
+  const pairNotice = notices[notices.length - 1];
+
+  // 2. Target-only switch (source stays zh)
+  notices.length = 0;
+  await commands["lang"].handler("en", ctx);
+  const targetNotice = notices[notices.length - 1];
+
+  assert.notEqual(
+    targetNotice,
+    pairNotice,
+    "Target-only switch notification must be distinct from full pair switch"
+  );
+  assert.ok(
+    targetNotice.includes("目标语言") || targetNotice.includes("Target language") || targetNotice.includes("保持不变") || targetNotice.includes("unchanged"),
+    `Target-only notice must explicitly indicate target was switched: ${targetNotice}`
+  );
+
+  // Teardown back to zh en
+  await commands["lang"].handler("zh en", ctx);
+});
+
+test("/lingual command description across all presets reflects 3-core mode numbers (F2-8)", () => {
+  for (const lang of SUPPORTED_LANG_CODES) {
+    const labels = resolveLabelsForLang(lang);
+    const desc = labels.cmdDescMode || "";
+    assert.ok(desc, `[${lang}] cmdDescMode must be defined`);
+    assert.ok(desc.includes("1") && desc.includes("2") && desc.includes("3") && desc.includes("0"),
+      `[${lang}] cmdDescMode must contain numbers 1, 2, 3, 0: ${desc}`
+    );
+    assert.ok(!desc.includes("Candidates") && !desc.includes("Modify"),
+      `[${lang}] cmdDescMode must not contain legacy Candidates or Modify: ${desc}`
+    );
+  }
 });

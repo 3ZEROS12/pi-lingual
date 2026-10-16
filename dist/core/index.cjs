@@ -91,21 +91,160 @@ __export(core_exports, {
 module.exports = __toCommonJS(core_exports);
 
 // src/prompts.ts
+var SLOT_LABELS_BY_LANG = {
+  zh: {
+    source: "\u539F\u6587",
+    spoken: "\u53E3\u8BED",
+    written: "\u5199\u4F5C",
+    vocab: "\u91CD\u70B9",
+    en_direct: "\u89C4\u8303\u82F1\u6587",
+    direct_vocab: "\u6838\u5FC3\u8868\u8FBE",
+    concise: "\u6781\u7B80\u884C\u52A8",
+    spec: "\u7ED3\u6784\u89C4\u8303",
+    deep: "\u6839\u56E0\u6EAF\u6E90",
+    prompt_vocab: "\u6838\u5FC3\u8868\u8FBE",
+    fixed: "\u539F\u53E5\u4FEE\u8865",
+    native: "\u5730\u9053\u8868\u8FBE",
+    fixes: "\u6536\u83B7\u590D\u76D8"
+  },
+  tw: {
+    source: "\u539F\u6587",
+    spoken: "\u53E3\u8A9E",
+    written: "\u5BEB\u4F5C",
+    vocab: "\u91CD\u9EDE",
+    en_direct: "\u898F\u7BC4\u82F1\u6587",
+    direct_vocab: "\u6838\u5FC3\u8868\u9054",
+    concise: "\u6975\u7C21\u884C\u52D5",
+    spec: "\u7D50\u69CB\u898F\u7BC4",
+    deep: "\u6839\u56E0\u6EAF\u6E90",
+    prompt_vocab: "\u6838\u5FC3\u8868\u9054",
+    fixed: "\u539F\u53E5\u4FEE\u88DC",
+    native: "\u9053\u5730\u8868\u9054",
+    fixes: "\u6536\u7A6B\u8907\u76E4"
+  },
+  ja: {
+    source: "\u539F\u6587",
+    spoken: "\u53E3\u8A9E",
+    written: "\u6587\u9762",
+    vocab: "\u5358\u8A9E",
+    en_direct: "\u6A19\u6E96\u82F1\u8A9E",
+    direct_vocab: "\u91CD\u8981\u8A9E\u5F59",
+    concise: "\u7C21\u6F54\u30FB\u9AD8\u52B9\u7387",
+    spec: "\u69CB\u9020\u5316\u4ED5\u69D8",
+    deep: "\u6839\u672C\u539F\u56E0\u30FB\u53B3\u5BC6",
+    prompt_vocab: "\u91CD\u8981\u8A9E\u5F59",
+    fixed: "\u539F\u6587\u4FEE\u6B63",
+    native: "\u81EA\u7136\u8868\u73FE",
+    fixes: "\u91CD\u8981\u30DD\u30A4\u30F3\u30C8"
+  },
+  ko: {
+    source: "\uC6D0\uBB38",
+    spoken: "\uAD6C\uC5B4",
+    written: "\uBB38\uC5B4",
+    vocab: "\uD575\uC2EC\uC5B4\uD718",
+    en_direct: "\uADDC\uACA9\uC601\uC5B4",
+    direct_vocab: "\uD575\uC2EC\uD45C\uD604",
+    concise: "\uAC04\uACB0\uD55C \uD589\uB3D9",
+    spec: "\uAD6C\uC870\uD654 \uC0AC\uC591",
+    deep: "\uADFC\uBCF8\uC6D0\uC778 \uC5C4\uBC00",
+    prompt_vocab: "\uD575\uC2EC\uD45C\uD604",
+    fixed: "\uC6D0\uBB38\uC218\uC815",
+    native: "\uC790\uC5F0\uC2A4\uB7EC\uC6B4\uD45C\uD604",
+    fixes: "\uD575\uC2EC\uD3EC\uC778\uD2B8"
+  },
+  es: {
+    source: "Original",
+    spoken: "Coloquial",
+    written: "Escrito",
+    vocab: "Vocabulario",
+    en_direct: "Ingl\xE9s L\xF3gico",
+    direct_vocab: "T\xE9rminos clave",
+    concise: "Conciso",
+    spec: "Estructurado",
+    deep: "Rigor profundo",
+    prompt_vocab: "Vocabulario",
+    fixed: "Corregido",
+    native: "Nativo",
+    fixes: "Puntos clave"
+  },
+  fr: {
+    source: "Original",
+    spoken: "Oral",
+    written: "\xC9crit",
+    vocab: "Vocabulaire",
+    en_direct: "Anglais Logique",
+    direct_vocab: "Termes cl\xE9s",
+    concise: "Concis",
+    spec: "Structur\xE9",
+    deep: "Rigueur approfondie",
+    prompt_vocab: "Vocabulaire",
+    fixed: "Corrig\xE9",
+    native: "Naturel",
+    fixes: "Points cl\xE9s"
+  },
+  de: {
+    source: "Original",
+    spoken: "Gesprochen",
+    written: "Schriftlich",
+    vocab: "Vokabeln",
+    en_direct: "Logisches Englisch",
+    direct_vocab: "Schl\xFCsselbegriffe",
+    concise: "Pr\xE4gnant",
+    spec: "Strukturiert",
+    deep: "Ursachenanalyse",
+    prompt_vocab: "Schl\xFCsselbegriffe",
+    fixed: "Korrigiert",
+    native: "Nativ",
+    fixes: "Wichtige Punkte"
+  },
+  ru: {
+    source: "\u041E\u0440\u0438\u0433\u0438\u043D\u0430\u043B",
+    spoken: "\u0420\u0430\u0437\u0433\u043E\u0432\u043E\u0440\u043D\u044B\u0439",
+    written: "\u0414\u0435\u043B\u043E\u0432\u043E\u0439",
+    vocab: "\u041B\u0435\u043A\u0441\u0438\u043A\u0430",
+    en_direct: "\u0422\u0435\u0445-\u0430\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u0438\u0439",
+    direct_vocab: "\u041A\u043B\u044E\u0447\u0435\u0432\u044B\u0435 \u0441\u043B\u043E\u0432\u0430",
+    concise: "\u041A\u0440\u0430\u0442\u043A\u043E",
+    spec: "\u0421\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u0438\u0440\u043E\u0432\u0430\u043D\u043D\u043E",
+    deep: "\u041F\u0435\u0440\u0432\u043E\u043F\u0440\u0438\u0447\u0438\u043D\u0430",
+    prompt_vocab: "\u041A\u043B\u044E\u0447\u0435\u0432\u044B\u0435 \u0441\u043B\u043E\u0432\u0430",
+    fixed: "\u0418\u0441\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u043E",
+    native: "\u041D\u0430\u0442\u0438\u0432\u043D\u044B\u0439",
+    fixes: "\u0413\u043B\u0430\u0432\u043D\u043E\u0435"
+  },
+  en: {
+    source: "Original",
+    spoken: "Spoken",
+    written: "Written",
+    vocab: "Vocab",
+    en_direct: "Logical Spec",
+    direct_vocab: "Key Terms",
+    concise: "Concise",
+    spec: "Structured",
+    deep: "Deep Rigor",
+    prompt_vocab: "Vocab",
+    fixed: "Fixed",
+    native: "Native",
+    fixes: "Takeaway"
+  }
+};
+function resolveSlotLabels(lang = "en") {
+  const norm = (lang || "en").toLowerCase().split("-")[0];
+  return SLOT_LABELS_BY_LANG[norm] || SLOT_LABELS_BY_LANG.en;
+}
 function getDefaultDirectSlots(sourceLang = "en") {
-  const norm = (sourceLang || "en").toLowerCase().split("-")[0];
-  const isZh = norm === "zh" || norm === "tw";
-  const isJa = norm === "ja";
+  const sl = resolveSlotLabels(sourceLang);
   return [
     {
       id: "en_direct",
-      label: isZh ? "\u89C4\u8303\u82F1\u6587" : isJa ? "\u6A19\u6E96\u82F1\u8A9E" : "Logical Spec",
+      label: sl.en_direct,
       role: "rewrite",
       instruction: "Target Language: ${targetLang}. Strictly output in ${targetLang} ONLY: Translate and restructure user's raw, colloquial, or fragmented thoughts from ${sourceLang} into a clear, imperative, high-precision engineering instruction for an AI coding agent. Start directly with an active imperative verb (e.g. 'Inspect', 'Refactor', 'Implement', 'Fix', 'Trace'), eliminate conversational filler, preserve all code tokens, file paths, and CLI flags 100% verbatim, and strictly avoid hallucinations.",
       enabled: true
     },
     {
       id: "vocab",
-      label: isZh ? "\u6838\u5FC3\u8868\u8FBE" : isJa ? "\u91CD\u8981\u8A9E\u5F59" : "Key Terms",
+      label: sl.direct_vocab,
       role: "vocab",
       instruction: "Extract 2-3 high-value idiomatic ${targetLang} technical expressions relevant to this instruction following the 3-Second Glanceability Rule: 'term (${explainLang} meaning) \xB7 term2 (...)'.",
       enabled: true
@@ -113,34 +252,32 @@ function getDefaultDirectSlots(sourceLang = "en") {
   ];
 }
 function getDefaultPromptSlots(sourceLang = "en") {
-  const norm = (sourceLang || "en").toLowerCase().split("-")[0];
-  const isZh = norm === "zh" || norm === "tw";
-  const isJa = norm === "ja";
+  const sl = resolveSlotLabels(sourceLang);
   return [
     {
       id: "concise",
-      label: isZh ? "\u6781\u7B80\u884C\u52A8" : isJa ? "\u7C21\u6F54\u30FB\u9AD8\u52B9\u7387" : "Concise",
+      label: sl.concise,
       role: "rewrite",
       instruction: "Target Language: ${targetLang}. Strictly output in ${targetLang} ONLY: High-efficiency, zero-fluff imperative instruction targeting the exact action and smallest working diff.",
       enabled: true
     },
     {
       id: "spec",
-      label: isZh ? "\u7ED3\u6784\u89C4\u8303" : isJa ? "\u69CB\u9020\u5316\u4ED5\u69D8" : "Structured",
+      label: sl.spec,
       role: "rewrite",
       instruction: "Target Language: ${targetLang}. Strictly output in ${targetLang} ONLY: Structured engineering specification: distill messy thoughts into clear Objective, Constraints, and Deliverable without inventing unrequested features.",
       enabled: true
     },
     {
       id: "deep",
-      label: isZh ? "\u6839\u56E0\u6EAF\u6E90" : isJa ? "\u6839\u672C\u539F\u56E0\u30FB\u53B3\u5BC6" : "Deep Rigor",
+      label: sl.deep,
       role: "rewrite",
       instruction: "Target Language: ${targetLang}. Strictly output in ${targetLang} ONLY: Root-cause & architectural rigor: trace end-to-end execution flow, fix shared root causes rather than symptom patches, and verify edge cases.",
       enabled: true
     },
     {
       id: "vocab",
-      label: isZh ? "\u6838\u5FC3\u8868\u8FBE" : isJa ? "\u91CD\u8981\u8A9E\u5F59" : "Vocab",
+      label: sl.prompt_vocab,
       role: "vocab",
       instruction: "Extract 2-3 high-value idiomatic ${targetLang} technical expressions relevant to this prompt in ${explainLang}.",
       enabled: true
@@ -150,13 +287,12 @@ function getDefaultPromptSlots(sourceLang = "en") {
 function getDefaultModifySlots(sourceLang = "en", explainLang) {
   const norm = (sourceLang || "en").toLowerCase().split("-")[0];
   const expNorm = (explainLang || norm).toLowerCase().split("-")[0];
-  const isZh = norm === "zh" || norm === "tw";
-  const isJa = norm === "ja";
   const expName = resolveLanguageName(expNorm);
+  const sl = resolveSlotLabels(sourceLang);
   return [
     {
       id: "fixed",
-      label: isZh ? "\u539F\u53E5\u4FEE\u8865" : isJa ? "\u539F\u6587\u4FEE\u6B63" : "Fixed",
+      label: sl.fixed,
       role: "rewrite",
       instruction: "Target Language: ${targetLang}. Strictly output in ${targetLang} ONLY: Surgically correct ONLY spelling mistakes, fast typos, syntax structure (e.g. 'want that you can' \u2794 'want you to'), wrong prepositions/articles (e.g. 'in X' \u2794 'on X'), and grammatical slips in the user's sentence. CRITICAL RULES: (1) Zero Level Leap (i+1 Rule): Match user's natural vocabulary tier; do NOT artificially inflate everyday dev text into academic prose. (2) Zero Tone Sanitization: NEVER censor swear words or raw emotions (e.g. 'fuck', 'suck', 'shit')\u2014passion and emotional heat are natural and MUST be preserved 100%! (3) Zero Punctuation/Casing Nitpicking. (4) 100% preserve original words and cadence.",
       hideWhenLong: true,
@@ -164,7 +300,7 @@ function getDefaultModifySlots(sourceLang = "en", explainLang) {
     },
     {
       id: "native",
-      label: isZh ? "\u5730\u9053\u8868\u8FBE" : isJa ? "\u81EA\u7136\u8868\u73FE" : "Native",
+      label: sl.native,
       role: "rewrite",
       instruction: "Target Language: ${targetLang}. Strictly output in ${targetLang} ONLY: Provide a natural, idiomatic native phrasing expressing the exact same intent without level-leaping.",
       hideWhenLong: true,
@@ -172,7 +308,7 @@ function getDefaultModifySlots(sourceLang = "en", explainLang) {
     },
     {
       id: "fixes",
-      label: isZh ? "\u6536\u83B7\u590D\u76D8" : isJa ? "\u91CD\u8981\u30DD\u30A4\u30F3\u30C8" : "Takeaway",
+      label: sl.fixes,
       role: "vocab",
       instruction: `Extract 1-3 essential takeaways in the format: 'before \u2794 after (<= 10 words/chars grounded intuition in ${expName})'.`,
       enabled: true
@@ -180,19 +316,17 @@ function getDefaultModifySlots(sourceLang = "en", explainLang) {
   ];
 }
 function getDefaultSlots(sourceLang = "en") {
-  const norm = (sourceLang || "en").toLowerCase().split("-")[0];
-  const isZh = norm === "zh" || norm === "tw";
-  const isJa = norm === "ja";
+  const sl = resolveSlotLabels(sourceLang);
   return [
     {
       id: "source",
-      label: isZh ? "\u539F\u6587" : isJa ? "\u539F\u6587" : "Original",
+      label: sl.source,
       role: "source",
       enabled: true
     },
     {
       id: "spoken",
-      label: isZh ? "\u53E3\u8BED" : isJa ? "\u53E3\u8A9E" : "Spoken",
+      label: sl.spoken,
       role: "translation",
       instruction: "Natural, idiomatic spoken ${targetLang} suitable for real-time team collaboration, peer discussions, and daily communication.",
       showMeaning: true,
@@ -200,7 +334,7 @@ function getDefaultSlots(sourceLang = "en") {
     },
     {
       id: "written",
-      label: isZh ? "\u5199\u4F5C" : isJa ? "\u6587\u9762" : "Written",
+      label: sl.written,
       role: "translation",
       instruction: "Clear, precise, well-structured written ${targetLang} suitable for technical documentation, proposals, architecture reviews, and client communications. Active, concise, professional. STRICTLY AVOID archaic filler and AI-slop buzzwords.",
       showMeaning: true,
@@ -208,7 +342,7 @@ function getDefaultSlots(sourceLang = "en") {
     },
     {
       id: "vocab",
-      label: isZh ? "\u91CD\u70B9" : isJa ? "\u5358\u8A9E" : "Vocab",
+      label: sl.vocab,
       role: "vocab",
       instruction: "Extract key idiomatic collocations, phrasal expressions, technical idioms, or nuanced terms in ${explainLang}.",
       enabled: true
@@ -1091,7 +1225,7 @@ var PRESET_LOADOUTS = {
   commit: {
     id: "commit",
     name: "Commit Dehydrator",
-    description: "Extracts git diff and intent into conventional commits format (first line <=50 chars, imperative verb, Root Cause & Impact body)",
+    description: "Extracts git diff and intent into conventional commits format (first line <=72 chars, imperative verb, Root Cause & Impact body)",
     loadout: (sourceLang = "en", _explainLang) => ({
       id: "commit",
       name: resolveSeedNames(sourceLang).loadoutCommit,
@@ -1107,7 +1241,7 @@ var PRESET_LOADOUTS = {
           id: "commit",
           label: "Commit",
           role: "rewrite",
-          instruction: "Target Language: ${targetLang}. Strictly output in ${targetLang} ONLY: Generate strict Conventional Commits format (e.g. 'fix(scope): ...' or 'feat(scope): ...'). First line MUST be <= 50 characters starting directly with an imperative active verb (e.g. 'Prevent', 'Clear', 'Guard against', 'Handle'). Body must state strictly Root Cause and Impact without AI filler.",
+          instruction: "Target Language: ${targetLang}. Strictly output in ${targetLang} ONLY: Generate strict Conventional Commits format (e.g. 'fix(scope): ...' or 'feat(scope): ...'). First line MUST be <= 72 characters starting directly with an imperative active verb (e.g. 'Prevent', 'Clear', 'Guard against', 'Handle'). Body must state strictly Root Cause and Impact without AI filler.",
           enabled: true
         },
         {
@@ -1374,8 +1508,15 @@ var LANGUAGE_PRESETS = {
     notifyTimeout: "[en \u21C4 ja] Prompt rewrite timed out; original prompt passed",
     notifyError: "[en \u21C4 ja] Prompt rewrite error; original prompt passed",
     notifyModeNotFound: "[{pair}] Mode [{mode}] is not in your active registry. Run /lingual mode list to view available modes.",
+    notifyModeLockedCycleBlocked: "[{pair}] Mode is locked to [{mode}]. Run /lingual unlock to cycle modes or specify mode directly.",
+    notifyModeLockedSuccess: "[{pair}] Session mode locked to [{mode}]. Mode cycling is blocked. Run /lingual unlock to release.",
+    notifyModeUnlockedSuccess: "[{pair}] Mode lock released. Free mode cycling and configuration sync restored.",
+    notifyUnrecognizedSubcommand: '[{pair}] Unrecognized subcommand: "{cmd}". Current mode unchanged. Available: /lingual [1|2|3|0|lock|unlock|tuner|lang|slots|compact|status]',
+    notifyClipboardCopied: "Copied to clipboard (prompt intercepted - not sent to agent). Ready to paste into GitHub, PR, or X.",
+    notifyTargetSwitched: "Target language switched to: {target} (native {source} unchanged)",
+    langHelpText: "[Companion Language: {flow}]\n\u2022 Quick switch: /lang ja (target Japanese) \xB7 /lang en (target English)\n\u2022 Pair switch: /lang en ja \xB7 /lang ja en \xB7 /lang es en\n\u2022 Supported codes: zh, tw, ja, ko, en, es, fr, de, ru",
     modeSwitchedTemplate: "[{pair}] Switched to [{num}. {name} ({id})] ({slot})",
-    cmdDescMode: "Cycle companion mode [en \u21C4 ja]: [Companion] \u2794 [Direct] \u2794 [Off]",
+    cmdDescMode: "Cycle companion mode [en \u21C4 ja]: [1:Companion] \u2794 [2:Direct] \u2794 [3:Live-Flow] \u2794 [0:Off]",
     cmdDescLang: "Switch language pair [en \u21C4 ja]: /lang <source> [target]",
     cmdDescLast: "Replay previous companion card: /last",
     shortcutNextPage: "Next companion page segment",
@@ -1448,8 +1589,15 @@ var LANGUAGE_PRESETS = {
     notifyTimeout: "[zh \u21C4 en] \u63D0\u793A\u8BCD\u4F18\u5316\u8BF7\u6C42\u672A\u5C31\u7EEA\u6216\u8D85\u65F6\uFF0C\u672C\u6B21\u5DF2\u653E\u884C\u539F\u6587",
     notifyError: "[zh \u21C4 en] \u63D0\u793A\u8BCD\u4F18\u5316\u8BF7\u6C42\u5F02\u5E38\uFF0C\u672C\u6B21\u5DF2\u653E\u884C\u539F\u6587",
     notifyModeNotFound: "[{pair}] \u6A21\u5F0F\u3010{mode}\u3011\u4E0D\u5728\u5F53\u524D\u6CE8\u518C\u8868\u4E2D\u3002\u8F93\u5165 /lingual mode list \u67E5\u770B\u53EF\u7528\u6A21\u5F0F\u3002",
+    notifyModeLockedCycleBlocked: "[{pair}] \u5F53\u524D\u6A21\u5F0F\u5DF2\u9501\u5B9A\u5728\u3010{mode}\u3011\u3002\u5982\u9700\u8F6E\u8F6C\uFF0C\u8BF7\u5148\u8F93\u5165 /lingual unlock \u89E3\u9501\uFF0C\u6216\u4F7F\u7528 /lingual 1|2|3|0 \u663E\u5F0F\u6307\u5B9A\u3002",
+    notifyModeLockedSuccess: "[{pair}] \u4F1A\u8BDD\u6A21\u5F0F\u5DF2\u9501\u5B9A\u5728\u3010{mode}\u3011\u3002\u9632\u6B62\u5916\u90E8\u8FDB\u7A0B\u8986\u76D6\u4E0E\u65E0\u610F\u8F6E\u8F6C\uFF0C\u8F93\u5165 /lingual unlock \u53EF\u89E3\u9501\u3002",
+    notifyModeUnlockedSuccess: "[{pair}] \u6A21\u5F0F\u9501\u5B9A\u5DF2\u89E3\u9664\uFF08\u5DF2\u89E3\u9501\uFF09\uFF0C\u6062\u590D\u81EA\u7531\u8F6E\u8F6C\u4E0E\u5916\u90E8\u914D\u7F6E\u540C\u6B65\u3002",
+    notifyUnrecognizedSubcommand: '[{pair}] \u672A\u8BC6\u522B\u7684\u5B50\u547D\u4EE4: "{cmd}"\u3002\u5F53\u524D\u6A21\u5F0F\u4FDD\u6301\u4E0D\u53D8\u3002\u53EF\u7528\u547D\u4EE4: /lingual [1|2|3|0|lock|unlock|tuner|lang|slots|compact|status]',
+    notifyClipboardCopied: "\u5DF2\u590D\u5236\u5230\u526A\u8D34\u677F\uFF08\u5DF2\u62E6\u622A\u63D0\u793A\u8BCD\uFF0C\u672A\u53D1\u7ED9 Agent\uFF09\u3002\u53EF\u76F4\u63A5\u7C98\u8D34\u81F3 GitHub\u3001PR \u6216\u53D1\u63A8\u3002",
+    notifyTargetSwitched: "\u76EE\u6807\u8BED\u8A00\u5DF2\u5207\u6362\u4E3A: {target}\uFF08\u6BCD\u8BED {source} \u4FDD\u6301\u4E0D\u53D8\uFF09",
+    langHelpText: "[\u5F53\u524D\u4F34\u5B66\u8BED\u8A00: {flow}]\n\u2022 \u5E38\u7528\u5207\u6362: /lang ja (\u5207\u6362\u76EE\u6807\u4E3A\u65E5\u8BED) \xB7 /lang en (\u5207\u6362\u76EE\u6807\u4E3A\u82F1\u8BED)\n\u2022 \u53CC\u5411\u5207\u6362: /lang zh ja \xB7 /lang ja en \xB7 /lang en zh\n\u2022 \u652F\u6301\u8BED\u79CD: zh (\u4E2D\u6587), tw (\u7E41\u4E2D), ja (\u65E5\u8BED), ko (\u97E9\u8BED), en (\u82F1\u8BED), es (\u897F\u8BED), fr (\u6CD5\u8BED), de (\u5FB7\u8BED), ru (\u4FC4\u8BED)",
     modeSwitchedTemplate: "[{pair}] \u5DF2\u5207\u6362\u81F3\u3010{num}. {name} ({id})\u3011({slot})",
-    cmdDescMode: "\u5207\u6362\u4F34\u5B66\u6A21\u5F0F: /lingual",
+    cmdDescMode: "\u5207\u6362\u4F34\u5B66\u6A21\u5F0F: [1:\u7EAF\u4F34\u5B66] \u2794 [2:\u89C4\u8303\u76F4\u53D1] \u2794 [3:\u5B9E\u6218\u72C2\u98D9] \u2794 [0:\u5173\u95ED]",
     cmdDescLang: "\u5207\u6362\u4F34\u5B66\u8BED\u8A00: /lang <code>",
     cmdDescLast: "\u56DE\u770B\u4E0A\u4E00\u6761\u5361\u7247: /last",
     shortcutNextPage: "\u5207\u6362\u81F3\u4E0B\u4E00\u6BB5\u4F34\u5B66\u5207\u7247",
@@ -1497,6 +1645,87 @@ var LANGUAGE_PRESETS = {
     spokenLabel: "\u53E3\u8BED",
     writtenLabel: "\u5199\u4F5C"
   },
+  tw: {
+    slot1Label: "\u53E3\u8A9E",
+    slot2Label: "\u5BEB\u4F5C",
+    vocabLabel: "\u91CD\u9EDE",
+    sourceLabel: "\u539F\u6587",
+    hudTitle: "tw \u21C4 en",
+    statusOriginal: "tw \u21C4 en",
+    statusEnglish: "tw \u21C4 en",
+    statusOff: "tw \u21C4 en: off",
+    subNuanceLabel: "\u21B3",
+    notifyOriginal: "[tw \u21C4 en] \u5DF2\u5207\u63DB\u81F3\u3010\u539F\u6587\u6A21\u5F0F\u3011\uFF1A\u8F38\u5165\u4FDD\u6301\u7D14\u6DE8\u6BCD\u8A9E\uFF0C\u4E0A\u65B9 HUD \u6D6E\u73FE\u4F34\u5B78\u8996\u7A97",
+    notifyEnglish: "[tw \u21C4 en] \u5DF2\u5207\u63DB\u81F3\u3010\u82F1\u6587\u6A21\u5F0F\u3011\uFF1A\u767C\u7D66 AI \u7684\u8F38\u5165\u5C07\u81EA\u52D5\u8F49\u63DB\u70BA\u7D14\u6B63\u6280\u8853\u82F1\u6587",
+    notifyOff: "[tw \u21C4 en] \u5DF2\u95DC\u9589\u4F34\u5B78",
+    notifyPaging: "[tw \u21C4 en] \u9577\u53E5\u5DF2\u5207\u5206\u591A\u6BB5\uFF0C\u6309 Alt+. \u6216 Alt+, \u7FFB\u9801\u700F\u89BD",
+    notifyNoHistory: "[tw \u21C4 en] \u66AB\u7121\u4E0A\u4E00\u689D\u4F34\u5B78\u8A18\u9304",
+    notifyHistoryRestored: "[tw \u21C4 en] \u5DF2\u91CD\u65B0\u986F\u793A\u4E0A\u4E00\u689D\u4F34\u5B78\u5361\u7247",
+    notifyAgentHelp: '\u{1F4A1} \u5167\u5EFA lingual-tuner \u69FD\u4F4D\u8ABF\u512A\u6280\u80FD\uFF1A\u76F4\u63A5\u5C0D\u7576\u524D Agent \u8AAA "\u5E6B\u6211\u5B9A\u5236\u4F34\u5B78" \u5373\u53EF\u514D\u547D\u4EE4\u81EA\u52D5\u88DD\u914D\uFF01',
+    notifyModelSwitched: "\u4F34\u5B78\u6A21\u578B\u5DF2\u5207\u63DB\u70BA: {model}",
+    notifyLangSwitched: "\u4F34\u5B78\u8A9E\u8A00\u5DF2\u5207\u63DB\u70BA: {lang}",
+    notifyLangInvalid: "\u7121\u6548\u7684\u8A9E\u8A00\u4EE3\u78BC\u3002\u652F\u63F4: zh, tw, ja, en, es, fr, de, ko, ru",
+    notifyCompactOn: "[tw \u21C4 en] \u5DF2\u958B\u555F\u55AE\u884C\u81A0\u56CA\u6A21\u5F0F\uFF1A\u6975\u7C21\u5360\u4F4D",
+    notifyCompactOff: "[tw \u21C4 en] \u5DF2\u5207\u63DB\u70BA\u5DE6\u5C0E\u8ECC\u6A39\u72C0\u67B6\u69CB\uFF1A\u5C55\u793A\u5B8C\u6574\u591A\u69FD\u8207\u8A9E\u611F",
+    notifyTimeout: "[tw \u21C4 en] \u63D0\u793A\u8A5E\u512A\u5316\u8ACB\u6C42\u672A\u5C31\u7DD2\u6216\u8D85\u6642\uFF0C\u672C\u6B21\u5DF2\u653E\u884C\u539F\u6587",
+    notifyError: "[tw \u21C4 en] \u63D0\u793A\u8A5E\u512A\u5316\u8ACB\u6C42\u7570\u5E38\uFF0C\u672C\u6B21\u5DF2\u653E\u884C\u539F\u6587",
+    notifyModeNotFound: "[{pair}] \u6A21\u5F0F\u3010{mode}\u3011\u4E0D\u5728\u7576\u524D\u8A3B\u518A\u8868\u4E2D\u3002\u8F38\u5165 /lingual mode list \u67E5\u770B\u53EF\u7528\u6A21\u5F0F\u3002",
+    notifyModeLockedCycleBlocked: "[{pair}] \u7576\u524D\u6A21\u5F0F\u5DF2\u9396\u5B9A\u5728\u3010{mode}\u3011\u3002\u5982\u9700\u8F2A\u8F49\uFF0C\u8ACB\u5148\u8F38\u5165 /lingual unlock \u89E3\u9396\uFF0C\u6216\u4F7F\u7528 /lingual 1|2|3|0 \u986F\u5F0F\u6307\u5B9A\u3002",
+    notifyModeLockedSuccess: "[{pair}] \u6703\u8A71\u6A21\u5F0F\u5DF2\u9396\u5B9A\u5728\u3010{mode}\u3011\u3002\u9632\u6B62\u5916\u90E8\u9032\u7A0B\u8986\u84CB\u8207\u7121\u610F\u8F2A\u8F49\uFF0C\u8F38\u5165 /lingual unlock \u53EF\u89E3\u9396\u3002",
+    notifyModeUnlockedSuccess: "[{pair}] \u6A21\u5F0F\u9396\u5B9A\u5DF2\u89E3\u9664\uFF08\u5DF2\u89E3\u9396\uFF09\uFF0C\u6062\u5FA9\u81EA\u7531\u8F2A\u8F49\u8207\u5916\u90E8\u914D\u7F6E\u540C\u6B65\u3002",
+    notifyUnrecognizedSubcommand: '[{pair}] \u672A\u8B58\u5225\u7684\u5B50\u547D\u4EE4: "{cmd}"\u3002\u7576\u524D\u6A21\u5F0F\u4FDD\u6301\u4E0D\u8B8A\u3002\u53EF\u7528\u547D\u4EE4: /lingual [1|2|3|0|lock|unlock|tuner|lang|slots|compact|status]',
+    notifyClipboardCopied: "\u5DF2\u8907\u88FD\u5230\u526A\u8CBC\u7C3F\uFF08\u5DF2\u6514\u622A\u63D0\u793A\u8A5E\uFF0C\u672A\u767C\u7D66 Agent\uFF09\u3002\u53EF\u76F4\u63A5\u8CBC\u4E0A\u81F3 GitHub\u3001PR \u6216\u767C\u63A8\u3002",
+    notifyTargetSwitched: "\u76EE\u6A19\u8A9E\u8A00\u5DF2\u5207\u63DB\u70BA: {target}\uFF08\u6BCD\u8A9E {source} \u4FDD\u6301\u4E0D\u8B8A\uFF09",
+    langHelpText: "[\u7576\u524D\u4F34\u5B78\u8A9E\u8A00: {flow}]\n\u2022 \u5E38\u7528\u5207\u63DB: /lang ja (\u5207\u63DB\u76EE\u6A19\u70BA\u65E5\u8A9E) \xB7 /lang en (\u5207\u63DB\u76EE\u6A19\u70BA\u82F1\u8A9E)\n\u2022 \u96D9\u5411\u5207\u63DB: /lang tw ja \xB7 /lang ja en \xB7 /lang en zh\n\u2022 \u652F\u63F4\u8A9E\u7A2E: zh (\u4E2D\u6587), tw (\u7E41\u4E2D), ja (\u65E5\u8A9E), ko (\u97D3\u8A9E), en (\u82F1\u8A9E), es (\u897F\u8A9E), fr (\u6CD5\u8A9E), de (\u5FB7\u8A9E), ru (\u4FC4\u8A9E)",
+    modeSwitchedTemplate: "[{pair}] \u5DF2\u5207\u63DB\u81F3\u3010{num}. {name} ({id})\u3011({slot})",
+    cmdDescMode: "\u5207\u63DB\u4F34\u5B78\u6A21\u5F0F: [1:\u7D14\u4F34\u5B78] \u2794 [2:\u898F\u7BC4\u76F4\u767C] \u2794 [3:\u5BE6\u6230\u72C2\u98C6] \u2794 [0:\u95DC\u9589]",
+    cmdDescLang: "\u5207\u63DB\u4F34\u5B78\u8A9E\u8A00: /lang <code>",
+    cmdDescLast: "\u56DE\u770B\u4E0A\u4E00\u689D\u5361\u7247: /last",
+    shortcutNextPage: "\u5207\u63DB\u81F3\u4E0B\u4E00\u6BB5\u4F34\u5B78\u5207\u7247",
+    shortcutPrevPage: "\u5207\u63DB\u81F3\u4E0A\u4E00\u6BB5\u4F34\u5B78\u5207\u7247",
+    capsuleSlot1Prefix: "\u53E3",
+    capsuleSlot2Prefix: "\u5BEB",
+    layoutCapsule: "\u55AE\u884C\u81A0\u56CA\u6975\u7C21\u6D41 (1-Line Capsule)",
+    layoutTree: "Trifecta \u958B\u653E\u5F0F\u5DE6\u5C0E\u8ECC\u6A39\u72C0\u67B6\u69CB (\xB7 \u250C \u251C \u2514)",
+    statusReportTitle: "\u904B\u884C\u72C0\u614B\u5831\u544A",
+    statusReportMode: "\u7576\u524D\u6A21\u5F0F",
+    statusReportFlow: "\u8A9E\u8A00\u6D41\u5411",
+    statusReportModel: "\u4F34\u5B78\u6A21\u578B",
+    statusReportCache: "\u6703\u8A71\u5FEB\u53D6",
+    statusReportLayout: "HUD\u4F48\u5C40: Trifecta \u958B\u653E\u5F0F\u5DE6\u5C0E\u8ECC\u6A39\u72C0\u67B6\u69CB",
+    statusReportAuth: "\u6191\u64DA\u6A21\u5F0F: Pi \u539F\u751F\u9032\u7A0B\u5167\u8A8D\u8B49 (Zero Config)",
+    statusReportShortcuts: "\u5FEB\u6377\u64CD\u4F5C: /lingual \xB7 /slots \xB7 /lang \xB7 /last",
+    statusReportTuner: "\u69FD\u4F4D\u8ABF\u512A: \u5167\u5EFA lingual-tuner \u69FD\u4F4D\u8ABF\u512A\u6280\u80FD",
+    modeDescOriginal: "\u539F\u6587\u76F4\u901A \xB7 0ms\u975E\u963B\u585E",
+    modeDescEnglish: "\u82F1\u6587\u6A21\u5F0F \xB7 \u6DF1\u5EA6\u4EE3\u78BC\u63A8\u7406",
+    modeDescOff: "\u5DF2\u95DC\u9589",
+    modelCurrentLabel: "\u7576\u524D\u4F34\u5B78\u6A21\u578B",
+    modelFollowSession: "\u8DDF\u96A8\u6703\u8A71",
+    langUsageHint: "\u7528\u6CD5: /lang <zh|tw|ja|en|es|fr|de> [target]",
+    langList: ["\u2022 zh", "\u2022 tw", "\u2022 ja", "\u2022 en", "\u2022 es", "\u2022 fr", "\u2022 de", "\u2022 ko", "\u2022 ru"],
+    slotsHeader: "\u52D5\u614B\u69FD\u4F4D\u67B6\u69CB",
+    slotsActiveTag: "\u555F\u7528",
+    slotsNone: "\u672A\u914D\u7F6E\u4EFB\u4F55\u69FD\u4F4D",
+    slotsStatusEnabled: "\u5DF2\u555F\u7528",
+    slotsStatusDisabled: "\u5DF2\u7981\u7528",
+    slotsWithNuance: " +\u6BCD\u8A9E\u5FAE\u91CB\u7FA9",
+    slotsNlTitle: "\u{1F4AC} \u81EA\u7136\u8A9E\u8A00\u5B9A\u5236\uFF1A",
+    slotsNlExamples: ['\u2022 "\u5E6B\u6211\u5B9A\u5236\u4F34\u5B78\uFF1A\u53EA\u8981\u63A8\u6587\u548C\u6DF1\u5EA6\u5206\u6790\uFF0C\u4E0D\u8981\u539F\u6587"'],
+    slotsCliTitle: "\u5E38\u7528\u5FEB\u6377\u547D\u4EE4\uFF1A",
+    slotsCliHelp: ["\u2022 /slots add <id> <label> [instruction...]", "\u2022 /slots rm <id>", "\u2022 /slots toggle <id>", "\u2022 /slots reset"],
+    slotsResetSuccess: "[{pair}] \u5DF2\u91CD\u7F6E\u69FD\u4F4D\u70BA\u521D\u59CB\u9810\u8A2D\u72C0\u614B",
+    slotsRemovedSuccess: '[{pair}] \u5DF2\u79FB\u9664\u69FD\u4F4D [{id}] ("{label}")',
+    slotsRemovedSourceNote: " (\u5DF2\u7269\u7406\u96B1\u85CF\u539F\u6587\u884C)",
+    slotsToggled: "[{pair}] \u69FD\u4F4D [{id}] \u72C0\u614B\u8B8A\u66F4\u70BA: {status}",
+    slotsAdded: '[{pair}] \u5DF2\u6DFB\u52A0/\u66F4\u65B0\u69FD\u4F4D [{id}] "{label}"',
+    slotsNotFound: "[{pair}] \u672A\u627E\u5230\u69FD\u4F4D [{id}]",
+    slotsUsageAdd: "\u7528\u6CD5: /slots add <id> <label> [instruction...]",
+    slotsUsageRm: "\u7528\u6CD5: /slots rm <slot-id>",
+    slotsUsageToggle: "\u7528\u6CD5: /slots toggle <slot-id>",
+    slotsUnknown: '\u672A\u8B58\u5225\u7684\u69FD\u4F4D\u547D\u4EE4 "{cmd}"\u3002',
+    spokenLabel: "\u53E3\u8A9E",
+    writtenLabel: "\u5BEB\u4F5C"
+  },
   ja: {
     slot1Label: "\u53E3\u8A9E",
     slot2Label: "\u6587\u9762",
@@ -1522,8 +1751,15 @@ var LANGUAGE_PRESETS = {
     notifyTimeout: "[ja \u21C4 en] \u30BF\u30A4\u30E0\u30A2\u30A6\u30C8\u306E\u305F\u3081\u539F\u6587\u3092\u9001\u4FE1\u3057\u307E\u3057\u305F",
     notifyError: "[ja \u21C4 en] \u30A8\u30E9\u30FC\u306E\u305F\u3081\u539F\u6587\u3092\u9001\u4FE1\u3057\u307E\u3057\u305F",
     notifyModeNotFound: "[{pair}] \u30E2\u30FC\u30C9\u3010{mode}\u3011\u306F\u73FE\u5728\u306E\u767B\u9332\u8868\u306B\u5B58\u5728\u3057\u307E\u305B\u3093\u3002/lingual mode list \u3067\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+    notifyModeLockedCycleBlocked: "[{pair}] \u73FE\u5728\u306E\u30E2\u30FC\u30C9\u306F\u3010{mode}\u3011\u306B\u56FA\u5B9A\u3055\u308C\u3066\u3044\u307E\u3059\u3002\u5DE1\u56DE\u5207\u66FF\u306B\u306F /lingual unlock \u3067\u89E3\u9664\u3059\u308B\u304B\u3001/lingual 1|2|3|0 \u3067\u76F4\u63A5\u6307\u5B9A\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+    notifyModeLockedSuccess: "[{pair}] \u30BB\u30C3\u30B7\u30E7\u30F3\u30E2\u30FC\u30C9\u3092\u3010{mode}\u3011\u306B\u56FA\u5B9A\u3057\u307E\u3057\u305F\u3002\u5916\u90E8\u5909\u66F4\u3084\u610F\u56F3\u3057\u306A\u3044\u5207\u66FF\u3092\u9632\u6B62\u3057\u307E\u3059\u3002/lingual unlock \u3067\u89E3\u9664\u53EF\u80FD\u3002",
+    notifyModeUnlockedSuccess: "[{pair}] \u30E2\u30FC\u30C9\u56FA\u5B9A\u3092\u89E3\u9664\u3057\u307E\u3057\u305F\u3002\u81EA\u7531\u5207\u66FF\u3068\u8A2D\u5B9A\u540C\u671F\u3092\u518D\u958B\u3057\u307E\u3059\u3002",
+    notifyUnrecognizedSubcommand: '[{pair}] \u672A\u8A8D\u8B58\u306E\u30B5\u30D6\u30B3\u30DE\u30F3\u30C9: "{cmd}"\u3002\u73FE\u5728\u306E\u30E2\u30FC\u30C9\u3092\u7DAD\u6301\u3057\u307E\u3059\u3002\u5229\u7528\u53EF\u80FD: /lingual [1|2|3|0|lock|unlock|tuner|lang|slots|compact|status]',
+    notifyClipboardCopied: "\u30AF\u30EA\u30C3\u30D7\u30DC\u30FC\u30C9\u306B\u30B3\u30D4\u30FC\u3057\u307E\u3057\u305F\uFF08Agent\u672A\u9001\u4FE1\uFF09\u3002GitHub\u3001PR\u3001SNS\u7B49\u3078\u8CBC\u308A\u4ED8\u3051\u53EF\u80FD\u3002",
+    notifyTargetSwitched: "\u30BF\u30FC\u30B2\u30C3\u30C8\u8A00\u8A9E\u3092 {target} \u306B\u5909\u66F4\u3057\u307E\u3057\u305F\uFF08\u6BCD\u8A9E {source} \u306F\u7DAD\u6301\uFF09",
+    langHelpText: "[\u73FE\u5728\u306E\u8A00\u8A9E\u30DA\u30A2: {flow}]\n\u2022 \u30AF\u30A4\u30C3\u30AF\u5207\u66FF: /lang en (\u82F1\u8A9E\u3078) \xB7 /lang ja (\u65E5\u672C\u8A9E\u3078)\n\u2022 \u53CC\u65B9\u5411\u5207\u66FF: /lang ja en \xB7 /lang en ja \xB7 /lang ja zh\n\u2022 \u5BFE\u5FDC\u30B3\u30FC\u30C9: zh, tw, ja, ko, en, es, fr, de, ru",
     modeSwitchedTemplate: "[{pair}] \u3010{num}. {name} ({id})\u3011\u306B\u5207\u308A\u66FF\u3048\u307E\u3057\u305F ({slot})",
-    cmdDescMode: "\u30E2\u30FC\u30C9\u5207\u66FF: /lingual",
+    cmdDescMode: "\u30E2\u30FC\u30C9\u5207\u66FF: [1:\u4F34\u8D70] \u2794 [2:\u4ED5\u69D8\u76F4\u884C] \u2794 [3:\u5B9F\u6226\u75BE\u8D70] \u2794 [0:\u30AA\u30D5]",
     cmdDescLang: "\u8A00\u8A9E\u5207\u66FF: /lang <code>",
     cmdDescLast: "\u524D\u56DE\u30AB\u30FC\u30C9\u518D\u8868\u793A: /last",
     shortcutNextPage: "\u6B21\u306E\u30B9\u30E9\u30A4\u30B9\u3078\u79FB\u52D5",
@@ -1598,8 +1834,15 @@ var LANGUAGE_PRESETS = {
     notifyTimeout: "[es \u21C4 en] La traducci\xF3n al ingl\xE9s agot\xF3 el tiempo; se envi\xF3 el texto original",
     notifyError: "[es \u21C4 en] Error en la traducci\xF3n al ingl\xE9s; se envi\xF3 el texto original",
     notifyModeNotFound: "[{pair}] El modo [{mode}] no est\xE1 en el registro activo. Ejecute /lingual mode list para ver los modos disponibles.",
+    notifyModeLockedCycleBlocked: "[{pair}] El modo est\xE1 bloqueado en [{mode}]. Use /lingual unlock para liberar o especifique el modo directamente.",
+    notifyModeLockedSuccess: "[{pair}] Modo de sesi\xF3n bloqueado en [{mode}]. Ciclo bloqueado. Use /lingual unlock para liberar.",
+    notifyModeUnlockedSuccess: "[{pair}] Bloqueo de modo liberado. Ciclo libre y sincronizaci\xF3n restaurados.",
+    notifyUnrecognizedSubcommand: '[{pair}] Subcomando no reconocido: "{cmd}". Modo actual sin cambios. Disponibles: /lingual [1|2|3|0|lock|unlock|tuner|lang|slots|compact|status]',
+    notifyClipboardCopied: "Copiado al portapapeles (prompt interceptado, no enviado al agente). Listo para pegar.",
+    notifyTargetSwitched: "Idioma de destino cambiado a: {target} (nativo {source} sin cambios)",
+    langHelpText: "[Idioma de asistencia: {flow}]\n\u2022 Cambio r\xE1pido: /lang ja (japon\xE9s) \xB7 /lang en (ingl\xE9s)\n\u2022 Cambio de par: /lang es en \xB7 /lang en es \xB7 /lang es ja\n\u2022 C\xF3digos admitidos: zh, tw, ja, ko, en, es, fr, de, ru",
     modeSwitchedTemplate: "[{pair}] Cambiado a [{num}. {name} ({id})] ({slot})",
-    cmdDescMode: "Cambiar modo [es \u21C4 en]: [Original] \u2794 [Ingl\xE9s] \u2794 [Apagado]",
+    cmdDescMode: "Cambiar modo: [1:Aprendizaje] \u2794 [2:Directo L\xF3gico] \u2794 [3:Live Flow] \u2794 [0:Apagado]",
     cmdDescStatus: "Mostrar diagn\xF3stico y estado del modelo: /lingual-status",
     cmdDescModel: "Consultar o cambiar modelo: /lingual-model [model-id|auto]",
     cmdDescLang: "Ver o cambiar idioma nativo: /lingual-lang [zh|ja|en|es|fr|de]",
@@ -1695,8 +1938,15 @@ var LANGUAGE_PRESETS = {
     notifyTimeout: "[fr \u21C4 en] La traduction en anglais a expir\xE9 ; le prompt original a \xE9t\xE9 transmis",
     notifyError: "[fr \u21C4 en] Erreur de traduction en anglais ; le prompt original a \xE9t\xE9 transmis",
     notifyModeNotFound: "[{pair}] Le mode [{mode}] n'est pas dans votre registre actif. Ex\xE9cutez /lingual mode list pour voir les modes disponibles.",
+    notifyModeLockedCycleBlocked: "[{pair}] Le mode est verrouill\xE9 sur [{mode}]. Ex\xE9cutez /lingual unlock pour d\xE9verrouiller ou sp\xE9cifiez le mode directement.",
+    notifyModeLockedSuccess: "[{pair}] Mode de session verrouill\xE9 sur [{mode}]. D\xE9filement bloqu\xE9. Ex\xE9cutez /lingual unlock pour lib\xE9rer.",
+    notifyModeUnlockedSuccess: "[{pair}] Verrouillage du mode d\xE9sactiv\xE9. D\xE9filement libre et synchronisation restaur\xE9s.",
+    notifyUnrecognizedSubcommand: '[{pair}] Sous-commande non reconnue : "{cmd}". Mode actuel inchang\xE9. Disponibles : /lingual [1|2|3|0|lock|unlock|tuner|lang|slots|compact|status]',
+    notifyClipboardCopied: "Copi\xE9 dans le presse-papiers (prompt intercept\xE9, non envoy\xE9 \xE0 l'agent). Pr\xEAt \xE0 coller.",
+    notifyTargetSwitched: "Langue cible chang\xE9e en : {target} (langue native {source} inchang\xE9e)",
+    langHelpText: "[Paire de langues : {flow}]\n\u2022 Changement rapide : /lang ja (japonais) \xB7 /lang en (anglais)\n\u2022 Changement de paire : /lang fr en \xB7 /lang en fr\n\u2022 Codes pris en charge : zh, tw, ja, ko, en, es, fr, de, ru",
     modeSwitchedTemplate: "[{pair}] Chang\xE9 en [{num}. {name} ({id})] ({slot})",
-    cmdDescMode: "Changer de mode [fr \u21C4 en]: [Original] \u2794 [Anglais] \u2794 [D\xE9sactiv\xE9]",
+    cmdDescMode: "Changer de mode : [1:Compagnon] \u2794 [2:Direct Logique] \u2794 [3:Live Flow] \u2794 [0:D\xE9sactiv\xE9]",
     cmdDescStatus: "Afficher le rapport d'\xE9tat et le diagnostic: /lingual-status",
     cmdDescModel: "Consulter ou changer de mod\xE8le: /lingual-model [model-id|auto]",
     cmdDescLang: "Afficher ou changer la langue maternelle: /lingual-lang [zh|ja|en|es|fr|de]",
@@ -1792,8 +2042,15 @@ var LANGUAGE_PRESETS = {
     notifyTimeout: "[de \u21C4 en] Englische \xDCbersetzung hat das Zeitlimit \xFCberschritten; Originaltext wurde \xFCbergeben",
     notifyError: "[de \u21C4 en] Fehler bei der englischen \xDCbersetzung; Originaltext wurde \xFCbergeben",
     notifyModeNotFound: "[{pair}] Modus [{mode}] ist nicht im aktiven Register. F\xFChren Sie /lingual mode list aus, um verf\xFCgbare Modi anzuzeigen.",
+    notifyModeLockedCycleBlocked: "[{pair}] Modus ist auf [{mode}] gesperrt. F\xFChren Sie /lingual unlock aus oder geben Sie den Modus direkt an.",
+    notifyModeLockedSuccess: "[{pair}] Sitzungsmodus auf [{mode}] gesperrt. Moduswechsel gesperrt. /lingual unlock zum Entsperren.",
+    notifyModeUnlockedSuccess: "[{pair}] Modussperre aufgehoben. Freier Wechsel und Synchronisation wiederhergestellt.",
+    notifyUnrecognizedSubcommand: '[{pair}] Unbekannter Unterbefehl: "{cmd}". Aktueller Modus unver\xE4ndert. Verf\xFCgbar: /lingual [1|2|3|0|lock|unlock|tuner|lang|slots|compact|status]',
+    notifyClipboardCopied: "In die Zwischenablage kopiert (Prompt abgefangen, nicht an Agent gesendet). Bereit zum Einf\xFCgen.",
+    notifyTargetSwitched: "Zielsprache ge\xE4ndert zu: {target} (Muttersprache {source} unver\xE4ndert)",
+    langHelpText: "[Sprachpaar: {flow}]\n\u2022 Schneller Wechsel: /lang ja (Japanisch) \xB7 /lang en (Englisch)\n\u2022 Paar-Wechsel: /lang de en \xB7 /lang en de\n\u2022 Unterst\xFCtzte Codes: zh, tw, ja, ko, en, es, fr, de, ru",
     modeSwitchedTemplate: "[{pair}] Gewechselt zu [{num}. {name} ({id})] ({slot})",
-    cmdDescMode: "Modus umschalten [de \u21C4 en]: [Original] \u2794 [Englisch] \u2794 [Aus]",
+    cmdDescMode: "Modus umschalten: [1:Begleitung] \u2794 [2:Direkte Logik] \u2794 [3:Live Flow] \u2794 [0:Aus]",
     cmdDescStatus: "Statusbericht und Modell-Diagnose anzeigen: /lingual-status",
     cmdDescModel: "Modell pr\xFCfen oder wechseln: /lingual-model [model-id|auto]",
     cmdDescLang: "Muttersprache anzeigen oder wechseln: /lingual-lang [zh|ja|en|es|fr|de]",
@@ -1889,8 +2146,15 @@ var LANGUAGE_PRESETS = {
     notifyTimeout: "[ko \u21C4 en] \uBC88\uC5ED \uC2DC\uAC04 \uCD08\uACFC; \uC6D0\uBB38\uC774 \uADF8\uB300\uB85C \uC804\uB2EC\uB418\uC5C8\uC2B5\uB2C8\uB2E4",
     notifyError: "[ko \u21C4 en] \uBC88\uC5ED \uC624\uB958; \uC6D0\uBB38\uC774 \uADF8\uB300\uB85C \uC804\uB2EC\uB418\uC5C8\uC2B5\uB2C8\uB2E4",
     notifyModeNotFound: "[{pair}] \uBAA8\uB4DC [{mode}]\uAC00 \uD65C\uC131 \uB808\uC9C0\uC2A4\uD2B8\uB9AC\uC5D0 \uC5C6\uC2B5\uB2C8\uB2E4. /lingual mode list\uB85C \uD655\uC778\uD558\uC138\uC694.",
+    notifyModeLockedCycleBlocked: "[{pair}] \uD604\uC7AC \uBAA8\uB4DC\uAC00 \u3010{mode}\u3011(\uC73C)\uB85C \uC7A0\uACA8 \uC788\uC2B5\uB2C8\uB2E4. \uC21C\uD658\uD558\uB824\uBA74 /lingual unlock \uC73C\uB85C \uD574\uC81C\uD558\uAC70\uB098 /lingual 1|2|3|0 \uC73C\uB85C \uC9C1\uC811 \uC9C0\uC815\uD558\uC138\uC694.",
+    notifyModeLockedSuccess: "[{pair}] \uC138\uC158 \uBAA8\uB4DC\uAC00 \u3010{mode}\u3011(\uC73C)\uB85C \uACE0\uC815\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uC678\uBD80 \uBCC0\uACBD \uBC0F \uC758\uB3C4\uCE58 \uC54A\uC740 \uC804\uD658\uC744 \uBC29\uC9C0\uD569\uB2C8\uB2E4. /lingual unlock \uC73C\uB85C \uD574\uC81C \uAC00\uB2A5.",
+    notifyModeUnlockedSuccess: "[{pair}] \uBAA8\uB4DC \uC7A0\uAE08\uC774 \uD574\uC81C\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uC790\uC720 \uC804\uD658\uACFC \uC124\uC815 \uB3D9\uAE30\uD654\uAC00 \uBCF5\uC6D0\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
+    notifyUnrecognizedSubcommand: '[{pair}] \uC778\uC2DD\uD560 \uC218 \uC5C6\uB294 \uD558\uC704 \uBA85\uB839: "{cmd}". \uD604\uC7AC \uBAA8\uB4DC\uAC00 \uC720\uC9C0\uB429\uB2C8\uB2E4. \uC0AC\uC6A9 \uAC00\uB2A5: /lingual [1|2|3|0|lock|unlock|tuner|lang|slots|compact|status]',
+    notifyClipboardCopied: "\uD074\uB9BD\uBCF4\uB4DC\uC5D0 \uBCF5\uC0AC\uB418\uC5C8\uC2B5\uB2C8\uB2E4 (Agent \uBBF8\uC804\uC1A1). GitHub, PR \uB610\uB294 SNS\uC5D0 \uBD99\uC5EC\uB123\uAE30 \uAC00\uB2A5.",
+    notifyTargetSwitched: "\uBAA9\uD45C \uC5B8\uC5B4\uAC00 {target}(\uC73C)\uB85C \uBCC0\uACBD\uB418\uC5C8\uC2B5\uB2C8\uB2E4 (\uBAA8\uAD6D\uC5B4 {source} \uC720\uC9C0)",
+    langHelpText: "[\uD604\uC7AC \uB3D9\uBC18 \uC5B8\uC5B4: {flow}]\n\u2022 \uBE60\uB978 \uC804\uD658: /lang ja (\uC77C\uBCF8\uC5B4\uB85C) \xB7 /lang en (\uC601\uC5B4\uB85C)\n\u2022 \uC591\uBC29\uD5A5 \uC804\uD658: /lang ko en \xB7 /lang en ko \xB7 /lang ko ja\n\u2022 \uC9C0\uC6D0 \uCF54\uB4DC: zh, tw, ja, ko, en, es, fr, de, ru",
     modeSwitchedTemplate: "[{pair}] \u3010{num}. {name} ({id})\u3011(\uC73C)\uB85C \uC804\uD658\uB418\uC5C8\uC2B5\uB2C8\uB2E4 ({slot})",
-    cmdDescMode: "\uBAA8\uB4DC \uC804\uD658 [ko \u21C4 en]: [\uC6D0\uBB38] \u2794 [\uC601\uC5B4] \u2794 [\uB054]",
+    cmdDescMode: "\uBAA8\uB4DC \uC804\uD658: [1:\uB3D9\uD589\uD559\uC2B5] \u2794 [2:\uB17C\uB9AC\uC815\uC81C] \u2794 [3:\uC2E4\uC804\uC9C8\uC8FC] \u2794 [0:\uAEBC\uC9D0]",
     cmdDescStatus: "\uC0C1\uD0DC \uBCF4\uACE0\uC11C \uBC0F \uC9C4\uB2E8 \uD655\uC778: /lingual-status",
     cmdDescModel: "\uBAA8\uB378 \uD655\uC778 \uBC0F \uBCC0\uACBD: /lingual-model [model-id|auto]",
     cmdDescLang: "\uBAA8\uAD6D\uC5B4 \uD655\uC778 \uBC0F \uBCC0\uACBD: /lingual-lang",
@@ -1987,8 +2251,15 @@ var LANGUAGE_PRESETS = {
     notifyTimeout: "[ru \u21C4 en] \u0412\u0440\u0435\u043C\u044F \u043E\u0436\u0438\u0434\u0430\u043D\u0438\u044F \u043F\u0435\u0440\u0435\u0432\u043E\u0434\u0430 \u0438\u0441\u0442\u0435\u043A\u043B\u043E; \u043F\u0435\u0440\u0435\u0434\u0430\u043D \u043E\u0440\u0438\u0433\u0438\u043D\u0430\u043B",
     notifyError: "[ru \u21C4 en] \u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0435\u0440\u0435\u0432\u043E\u0434\u0430; \u043F\u0435\u0440\u0435\u0434\u0430\u043D \u043E\u0440\u0438\u0433\u0438\u043D\u0430\u043B",
     notifyModeNotFound: "[{pair}] \u0420\u0435\u0436\u0438\u043C [{mode}] \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D \u0432 \u0430\u043A\u0442\u0438\u0432\u043D\u043E\u043C \u0440\u0435\u0435\u0441\u0442\u0440\u0435. \u0412\u0432\u0435\u0434\u0438\u0442\u0435 /lingual mode list \u0434\u043B\u044F \u0441\u043F\u0438\u0441\u043A\u0430.",
+    notifyModeLockedCycleBlocked: "[{pair}] \u0420\u0435\u0436\u0438\u043C \u0437\u0430\u0431\u043B\u043E\u043A\u0438\u0440\u043E\u0432\u0430\u043D \u043D\u0430 [{mode}]. \u0412\u044B\u043F\u043E\u043B\u043D\u0438\u0442\u0435 /lingual unlock \u0434\u043B\u044F \u0440\u0430\u0437\u0431\u043B\u043E\u043A\u0438\u0440\u043E\u0432\u043A\u0438 \u0438\u043B\u0438 \u0443\u043A\u0430\u0436\u0438\u0442\u0435 \u0440\u0435\u0436\u0438\u043C \u043D\u0430\u043F\u0440\u044F\u043C\u0443\u044E.",
+    notifyModeLockedSuccess: "[{pair}] \u0420\u0435\u0436\u0438\u043C \u0441\u0435\u0441\u0441\u0438\u0438 \u0437\u0430\u0431\u043B\u043E\u043A\u0438\u0440\u043E\u0432\u0430\u043D \u043D\u0430 [{mode}]. \u041F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0435 \u0437\u0430\u0431\u043B\u043E\u043A\u0438\u0440\u043E\u0432\u0430\u043D\u043E. \u0412\u0432\u0435\u0434\u0438\u0442\u0435 /lingual unlock \u0434\u043B\u044F \u0441\u0431\u0440\u043E\u0441\u0430.",
+    notifyModeUnlockedSuccess: "[{pair}] \u0411\u043B\u043E\u043A\u0438\u0440\u043E\u0432\u043A\u0430 \u0440\u0435\u0436\u0438\u043C\u0430 \u0441\u043D\u044F\u0442\u0430. \u0412\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u043E \u0441\u0432\u043E\u0431\u043E\u0434\u043D\u043E\u0435 \u043F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0435 \u0438 \u0441\u0438\u043D\u0445\u0440\u043E\u043D\u0438\u0437\u0430\u0446\u0438\u044F.",
+    notifyUnrecognizedSubcommand: '[{pair}] \u041D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u0430\u044F \u043F\u043E\u0434\u043A\u043E\u043C\u0430\u043D\u0434\u0430: "{cmd}". \u0422\u0435\u043A\u0443\u0449\u0438\u0439 \u0440\u0435\u0436\u0438\u043C \u043D\u0435 \u0438\u0437\u043C\u0435\u043D\u0435\u043D. \u0414\u043E\u0441\u0442\u0443\u043F\u043D\u043E: /lingual [1|2|3|0|lock|unlock|tuner|lang|slots|compact|status]',
+    notifyClipboardCopied: "\u0421\u043A\u043E\u043F\u0438\u0440\u043E\u0432\u0430\u043D\u043E \u0432 \u0431\u0443\u0444\u0435\u0440 \u043E\u0431\u043C\u0435\u043D\u0430 (\u043F\u0440\u043E\u043C\u043F\u0442 \u043F\u0435\u0440\u0435\u0445\u0432\u0430\u0447\u0435\u043D, \u043D\u0435 \u043E\u0442\u043F\u0440\u0430\u0432\u043B\u0435\u043D \u0430\u0433\u0435\u043D\u0442\u0443). \u0413\u043E\u0442\u043E\u0432\u043E \u043A \u0432\u0441\u0442\u0430\u0432\u043A\u0435.",
+    notifyTargetSwitched: "\u0426\u0435\u043B\u0435\u0432\u043E\u0439 \u044F\u0437\u044B\u043A \u043F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0435\u043D \u043D\u0430: {target} (\u0440\u043E\u0434\u043D\u043E\u0439 {source} \u0431\u0435\u0437 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0439)",
+    langHelpText: "[\u042F\u0437\u044B\u043A\u043E\u0432\u0430\u044F \u043F\u0430\u0440\u0430: {flow}]\n\u2022 \u0411\u044B\u0441\u0442\u0440\u043E\u0435 \u043F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0435: /lang ja (\u044F\u043F\u043E\u043D\u0441\u043A\u0438\u0439) \xB7 /lang en (\u0430\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u0438\u0439)\n\u2022 \u0421\u043C\u0435\u043D\u0430 \u043F\u0430\u0440\u044B: /lang ru en \xB7 /lang en ru\n\u2022 \u041F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u043C\u044B\u0435 \u043A\u043E\u0434\u044B: zh, tw, ja, ko, en, es, fr, de, ru",
     modeSwitchedTemplate: "[{pair}] \u041F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0435\u043D\u043E \u043D\u0430 [{num}. {name} ({id})] ({slot})",
-    cmdDescMode: "\u041F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0438\u0442\u044C \u0440\u0435\u0436\u0438\u043C [ru \u21C4 en]: [\u041E\u0440\u0438\u0433\u0438\u043D\u0430\u043B] \u2794 [\u0410\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u0438\u0439] \u2794 [\u0412\u044B\u043A\u043B]",
+    cmdDescMode: "\u041F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0438\u0442\u044C \u0440\u0435\u0436\u0438\u043C: [1:\u0421\u043E\u043F\u0440\u043E\u0432\u043E\u0436\u0434\u0435\u043D\u0438\u0435] \u2794 [2:\u041F\u0440\u044F\u043C\u043E\u0439 \u043F\u043E\u0442\u043E\u043A] \u2794 [3:Live Flow] \u2794 [0:\u0412\u044B\u043A\u043B]",
     cmdDescStatus: "\u041E\u0442\u0447\u0435\u0442 \u043E \u0441\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u0438 \u0438 \u0434\u0438\u0430\u0433\u043D\u043E\u0441\u0442\u0438\u043A\u0430: /lingual-status",
     cmdDescModel: "\u041F\u0440\u043E\u0432\u0435\u0440\u0438\u0442\u044C \u0438\u043B\u0438 \u0441\u043C\u0435\u043D\u0438\u0442\u044C \u043C\u043E\u0434\u0435\u043B\u044C: /lingual-model [model-id|auto]",
     cmdDescLang: "\u041F\u0440\u043E\u0432\u0435\u0440\u0438\u0442\u044C \u0438\u043B\u0438 \u0441\u043C\u0435\u043D\u0438\u0442\u044C \u044F\u0437\u044B\u043A: /lingual-lang",
@@ -2089,8 +2360,7 @@ function resolveLangPair(input, fallbackPair) {
 }
 function resolveLabelsForLang(lang = "en", overrides, targetLang) {
   const norm = (lang || "en").toLowerCase().split("-")[0];
-  const presetKey = norm === "tw" ? "zh" : norm;
-  const target = LANGUAGE_PRESETS[presetKey] || LANGUAGE_PRESETS.en;
+  const target = LANGUAGE_PRESETS[norm] || LANGUAGE_PRESETS.en;
   const actualTarget = targetLang || (norm === "en" ? "ja" : "en");
   const pairTitle = `${norm} \u21C4 ${actualTarget}`;
   const merged = {

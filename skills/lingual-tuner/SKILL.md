@@ -70,7 +70,7 @@ An on-demand configuration skill for `pi-lingual`. By default, `pi-lingual` stri
 | **`lazy`** *(Default)* | **Logical Spec (规范直发)** | `agent` | `translate` | `transform` | `preview` | Restructures raw thoughts into imperative engineering specs with active verbs (`Inspect`, `Refactor`, `Trace`). |
 | **`raw`** *(Default)* | **Live Flow (实战狂飙)** | `agent` | `proofread` | `transform` | `adaptive-takeaway` | Direct typing in `${targetLang}`. 100% profanity/heat kept, i+1 anti-level-leap, zero casing nitpicks, native takeaway diffs. |
 | **`spec`** | **Brain-Dump to Spec (脑暴压铸)** | `agent` | `translate` | `transform` | `preview` | Casts messy thoughts into strict Objective, Constraints, Edge Cases, and Do Not Touch modules for agent plan mode. |
-| **`commit`** | **Commit Dehydrator (提交脱水)** | `clipboard` | `translate` | `transform` | `preview` | Generates strict Conventional Commits (first line <=50 chars, imperative verb, Root Cause & Impact body). Copies to clipboard. |
+| **`commit`** | **Commit Dehydrator (提交脱水)** | `clipboard` | `translate` | `transform` | `preview` | Generates strict Conventional Commits (first line <=72 chars, imperative verb, Root Cause & Impact body). Copies to clipboard. |
 | **`oss`** | **OSS Peer Comms (开源对线)** | `clipboard` | `translate` | `transform` | `tree` | Transforms blunt critiques into objective, peer-level GitHub comments (`nit:`, `under contention`, `repro:`). Copies to clipboard. |
 | **`yap`** | **Indie Shipper (极客发推)** | `clipboard` | `translate` | `transform` | `tree` | Cold, high-density Indie Hacker tech post (<280 chars) with 0 emojis, 0 corporate marketing hype. Copies to clipboard. |
 

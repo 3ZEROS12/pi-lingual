@@ -6,11 +6,12 @@
 - **Mode as Configuration (模式即配置 · Declarative Architecture)**:
   - Transitioned the entire extension architecture from hardcoded mode conditionals into a user-governed declarative state machine engine (`CustomModeConfig`).
   - Modes, actions (`pass-through`, `transform`, `select`), HUD styles (`preview`, `adaptive-takeaway`, `tree`, `none`), flow directions (`translate`, `proofread`, `custom`), output targets (`agent` vs `clipboard`), and prompt slots are 100% defined and persisted in `~/.pi/agent/lingual.json`.
-- **Dual-Core Golden Defaults (`lazy` / `direct` + `raw` / `live-flow`)**:
-  - Ships with exactly two factory golden defaults out of the box:
-    1. **`lazy` / `direct` (Logical Spec / 规范直发)**: Imperative engineering prompt structuring on Enter (`action: "transform"`, `hud: "preview"`).
-    2. **`raw` / `live-flow` (Live Flow / 实战狂飙)**: Direct foreign language drafting with zero tone sanitization, i+1 anti-level-leap, and adaptive takeaway diffs (`action: "transform"`, `hud: "adaptive-takeaway"`).
-    3. **`off` (已关闭)**: 0 pixels, 0 listeners, 0 tokens.
+- **Three-Core Golden Defaults (`companion` + `direct` + `live-flow`)**:
+  - Ships with three factory golden defaults out of the box (plus off):
+    1. **`companion` (Companion / 纯伴学)**: 0ms raw prompt pass-through with rich Left-Rail bilingual card rendered above editor (`action: "pass-through"`, `hud: "tree"`).
+    2. **`direct` (Logical Spec / 规范直发)**: Imperative engineering prompt structuring on Enter (`action: "transform"`, `hud: "preview"`).
+    3. **`live-flow` (Live Flow / 实战狂飙)**: Direct foreign language drafting with zero tone sanitization, i+1 anti-level-leap, and adaptive takeaway diffs (`action: "transform"`, `hud: "adaptive-takeaway"`).
+    4. **`off` (已关闭)**: 0 pixels, 0 listeners, 0 tokens.
 - **Tactical Loadouts Catalog (`spec`, `commit`, `oss`, `yap`)**:
   - Introduced four pre-configured tactical loadouts accessible via `/lingual loadout apply <id>`:
     1. **`spec` (Brain-Dump to Spec · 脑暴压铸)**: Casts messy thoughts into strict Objective, Constraints, Edge Cases, and Do Not Touch modules for agent plan mode (`target: "agent"`).

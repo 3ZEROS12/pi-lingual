@@ -42,6 +42,7 @@ import {
   resolveReleaseBannerLang,
   resolveModeDisplaySpec,
   resolveModeDisplayName,
+  resolveSelectPrompts,
   normalizeLingualModeInput,
   CURRENT_FEATURE_BANNER_VERSION,
   getDefaultDirectSlots,
@@ -568,10 +569,12 @@ export default function (pi: ExtensionAPI) {
           : state.mode === "off"
             ? modeSpec.off
             : state.mode;
-        const isZh = state.sourceLang === "zh" || state.sourceLang === "tw";
-        const lockWarning = isZh
-          ? `[${pair}] 当前模式已锁定在 [${currentName}]。如需轮转，请先输入 /lingual unlock 解锁，或使用 /lingual 1|2|3|0 显式指定。`
-          : `[${pair}] Mode is locked to [${currentName}]. Run /lingual unlock to cycle modes or specify mode directly.`;
+        const template =
+          state.labels.notifyModeLockedCycleBlocked ||
+          "[{pair}] Mode is locked to [{mode}]. Run /lingual unlock to cycle modes or specify mode directly.";
+        const lockWarning = template
+          .replace("{pair}", pair)
+          .replace("{mode}", currentName);
         try {
           ctx.ui.notify(lockWarning, "warning");
         } catch {}
@@ -581,7 +584,10 @@ export default function (pi: ExtensionAPI) {
       if (hasCustomModesOnDisk) {
         const cycleList = [...activeModes.map((m) => m.id), "off"];
         const currentIdx = cycleList.indexOf(state.mode);
-        nextMode = cycleList[(currentIdx + 1) % cycleList.length] || activeModes[0]?.id || "companion";
+        nextMode =
+          currentIdx === -1
+            ? activeModes[0]?.id || "companion"
+            : cycleList[(currentIdx + 1) % cycleList.length] || activeModes[0]?.id || "companion";
       } else {
         // Default mode cycle: companion -> direct -> live-flow -> off -> companion
         nextMode =
@@ -687,13 +693,18 @@ export default function (pi: ExtensionAPI) {
   };
 
   const switchLangHandler = async (args: string, ctx: ExtensionContext) => {
+    const pair = state.labels.hudTitle || `${state.sourceLang} ⇄ ${state.targetLang}`;
+    const previousSource = state.sourceLang;
+    const previousTarget = state.targetLang;
     const trimmed = args.trim().toLowerCase();
     if (!trimmed || trimmed === "list" || trimmed === "help" || trimmed === "?") {
-      const isZh = state.sourceLang === "zh" || state.sourceLang === "tw";
       const flowText = `${state.sourceLang} ➔ ${state.targetLang}`;
-      const helpMsg = isZh
-        ? `[当前伴学语言: ${flowText}]\n• 常用切换: /lang ja (切换目标为日语) · /lang en (切换目标为英语)\n• 双向切换: /lang zh ja · /lang ja en · /lang en zh\n• 支持语种: zh (中文), tw (繁中), ja (日语), ko (韩语), en (英语), es (西语), fr (法语), de (德语), ru (俄语)`
-        : `[Companion Language: ${flowText}]\n• Quick switch: /lang ja (target Japanese) · /lang en (target English)\n• Pair switch: /lang en ja · /lang ja en · /lang es en\n• Supported codes: zh, tw, ja, ko, en, es, fr, de, ru`;
+      const template =
+        state.labels.langHelpText ||
+        "[Companion Language: {flow}]\n• Quick switch: /lang ja (target Japanese) · /lang en (target English)\n• Pair switch: /lang en ja · /lang ja en · /lang es en\n• Supported codes: zh, tw, ja, ko, en, es, fr, de, ru";
+      const helpMsg = template
+        .replace("{flow}", flowText)
+        .replace("{pair}", pair);
       ctx.ui.notify(helpMsg, "info");
       return;
     }
@@ -774,9 +785,15 @@ export default function (pi: ExtensionAPI) {
     globalLingualCache.clear();
     updateFooter(ctx);
 
-    const template = state.labels.notifyLangSwitched || "Native language switched to: {lang}";
+    const isTargetOnly = newSource === previousSource && newTarget !== previousTarget;
+    const template = isTargetOnly
+      ? (state.labels.notifyTargetSwitched || "Target language switched to: {target} (native {source} unchanged)")
+      : (state.labels.notifyLangSwitched || "Native language switched to: {lang}");
     const flowText = `${newSource} ⇄ ${newTarget}`;
-    ctx.ui.notify(`[${flowText}] ` + template.replace("{lang}", flowText), "info");
+    const msg = isTargetOnly
+      ? `[${flowText}] ` + template.replace("{target}", newTarget).replace("{source}", newSource)
+      : `[${flowText}] ` + template.replace("{lang}", flowText);
+    ctx.ui.notify(msg, "info");
   };
 
   const toggleCompactHandler = async (_args: string, ctx: ExtensionContext) => {
@@ -1435,10 +1452,12 @@ export default function (pi: ExtensionAPI) {
       const modeSpec = resolveModeDisplaySpec(state.sourceLang);
       const activeObj = state.modes.find((m) => m.id === state.mode);
       const currentName = activeObj ? activeObj.name : (state.mode === "off" ? modeSpec.off : state.mode);
-      const isZh = state.sourceLang === "zh" || state.sourceLang === "tw";
-      const lockMsg = isZh
-        ? `[${pair}] 会话模式已锁定在 [${currentName}]。防止外部进程覆盖与无意轮转，输入 /lingual unlock 可解锁。`
-        : `[${pair}] Session mode locked to [${currentName}]. Mode cycling is blocked. Run /lingual unlock to release.`;
+      const template =
+        state.labels.notifyModeLockedSuccess ||
+        "[{pair}] Session mode locked to [{mode}]. Mode cycling is blocked. Run /lingual unlock to release.";
+      const lockMsg = template
+        .replace("{pair}", pair)
+        .replace("{mode}", currentName);
       try {
         ctx.ui.notify(lockMsg, "info");
       } catch {}
@@ -1450,10 +1469,10 @@ export default function (pi: ExtensionAPI) {
       state.modeLocked = false;
       saveUserLingualConfig({ modeLocked: false });
       const pair = state.labels.hudTitle || `${state.sourceLang} ⇄ ${state.targetLang}`;
-      const isZh = state.sourceLang === "zh" || state.sourceLang === "tw";
-      const unlockMsg = isZh
-        ? `[${pair}] 模式锁定已解除（已解锁），恢复自由轮转与外部配置同步。`
-        : `[${pair}] Mode lock released. Free mode cycling and configuration sync restored.`;
+      const template =
+        state.labels.notifyModeUnlockedSuccess ||
+        "[{pair}] Mode lock released. Free mode cycling and configuration sync restored.";
+      const unlockMsg = template.replace("{pair}", pair);
       try {
         ctx.ui.notify(unlockMsg, "info");
       } catch {}
@@ -1493,10 +1512,12 @@ export default function (pi: ExtensionAPI) {
 
     // 9. Unrecognized subcommand safety guardrail: do NOT cycle mode on mistyped words
     const pair = state.labels.hudTitle || `${state.sourceLang} ⇄ ${state.targetLang}`;
-    const isZh = state.sourceLang === "zh" || state.sourceLang === "tw";
-    const unrecMsg = isZh
-      ? `[${pair}] 未识别的子命令: "${trimmed}"。当前模式保持不变。可用命令: /lingual [1|2|3|0|lock|unlock|tuner|lang|slots|compact|status]`
-      : `[${pair}] Unrecognized subcommand: "${trimmed}". Current mode unchanged. Available: /lingual [1|2|3|0|lock|unlock|tuner|lang|slots|compact|status]`;
+    const template =
+      state.labels.notifyUnrecognizedSubcommand ||
+      "[{pair}] Unrecognized subcommand: \"{cmd}\". Current mode unchanged. Available: /lingual [1|2|3|0|lock|unlock|tuner|lang|slots|compact|status]";
+    const unrecMsg = template
+      .replace("{pair}", pair)
+      .replace("{cmd}", trimmed);
     try {
       ctx.ui.notify(unrecMsg, "warning");
     } catch {}
@@ -1506,7 +1527,7 @@ export default function (pi: ExtensionAPI) {
   pi.registerCommand("lingual", {
     description:
       state.labels.cmdDescMode ||
-      "Cycle mode (1:Companion ➔ 2:Direct ➔ 3:Candidates ➔ 4:Modify ➔ 0:Off) or manage: /lingual [1|2|3|4|0|tuner|lang|slots|compact|model|status|last]",
+      "Cycle mode (1:Companion ➔ 2:Direct ➔ 3:Live-Flow ➔ 0:Off) or manage: /lingual [1|2|3|0|tuner|lang|slots|compact|model|status|last]",
     handler: masterCommandHandler,
   });
 
@@ -2057,29 +2078,7 @@ export default function (pi: ExtensionAPI) {
 
       if (isSelectMode && hasActiveUI(ctx)) {
         const langCode = (state.sourceLang || "en").toLowerCase().split("-")[0];
-        const selectPrompts: Record<string, { title: string; keepOrig: string; hint: string }> = {
-          zh: {
-            title: "✦ 挑候选发送",
-            keepOrig: "原话直发",
-            hint: `按数字 1-${candidates.length} 直接发出 · ←→/↑↓ 切换 Enter 确认 · 0/Esc 发原话`,
-          },
-          tw: {
-            title: "✦ 挑候選發送",
-            keepOrig: "原話直發",
-            hint: `按數字 1-${candidates.length} 直接發出 · ←→/↑↓ 切換 Enter 確認 · 0/Esc 發原話`,
-          },
-          ja: {
-            title: "✦ 候補を選んで送信",
-            keepOrig: "原文のまま",
-            hint: `数字 1-${candidates.length} で即送信 · ←→/↑↓ 選択 Enter 確定 · 0/Esc 原文送信`,
-          },
-          en: {
-            title: "✦ Pick candidate",
-            keepOrig: "Send original",
-            hint: `1-${candidates.length} send · ←→/↑↓ Enter · 0/Esc original`,
-          },
-        };
-        const sp = selectPrompts[langCode] || selectPrompts.en;
+        const sp = resolveSelectPrompts(langCode, candidates.length);
 
         if (typeof (ctx.ui as any).custom === "function") {
           // Compact capsule hotkey bar: press number keys 1..N to send candidate in 0ms without Enter
@@ -2231,10 +2230,10 @@ export default function (pi: ExtensionAPI) {
       if (currentMode.target === "clipboard") {
         copyToClipboard(finalText);
         if (hasActiveUI(ctx)) {
-          ctx.ui.notify(
-            `[${state.labels.hudTitle}] 📋 Copied to clipboard! Ready to paste into GitHub, PR, or X. (Prompt intercepted - not sent to agent)`,
-            "info"
-          );
+          const template =
+            state.labels.notifyClipboardCopied ||
+            "Copied to clipboard (prompt intercepted - not sent to agent). Ready to paste into GitHub, PR, or X.";
+          ctx.ui.notify(`[${state.labels.hudTitle}] ` + template, "info");
         }
         return { action: "handled" };
       }

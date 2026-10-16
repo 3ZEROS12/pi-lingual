@@ -7,7 +7,7 @@ Code in your native language. See real-time Silicon Valley spoken phrasing and f
 [![npm version](https://img.shields.io/npm/v/pi-lingual?color=blue)](https://www.npmjs.com/package/pi-lingual)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Built for Pi](https://img.shields.io/badge/Built%20for-Pi%20Coding%20Agent-orange)](https://github.com/earendil-works/pi-coding-agent)
-[![Tests](https://img.shields.io/badge/Tests-144%2F144%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
+[![Tests](https://img.shields.io/badge/Tests-152%2F152%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict%20Zero%20Error-blue)](tsconfig.json)
 
 **English** | [简体中文](./README_zh.md)
@@ -103,7 +103,7 @@ Beyond the dual-core factory defaults, `pi-lingual` provides 4 pre-configured ba
 - **`spec` (Brain-Dump to Spec)**: `flow: "translate"` · `action: "transform"` · `target: "agent"` · `hud: "preview"`  
   Casts raw, messy thoughts into structured engineering specifications (Objective, Constraints, Edge Cases, and Do Not Touch clauses) for agent plan mode.
 - **`commit` (Commit Dehydrator)**: `flow: "translate"` · `action: "transform"` · `target: "clipboard"` · `hud: "preview"`  
-  Transforms plain-language explanations or commit drafts into strict Conventional Commits (first line $\le 50$ chars, imperative verbs, Root Cause & Impact body) and copies directly to clipboard.
+  Transforms plain-language explanations or commit drafts into strict Conventional Commits (first line $\le 72$ chars, imperative verbs, Root Cause & Impact body) and copies directly to clipboard.
 - **`oss` (OSS Peer Comms)**: `flow: "translate"` · `action: "transform"` · `target: "clipboard"` · `hud: "tree"`  
   Turns blunt technical feedback into objective, peer-level GitHub issue/PR comments using authentic maintainer idioms (`nit:`, `under contention`, `race condition`, `repro:`). Copies directly to clipboard.
 - **`yap` (Indie Shipper)**: `flow: "translate"` · `action: "transform"` · `target: "clipboard"` · `hud: "tree"`  

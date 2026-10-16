@@ -42,7 +42,7 @@ test("L5: Clipboard loadouts (commit dehydrator on Windows)", async (t) => {
   const cb = execSync("powershell -NoProfile -Command \"Get-Clipboard\"", { encoding: "utf8" }).trim();
   const firstLine = cb.split(/\r?\n/)[0].trim();
 
-  // Assert Conventional Commits format and <= 50 characters first line
+  // Assert Conventional Commits format and <= 72 characters first line
   assert.ok(
     /^(feat|fix|refactor|docs|test|chore|perf)(\(.+\))?: .+/i.test(firstLine),
     `First line must match Conventional Commits format: ${firstLine}`

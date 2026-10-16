@@ -7,7 +7,7 @@
 [![npm version](https://img.shields.io/npm/v/pi-lingual?color=blue)](https://www.npmjs.com/package/pi-lingual)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Built for Pi](https://img.shields.io/badge/Built%20for-Pi%20Coding%20Agent-orange)](https://github.com/earendil-works/pi-coding-agent)
-[![Tests](https://img.shields.io/badge/Tests-144%2F144%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
+[![Tests](https://img.shields.io/badge/Tests-152%2F152%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict%20Zero%20Error-blue)](tsconfig.json)
 
 [English](./README.md) | **简体中文**
@@ -103,7 +103,7 @@ pi install npm:pi-lingual
 - **`spec`（脑暴压铸）**：`flow: "translate"` · `action: "transform"` · `target: "agent"` · `hud: "preview"`  
   中英杂乱思路 ➔ 压铸为「目标、硬约束、边界流、禁止修改模块」严谨规范，喂给 AI 的 Plan 模式打底。
 - **`commit`（提交脱水）**：`flow: "translate"` · `action: "transform"` · `target: "clipboard"` · `hud: "preview"`  
-  大白话修改说明 ➔ 自动提取差异转写为首行 $\le 50$ 字符、强动词开头的 Conventional Commits 规范，自动复制到剪贴板。
+  大白话修改说明 ➔ 自动提取差异转写为首行 $\le 72$ 字符、强动词开头的 Conventional Commits 规范，自动复制到剪贴板。
 - **`oss`（开源对线）**：`flow: "translate"` · `action: "transform"` · `target: "clipboard"` · `hud: "tree"`  
   技术反驳与 Issue 讨论 ➔ 转为硅谷 Maintainer 平视、克制、对事不对人的行话（`nit:`, `under contention`, `repro:`），自动复制到剪贴板。
 - **`yap`（极客发推）**：`flow: "translate"` · `action: "transform"` · `target: "clipboard"` · `hud: "tree"`  

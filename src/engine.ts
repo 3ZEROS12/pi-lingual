@@ -1336,6 +1336,64 @@ interface BannerSpec {
   rows: [string, string, string, string, string, string];
 }
 
+export interface SelectPromptSpec {
+  title: string;
+  keepOrig: string;
+  hint: string;
+}
+
+export function resolveSelectPrompts(lang = "en", candidatesCount = 3): SelectPromptSpec {
+  const norm = (lang || "en").toLowerCase().split("-")[0];
+  const selectPrompts: Record<string, SelectPromptSpec> = {
+    zh: {
+      title: "✦ 挑候选发送",
+      keepOrig: "原话直发",
+      hint: `按数字 1-${candidatesCount} 直接发出 · ←→/↑↓ 切换 Enter 确认 · 0/Esc 发原话`,
+    },
+    tw: {
+      title: "✦ 挑候選發送",
+      keepOrig: "原話直發",
+      hint: `按數字 1-${candidatesCount} 直接發出 · ←→/↑↓ 切換 Enter 確認 · 0/Esc 發原話`,
+    },
+    ja: {
+      title: "✦ 候補を選んで送信",
+      keepOrig: "原文のまま",
+      hint: `数字 1-${candidatesCount} で即送信 · ←→/↑↓ 選択 Enter 確定 · 0/Esc 原文送信`,
+    },
+    ko: {
+      title: "✦ 후보 선택 전송",
+      keepOrig: "원문 전송",
+      hint: `숫자 1-${candidatesCount} 즉시 전송 · ←→/↑↓ Enter 확인 · 0/Esc 원문 전송`,
+    },
+    es: {
+      title: "✦ Elegir candidato",
+      keepOrig: "Texto original",
+      hint: `1-${candidatesCount} enviar · ←→/↑↓ Enter confirmar · 0/Esc original`,
+    },
+    fr: {
+      title: "✦ Choisir une variante",
+      keepOrig: "Texte original",
+      hint: `1-${candidatesCount} envoyer · ←→/↑↓ Entrée valider · 0/Esc original`,
+    },
+    de: {
+      title: "✦ Variante wählen",
+      keepOrig: "Originaltext",
+      hint: `1-${candidatesCount} senden · ←→/↑↓ Eingabe bestätigen · 0/Esc Original`,
+    },
+    ru: {
+      title: "✦ Выбор варианта",
+      keepOrig: "Исходный текст",
+      hint: `1-${candidatesCount} отправить · ←→/↑↓ Enter подтвердить · 0/Esc исходный`,
+    },
+    en: {
+      title: "✦ Pick candidate",
+      keepOrig: "Send original",
+      hint: `1-${candidatesCount} send · ←→/↑↓ Enter · 0/Esc original`,
+    },
+  };
+  return selectPrompts[norm] || selectPrompts.en;
+}
+
 export function formatReleaseBannerLines(
   sourceLang = "en",
   maxCols = 80,

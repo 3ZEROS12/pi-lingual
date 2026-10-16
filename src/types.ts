@@ -123,6 +123,13 @@ export interface LingualI18nLabels {
   notifyTimeout?: string;
   notifyError?: string;
   notifyModeNotFound?: string;
+  notifyModeLockedCycleBlocked?: string;
+  notifyModeLockedSuccess?: string;
+  notifyModeUnlockedSuccess?: string;
+  notifyUnrecognizedSubcommand?: string;
+  notifyClipboardCopied?: string;
+  notifyTargetSwitched?: string;
+  langHelpText?: string;
   modeSwitchedTemplate?: string;
 
   // Localized command descriptions
