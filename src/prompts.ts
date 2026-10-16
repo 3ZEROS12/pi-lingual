@@ -348,19 +348,21 @@ export const LEGACY_SLOT_PRESETS: Record<string, { slot1: SlotDefinition; slot2:
   },
 };
 
+export interface LanguageAnchor {
+  input: string;
+  spoken: string;
+  spoken_meaning: string;
+  written: string;
+  written_meaning: string;
+  vocab: string;
+}
+
 export interface LanguageSpec {
   name: string;
   nativeName: string;
   meaningInstruction: string;
   vocabInstruction: string;
-  anchors: Array<{
-    input: string;
-    spoken: string;
-    spoken_meaning: string;
-    written: string;
-    written_meaning: string;
-    vocab: string;
-  }>;
+  anchors: LanguageAnchor[];
 }
 
 /**
@@ -412,7 +414,24 @@ export const LANGUAGE_SPECS: Record<string, LanguageSpec> = {
     nativeName: "繁體中文",
     meaningInstruction: "in native Chinese",
     vocabInstruction: "in Chinese in parentheses separated by \" · \"",
-    anchors: [],
+    anchors: [
+      {
+        input: "這個方案有點過度設計了，不如直接用標準庫實現",
+        spoken: "This feels a bit over-engineered; we'd be much better off just sticking with the standard library.",
+        spoken_meaning: "感覺有點過度設計了，用標準庫划算得多",
+        written: "The proposed approach introduces unnecessary complexity. Leveraging native standard library implementations is preferred.",
+        written_meaning: "該方案引入了不必要的複雜度，建議優先採用原生標準庫實現",
+        vocab: "over-engineered (過度工程化) · be better off (做某事更划算) · stick with (沿用/堅持使用) · leverage (善用/借助)",
+      },
+      {
+        input: "認同，開始吧",
+        spoken: "Totally on board with that — let's dive right in.",
+        spoken_meaning: "完全贊同，咱們直接開搞",
+        written: "Acknowledged. Let's proceed with the implementation.",
+        written_meaning: "確認贊同，著手推進具體實施",
+        vocab: "on board with (贊成/支持) · dive in (立刻著手/開搞)",
+      },
+    ],
   },
   ja: {
     name: "Japanese",
@@ -461,12 +480,12 @@ export const LANGUAGE_SPECS: Record<string, LanguageSpec> = {
         vocab: "ship (deploy/release to production) · proceed with (move forward with)",
       },
       {
-        input: "Keep going.",
-        spoken: "Let's keep going with the next steps.",
-        spoken_meaning: "Encouragement to continue ongoing implementation.",
-        written: "Proceed with the subsequent implementation steps.",
-        written_meaning: "Formal instruction to execute subsequent phase.",
-        vocab: "keep going (continue implementation) · subsequent (following/next)",
+        input: "This approach feels a bit over-engineered; let's just stick with the standard library.",
+        spoken: "This feels a bit over-engineered; we'd be much better off just sticking with the standard library.",
+        spoken_meaning: "Suggestion to keep architecture simple and avoid unnecessary dependencies.",
+        written: "The proposed approach introduces unnecessary complexity. Leveraging native standard library implementations is preferred.",
+        written_meaning: "Formal architectural recommendation favoring standard library.",
+        vocab: "over-engineered (excessively complex) · be better off (preferable) · stick with (adhere to)",
       },
     ],
   },
@@ -477,20 +496,20 @@ export const LANGUAGE_SPECS: Record<string, LanguageSpec> = {
     vocabInstruction: "in Spanish in parentheses separated by \" · \"",
     anchors: [
       {
+        input: "Este enfoque está un poco sobreingeniado, es mejor que usemos la biblioteca estándar.",
+        spoken: "This feels a bit over-engineered; we'd be much better off just sticking with the standard library.",
+        spoken_meaning: "Se siente un poco sobreingeniado, nos conviene más usar la biblioteca estándar.",
+        written: "The proposed approach introduces unnecessary complexity. Leveraging native standard library implementations is preferred.",
+        written_meaning: "El enfoque propuesto introduce una complejidad innecesaria. Se recomienda priorizar la biblioteca estándar.",
+        vocab: "over-engineered (sobreingeniado/excesivo) · be better off (conviene más) · stick with (mantenerse en)",
+      },
+      {
         input: "De acuerdo, empecemos",
         spoken: "Totally on board with that — let's dive right in.",
         spoken_meaning: "Totalmente de acuerdo, vamos al grano",
         written: "Acknowledged. Let's proceed with the implementation.",
         written_meaning: "Confirmado. Procedamos con la implementación",
         vocab: "on board with (estar de acuerdo) · dive in (empezar de lleno)",
-      },
-      {
-        input: "Continuar",
-        spoken: "Let's keep going.",
-        spoken_meaning: "Sigamos adelante",
-        written: "Proceed with the next steps.",
-        written_meaning: "Continuar con los siguientes pasos",
-        vocab: "keep going (seguir adelante) · proceed with (proceder con)",
       },
     ],
   },
@@ -499,30 +518,225 @@ export const LANGUAGE_SPECS: Record<string, LanguageSpec> = {
     nativeName: "Français",
     meaningInstruction: "in native French",
     vocabInstruction: "in French in parentheses separated by \" · \"",
-    anchors: [],
+    anchors: [
+      {
+        input: "Cette approche est surconçue, on ferait mieux d'utiliser la bibliothèque standard.",
+        spoken: "This feels a bit over-engineered; we'd be much better off just sticking with the standard library.",
+        spoken_meaning: "Ça semble un peu trop complexe, on a meilleur compte à garder la lib standard.",
+        written: "The proposed approach introduces unnecessary complexity. Leveraging native standard library implementations is preferred.",
+        written_meaning: "L'approche proposée introduit une complexité superflue. Il est recommandé de privilégier la bibliothèque standard.",
+        vocab: "over-engineered (surconçu/trop complexe) · stick with (s'en tenir à) · leverage (tirer parti de)",
+      },
+      {
+        input: "D'accord, c'est parti.",
+        spoken: "Totally on board with that — let's dive right in.",
+        spoken_meaning: "Tout à fait d'accord, allons-y directement.",
+        written: "Acknowledged. Let's proceed with the implementation.",
+        written_meaning: "Confirmé. Procédons à l'implémentation.",
+        vocab: "on board with (être d'accord) · dive in (commencer directement)",
+      },
+    ],
   },
   de: {
     name: "German",
     nativeName: "Deutsch",
     meaningInstruction: "in native German",
     vocabInstruction: "in German in parentheses separated by \" · \"",
-    anchors: [],
+    anchors: [
+      {
+        input: "Der Ansatz ist überkompliziert, wir sollten lieber die Standardbibliothek nutzen.",
+        spoken: "This feels a bit over-engineered; we'd be much better off just sticking with the standard library.",
+        spoken_meaning: "Fühlt sich überdimensioniert an, mit der Standardbibliothek fahren wir besser.",
+        written: "The proposed approach introduces unnecessary complexity. Leveraging native standard library implementations is preferred.",
+        written_meaning: "Der Vorschlag erhöht die Komplexität unnötig. Native Implementierungen der Standardbibliothek werden bevorzugt.",
+        vocab: "over-engineered (überdimensioniert/überkompliziert) · stick with (beibehalten/nutzen) · leverage (nutzen/einsetzen)",
+      },
+      {
+        input: "Einverstanden, fangen wir an.",
+        spoken: "Totally on board with that — let's dive right in.",
+        spoken_meaning: "Voll dabei, legen wir direkt los.",
+        written: "Acknowledged. Let's proceed with the implementation.",
+        written_meaning: "Bestätigt. Beginn der Implementierung.",
+        vocab: "on board with (einverstanden sein) · dive in (direkt einsteigen/loslegen)",
+      },
+    ],
   },
   ko: {
     name: "Korean",
     nativeName: "한국어",
     meaningInstruction: "in native Korean",
     vocabInstruction: "in Korean in parentheses separated by \" · \"",
-    anchors: [],
+    anchors: [
+      {
+        input: "이 방식은 좀 오버엔지니어링 같아요. 그냥 표준 라이브러리를 쓰는 게 낫겠습니다.",
+        spoken: "This feels a bit over-engineered; we'd be much better off just sticking with the standard library.",
+        spoken_meaning: "조금 과한 설계인 것 같아요. 표준 라이브러리로 가는 게 훨씬 낫습니다.",
+        written: "The proposed approach introduces unnecessary complexity. Leveraging native standard library implementations is preferred.",
+        written_meaning: "제안된 방식은 불필요한 복잡성을 초래하므로, 표준 라이브러리 사용을 권장합니다.",
+        vocab: "over-engineered (과도한 설계) · be better off (~하는 편이 훨씬 낫다) · stick with (계속 사용하다) · leverage (활용하다)",
+      },
+      {
+        input: "동의합니다, 시작하죠.",
+        spoken: "Totally on board with that — let's dive right in.",
+        spoken_meaning: "전적으로 동의합니다, 바로 시작하죠.",
+        written: "Acknowledged. Let's proceed with the implementation.",
+        written_meaning: "확인했습니다. 구현을 진행하겠습니다.",
+        vocab: "on board with (동의/찬성하다) · dive in (곧바로 착수하다)",
+      },
+    ],
   },
   ru: {
     name: "Russian",
     nativeName: "Русский",
     meaningInstruction: "in native Russian",
     vocabInstruction: "in Russian in parentheses separated by \" · \"",
-    anchors: [],
+    anchors: [
+      {
+        input: "Кажется, это оверинжиниринг, лучше использовать стандартную библиотеку.",
+        spoken: "This feels a bit over-engineered; we'd be much better off just sticking with the standard library.",
+        spoken_meaning: "Похоже на оверинжиниринг, намного проще остаться на стандартной библиотеке.",
+        written: "The proposed approach introduces unnecessary complexity. Leveraging native standard library implementations is preferred.",
+        written_meaning: "Предложенное решение неоправданно усложняет архитектуру. Рекомендуется использовать стандартную библиотеку.",
+        vocab: "over-engineered (оверинжиниринг/избыточная сложность) · stick with (придерживаться) · leverage (задействовать)",
+      },
+      {
+        input: "Согласен, погнали.",
+        spoken: "Totally on board with that — let's dive right in.",
+        spoken_meaning: "Полностью согласен, погнали реализовывать.",
+        written: "Acknowledged. Let's proceed with the implementation.",
+        written_meaning: "Подтверждено. Приступаем к реализации.",
+        vocab: "on board with (быть согласным) · dive in (погружаться/начинать сразу)",
+      },
+    ],
   },
 };
+
+/**
+ * Dynamic Symmetric Polyglot Anchor Matrix.
+ * Maps (sourceLang -> targetLang) directly to pair-specific golden few-shot examples.
+ */
+export const LANGUAGE_PAIR_ANCHORS: Record<string, LanguageAnchor[]> = {
+  // English target pairs
+  "zh->en": LANGUAGE_SPECS.zh.anchors,
+  "tw->en": LANGUAGE_SPECS.tw.anchors,
+  "ja->en": LANGUAGE_SPECS.ja.anchors,
+  "ko->en": LANGUAGE_SPECS.ko.anchors,
+  "de->en": LANGUAGE_SPECS.de.anchors,
+  "fr->en": LANGUAGE_SPECS.fr.anchors,
+  "es->en": LANGUAGE_SPECS.es.anchors,
+  "ru->en": LANGUAGE_SPECS.ru.anchors,
+
+  // English source pairs (English -> Chinese, Japanese, etc.)
+  "en->zh": [
+    {
+      input: "This approach feels a bit over-engineered; let's just stick with the standard library.",
+      spoken: "这个方案感觉有点过度设计了，咱们直接用标准库搞定得了。",
+      spoken_meaning: "Conversational peer suggestion to avoid over-engineering.",
+      written: "该方案引入了不必要的复杂性，建议优先采用原生标准库实现。",
+      written_meaning: "Formal architectural recommendation favoring standard library.",
+      vocab: "过度设计 (over-engineering) · 标准库 (standard library) · 原生实现 (native implementation)",
+    },
+    {
+      input: "Totally on board with that, let's ship it.",
+      spoken: "完全赞成，咱们赶紧发版吧。",
+      spoken_meaning: "Clear approval to release immediately.",
+      written: "确认赞同。按既定计划推进生产环境发布。",
+      written_meaning: "Formal confirmation authorizing release to production.",
+      vocab: "发版 (ship/release) · 生产环境 (production environment)",
+    },
+  ],
+  "en->ja": [
+    {
+      input: "This approach feels a bit over-engineered; let's just stick with the standard library.",
+      spoken: "この設計はちょっと過剰な気がするので、標準ライブラリで済ませましょう。",
+      spoken_meaning: "Casual team suggestion to stick with the standard library.",
+      written: "提案されたアプローチは不要な複雑性を生むため、標準ライブラリによる実装を推奨します。",
+      written_meaning: "Formal architectural recommendation favoring standard library.",
+      vocab: "過剰設計 (over-engineering) · 標準ライブラリ (standard library) · 実装を推奨 (recommend implementation)",
+    },
+    {
+      input: "Totally on board with that, let's ship it.",
+      spoken: "大賛成です、早速リリースしましょう！",
+      spoken_meaning: "Clear approval to release immediately.",
+      written: "承認いたしました。本番環境へのデプロイを進行します。",
+      written_meaning: "Formal authorization to deploy to production.",
+      vocab: "本番環境 (production environment) · デプロイ (deploy) · リリース (release)",
+    },
+  ],
+
+  // Cross-lingual Asian pairs (Chinese <-> Japanese)
+  "zh->ja": [
+    {
+      input: "这个方案有点过度设计了，不如直接用标准库实现",
+      spoken: "このやり方はちょっと過剰設計な気がするし、標準ライブラリで済ませたほうが良さそう。",
+      spoken_meaning: "感觉有点过度设计了，直接用标准库更划算",
+      written: "提案されたアプローチは不要な複雑性を生むため、標準ライブラリによる実装を推奨します。",
+      written_meaning: "该方案会产生不必要的复杂度，建议使用标准库实现",
+      vocab: "過剰設計 (过度设计) · 標準ライブラリ (标准库) · アプローチ (方案/方法) · 済ませる (对付/搞定)",
+    },
+    {
+      input: "认同，开始吧",
+      spoken: "大賛成、すぐに始めよう。",
+      spoken_meaning: "完全赞成，咱们立刻开搞",
+      written: "同意しました。実装を進めます。",
+      written_meaning: "确认赞同，推进具体代码实现",
+      vocab: "大賛成 (完全赞同) · すぐに始める (立刻着手) · 実装を進める (推进实现)",
+    },
+  ],
+  "ja->zh": [
+    {
+      input: "この設計は少し過剰です。標準ライブラリを使ったほうがいいでしょう",
+      spoken: "这个方案感觉有点过度设计了，咱们直接用标准库搞定得了。",
+      spoken_meaning: "少し過剰設計な気がします。標準ライブラリで十分です",
+      written: "该方案引入了不必要的复杂性，建议优先采用原生标准库实现。",
+      written_meaning: "提案された構成は不要な複雑さをもたらします。標準ライブラリの利用を推奨します",
+      vocab: "过度设计 (過剰設計) · 标准库 (標準ライブラリ) · 原生实现 (ネイティブ実装)",
+    },
+    {
+      input: "賛成、始めましょう",
+      spoken: "完全赞成，咱们直接开搞。",
+      spoken_meaning: "大賛成、すぐに始めよう",
+      written: "确认赞同。着手推进具体实施。",
+      written_meaning: "同意しました。実装を進めます",
+      vocab: "开搞 (始める/着手する) · 推进实施 (実装を進める)",
+    },
+  ],
+};
+
+/**
+ * Resolves pair-specific golden few-shot anchors dynamically based on (sourceLang -> targetLang).
+ */
+export function resolveLanguagePairAnchors(
+  sourceLang = "en",
+  targetLang = "en"
+): LanguageAnchor[] {
+  const normSource = (sourceLang || "en").toLowerCase().split("-")[0];
+  const normTarget = (targetLang || "en").toLowerCase().split("-")[0];
+
+  // 1. English developer baseline (source: "en") - clean English anchors with zero foreign residue
+  if (normSource === "en") {
+    return LANGUAGE_SPECS.en?.anchors || [];
+  }
+
+  // 2. Exact cross-lingual pair (e.g. zh->ja, ja->zh)
+  const pairKey = `${normSource}->${normTarget}`;
+  if (LANGUAGE_PAIR_ANCHORS[pairKey] && LANGUAGE_PAIR_ANCHORS[pairKey].length > 0) {
+    return LANGUAGE_PAIR_ANCHORS[pairKey];
+  }
+
+  // 3. Target English (* -> en): return source language anchors
+  if (normTarget === "en" && LANGUAGE_SPECS[normSource]?.anchors?.length > 0) {
+    return LANGUAGE_SPECS[normSource].anchors;
+  }
+
+  // 4. Fallback for Traditional Chinese (tw)
+  if (normSource === "tw") {
+    const zhKey = `zh->${normTarget}`;
+    if (LANGUAGE_PAIR_ANCHORS[zhKey]) return LANGUAGE_PAIR_ANCHORS[zhKey];
+  }
+
+  return [];
+}
 
 const PROMPT_TARGET_LANGUAGE_NAMES: Record<string, string> = {
   en: "English",
@@ -660,9 +874,9 @@ export function buildSystemPrompt(
   const spec = LANGUAGE_SPECS[normSource] || LANGUAGE_SPECS.en;
   const targetName = resolveLanguageName(normTarget);
 
-  const shouldInjectAnchors = (normTarget === "en" || normSource === "en") && spec.anchors && spec.anchors.length > 0;
-  const anchorText = shouldInjectAnchors
-    ? spec.anchors
+  const pairAnchors = resolveLanguagePairAnchors(normSource, normTarget);
+  const anchorText = pairAnchors.length > 0
+    ? pairAnchors
         .map(
           (a) => `Input: ${JSON.stringify(a.input)}\nOutput: ${JSON.stringify({
             spoken: a.spoken,
@@ -675,7 +889,7 @@ export function buildSystemPrompt(
         .join("\n\n")
     : "";
 
-  const anchorBlock = anchorText ? `\n\n[GOLDEN FEW-SHOT ANCHORS]:\n${anchorText}` : "";
+  const anchorBlock = anchorText ? `\n\n[GOLDEN FEW-SHOT ANCHORS (Pair: ${normSource} ➔ ${normTarget})]:\n${anchorText}` : "";
 
   const condensationDirective = isLongInput
     ? `\n\n[LONG INPUT CONDENSATION DIRECTIVE]:
@@ -823,6 +1037,7 @@ export function buildDirectRewriteSystemPrompt(options: {
   promptLang?: string;
   promptRule?: string | string[];
   learnInRewrite?: boolean;
+  context?: string;
 }): string {
   const normSource = (options.sourceLang || "en").toLowerCase().split("-")[0];
   const { name: outLangName } = resolvePromptTargetLangName(
@@ -839,6 +1054,14 @@ Weave and enforce the following user-specified condition(s) directly into the re
 ${rules.map((r, i) => `(${i + 1}) ${r}`).join("\n")}`
     : "";
 
+  const contextBlock = options.context && options.context.trim()
+    ? `\n\n[CONVERSATION & PROJECT CONTEXT - USE FOR PRONOUN RESOLUTION]:
+"""
+${options.context.trim().slice(0, 500)}
+"""
+CRITICAL: Use this context strictly to resolve anaphoric pronouns ("here", "this function", "as discussed") and anchor domain terminology. NEVER invent unmentioned requirements or copy unrelated code from the context.`
+    : "";
+
   const learnBlock = options.learnInRewrite
     ? `\n5. **Companion Takeaway ("vocab")**: Also extract 2–3 high-value authentic English technical expressions or collocations relevant to this prompt as a single inline string \`term (meaning) · term2 (meaning)\` ${spec.vocabInstruction}.`
     : "";
@@ -849,6 +1072,10 @@ ${rules.map((r, i) => `(${i + 1}) ${r}`).join("\n")}`
 
   const anchorBlock = outLangName === "English"
     ? `[GOLDEN FEW-SHOT ANCHORS (Target: ${outLangName})]:
+- Input: "刚才登录接口报500了，排查一下src/auth.ts里的token过期逻辑，别动数据库配置，改动尽量小"
+  Output in ${outLangName}: "Diagnose and fix the 500 error on the login endpoint by inspecting the token expiration logic in \`src/auth.ts\`. Keep the diff minimal, leave unrelated code untouched, and do not modify any database configurations."
+- Input: "把这个函数改成异步的，顺便跑一下测试确保别挂了"
+  Output in ${outLangName}: "Refactor the function to be asynchronous while preserving its existing contract and behavior. Run the existing test suite to verify zero regressions."
 - Input: "The login session drops on page refresh, check if cookie expiration in src/auth.ts is wrong, keep diff minimal"
   Output in ${outLangName}: "Inspect \`src/auth.ts\` to diagnose and fix session loss on page refresh, specifically checking cookie expiration settings while keeping the diff minimal and leaving unrelated code untouched."`
     : "";
@@ -860,13 +1087,15 @@ ${rules.map((r, i) => `(${i + 1}) ${r}`).join("\n")}`
     ? `"look into / check / 看看 / 排查" ➔ "Inspect" / "Diagnose" / "Trace"; "clean up / tweak / 改改 / 重构" ➔ "Refactor" / "Streamline" / "Harden"; "add / create / 加上 / 做个" ➔ "Implement" / "Scaffold" / "Wire up"; "remove / drop / 删掉" ➔ "Prune" / "Deprecate" / "Strip"; "fix / 搞好" ➔ "Fix" / "Resolve"`
     : `"look into / check" ➔ "Inspect" / "Diagnose" / "Trace"; "clean up / tweak" ➔ "Refactor" / "Streamline" / "Harden"; "add / create" ➔ "Implement" / "Scaffold" / "Wire up"; "remove / drop" ➔ "Prune" / "Deprecate" / "Strip"; "fix" ➔ "Fix" / "Resolve"`;
 
-  return `You are an elite AI Coding Prompt Architect.
+  return `You are an elite AI Coding Intent Compiler & Prompt Architect.
 The user is typing a raw, potentially messy, colloquial, or fragmented instruction for an AI coding agent.
-Rewrite, structure, standardize, and optimize their input into a high-efficiency, unambiguous engineering prompt in **${outLangName}**:
-1. **Direct Imperative Opening (Smart Verb Sniffing)**: Start immediately with an active imperative engineering verb. Accurately map vague conversational intents to sharp, specific engineering actions (e.g., ${verbExamples}). NEVER use robotic preambles like "As an expert software engineer, please comprehensively..." or "I would like you to...".
-2. **100% Intent Fidelity (Zero Hallucination)**: Clarify logic and sharpen terminology in **${outLangName}**, but NEVER invent unmentioned file names, libraries, or speculative requirements.
-3. **Proportional Density**: Keep short requests crisp (1–2 sentences); structure multi-constraint requests into clean clauses.
-4. **Code-Switch & CLI Flag Shield**: Preserve all CLI flags (e.g. \`--dry-run\`, \`-rf\`, \`--no-verify\`), package scopes/decorators (e.g. \`@scope/pkg\`, \`@ts-expect-error\`), inline code (\`foo()\`), file paths (@file, path/to/file), and identifiers 100% verbatim. NEVER translate or alter CLI flags (e.g. never translate '--dry-run' into words).${learnBlock}${customRuleBlock}${compileKillListInstruction(undefined, DEFAULT_KILL_LIST)}
+Compile, structure, and optimize their input into a high-signal, unambiguous engineering prompt in **${outLangName}** that maximizes the AI agent's probability of one-shot success:
+1. **Direct Imperative Opening & Objective Isolation**: Start immediately with an active imperative engineering verb. Accurately map vague conversational intents to sharp, specific engineering actions (e.g., ${verbExamples}). Clearly isolate the core technical objective and eliminate chatty conversational filler (e.g. NEVER use "Please help me", "As an AI, could you...", "I want to...").
+2. **Defensive Blast Radius Guard & Negative Constraints**: When the user expresses or implies caution (e.g. "don't touch X", "keep diff minimal", "avoid regressions", "don't add heavy dependencies"), formalize them into explicit negative constraints (e.g., "Keep diff minimal; leave unrelated files and configurations untouched; do not add unrequested external dependencies").
+3. **Pronoun & Anaphora Resolution**: If the user uses anaphoric pronouns ("here", "this function", "as discussed", "刚才说的"), resolve them cleanly using the provided context without hallucinating unmentioned file paths or inventing speculative requirements.
+4. **Falsifiable Verification Anchor**: Where appropriate, frame the instruction with verifiable completion expectations (e.g. "Run existing tests to confirm zero regressions").
+5. **100% Intent Fidelity (Zero Hallucination)**: Clarify logic and sharpen terminology in **${outLangName}**, but NEVER invent unmentioned file names, libraries, or speculative scaffolding.
+6. **Code-Switch & CLI Flag Shield**: Preserve all CLI flags (e.g. \`--dry-run\`, \`-rf\`, \`--no-verify\`), package scopes/decorators (e.g. \`@scope/pkg\`, \`@ts-expect-error\`), inline code (\`foo()\`), file paths (@file, path/to/file), and identifiers 100% verbatim. NEVER translate or alter CLI flags.${contextBlock}${learnBlock}${customRuleBlock}${compileKillListInstruction(undefined, DEFAULT_KILL_LIST)}
 ${anchorBlock ? `\n${anchorBlock}\n` : ""}
 Strict JSON format:
 ${jsonSchema}
@@ -884,6 +1113,7 @@ export function buildPromptCandidatesSystemPrompt(options: {
   promptRule?: string | string[];
   promptSlots?: PromptSlotConfig[];
   learnInRewrite?: boolean;
+  context?: string;
 }): string {
   const normSource = (options.sourceLang || "en").toLowerCase().split("-")[0];
   const { name: outLangName } = resolvePromptTargetLangName(
@@ -929,15 +1159,23 @@ Ensure every generated candidate incorporates the following user-specified condi
 ${rules.map((r, i) => `(${i + 1}) ${r}`).join("\n")}`
     : "";
 
+  const contextBlock = options.context && options.context.trim()
+    ? `\n\n[CONVERSATION & PROJECT CONTEXT - USE FOR PRONOUN RESOLUTION]:
+"""
+${options.context.trim().slice(0, 500)}
+"""
+CRITICAL: Use this context strictly to resolve anaphoric pronouns ("here", "this function", "as discussed") and domain terminology. NEVER invent unmentioned requirements or copy unrelated code from the context.`
+    : "";
+
   return `You are an elite Bilingual Translation & Prompt Architect.
 Transform the user's raw input into ${slots.length} distinct output slots strictly following each slot's specific instruction and target language:
 ${taskLines.join("\n")}
 
 [STRICT QUALITY GUARDRAILS]:
 - **100% Semantic Fidelity**: Translate or refine EVERY sentence, clause, and detail from the user's input from start to finish. NEVER summarize, truncate, or drop details unless a slot explicitly asks for condensation.
-- **Respect Slot Role & Register**: If a slot asks for spoken/colloquial translation, output natural spoken flow; if it asks for formal/written translation, output polished written prose; if it asks for prompt structuring, structure it cleanly without robotic AI filler.
+- **Respect Slot Role & Register**: If a slot asks for spoken/colloquial translation, output natural spoken flow; if it asks for formal/written translation, output polished written prose; if it asks for prompt structuring, compile clear objectives, isolate negative constraints (minimal diff, blast radius guard), and eliminate robotic AI filler.
 - **Zero Hallucination**: Never invent unmentioned files, bug reports, or speculative features.
-- **Code & Symbol Shield**: Preserve all CLI flags (e.g. \`--dry-run\`, \`-rf\`, \`--no-verify\`), package scopes/decorators, inline code, file paths, and technical identifiers 100% verbatim in every slot.${customRuleBlock}
+- **Code & Symbol Shield**: Preserve all CLI flags (e.g. \`--dry-run\`, \`-rf\`, \`--no-verify\`), package scopes/decorators, inline code, file paths, and technical identifiers 100% verbatim in every slot.${contextBlock}${customRuleBlock}
 
 Strict JSON format:
 {

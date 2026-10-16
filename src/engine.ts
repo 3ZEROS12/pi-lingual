@@ -55,6 +55,8 @@ import {
   resolveLanguageName,
   DEFAULT_KILL_LIST,
   compileKillListInstruction,
+  resolveLanguagePairAnchors,
+  LANGUAGE_PAIR_ANCHORS,
 } from "./prompts.js";
 import { shouldShieldBypass, isNonEnglish } from "./shield.js";
 import { LingualLruCache, globalLingualCache } from "./cache.js";
@@ -92,6 +94,8 @@ export {
   getDefaultDirectSlots,
   getDefaultPromptSlots,
   getDefaultModifySlots,
+  resolveLanguagePairAnchors,
+  LANGUAGE_PAIR_ANCHORS,
 };
 
 let cachedUserConfig: Partial<LingualConfig> | null = null;
@@ -702,7 +706,7 @@ export async function translatePrompt(
   if (cached) return cached;
 
   const isLongInput = isDynamicLongInput(trimmed, cfg.sourceLang);
-  const sysPrompt = buildSystemPrompt(cfg.sourceLang, cfg.targetLang, isLongInput, undefined, "general", effectiveSlots);
+  const sysPrompt = buildSystemPrompt(cfg.sourceLang, cfg.targetLang, isLongInput, (cfg as any).context, "general", effectiveSlots);
   const content = await executeLlmCompletion(trimmed, sysPrompt, cfg);
   if (typeof content !== "string" || !content.trim()) return null;
 
@@ -996,7 +1000,11 @@ export function compileModeSystemPrompt(
 
   let contextBlock = "";
   if (options.context && options.context.trim()) {
-    contextBlock = `\n\n[CONTEXT / RECENT GIT DIFF]:\n${options.context.trim().slice(0, 500)}`;
+    contextBlock = `\n\n[CONVERSATION & PROJECT CONTEXT - USE FOR PRONOUN RESOLUTION]:
+"""
+${options.context.trim().slice(0, 500)}
+"""
+CRITICAL: Use context strictly to resolve anaphoric pronouns ("here", "this function", "as discussed") and domain terminology. NEVER invent unmentioned requirements or copy unrelated code.`;
   }
 
   if (mode.flow === "proofread") {

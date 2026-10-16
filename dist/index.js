@@ -353,7 +353,24 @@ var LANGUAGE_SPECS = {
     nativeName: "\u7E41\u9AD4\u4E2D\u6587",
     meaningInstruction: "in native Chinese",
     vocabInstruction: 'in Chinese in parentheses separated by " \xB7 "',
-    anchors: []
+    anchors: [
+      {
+        input: "\u9019\u500B\u65B9\u6848\u6709\u9EDE\u904E\u5EA6\u8A2D\u8A08\u4E86\uFF0C\u4E0D\u5982\u76F4\u63A5\u7528\u6A19\u6E96\u5EAB\u5BE6\u73FE",
+        spoken: "This feels a bit over-engineered; we'd be much better off just sticking with the standard library.",
+        spoken_meaning: "\u611F\u89BA\u6709\u9EDE\u904E\u5EA6\u8A2D\u8A08\u4E86\uFF0C\u7528\u6A19\u6E96\u5EAB\u5212\u7B97\u5F97\u591A",
+        written: "The proposed approach introduces unnecessary complexity. Leveraging native standard library implementations is preferred.",
+        written_meaning: "\u8A72\u65B9\u6848\u5F15\u5165\u4E86\u4E0D\u5FC5\u8981\u7684\u8907\u96DC\u5EA6\uFF0C\u5EFA\u8B70\u512A\u5148\u63A1\u7528\u539F\u751F\u6A19\u6E96\u5EAB\u5BE6\u73FE",
+        vocab: "over-engineered (\u904E\u5EA6\u5DE5\u7A0B\u5316) \xB7 be better off (\u505A\u67D0\u4E8B\u66F4\u5212\u7B97) \xB7 stick with (\u6CBF\u7528/\u5805\u6301\u4F7F\u7528) \xB7 leverage (\u5584\u7528/\u501F\u52A9)"
+      },
+      {
+        input: "\u8A8D\u540C\uFF0C\u958B\u59CB\u5427",
+        spoken: "Totally on board with that \u2014 let's dive right in.",
+        spoken_meaning: "\u5B8C\u5168\u8D0A\u540C\uFF0C\u54B1\u5011\u76F4\u63A5\u958B\u641E",
+        written: "Acknowledged. Let's proceed with the implementation.",
+        written_meaning: "\u78BA\u8A8D\u8D0A\u540C\uFF0C\u8457\u624B\u63A8\u9032\u5177\u9AD4\u5BE6\u65BD",
+        vocab: "on board with (\u8D0A\u6210/\u652F\u6301) \xB7 dive in (\u7ACB\u523B\u8457\u624B/\u958B\u641E)"
+      }
+    ]
   },
   ja: {
     name: "Japanese",
@@ -402,12 +419,12 @@ var LANGUAGE_SPECS = {
         vocab: "ship (deploy/release to production) \xB7 proceed with (move forward with)"
       },
       {
-        input: "Keep going.",
-        spoken: "Let's keep going with the next steps.",
-        spoken_meaning: "Encouragement to continue ongoing implementation.",
-        written: "Proceed with the subsequent implementation steps.",
-        written_meaning: "Formal instruction to execute subsequent phase.",
-        vocab: "keep going (continue implementation) \xB7 subsequent (following/next)"
+        input: "This approach feels a bit over-engineered; let's just stick with the standard library.",
+        spoken: "This feels a bit over-engineered; we'd be much better off just sticking with the standard library.",
+        spoken_meaning: "Suggestion to keep architecture simple and avoid unnecessary dependencies.",
+        written: "The proposed approach introduces unnecessary complexity. Leveraging native standard library implementations is preferred.",
+        written_meaning: "Formal architectural recommendation favoring standard library.",
+        vocab: "over-engineered (excessively complex) \xB7 be better off (preferable) \xB7 stick with (adhere to)"
       }
     ]
   },
@@ -418,20 +435,20 @@ var LANGUAGE_SPECS = {
     vocabInstruction: 'in Spanish in parentheses separated by " \xB7 "',
     anchors: [
       {
+        input: "Este enfoque est\xE1 un poco sobreingeniado, es mejor que usemos la biblioteca est\xE1ndar.",
+        spoken: "This feels a bit over-engineered; we'd be much better off just sticking with the standard library.",
+        spoken_meaning: "Se siente un poco sobreingeniado, nos conviene m\xE1s usar la biblioteca est\xE1ndar.",
+        written: "The proposed approach introduces unnecessary complexity. Leveraging native standard library implementations is preferred.",
+        written_meaning: "El enfoque propuesto introduce una complejidad innecesaria. Se recomienda priorizar la biblioteca est\xE1ndar.",
+        vocab: "over-engineered (sobreingeniado/excesivo) \xB7 be better off (conviene m\xE1s) \xB7 stick with (mantenerse en)"
+      },
+      {
         input: "De acuerdo, empecemos",
         spoken: "Totally on board with that \u2014 let's dive right in.",
         spoken_meaning: "Totalmente de acuerdo, vamos al grano",
         written: "Acknowledged. Let's proceed with the implementation.",
         written_meaning: "Confirmado. Procedamos con la implementaci\xF3n",
         vocab: "on board with (estar de acuerdo) \xB7 dive in (empezar de lleno)"
-      },
-      {
-        input: "Continuar",
-        spoken: "Let's keep going.",
-        spoken_meaning: "Sigamos adelante",
-        written: "Proceed with the next steps.",
-        written_meaning: "Continuar con los siguientes pasos",
-        vocab: "keep going (seguir adelante) \xB7 proceed with (proceder con)"
       }
     ]
   },
@@ -440,30 +457,202 @@ var LANGUAGE_SPECS = {
     nativeName: "Fran\xE7ais",
     meaningInstruction: "in native French",
     vocabInstruction: 'in French in parentheses separated by " \xB7 "',
-    anchors: []
+    anchors: [
+      {
+        input: "Cette approche est surcon\xE7ue, on ferait mieux d'utiliser la biblioth\xE8que standard.",
+        spoken: "This feels a bit over-engineered; we'd be much better off just sticking with the standard library.",
+        spoken_meaning: "\xC7a semble un peu trop complexe, on a meilleur compte \xE0 garder la lib standard.",
+        written: "The proposed approach introduces unnecessary complexity. Leveraging native standard library implementations is preferred.",
+        written_meaning: "L'approche propos\xE9e introduit une complexit\xE9 superflue. Il est recommand\xE9 de privil\xE9gier la biblioth\xE8que standard.",
+        vocab: "over-engineered (surcon\xE7u/trop complexe) \xB7 stick with (s'en tenir \xE0) \xB7 leverage (tirer parti de)"
+      },
+      {
+        input: "D'accord, c'est parti.",
+        spoken: "Totally on board with that \u2014 let's dive right in.",
+        spoken_meaning: "Tout \xE0 fait d'accord, allons-y directement.",
+        written: "Acknowledged. Let's proceed with the implementation.",
+        written_meaning: "Confirm\xE9. Proc\xE9dons \xE0 l'impl\xE9mentation.",
+        vocab: "on board with (\xEAtre d'accord) \xB7 dive in (commencer directement)"
+      }
+    ]
   },
   de: {
     name: "German",
     nativeName: "Deutsch",
     meaningInstruction: "in native German",
     vocabInstruction: 'in German in parentheses separated by " \xB7 "',
-    anchors: []
+    anchors: [
+      {
+        input: "Der Ansatz ist \xFCberkompliziert, wir sollten lieber die Standardbibliothek nutzen.",
+        spoken: "This feels a bit over-engineered; we'd be much better off just sticking with the standard library.",
+        spoken_meaning: "F\xFChlt sich \xFCberdimensioniert an, mit der Standardbibliothek fahren wir besser.",
+        written: "The proposed approach introduces unnecessary complexity. Leveraging native standard library implementations is preferred.",
+        written_meaning: "Der Vorschlag erh\xF6ht die Komplexit\xE4t unn\xF6tig. Native Implementierungen der Standardbibliothek werden bevorzugt.",
+        vocab: "over-engineered (\xFCberdimensioniert/\xFCberkompliziert) \xB7 stick with (beibehalten/nutzen) \xB7 leverage (nutzen/einsetzen)"
+      },
+      {
+        input: "Einverstanden, fangen wir an.",
+        spoken: "Totally on board with that \u2014 let's dive right in.",
+        spoken_meaning: "Voll dabei, legen wir direkt los.",
+        written: "Acknowledged. Let's proceed with the implementation.",
+        written_meaning: "Best\xE4tigt. Beginn der Implementierung.",
+        vocab: "on board with (einverstanden sein) \xB7 dive in (direkt einsteigen/loslegen)"
+      }
+    ]
   },
   ko: {
     name: "Korean",
     nativeName: "\uD55C\uAD6D\uC5B4",
     meaningInstruction: "in native Korean",
     vocabInstruction: 'in Korean in parentheses separated by " \xB7 "',
-    anchors: []
+    anchors: [
+      {
+        input: "\uC774 \uBC29\uC2DD\uC740 \uC880 \uC624\uBC84\uC5D4\uC9C0\uB2C8\uC5B4\uB9C1 \uAC19\uC544\uC694. \uADF8\uB0E5 \uD45C\uC900 \uB77C\uC774\uBE0C\uB7EC\uB9AC\uB97C \uC4F0\uB294 \uAC8C \uB0AB\uACA0\uC2B5\uB2C8\uB2E4.",
+        spoken: "This feels a bit over-engineered; we'd be much better off just sticking with the standard library.",
+        spoken_meaning: "\uC870\uAE08 \uACFC\uD55C \uC124\uACC4\uC778 \uAC83 \uAC19\uC544\uC694. \uD45C\uC900 \uB77C\uC774\uBE0C\uB7EC\uB9AC\uB85C \uAC00\uB294 \uAC8C \uD6E8\uC52C \uB0AB\uC2B5\uB2C8\uB2E4.",
+        written: "The proposed approach introduces unnecessary complexity. Leveraging native standard library implementations is preferred.",
+        written_meaning: "\uC81C\uC548\uB41C \uBC29\uC2DD\uC740 \uBD88\uD544\uC694\uD55C \uBCF5\uC7A1\uC131\uC744 \uCD08\uB798\uD558\uBBC0\uB85C, \uD45C\uC900 \uB77C\uC774\uBE0C\uB7EC\uB9AC \uC0AC\uC6A9\uC744 \uAD8C\uC7A5\uD569\uB2C8\uB2E4.",
+        vocab: "over-engineered (\uACFC\uB3C4\uD55C \uC124\uACC4) \xB7 be better off (~\uD558\uB294 \uD3B8\uC774 \uD6E8\uC52C \uB0AB\uB2E4) \xB7 stick with (\uACC4\uC18D \uC0AC\uC6A9\uD558\uB2E4) \xB7 leverage (\uD65C\uC6A9\uD558\uB2E4)"
+      },
+      {
+        input: "\uB3D9\uC758\uD569\uB2C8\uB2E4, \uC2DC\uC791\uD558\uC8E0.",
+        spoken: "Totally on board with that \u2014 let's dive right in.",
+        spoken_meaning: "\uC804\uC801\uC73C\uB85C \uB3D9\uC758\uD569\uB2C8\uB2E4, \uBC14\uB85C \uC2DC\uC791\uD558\uC8E0.",
+        written: "Acknowledged. Let's proceed with the implementation.",
+        written_meaning: "\uD655\uC778\uD588\uC2B5\uB2C8\uB2E4. \uAD6C\uD604\uC744 \uC9C4\uD589\uD558\uACA0\uC2B5\uB2C8\uB2E4.",
+        vocab: "on board with (\uB3D9\uC758/\uCC2C\uC131\uD558\uB2E4) \xB7 dive in (\uACE7\uBC14\uB85C \uCC29\uC218\uD558\uB2E4)"
+      }
+    ]
   },
   ru: {
     name: "Russian",
     nativeName: "\u0420\u0443\u0441\u0441\u043A\u0438\u0439",
     meaningInstruction: "in native Russian",
     vocabInstruction: 'in Russian in parentheses separated by " \xB7 "',
-    anchors: []
+    anchors: [
+      {
+        input: "\u041A\u0430\u0436\u0435\u0442\u0441\u044F, \u044D\u0442\u043E \u043E\u0432\u0435\u0440\u0438\u043D\u0436\u0438\u043D\u0438\u0440\u0438\u043D\u0433, \u043B\u0443\u0447\u0448\u0435 \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u044C \u0441\u0442\u0430\u043D\u0434\u0430\u0440\u0442\u043D\u0443\u044E \u0431\u0438\u0431\u043B\u0438\u043E\u0442\u0435\u043A\u0443.",
+        spoken: "This feels a bit over-engineered; we'd be much better off just sticking with the standard library.",
+        spoken_meaning: "\u041F\u043E\u0445\u043E\u0436\u0435 \u043D\u0430 \u043E\u0432\u0435\u0440\u0438\u043D\u0436\u0438\u043D\u0438\u0440\u0438\u043D\u0433, \u043D\u0430\u043C\u043D\u043E\u0433\u043E \u043F\u0440\u043E\u0449\u0435 \u043E\u0441\u0442\u0430\u0442\u044C\u0441\u044F \u043D\u0430 \u0441\u0442\u0430\u043D\u0434\u0430\u0440\u0442\u043D\u043E\u0439 \u0431\u0438\u0431\u043B\u0438\u043E\u0442\u0435\u043A\u0435.",
+        written: "The proposed approach introduces unnecessary complexity. Leveraging native standard library implementations is preferred.",
+        written_meaning: "\u041F\u0440\u0435\u0434\u043B\u043E\u0436\u0435\u043D\u043D\u043E\u0435 \u0440\u0435\u0448\u0435\u043D\u0438\u0435 \u043D\u0435\u043E\u043F\u0440\u0430\u0432\u0434\u0430\u043D\u043D\u043E \u0443\u0441\u043B\u043E\u0436\u043D\u044F\u0435\u0442 \u0430\u0440\u0445\u0438\u0442\u0435\u043A\u0442\u0443\u0440\u0443. \u0420\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0443\u0435\u0442\u0441\u044F \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u0442\u044C \u0441\u0442\u0430\u043D\u0434\u0430\u0440\u0442\u043D\u0443\u044E \u0431\u0438\u0431\u043B\u0438\u043E\u0442\u0435\u043A\u0443.",
+        vocab: "over-engineered (\u043E\u0432\u0435\u0440\u0438\u043D\u0436\u0438\u043D\u0438\u0440\u0438\u043D\u0433/\u0438\u0437\u0431\u044B\u0442\u043E\u0447\u043D\u0430\u044F \u0441\u043B\u043E\u0436\u043D\u043E\u0441\u0442\u044C) \xB7 stick with (\u043F\u0440\u0438\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0442\u044C\u0441\u044F) \xB7 leverage (\u0437\u0430\u0434\u0435\u0439\u0441\u0442\u0432\u043E\u0432\u0430\u0442\u044C)"
+      },
+      {
+        input: "\u0421\u043E\u0433\u043B\u0430\u0441\u0435\u043D, \u043F\u043E\u0433\u043D\u0430\u043B\u0438.",
+        spoken: "Totally on board with that \u2014 let's dive right in.",
+        spoken_meaning: "\u041F\u043E\u043B\u043D\u043E\u0441\u0442\u044C\u044E \u0441\u043E\u0433\u043B\u0430\u0441\u0435\u043D, \u043F\u043E\u0433\u043D\u0430\u043B\u0438 \u0440\u0435\u0430\u043B\u0438\u0437\u043E\u0432\u044B\u0432\u0430\u0442\u044C.",
+        written: "Acknowledged. Let's proceed with the implementation.",
+        written_meaning: "\u041F\u043E\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043D\u043E. \u041F\u0440\u0438\u0441\u0442\u0443\u043F\u0430\u0435\u043C \u043A \u0440\u0435\u0430\u043B\u0438\u0437\u0430\u0446\u0438\u0438.",
+        vocab: "on board with (\u0431\u044B\u0442\u044C \u0441\u043E\u0433\u043B\u0430\u0441\u043D\u044B\u043C) \xB7 dive in (\u043F\u043E\u0433\u0440\u0443\u0436\u0430\u0442\u044C\u0441\u044F/\u043D\u0430\u0447\u0438\u043D\u0430\u0442\u044C \u0441\u0440\u0430\u0437\u0443)"
+      }
+    ]
   }
 };
+var LANGUAGE_PAIR_ANCHORS = {
+  // English target pairs
+  "zh->en": LANGUAGE_SPECS.zh.anchors,
+  "tw->en": LANGUAGE_SPECS.tw.anchors,
+  "ja->en": LANGUAGE_SPECS.ja.anchors,
+  "ko->en": LANGUAGE_SPECS.ko.anchors,
+  "de->en": LANGUAGE_SPECS.de.anchors,
+  "fr->en": LANGUAGE_SPECS.fr.anchors,
+  "es->en": LANGUAGE_SPECS.es.anchors,
+  "ru->en": LANGUAGE_SPECS.ru.anchors,
+  // English source pairs (English -> Chinese, Japanese, etc.)
+  "en->zh": [
+    {
+      input: "This approach feels a bit over-engineered; let's just stick with the standard library.",
+      spoken: "\u8FD9\u4E2A\u65B9\u6848\u611F\u89C9\u6709\u70B9\u8FC7\u5EA6\u8BBE\u8BA1\u4E86\uFF0C\u54B1\u4EEC\u76F4\u63A5\u7528\u6807\u51C6\u5E93\u641E\u5B9A\u5F97\u4E86\u3002",
+      spoken_meaning: "Conversational peer suggestion to avoid over-engineering.",
+      written: "\u8BE5\u65B9\u6848\u5F15\u5165\u4E86\u4E0D\u5FC5\u8981\u7684\u590D\u6742\u6027\uFF0C\u5EFA\u8BAE\u4F18\u5148\u91C7\u7528\u539F\u751F\u6807\u51C6\u5E93\u5B9E\u73B0\u3002",
+      written_meaning: "Formal architectural recommendation favoring standard library.",
+      vocab: "\u8FC7\u5EA6\u8BBE\u8BA1 (over-engineering) \xB7 \u6807\u51C6\u5E93 (standard library) \xB7 \u539F\u751F\u5B9E\u73B0 (native implementation)"
+    },
+    {
+      input: "Totally on board with that, let's ship it.",
+      spoken: "\u5B8C\u5168\u8D5E\u6210\uFF0C\u54B1\u4EEC\u8D76\u7D27\u53D1\u7248\u5427\u3002",
+      spoken_meaning: "Clear approval to release immediately.",
+      written: "\u786E\u8BA4\u8D5E\u540C\u3002\u6309\u65E2\u5B9A\u8BA1\u5212\u63A8\u8FDB\u751F\u4EA7\u73AF\u5883\u53D1\u5E03\u3002",
+      written_meaning: "Formal confirmation authorizing release to production.",
+      vocab: "\u53D1\u7248 (ship/release) \xB7 \u751F\u4EA7\u73AF\u5883 (production environment)"
+    }
+  ],
+  "en->ja": [
+    {
+      input: "This approach feels a bit over-engineered; let's just stick with the standard library.",
+      spoken: "\u3053\u306E\u8A2D\u8A08\u306F\u3061\u3087\u3063\u3068\u904E\u5270\u306A\u6C17\u304C\u3059\u308B\u306E\u3067\u3001\u6A19\u6E96\u30E9\u30A4\u30D6\u30E9\u30EA\u3067\u6E08\u307E\u305B\u307E\u3057\u3087\u3046\u3002",
+      spoken_meaning: "Casual team suggestion to stick with the standard library.",
+      written: "\u63D0\u6848\u3055\u308C\u305F\u30A2\u30D7\u30ED\u30FC\u30C1\u306F\u4E0D\u8981\u306A\u8907\u96D1\u6027\u3092\u751F\u3080\u305F\u3081\u3001\u6A19\u6E96\u30E9\u30A4\u30D6\u30E9\u30EA\u306B\u3088\u308B\u5B9F\u88C5\u3092\u63A8\u5968\u3057\u307E\u3059\u3002",
+      written_meaning: "Formal architectural recommendation favoring standard library.",
+      vocab: "\u904E\u5270\u8A2D\u8A08 (over-engineering) \xB7 \u6A19\u6E96\u30E9\u30A4\u30D6\u30E9\u30EA (standard library) \xB7 \u5B9F\u88C5\u3092\u63A8\u5968 (recommend implementation)"
+    },
+    {
+      input: "Totally on board with that, let's ship it.",
+      spoken: "\u5927\u8CDB\u6210\u3067\u3059\u3001\u65E9\u901F\u30EA\u30EA\u30FC\u30B9\u3057\u307E\u3057\u3087\u3046\uFF01",
+      spoken_meaning: "Clear approval to release immediately.",
+      written: "\u627F\u8A8D\u3044\u305F\u3057\u307E\u3057\u305F\u3002\u672C\u756A\u74B0\u5883\u3078\u306E\u30C7\u30D7\u30ED\u30A4\u3092\u9032\u884C\u3057\u307E\u3059\u3002",
+      written_meaning: "Formal authorization to deploy to production.",
+      vocab: "\u672C\u756A\u74B0\u5883 (production environment) \xB7 \u30C7\u30D7\u30ED\u30A4 (deploy) \xB7 \u30EA\u30EA\u30FC\u30B9 (release)"
+    }
+  ],
+  // Cross-lingual Asian pairs (Chinese <-> Japanese)
+  "zh->ja": [
+    {
+      input: "\u8FD9\u4E2A\u65B9\u6848\u6709\u70B9\u8FC7\u5EA6\u8BBE\u8BA1\u4E86\uFF0C\u4E0D\u5982\u76F4\u63A5\u7528\u6807\u51C6\u5E93\u5B9E\u73B0",
+      spoken: "\u3053\u306E\u3084\u308A\u65B9\u306F\u3061\u3087\u3063\u3068\u904E\u5270\u8A2D\u8A08\u306A\u6C17\u304C\u3059\u308B\u3057\u3001\u6A19\u6E96\u30E9\u30A4\u30D6\u30E9\u30EA\u3067\u6E08\u307E\u305B\u305F\u307B\u3046\u304C\u826F\u3055\u305D\u3046\u3002",
+      spoken_meaning: "\u611F\u89C9\u6709\u70B9\u8FC7\u5EA6\u8BBE\u8BA1\u4E86\uFF0C\u76F4\u63A5\u7528\u6807\u51C6\u5E93\u66F4\u5212\u7B97",
+      written: "\u63D0\u6848\u3055\u308C\u305F\u30A2\u30D7\u30ED\u30FC\u30C1\u306F\u4E0D\u8981\u306A\u8907\u96D1\u6027\u3092\u751F\u3080\u305F\u3081\u3001\u6A19\u6E96\u30E9\u30A4\u30D6\u30E9\u30EA\u306B\u3088\u308B\u5B9F\u88C5\u3092\u63A8\u5968\u3057\u307E\u3059\u3002",
+      written_meaning: "\u8BE5\u65B9\u6848\u4F1A\u4EA7\u751F\u4E0D\u5FC5\u8981\u7684\u590D\u6742\u5EA6\uFF0C\u5EFA\u8BAE\u4F7F\u7528\u6807\u51C6\u5E93\u5B9E\u73B0",
+      vocab: "\u904E\u5270\u8A2D\u8A08 (\u8FC7\u5EA6\u8BBE\u8BA1) \xB7 \u6A19\u6E96\u30E9\u30A4\u30D6\u30E9\u30EA (\u6807\u51C6\u5E93) \xB7 \u30A2\u30D7\u30ED\u30FC\u30C1 (\u65B9\u6848/\u65B9\u6CD5) \xB7 \u6E08\u307E\u305B\u308B (\u5BF9\u4ED8/\u641E\u5B9A)"
+    },
+    {
+      input: "\u8BA4\u540C\uFF0C\u5F00\u59CB\u5427",
+      spoken: "\u5927\u8CDB\u6210\u3001\u3059\u3050\u306B\u59CB\u3081\u3088\u3046\u3002",
+      spoken_meaning: "\u5B8C\u5168\u8D5E\u6210\uFF0C\u54B1\u4EEC\u7ACB\u523B\u5F00\u641E",
+      written: "\u540C\u610F\u3057\u307E\u3057\u305F\u3002\u5B9F\u88C5\u3092\u9032\u3081\u307E\u3059\u3002",
+      written_meaning: "\u786E\u8BA4\u8D5E\u540C\uFF0C\u63A8\u8FDB\u5177\u4F53\u4EE3\u7801\u5B9E\u73B0",
+      vocab: "\u5927\u8CDB\u6210 (\u5B8C\u5168\u8D5E\u540C) \xB7 \u3059\u3050\u306B\u59CB\u3081\u308B (\u7ACB\u523B\u7740\u624B) \xB7 \u5B9F\u88C5\u3092\u9032\u3081\u308B (\u63A8\u8FDB\u5B9E\u73B0)"
+    }
+  ],
+  "ja->zh": [
+    {
+      input: "\u3053\u306E\u8A2D\u8A08\u306F\u5C11\u3057\u904E\u5270\u3067\u3059\u3002\u6A19\u6E96\u30E9\u30A4\u30D6\u30E9\u30EA\u3092\u4F7F\u3063\u305F\u307B\u3046\u304C\u3044\u3044\u3067\u3057\u3087\u3046",
+      spoken: "\u8FD9\u4E2A\u65B9\u6848\u611F\u89C9\u6709\u70B9\u8FC7\u5EA6\u8BBE\u8BA1\u4E86\uFF0C\u54B1\u4EEC\u76F4\u63A5\u7528\u6807\u51C6\u5E93\u641E\u5B9A\u5F97\u4E86\u3002",
+      spoken_meaning: "\u5C11\u3057\u904E\u5270\u8A2D\u8A08\u306A\u6C17\u304C\u3057\u307E\u3059\u3002\u6A19\u6E96\u30E9\u30A4\u30D6\u30E9\u30EA\u3067\u5341\u5206\u3067\u3059",
+      written: "\u8BE5\u65B9\u6848\u5F15\u5165\u4E86\u4E0D\u5FC5\u8981\u7684\u590D\u6742\u6027\uFF0C\u5EFA\u8BAE\u4F18\u5148\u91C7\u7528\u539F\u751F\u6807\u51C6\u5E93\u5B9E\u73B0\u3002",
+      written_meaning: "\u63D0\u6848\u3055\u308C\u305F\u69CB\u6210\u306F\u4E0D\u8981\u306A\u8907\u96D1\u3055\u3092\u3082\u305F\u3089\u3057\u307E\u3059\u3002\u6A19\u6E96\u30E9\u30A4\u30D6\u30E9\u30EA\u306E\u5229\u7528\u3092\u63A8\u5968\u3057\u307E\u3059",
+      vocab: "\u8FC7\u5EA6\u8BBE\u8BA1 (\u904E\u5270\u8A2D\u8A08) \xB7 \u6807\u51C6\u5E93 (\u6A19\u6E96\u30E9\u30A4\u30D6\u30E9\u30EA) \xB7 \u539F\u751F\u5B9E\u73B0 (\u30CD\u30A4\u30C6\u30A3\u30D6\u5B9F\u88C5)"
+    },
+    {
+      input: "\u8CDB\u6210\u3001\u59CB\u3081\u307E\u3057\u3087\u3046",
+      spoken: "\u5B8C\u5168\u8D5E\u6210\uFF0C\u54B1\u4EEC\u76F4\u63A5\u5F00\u641E\u3002",
+      spoken_meaning: "\u5927\u8CDB\u6210\u3001\u3059\u3050\u306B\u59CB\u3081\u3088\u3046",
+      written: "\u786E\u8BA4\u8D5E\u540C\u3002\u7740\u624B\u63A8\u8FDB\u5177\u4F53\u5B9E\u65BD\u3002",
+      written_meaning: "\u540C\u610F\u3057\u307E\u3057\u305F\u3002\u5B9F\u88C5\u3092\u9032\u3081\u307E\u3059",
+      vocab: "\u5F00\u641E (\u59CB\u3081\u308B/\u7740\u624B\u3059\u308B) \xB7 \u63A8\u8FDB\u5B9E\u65BD (\u5B9F\u88C5\u3092\u9032\u3081\u308B)"
+    }
+  ]
+};
+function resolveLanguagePairAnchors(sourceLang = "en", targetLang = "en") {
+  const normSource = (sourceLang || "en").toLowerCase().split("-")[0];
+  const normTarget = (targetLang || "en").toLowerCase().split("-")[0];
+  if (normSource === "en") {
+    return LANGUAGE_SPECS.en?.anchors || [];
+  }
+  const pairKey = `${normSource}->${normTarget}`;
+  if (LANGUAGE_PAIR_ANCHORS[pairKey] && LANGUAGE_PAIR_ANCHORS[pairKey].length > 0) {
+    return LANGUAGE_PAIR_ANCHORS[pairKey];
+  }
+  if (normTarget === "en" && LANGUAGE_SPECS[normSource]?.anchors?.length > 0) {
+    return LANGUAGE_SPECS[normSource].anchors;
+  }
+  if (normSource === "tw") {
+    const zhKey = `zh->${normTarget}`;
+    if (LANGUAGE_PAIR_ANCHORS[zhKey]) return LANGUAGE_PAIR_ANCHORS[zhKey];
+  }
+  return [];
+}
 var PROMPT_TARGET_LANGUAGE_NAMES = {
   en: "English",
   zh: "Chinese (Simplified)",
@@ -558,8 +747,8 @@ function buildSystemPrompt(sourceLang = "en", targetLang = "ja", isLongInput = f
   const normTarget = (targetLang || "ja").toLowerCase().split("-")[0];
   const spec = LANGUAGE_SPECS[normSource] || LANGUAGE_SPECS.en;
   const targetName = resolveLanguageName(normTarget);
-  const shouldInjectAnchors = (normTarget === "en" || normSource === "en") && spec.anchors && spec.anchors.length > 0;
-  const anchorText = shouldInjectAnchors ? spec.anchors.map(
+  const pairAnchors = resolveLanguagePairAnchors(normSource, normTarget);
+  const anchorText = pairAnchors.length > 0 ? pairAnchors.map(
     (a) => `Input: ${JSON.stringify(a.input)}
 Output: ${JSON.stringify({
       spoken: a.spoken,
@@ -571,7 +760,7 @@ Output: ${JSON.stringify({
   ).join("\n\n") : "";
   const anchorBlock = anchorText ? `
 
-[GOLDEN FEW-SHOT ANCHORS]:
+[GOLDEN FEW-SHOT ANCHORS (Pair: ${normSource} \u2794 ${normTarget})]:
 ${anchorText}` : "";
   const condensationDirective = isLongInput ? `
 
@@ -703,6 +892,13 @@ function buildDirectRewriteSystemPrompt(options) {
 [USER CUSTOM SPECIFICATION & STACKED CONDITIONS - MANDATORY]:
 Weave and enforce the following user-specified condition(s) directly into the rewritten prompt:
 ${rules.map((r, i) => `(${i + 1}) ${r}`).join("\n")}` : "";
+  const contextBlock = options.context && options.context.trim() ? `
+
+[CONVERSATION & PROJECT CONTEXT - USE FOR PRONOUN RESOLUTION]:
+"""
+${options.context.trim().slice(0, 500)}
+"""
+CRITICAL: Use this context strictly to resolve anaphoric pronouns ("here", "this function", "as discussed") and anchor domain terminology. NEVER invent unmentioned requirements or copy unrelated code from the context.` : "";
   const learnBlock = options.learnInRewrite ? `
 5. **Companion Takeaway ("vocab")**: Also extract 2\u20133 high-value authentic English technical expressions or collocations relevant to this prompt as a single inline string \`term (meaning) \xB7 term2 (meaning)\` ${spec.vocabInstruction}.` : "";
   const jsonSchema = options.learnInRewrite ? `{
@@ -712,17 +908,23 @@ ${rules.map((r, i) => `(${i + 1}) ${r}`).join("\n")}` : "";
   "prompt": "..."
 }`;
   const anchorBlock = outLangName === "English" ? `[GOLDEN FEW-SHOT ANCHORS (Target: ${outLangName})]:
+- Input: "\u521A\u624D\u767B\u5F55\u63A5\u53E3\u62A5500\u4E86\uFF0C\u6392\u67E5\u4E00\u4E0Bsrc/auth.ts\u91CC\u7684token\u8FC7\u671F\u903B\u8F91\uFF0C\u522B\u52A8\u6570\u636E\u5E93\u914D\u7F6E\uFF0C\u6539\u52A8\u5C3D\u91CF\u5C0F"
+  Output in ${outLangName}: "Diagnose and fix the 500 error on the login endpoint by inspecting the token expiration logic in \`src/auth.ts\`. Keep the diff minimal, leave unrelated code untouched, and do not modify any database configurations."
+- Input: "\u628A\u8FD9\u4E2A\u51FD\u6570\u6539\u6210\u5F02\u6B65\u7684\uFF0C\u987A\u4FBF\u8DD1\u4E00\u4E0B\u6D4B\u8BD5\u786E\u4FDD\u522B\u6302\u4E86"
+  Output in ${outLangName}: "Refactor the function to be asynchronous while preserving its existing contract and behavior. Run the existing test suite to verify zero regressions."
 - Input: "The login session drops on page refresh, check if cookie expiration in src/auth.ts is wrong, keep diff minimal"
   Output in ${outLangName}: "Inspect \`src/auth.ts\` to diagnose and fix session loss on page refresh, specifically checking cookie expiration settings while keeping the diff minimal and leaving unrelated code untouched."` : "";
   const isZhSource = normSource === "zh" || normSource === "tw";
   const verbExamples = isZhSource ? `"look into / check / \u770B\u770B / \u6392\u67E5" \u2794 "Inspect" / "Diagnose" / "Trace"; "clean up / tweak / \u6539\u6539 / \u91CD\u6784" \u2794 "Refactor" / "Streamline" / "Harden"; "add / create / \u52A0\u4E0A / \u505A\u4E2A" \u2794 "Implement" / "Scaffold" / "Wire up"; "remove / drop / \u5220\u6389" \u2794 "Prune" / "Deprecate" / "Strip"; "fix / \u641E\u597D" \u2794 "Fix" / "Resolve"` : `"look into / check" \u2794 "Inspect" / "Diagnose" / "Trace"; "clean up / tweak" \u2794 "Refactor" / "Streamline" / "Harden"; "add / create" \u2794 "Implement" / "Scaffold" / "Wire up"; "remove / drop" \u2794 "Prune" / "Deprecate" / "Strip"; "fix" \u2794 "Fix" / "Resolve"`;
-  return `You are an elite AI Coding Prompt Architect.
+  return `You are an elite AI Coding Intent Compiler & Prompt Architect.
 The user is typing a raw, potentially messy, colloquial, or fragmented instruction for an AI coding agent.
-Rewrite, structure, standardize, and optimize their input into a high-efficiency, unambiguous engineering prompt in **${outLangName}**:
-1. **Direct Imperative Opening (Smart Verb Sniffing)**: Start immediately with an active imperative engineering verb. Accurately map vague conversational intents to sharp, specific engineering actions (e.g., ${verbExamples}). NEVER use robotic preambles like "As an expert software engineer, please comprehensively..." or "I would like you to...".
-2. **100% Intent Fidelity (Zero Hallucination)**: Clarify logic and sharpen terminology in **${outLangName}**, but NEVER invent unmentioned file names, libraries, or speculative requirements.
-3. **Proportional Density**: Keep short requests crisp (1\u20132 sentences); structure multi-constraint requests into clean clauses.
-4. **Code-Switch & CLI Flag Shield**: Preserve all CLI flags (e.g. \`--dry-run\`, \`-rf\`, \`--no-verify\`), package scopes/decorators (e.g. \`@scope/pkg\`, \`@ts-expect-error\`), inline code (\`foo()\`), file paths (@file, path/to/file), and identifiers 100% verbatim. NEVER translate or alter CLI flags (e.g. never translate '--dry-run' into words).${learnBlock}${customRuleBlock}${compileKillListInstruction(void 0, DEFAULT_KILL_LIST)}
+Compile, structure, and optimize their input into a high-signal, unambiguous engineering prompt in **${outLangName}** that maximizes the AI agent's probability of one-shot success:
+1. **Direct Imperative Opening & Objective Isolation**: Start immediately with an active imperative engineering verb. Accurately map vague conversational intents to sharp, specific engineering actions (e.g., ${verbExamples}). Clearly isolate the core technical objective and eliminate chatty conversational filler (e.g. NEVER use "Please help me", "As an AI, could you...", "I want to...").
+2. **Defensive Blast Radius Guard & Negative Constraints**: When the user expresses or implies caution (e.g. "don't touch X", "keep diff minimal", "avoid regressions", "don't add heavy dependencies"), formalize them into explicit negative constraints (e.g., "Keep diff minimal; leave unrelated files and configurations untouched; do not add unrequested external dependencies").
+3. **Pronoun & Anaphora Resolution**: If the user uses anaphoric pronouns ("here", "this function", "as discussed", "\u521A\u624D\u8BF4\u7684"), resolve them cleanly using the provided context without hallucinating unmentioned file paths or inventing speculative requirements.
+4. **Falsifiable Verification Anchor**: Where appropriate, frame the instruction with verifiable completion expectations (e.g. "Run existing tests to confirm zero regressions").
+5. **100% Intent Fidelity (Zero Hallucination)**: Clarify logic and sharpen terminology in **${outLangName}**, but NEVER invent unmentioned file names, libraries, or speculative scaffolding.
+6. **Code-Switch & CLI Flag Shield**: Preserve all CLI flags (e.g. \`--dry-run\`, \`-rf\`, \`--no-verify\`), package scopes/decorators (e.g. \`@scope/pkg\`, \`@ts-expect-error\`), inline code (\`foo()\`), file paths (@file, path/to/file), and identifiers 100% verbatim. NEVER translate or alter CLI flags.${contextBlock}${learnBlock}${customRuleBlock}${compileKillListInstruction(void 0, DEFAULT_KILL_LIST)}
 ${anchorBlock ? `
 ${anchorBlock}
 ` : ""}
@@ -766,15 +968,22 @@ function buildPromptCandidatesSystemPrompt(options) {
 [USER CUSTOM SPECIFICATION & STACKED CONDITIONS - MANDATORY]:
 Ensure every generated candidate incorporates the following user-specified condition(s):
 ${rules.map((r, i) => `(${i + 1}) ${r}`).join("\n")}` : "";
+  const contextBlock = options.context && options.context.trim() ? `
+
+[CONVERSATION & PROJECT CONTEXT - USE FOR PRONOUN RESOLUTION]:
+"""
+${options.context.trim().slice(0, 500)}
+"""
+CRITICAL: Use this context strictly to resolve anaphoric pronouns ("here", "this function", "as discussed") and domain terminology. NEVER invent unmentioned requirements or copy unrelated code from the context.` : "";
   return `You are an elite Bilingual Translation & Prompt Architect.
 Transform the user's raw input into ${slots.length} distinct output slots strictly following each slot's specific instruction and target language:
 ${taskLines.join("\n")}
 
 [STRICT QUALITY GUARDRAILS]:
 - **100% Semantic Fidelity**: Translate or refine EVERY sentence, clause, and detail from the user's input from start to finish. NEVER summarize, truncate, or drop details unless a slot explicitly asks for condensation.
-- **Respect Slot Role & Register**: If a slot asks for spoken/colloquial translation, output natural spoken flow; if it asks for formal/written translation, output polished written prose; if it asks for prompt structuring, structure it cleanly without robotic AI filler.
+- **Respect Slot Role & Register**: If a slot asks for spoken/colloquial translation, output natural spoken flow; if it asks for formal/written translation, output polished written prose; if it asks for prompt structuring, compile clear objectives, isolate negative constraints (minimal diff, blast radius guard), and eliminate robotic AI filler.
 - **Zero Hallucination**: Never invent unmentioned files, bug reports, or speculative features.
-- **Code & Symbol Shield**: Preserve all CLI flags (e.g. \`--dry-run\`, \`-rf\`, \`--no-verify\`), package scopes/decorators, inline code, file paths, and technical identifiers 100% verbatim in every slot.${customRuleBlock}
+- **Code & Symbol Shield**: Preserve all CLI flags (e.g. \`--dry-run\`, \`-rf\`, \`--no-verify\`), package scopes/decorators, inline code, file paths, and technical identifiers 100% verbatim in every slot.${contextBlock}${customRuleBlock}
 
 Strict JSON format:
 {
@@ -1052,7 +1261,7 @@ function getDefaultFactoryModes(sourceLang = "en", explainLang) {
           id: "direct_spec",
           label: n.direct,
           role: "rewrite",
-          instruction: "Target Language: ${targetLang}. Strictly output in ${targetLang} ONLY: Translate and restructure user's raw, colloquial, or fragmented thoughts from ${sourceLang} into a clear, imperative, high-precision engineering instruction for an AI coding agent. Start directly with an active imperative verb (e.g. 'Inspect', 'Refactor', 'Implement', 'Fix', 'Trace'), eliminate conversational filler, preserve all code tokens, file paths, and CLI flags 100% verbatim, and strictly avoid hallucinations.",
+          instruction: "Target Language: ${targetLang}. Strictly output in ${targetLang} ONLY: Compile user's raw, colloquial, or fragmented thoughts from ${sourceLang} into a high-signal AI Coding Agent Prompt (Intent Compiler). (1) Start with an active imperative verb (e.g. 'Inspect', 'Refactor', 'Implement', 'Fix', 'Trace'); (2) Isolate the core technical objective; (3) Extract explicit or implicit negative constraints (minimal diff, blast radius guard, leave unrelated files untouched, zero speculative scaffolding); (4) Preserve all code tokens, file paths, and CLI flags 100% verbatim; (5) Resolve anaphoric pronouns ('this function', 'here', 'as discussed') cleanly when context permits; (6) Eliminate conversational filler and AI clich\xE9s. NEVER invent unmentioned files or unrequested features.",
           enabled: true
         },
         {
@@ -4266,7 +4475,7 @@ async function translatePrompt(text, userConfig = {}) {
   const cached = globalLingualCache.get(cacheKey);
   if (cached) return cached;
   const isLongInput = isDynamicLongInput(trimmed, cfg.sourceLang);
-  const sysPrompt = buildSystemPrompt(cfg.sourceLang, cfg.targetLang, isLongInput, void 0, "general", effectiveSlots);
+  const sysPrompt = buildSystemPrompt(cfg.sourceLang, cfg.targetLang, isLongInput, cfg.context, "general", effectiveSlots);
   const content = await executeLlmCompletion(trimmed, sysPrompt, cfg);
   if (typeof content !== "string" || !content.trim()) return null;
   const payload = parseLlmResponse(content);
@@ -4490,8 +4699,11 @@ If the user's input draft contains native ${sourceLang} words or expressions mix
   if (options.context && options.context.trim()) {
     contextBlock = `
 
-[CONTEXT / RECENT GIT DIFF]:
-${options.context.trim().slice(0, 500)}`;
+[CONVERSATION & PROJECT CONTEXT - USE FOR PRONOUN RESOLUTION]:
+"""
+${options.context.trim().slice(0, 500)}
+"""
+CRITICAL: Use context strictly to resolve anaphoric pronouns ("here", "this function", "as discussed") and domain terminology. NEVER invent unmentioned requirements or copy unrelated code.`;
   }
   if (mode.flow === "proofread") {
     const base2 = buildModifySystemPrompt({
@@ -4969,6 +5181,7 @@ export {
   CURRENT_FEATURE_BANNER_VERSION,
   DEFAULT_CONFIG,
   DEFAULT_KILL_LIST,
+  LANGUAGE_PAIR_ANCHORS,
   LANGUAGE_PRESETS,
   LANGUAGE_SPECS,
   LEGACY_SLOT_PRESETS,
@@ -5050,6 +5263,7 @@ export {
   resolveLabelsForLang,
   resolveLangPair,
   resolveLanguageName,
+  resolveLanguagePairAnchors,
   resolveModeDisplayName,
   resolveModeDisplaySpec,
   resolveModesFromConfig,

@@ -10,6 +10,8 @@ import {
   getDefaultDirectSlots,
   getDefaultPromptSlots,
   getDefaultModifySlots,
+  resolveLanguagePairAnchors,
+  buildSystemPrompt,
 } from "../src/index.js";
 
 // Whitelist of legitimate language-neutral keys or shared linguistic cognates
@@ -178,3 +180,43 @@ test("i18n invariant (c): Traditional Chinese (tw) contains zero Simplified Chin
     }
   }
 });
+
+test("i18n invariant (d): Dynamic Symmetric Polyglot Anchor Matrix covers cross-lingual pairs", () => {
+  const verifiedPairs = [
+    { src: "zh", tgt: "en", hasCjkSrc: true, langTgt: "English" },
+    { src: "tw", tgt: "en", hasCjkSrc: true, langTgt: "English" },
+    { src: "ja", tgt: "en", hasCjkSrc: true, langTgt: "English" },
+    { src: "ko", tgt: "en", hasCjkSrc: true, langTgt: "English" },
+    { src: "de", tgt: "en", hasCjkSrc: false, langTgt: "English" },
+    { src: "fr", tgt: "en", hasCjkSrc: false, langTgt: "English" },
+    { src: "es", tgt: "en", hasCjkSrc: false, langTgt: "English" },
+    { src: "ru", tgt: "en", hasCjkSrc: false, langTgt: "English" },
+    { src: "en", tgt: "zh", hasCjkSrc: false, langTgt: "Chinese" },
+    { src: "en", tgt: "ja", hasCjkSrc: false, langTgt: "Japanese" },
+    { src: "zh", tgt: "ja", hasCjkSrc: true, langTgt: "Japanese" },
+    { src: "ja", tgt: "zh", hasCjkSrc: true, langTgt: "Chinese" },
+  ];
+
+  for (const { src, tgt } of verifiedPairs) {
+    const anchors = resolveLanguagePairAnchors(src, tgt);
+    assert.ok(
+      anchors.length > 0,
+      `Language pair [${src} -> ${tgt}] must have non-empty golden anchors (got ${anchors.length})`
+    );
+
+    for (const a of anchors) {
+      assert.ok(a.input && a.input.length > 0, `[${src}->${tgt}] anchor input must not be empty`);
+      assert.ok(a.spoken && a.spoken.length > 0, `[${src}->${tgt}] anchor spoken must not be empty`);
+      assert.ok(a.written && a.written.length > 0, `[${src}->${tgt}] anchor written must not be empty`);
+      assert.ok(a.vocab && a.vocab.includes(" · "), `[${src}->${tgt}] anchor vocab must use standard " · " delimiter`);
+    }
+
+    // Verify buildSystemPrompt injects the pair-specific anchor header
+    const sysPrompt = buildSystemPrompt(src, tgt);
+    assert.ok(
+      sysPrompt.includes(`[GOLDEN FEW-SHOT ANCHORS (Pair: ${src} ➔ ${tgt})]`),
+      `buildSystemPrompt("${src}", "${tgt}") must embed pair-specific anchor block`
+    );
+  }
+});
+

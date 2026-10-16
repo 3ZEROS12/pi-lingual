@@ -166,6 +166,38 @@ function hasActiveUI(ctx: ExtensionContext | null | undefined): ctx is Extension
   }
 }
 
+/**
+ * Lightweight Context Siphon: extracts recent assistant turn's anchor line (up to 160 chars)
+ * strictly for pronoun/anaphora resolution ("here", "this function", "as discussed") and domain terminology.
+ */
+function extractRecentContextAnchor(ctx: ExtensionContext | null | undefined): string {
+  if (!ctx) return "";
+  try {
+    const entries = (ctx as any)?.sessionManager?.getEntries?.() || [];
+    for (let i = entries.length - 1; i >= 0; i--) {
+      const entry = entries[i];
+      if (entry?.type === "message" && entry?.message?.role === "assistant") {
+        const content = entry.message.content;
+        let text = "";
+        if (typeof content === "string") {
+          text = content;
+        } else if (Array.isArray(content)) {
+          text = content
+            .filter((c: any) => c?.type === "text" && typeof c.text === "string")
+            .map((c: any) => c.text)
+            .join(" ");
+        }
+        if (text && text.trim()) {
+          const lines = text.trim().split("\n").filter((l: string) => l.trim().length > 0);
+          const lastLine = lines[lines.length - 1] || "";
+          return lastLine.slice(0, 160);
+        }
+      }
+    }
+  } catch {}
+  return "";
+}
+
 function copyToClipboard(text: string): boolean {
   if (!text) return false;
   // Emit ANSI OSC 52 sequence for SSH / tmux / modern terminal clipboard sync
@@ -1959,6 +1991,7 @@ export default function (pi: ExtensionAPI) {
           slotPreset: state.slotPreset,
           complete: completer,
           signal,
+          context: extractRecentContextAnchor(ctx),
         })
           .then((result) => {
             if (!session.isLatest(generation) || signal.aborted) {
@@ -2076,7 +2109,7 @@ export default function (pi: ExtensionAPI) {
     }
 
     try {
-      let gitDiffContext = "";
+      let recentContext = "";
       if (currentMode.id === "commit" || (currentMode as any).contextAware === true) {
         try {
           const diffOutput = execFileSync("git", ["diff", "--stat", "HEAD"], {
@@ -2085,7 +2118,7 @@ export default function (pi: ExtensionAPI) {
             stdio: ["ignore", "pipe", "ignore"],
           });
           if (diffOutput && diffOutput.trim()) {
-            gitDiffContext = diffOutput.trim().slice(0, 300);
+            recentContext = `[GIT DIFF]:\n${diffOutput.trim().slice(0, 300)}`;
           } else {
             const statusOutput = execFileSync("git", ["status", "--short"], {
               encoding: "utf8",
@@ -2093,10 +2126,20 @@ export default function (pi: ExtensionAPI) {
               stdio: ["ignore", "pipe", "ignore"],
             });
             if (statusOutput && statusOutput.trim()) {
-              gitDiffContext = statusOutput.trim().slice(0, 300);
+              recentContext = `[GIT STATUS]:\n${statusOutput.trim().slice(0, 300)}`;
             }
           }
         } catch {}
+      }
+
+      // Mode 2 (Intent Compiler) & context-aware modes: siphon recent assistant anchor for pronoun resolution
+      if (isDirectMode || (currentMode as any).contextAware === true) {
+        const assistantAnchor = extractRecentContextAnchor(ctx);
+        if (assistantAnchor) {
+          recentContext = recentContext
+            ? `${recentContext}\n[LAST AGENT SUMMARY]: ${assistantAnchor}`
+            : `[LAST AGENT SUMMARY]: ${assistantAnchor}`;
+        }
       }
 
       const modeToRun: CustomModeConfig = {
@@ -2109,7 +2152,7 @@ export default function (pi: ExtensionAPI) {
         sourceLang: state.sourceLang,
         targetLang: state.targetLang,
         explainLang: latestDisk.explainLang,
-        context: gitDiffContext,
+        context: recentContext,
         complete: completer,
         signal,
       });
