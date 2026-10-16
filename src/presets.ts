@@ -10,26 +10,188 @@ export interface SlotPresetDefinition {
 export { getDefaultSlots, getDefaultDirectSlots, getDefaultModifySlots } from "./prompts.js";
 import { getDefaultDirectSlots, getDefaultModifySlots, getDefaultSlots } from "./prompts.js";
 
+export interface SeedNames {
+  companion: string;
+  direct: string;
+  liveFlow: string;
+  candidates: string;
+  loadoutSpec: string;
+  loadoutCommit: string;
+  loadoutOss: string;
+  loadoutYap: string;
+  vocab: string;
+  fixed: string;
+  native: string;
+  takeaway: string;
+}
+
+export const SEED_NAMES: Record<string, SeedNames> = {
+  en: {
+    companion: "Companion",
+    direct: "Logical Spec",
+    liveFlow: "Live Flow",
+    candidates: "Candidates",
+    loadoutSpec: "Brain-Dump Spec",
+    loadoutCommit: "Commit Dehydrator",
+    loadoutOss: "OSS Peer Comms",
+    loadoutYap: "Indie Shipper",
+    vocab: "Key Terms",
+    fixed: "Fixed",
+    native: "Native",
+    takeaway: "Takeaways",
+  },
+  zh: {
+    companion: "纯伴学",
+    direct: "规范直发",
+    liveFlow: "实战狂飙",
+    candidates: "挑候选",
+    loadoutSpec: "脑暴压铸",
+    loadoutCommit: "提交脱水",
+    loadoutOss: "开源对线",
+    loadoutYap: "极客发推",
+    vocab: "核心表达",
+    fixed: "原句修补",
+    native: "地道表达",
+    takeaway: "收获复盘",
+  },
+  tw: {
+    companion: "純伴學",
+    direct: "規範直發",
+    liveFlow: "實戰狂飆",
+    candidates: "挑候選",
+    loadoutSpec: "腦暴壓鑄",
+    loadoutCommit: "提交脫水",
+    loadoutOss: "開源對線",
+    loadoutYap: "極客發推",
+    vocab: "核心表達",
+    fixed: "原句修補",
+    native: "道地表達",
+    takeaway: "收穫複盤",
+  },
+  ja: {
+    companion: "伴走",
+    direct: "仕様直行",
+    liveFlow: "実戦疾走",
+    candidates: "候補選択",
+    loadoutSpec: "仕様鋳造",
+    loadoutCommit: "コミット脱水",
+    loadoutOss: "OSS対話",
+    loadoutYap: "発信投稿",
+    vocab: "重要語彙",
+    fixed: "原文修正",
+    native: "自然表現",
+    takeaway: "重要ポイント",
+  },
+  ko: {
+    companion: "동행학습",
+    direct: "논리정제",
+    liveFlow: "실전질주",
+    candidates: "후보선택",
+    loadoutSpec: "사양주조",
+    loadoutCommit: "커밋정제",
+    loadoutOss: "OSS대화",
+    loadoutYap: "개발자발신",
+    vocab: "핵심어휘",
+    fixed: "원문수정",
+    native: "자연스러운표현",
+    takeaway: "핵심포인트",
+  },
+  es: {
+    companion: "Aprendizaje",
+    direct: "Directo Lógico",
+    liveFlow: "Live Flow",
+    candidates: "Candidatos",
+    loadoutSpec: "Spec Lógica",
+    loadoutCommit: "Commit Dehidrado",
+    loadoutOss: "OSS Comms",
+    loadoutYap: "Post Indie",
+    vocab: "Términos clave",
+    fixed: "Corregido",
+    native: "Nativo",
+    takeaway: "Puntos clave",
+  },
+  fr: {
+    companion: "Compagnon",
+    direct: "Direct Logique",
+    liveFlow: "Live Flow",
+    candidates: "Candidats",
+    loadoutSpec: "Spécification",
+    loadoutCommit: "Commit Épuré",
+    loadoutOss: "Comms OSS",
+    loadoutYap: "Post Indie",
+    vocab: "Termes clés",
+    fixed: "Corrigé",
+    native: "Naturel",
+    takeaway: "Points clés",
+  },
+  de: {
+    companion: "Begleitung",
+    direct: "Direkte Logik",
+    liveFlow: "Live Flow",
+    candidates: "Kandidaten",
+    loadoutSpec: "Spezifikation",
+    loadoutCommit: "Commit-Kompakt",
+    loadoutOss: "OSS-Dialog",
+    loadoutYap: "Indie-Post",
+    vocab: "Schlüsselbegriffe",
+    fixed: "Korrigiert",
+    native: "Nativ",
+    takeaway: "Wichtige Punkte",
+  },
+  ru: {
+    companion: "Сопровождение",
+    direct: "Прямой поток",
+    liveFlow: "Live Flow",
+    candidates: "Кандидаты",
+    loadoutSpec: "Спецификация",
+    loadoutCommit: "Коммит-дехидрат",
+    loadoutOss: "OSS-диалог",
+    loadoutYap: "Инди-пост",
+    vocab: "Ключевые слова",
+    fixed: "Исправлено",
+    native: "Нативный",
+    takeaway: "Главное",
+  },
+};
+
+export function resolveSeedNames(lang = "en"): SeedNames {
+  const norm = (lang || "en").toLowerCase().split("-")[0];
+  return SEED_NAMES[norm] || SEED_NAMES.en;
+}
+
+export function resolveModeDisplayName(modeId: string, lang = "en"): string {
+  const n = resolveSeedNames(lang);
+  const norm = (modeId || "").toLowerCase();
+  switch (norm) {
+    case "companion":
+    case "original":
+      return n.companion;
+    case "direct":
+    case "lazy":
+    case "english":
+      return n.direct;
+    case "live-flow":
+    case "modify":
+    case "raw":
+      return n.liveFlow;
+    case "candidates":
+    case "select":
+      return n.candidates;
+    case "off": {
+      const isZh = lang === "zh" || lang === "tw";
+      const isJa = lang === "ja";
+      return isZh ? "已关闭" : isJa ? "オフ" : "Off";
+    }
+    default:
+      return modeId;
+  }
+}
+
 /**
  * Returns three-core factory golden defaults (v0.6.0 Three-Core Baselines: 1. Companion + 2. Logical Spec + 3. Live Flow).
  */
 export function getDefaultFactoryModes(sourceLang = "en", explainLang?: string): CustomModeConfig[] {
-  const norm = (sourceLang || "en").toLowerCase().split("-")[0];
-  const SEED_NAMES: Record<
-    string,
-    { companion: string; direct: string; liveFlow: string; vocab: string; fixed: string; native: string; takeaway: string }
-  > = {
-    en: { companion: "Companion", direct: "Logical Spec", liveFlow: "Live Flow", vocab: "Key Terms", fixed: "Fixed", native: "Native", takeaway: "Takeaways" },
-    zh: { companion: "纯伴学", direct: "规范直发", liveFlow: "实战狂飙", vocab: "核心表达", fixed: "原句修补", native: "地道表达", takeaway: "收获复盘" },
-    tw: { companion: "純伴學", direct: "規範直發", liveFlow: "實戰狂飆", vocab: "核心表達", fixed: "原句修補", native: "道地表達", takeaway: "收穫複盤" },
-    ja: { companion: "伴走", direct: "仕様直行", liveFlow: "実戦疾走", vocab: "重要語彙", fixed: "原文修正", native: "自然表現", takeaway: "重要ポイント" },
-    ko: { companion: "동행학습", direct: "논리정제", liveFlow: "실전질주", vocab: "핵심어휘", fixed: "원문수정", native: "자연스러운표현", takeaway: "핵심포인트" },
-    es: { companion: "Aprendizaje", direct: "Directo Lógico", liveFlow: "Live Flow", vocab: "Términos clave", fixed: "Corregido", native: "Nativo", takeaway: "Puntos clave" },
-    fr: { companion: "Compagnon", direct: "Direct Logique", liveFlow: "Live Flow", vocab: "Termes clés", fixed: "Corrigé", native: "Naturel", takeaway: "Points clés" },
-    de: { companion: "Begleitung", direct: "Direkte Logik", liveFlow: "Live Flow", vocab: "Schlüsselbegriffe", fixed: "Korrigiert", native: "Nativ", takeaway: "Wichtige Punkte" },
-    ru: { companion: "Сопровождение", direct: "Прямой поток", liveFlow: "Live Flow", vocab: "Ключевые слова", fixed: "Исправлено", native: "Нативный", takeaway: "Главное" },
-  };
-  const n = SEED_NAMES[norm] || SEED_NAMES.en;
+  const n = resolveSeedNames(sourceLang);
 
   return [
     // Archetype 1: Companion (pass-through) keeps the 5-second-gap learning card alive out of the box.
@@ -127,7 +289,7 @@ export const PRESET_LOADOUTS: Record<string, LoadoutDefinition> = {
     description: "Transforms unstructured thoughts into clear Objective, Constraints, Edge Cases, and Do Not Touch clauses for agent plan mode",
     loadout: (sourceLang = "en", _explainLang?: string) => ({
       id: "spec",
-      name: sourceLang === "zh" ? "脑暴压铸" : sourceLang === "ja" ? "仕様鋳造" : "Brain-Dump Spec",
+      name: resolveSeedNames(sourceLang).loadoutSpec,
       flow: "translate",
       action: "transform",
       hud: "preview",
@@ -160,7 +322,7 @@ export const PRESET_LOADOUTS: Record<string, LoadoutDefinition> = {
     description: "Extracts git diff and intent into conventional commits format (first line <=50 chars, imperative verb, Root Cause & Impact body)",
     loadout: (sourceLang = "en", _explainLang?: string) => ({
       id: "commit",
-      name: sourceLang === "zh" ? "提交脱水" : sourceLang === "ja" ? "コミット脱水" : "Commit Dehydrator",
+      name: resolveSeedNames(sourceLang).loadoutCommit,
       flow: "translate",
       action: "transform",
       hud: "preview",
@@ -194,7 +356,7 @@ export const PRESET_LOADOUTS: Record<string, LoadoutDefinition> = {
     description: "Transforms blunt feedback or bug reports into peer-level, objective, non-defensive GitHub issue/PR comments (nit, blocker, repro)",
     loadout: (sourceLang = "en", _explainLang?: string) => ({
       id: "oss",
-      name: sourceLang === "zh" ? "开源对线" : sourceLang === "ja" ? "OSS対話" : "OSS Peer Comms",
+      name: resolveSeedNames(sourceLang).loadoutOss,
       flow: "translate",
       action: "transform",
       hud: "tree",
@@ -227,7 +389,7 @@ export const PRESET_LOADOUTS: Record<string, LoadoutDefinition> = {
     description: "Distills technical builds into cold, high-density Indie Hacker tech posts (<280 chars) for X and HN with 0 emojis and 0 corporate hype",
     loadout: (sourceLang = "en", _explainLang?: string) => ({
       id: "yap",
-      name: sourceLang === "zh" ? "极客发推" : sourceLang === "ja" ? "発信投稿" : "Indie Shipper",
+      name: resolveSeedNames(sourceLang).loadoutYap,
       flow: "translate",
       action: "transform",
       hud: "tree",

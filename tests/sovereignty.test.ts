@@ -168,8 +168,8 @@ test("System Prompt Sovereignty - Generates authentic Language A anchors and rul
   assert.deepEqual(jaCandidates.map((s) => s.label), ["簡潔・高効率", "構造化仕様", "根本原因・厳密", "重要語彙"]);
   const jaModeSpec = resolveModeDisplaySpec("ja");
   assert.equal(jaModeSpec.companion, "伴走");
-  assert.equal(jaModeSpec.direct, "直改");
-  assert.equal(jaModeSpec.candidates, "候補選");
+  assert.equal(jaModeSpec.direct, "仕様直行");
+  assert.equal(jaModeSpec.candidates, "候補選択");
   const jaSys = buildSystemPrompt("ja", "en", false, undefined, "general", getDefaultSlots("ja"));
   assert.ok(!jaSys.includes("释义"), "Japanese system prompt with default slots must NOT contain Chinese '释义'");
   assert.ok(jaSys.includes("in Japanese in parentheses"));

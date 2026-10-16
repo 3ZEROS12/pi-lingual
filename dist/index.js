@@ -721,20 +721,167 @@ Output valid JSON ONLY. Never output markdown code fences or explanations.`;
 }
 
 // src/presets.ts
+var SEED_NAMES = {
+  en: {
+    companion: "Companion",
+    direct: "Logical Spec",
+    liveFlow: "Live Flow",
+    candidates: "Candidates",
+    loadoutSpec: "Brain-Dump Spec",
+    loadoutCommit: "Commit Dehydrator",
+    loadoutOss: "OSS Peer Comms",
+    loadoutYap: "Indie Shipper",
+    vocab: "Key Terms",
+    fixed: "Fixed",
+    native: "Native",
+    takeaway: "Takeaways"
+  },
+  zh: {
+    companion: "\u7EAF\u4F34\u5B66",
+    direct: "\u89C4\u8303\u76F4\u53D1",
+    liveFlow: "\u5B9E\u6218\u72C2\u98D9",
+    candidates: "\u6311\u5019\u9009",
+    loadoutSpec: "\u8111\u66B4\u538B\u94F8",
+    loadoutCommit: "\u63D0\u4EA4\u8131\u6C34",
+    loadoutOss: "\u5F00\u6E90\u5BF9\u7EBF",
+    loadoutYap: "\u6781\u5BA2\u53D1\u63A8",
+    vocab: "\u6838\u5FC3\u8868\u8FBE",
+    fixed: "\u539F\u53E5\u4FEE\u8865",
+    native: "\u5730\u9053\u8868\u8FBE",
+    takeaway: "\u6536\u83B7\u590D\u76D8"
+  },
+  tw: {
+    companion: "\u7D14\u4F34\u5B78",
+    direct: "\u898F\u7BC4\u76F4\u767C",
+    liveFlow: "\u5BE6\u6230\u72C2\u98C6",
+    candidates: "\u6311\u5019\u9078",
+    loadoutSpec: "\u8166\u66B4\u58D3\u9444",
+    loadoutCommit: "\u63D0\u4EA4\u812B\u6C34",
+    loadoutOss: "\u958B\u6E90\u5C0D\u7DDA",
+    loadoutYap: "\u6975\u5BA2\u767C\u63A8",
+    vocab: "\u6838\u5FC3\u8868\u9054",
+    fixed: "\u539F\u53E5\u4FEE\u88DC",
+    native: "\u9053\u5730\u8868\u9054",
+    takeaway: "\u6536\u7A6B\u8907\u76E4"
+  },
+  ja: {
+    companion: "\u4F34\u8D70",
+    direct: "\u4ED5\u69D8\u76F4\u884C",
+    liveFlow: "\u5B9F\u6226\u75BE\u8D70",
+    candidates: "\u5019\u88DC\u9078\u629E",
+    loadoutSpec: "\u4ED5\u69D8\u92F3\u9020",
+    loadoutCommit: "\u30B3\u30DF\u30C3\u30C8\u8131\u6C34",
+    loadoutOss: "OSS\u5BFE\u8A71",
+    loadoutYap: "\u767A\u4FE1\u6295\u7A3F",
+    vocab: "\u91CD\u8981\u8A9E\u5F59",
+    fixed: "\u539F\u6587\u4FEE\u6B63",
+    native: "\u81EA\u7136\u8868\u73FE",
+    takeaway: "\u91CD\u8981\u30DD\u30A4\u30F3\u30C8"
+  },
+  ko: {
+    companion: "\uB3D9\uD589\uD559\uC2B5",
+    direct: "\uB17C\uB9AC\uC815\uC81C",
+    liveFlow: "\uC2E4\uC804\uC9C8\uC8FC",
+    candidates: "\uD6C4\uBCF4\uC120\uD0DD",
+    loadoutSpec: "\uC0AC\uC591\uC8FC\uC870",
+    loadoutCommit: "\uCEE4\uBC0B\uC815\uC81C",
+    loadoutOss: "OSS\uB300\uD654",
+    loadoutYap: "\uAC1C\uBC1C\uC790\uBC1C\uC2E0",
+    vocab: "\uD575\uC2EC\uC5B4\uD718",
+    fixed: "\uC6D0\uBB38\uC218\uC815",
+    native: "\uC790\uC5F0\uC2A4\uB7EC\uC6B4\uD45C\uD604",
+    takeaway: "\uD575\uC2EC\uD3EC\uC778\uD2B8"
+  },
+  es: {
+    companion: "Aprendizaje",
+    direct: "Directo L\xF3gico",
+    liveFlow: "Live Flow",
+    candidates: "Candidatos",
+    loadoutSpec: "Spec L\xF3gica",
+    loadoutCommit: "Commit Dehidrado",
+    loadoutOss: "OSS Comms",
+    loadoutYap: "Post Indie",
+    vocab: "T\xE9rminos clave",
+    fixed: "Corregido",
+    native: "Nativo",
+    takeaway: "Puntos clave"
+  },
+  fr: {
+    companion: "Compagnon",
+    direct: "Direct Logique",
+    liveFlow: "Live Flow",
+    candidates: "Candidats",
+    loadoutSpec: "Sp\xE9cification",
+    loadoutCommit: "Commit \xC9pur\xE9",
+    loadoutOss: "Comms OSS",
+    loadoutYap: "Post Indie",
+    vocab: "Termes cl\xE9s",
+    fixed: "Corrig\xE9",
+    native: "Naturel",
+    takeaway: "Points cl\xE9s"
+  },
+  de: {
+    companion: "Begleitung",
+    direct: "Direkte Logik",
+    liveFlow: "Live Flow",
+    candidates: "Kandidaten",
+    loadoutSpec: "Spezifikation",
+    loadoutCommit: "Commit-Kompakt",
+    loadoutOss: "OSS-Dialog",
+    loadoutYap: "Indie-Post",
+    vocab: "Schl\xFCsselbegriffe",
+    fixed: "Korrigiert",
+    native: "Nativ",
+    takeaway: "Wichtige Punkte"
+  },
+  ru: {
+    companion: "\u0421\u043E\u043F\u0440\u043E\u0432\u043E\u0436\u0434\u0435\u043D\u0438\u0435",
+    direct: "\u041F\u0440\u044F\u043C\u043E\u0439 \u043F\u043E\u0442\u043E\u043A",
+    liveFlow: "Live Flow",
+    candidates: "\u041A\u0430\u043D\u0434\u0438\u0434\u0430\u0442\u044B",
+    loadoutSpec: "\u0421\u043F\u0435\u0446\u0438\u0444\u0438\u043A\u0430\u0446\u0438\u044F",
+    loadoutCommit: "\u041A\u043E\u043C\u043C\u0438\u0442-\u0434\u0435\u0445\u0438\u0434\u0440\u0430\u0442",
+    loadoutOss: "OSS-\u0434\u0438\u0430\u043B\u043E\u0433",
+    loadoutYap: "\u0418\u043D\u0434\u0438-\u043F\u043E\u0441\u0442",
+    vocab: "\u041A\u043B\u044E\u0447\u0435\u0432\u044B\u0435 \u0441\u043B\u043E\u0432\u0430",
+    fixed: "\u0418\u0441\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u043E",
+    native: "\u041D\u0430\u0442\u0438\u0432\u043D\u044B\u0439",
+    takeaway: "\u0413\u043B\u0430\u0432\u043D\u043E\u0435"
+  }
+};
+function resolveSeedNames(lang = "en") {
+  const norm = (lang || "en").toLowerCase().split("-")[0];
+  return SEED_NAMES[norm] || SEED_NAMES.en;
+}
+function resolveModeDisplayName(modeId, lang = "en") {
+  const n = resolveSeedNames(lang);
+  const norm = (modeId || "").toLowerCase();
+  switch (norm) {
+    case "companion":
+    case "original":
+      return n.companion;
+    case "direct":
+    case "lazy":
+    case "english":
+      return n.direct;
+    case "live-flow":
+    case "modify":
+    case "raw":
+      return n.liveFlow;
+    case "candidates":
+    case "select":
+      return n.candidates;
+    case "off": {
+      const isZh = lang === "zh" || lang === "tw";
+      const isJa = lang === "ja";
+      return isZh ? "\u5DF2\u5173\u95ED" : isJa ? "\u30AA\u30D5" : "Off";
+    }
+    default:
+      return modeId;
+  }
+}
 function getDefaultFactoryModes(sourceLang = "en", explainLang) {
-  const norm = (sourceLang || "en").toLowerCase().split("-")[0];
-  const SEED_NAMES = {
-    en: { companion: "Companion", direct: "Logical Spec", liveFlow: "Live Flow", vocab: "Key Terms", fixed: "Fixed", native: "Native", takeaway: "Takeaways" },
-    zh: { companion: "\u7EAF\u4F34\u5B66", direct: "\u89C4\u8303\u76F4\u53D1", liveFlow: "\u5B9E\u6218\u72C2\u98D9", vocab: "\u6838\u5FC3\u8868\u8FBE", fixed: "\u539F\u53E5\u4FEE\u8865", native: "\u5730\u9053\u8868\u8FBE", takeaway: "\u6536\u83B7\u590D\u76D8" },
-    tw: { companion: "\u7D14\u4F34\u5B78", direct: "\u898F\u7BC4\u76F4\u767C", liveFlow: "\u5BE6\u6230\u72C2\u98C6", vocab: "\u6838\u5FC3\u8868\u9054", fixed: "\u539F\u53E5\u4FEE\u88DC", native: "\u9053\u5730\u8868\u9054", takeaway: "\u6536\u7A6B\u8907\u76E4" },
-    ja: { companion: "\u4F34\u8D70", direct: "\u4ED5\u69D8\u76F4\u884C", liveFlow: "\u5B9F\u6226\u75BE\u8D70", vocab: "\u91CD\u8981\u8A9E\u5F59", fixed: "\u539F\u6587\u4FEE\u6B63", native: "\u81EA\u7136\u8868\u73FE", takeaway: "\u91CD\u8981\u30DD\u30A4\u30F3\u30C8" },
-    ko: { companion: "\uB3D9\uD589\uD559\uC2B5", direct: "\uB17C\uB9AC\uC815\uC81C", liveFlow: "\uC2E4\uC804\uC9C8\uC8FC", vocab: "\uD575\uC2EC\uC5B4\uD718", fixed: "\uC6D0\uBB38\uC218\uC815", native: "\uC790\uC5F0\uC2A4\uB7EC\uC6B4\uD45C\uD604", takeaway: "\uD575\uC2EC\uD3EC\uC778\uD2B8" },
-    es: { companion: "Aprendizaje", direct: "Directo L\xF3gico", liveFlow: "Live Flow", vocab: "T\xE9rminos clave", fixed: "Corregido", native: "Nativo", takeaway: "Puntos clave" },
-    fr: { companion: "Compagnon", direct: "Direct Logique", liveFlow: "Live Flow", vocab: "Termes cl\xE9s", fixed: "Corrig\xE9", native: "Naturel", takeaway: "Points cl\xE9s" },
-    de: { companion: "Begleitung", direct: "Direkte Logik", liveFlow: "Live Flow", vocab: "Schl\xFCsselbegriffe", fixed: "Korrigiert", native: "Nativ", takeaway: "Wichtige Punkte" },
-    ru: { companion: "\u0421\u043E\u043F\u0440\u043E\u0432\u043E\u0436\u0434\u0435\u043D\u0438\u0435", direct: "\u041F\u0440\u044F\u043C\u043E\u0439 \u043F\u043E\u0442\u043E\u043A", liveFlow: "Live Flow", vocab: "\u041A\u043B\u044E\u0447\u0435\u0432\u044B\u0435 \u0441\u043B\u043E\u0432\u0430", fixed: "\u0418\u0441\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u043E", native: "\u041D\u0430\u0442\u0438\u0432\u043D\u044B\u0439", takeaway: "\u0413\u043B\u0430\u0432\u043D\u043E\u0435" }
-  };
-  const n = SEED_NAMES[norm] || SEED_NAMES.en;
+  const n = resolveSeedNames(sourceLang);
   return [
     // Archetype 1: Companion (pass-through) keeps the 5-second-gap learning card alive out of the box.
     {
@@ -818,7 +965,7 @@ var PRESET_LOADOUTS = {
     description: "Transforms unstructured thoughts into clear Objective, Constraints, Edge Cases, and Do Not Touch clauses for agent plan mode",
     loadout: (sourceLang = "en", _explainLang) => ({
       id: "spec",
-      name: sourceLang === "zh" ? "\u8111\u66B4\u538B\u94F8" : sourceLang === "ja" ? "\u4ED5\u69D8\u92F3\u9020" : "Brain-Dump Spec",
+      name: resolveSeedNames(sourceLang).loadoutSpec,
       flow: "translate",
       action: "transform",
       hud: "preview",
@@ -850,7 +997,7 @@ var PRESET_LOADOUTS = {
     description: "Extracts git diff and intent into conventional commits format (first line <=50 chars, imperative verb, Root Cause & Impact body)",
     loadout: (sourceLang = "en", _explainLang) => ({
       id: "commit",
-      name: sourceLang === "zh" ? "\u63D0\u4EA4\u8131\u6C34" : sourceLang === "ja" ? "\u30B3\u30DF\u30C3\u30C8\u8131\u6C34" : "Commit Dehydrator",
+      name: resolveSeedNames(sourceLang).loadoutCommit,
       flow: "translate",
       action: "transform",
       hud: "preview",
@@ -883,7 +1030,7 @@ var PRESET_LOADOUTS = {
     description: "Transforms blunt feedback or bug reports into peer-level, objective, non-defensive GitHub issue/PR comments (nit, blocker, repro)",
     loadout: (sourceLang = "en", _explainLang) => ({
       id: "oss",
-      name: sourceLang === "zh" ? "\u5F00\u6E90\u5BF9\u7EBF" : sourceLang === "ja" ? "OSS\u5BFE\u8A71" : "OSS Peer Comms",
+      name: resolveSeedNames(sourceLang).loadoutOss,
       flow: "translate",
       action: "transform",
       hud: "tree",
@@ -915,7 +1062,7 @@ var PRESET_LOADOUTS = {
     description: "Distills technical builds into cold, high-density Indie Hacker tech posts (<280 chars) for X and HN with 0 emojis and 0 corporate hype",
     loadout: (sourceLang = "en", _explainLang) => ({
       id: "yap",
-      name: sourceLang === "zh" ? "\u6781\u5BA2\u53D1\u63A8" : sourceLang === "ja" ? "\u767A\u4FE1\u6295\u7A3F" : "Indie Shipper",
+      name: resolveSeedNames(sourceLang).loadoutYap,
       flow: "translate",
       action: "transform",
       hud: "tree",
@@ -3663,10 +3810,11 @@ function resolveModesFromConfig(cfg, fallbackSourceLang = "en") {
       instruction: s.instruction || "Natural expressions matching context",
       enabled: s.enabled !== false
     }));
+    const n = resolveSeedNames(sourceLang);
     return [
       {
         id: "direct",
-        name: sourceLang === "zh" ? "\u89C4\u8303\u76F4\u53D1" : sourceLang === "ja" ? "\u4ED5\u69D8\u76F4\u884C" : "Logical Spec",
+        name: n.direct,
         flow: "translate",
         action: "transform",
         hud: "preview",
@@ -3675,7 +3823,7 @@ function resolveModesFromConfig(cfg, fallbackSourceLang = "en") {
       },
       {
         id: "live-flow",
-        name: sourceLang === "zh" ? "\u5B9E\u6218\u72C2\u98D9" : sourceLang === "ja" ? "\u5B9F\u6226\u75BE\u8D70" : "Live Flow",
+        name: n.liveFlow,
         flow: "proofread",
         action: "transform",
         hud: "adaptive-takeaway",
@@ -3684,7 +3832,7 @@ function resolveModesFromConfig(cfg, fallbackSourceLang = "en") {
       },
       {
         id: "companion",
-        name: sourceLang === "zh" ? "\u7EAF\u4F34\u5B66" : sourceLang === "ja" ? "\u7D14\u4F34\u8D70" : "Companion",
+        name: n.companion,
         flow: "translate",
         action: "pass-through",
         hud: "tree",
@@ -3693,7 +3841,7 @@ function resolveModesFromConfig(cfg, fallbackSourceLang = "en") {
       },
       {
         id: "candidates",
-        name: sourceLang === "zh" ? "\u6311\u5019\u9009" : sourceLang === "ja" ? "\u5019\u88DC\u9078\u629E" : "Candidates",
+        name: n.candidates,
         flow: "translate",
         action: "select",
         hud: "tree",
@@ -3890,34 +4038,74 @@ function stripLingualContextWhenOff(systemPrompt, lastUserText = "", tunerArmed 
 }
 var MODE_DISPLAY_BY_LANG = {
   zh: {
-    companion: "\u7EAF\u4F34\u5B66",
-    direct: "\u76F4\u63A5\u6539",
-    candidates: "\u6311\u5019\u9009",
-    modify: "\u539F\u53E5\u4FEE\u8865",
+    companion: SEED_NAMES.zh.companion,
+    direct: SEED_NAMES.zh.direct,
+    candidates: SEED_NAMES.zh.candidates,
+    modify: SEED_NAMES.zh.liveFlow,
     off: "\u5DF2\u5173\u95ED",
     notifyOff: (p) => `[${p}] \u5DF2\u5207\u6362\u81F3\u30100 \u5DF2\u5173\u95ED (off)\u3011\uFF1A\u5E95\u680F\u9690\u85CF \xB7 \u76D1\u542C\u5DF2\u5378 \xB7 0 Token \u96F6\u8D1F\u62C5`
   },
   tw: {
-    companion: "\u7D14\u4F34\u5B78",
-    direct: "\u76F4\u63A5\u6539",
-    candidates: "\u6311\u5019\u9078",
-    modify: "\u539F\u53E5\u4FEE\u88DC",
+    companion: SEED_NAMES.tw.companion,
+    direct: SEED_NAMES.tw.direct,
+    candidates: SEED_NAMES.tw.candidates,
+    modify: SEED_NAMES.tw.liveFlow,
     off: "\u5DF2\u95DC\u9589",
     notifyOff: (p) => `[${p}] \u5DF2\u5207\u63DB\u81F3\u30100 \u5DF2\u95DC\u9589 (off)\u3011\uFF1A\u5E95\u6B04\u96B1\u85CF \xB7 \u76E3\u807D\u5DF2\u5378 \xB7 0 Token \u96F6\u8CA0\u64D4`
   },
   ja: {
-    companion: "\u4F34\u8D70",
-    direct: "\u76F4\u6539",
-    candidates: "\u5019\u88DC\u9078",
-    modify: "\u539F\u6587\u4FEE\u6B63",
+    companion: SEED_NAMES.ja.companion,
+    direct: SEED_NAMES.ja.direct,
+    candidates: SEED_NAMES.ja.candidates,
+    modify: SEED_NAMES.ja.liveFlow,
     off: "\u30AA\u30D5",
     notifyOff: (p) => `[${p}] \u30100 \u30AA\u30D5 (off)\u3011\uFF1A\u4E0B\u90E8\u30D0\u30FC\u975E\u8868\u793A\u30FB\u76E3\u8996\u505C\u6B62\u30FB0 Token \u7121\u8CA0\u8377`
   },
+  ko: {
+    companion: SEED_NAMES.ko.companion,
+    direct: SEED_NAMES.ko.direct,
+    candidates: SEED_NAMES.ko.candidates,
+    modify: SEED_NAMES.ko.liveFlow,
+    off: "\uAEBC\uC9D0",
+    notifyOff: (p) => `[${p}] \u30100 \uAEBC\uC9D0 (off)\u3011\uFF1A\uC0C1\uD0DC \uC228\uAE40 \xB7 \uB9AC\uC2A4\uB108 \uBD84\uB9AC \xB7 0 \uD1A0\uD070`
+  },
+  es: {
+    companion: SEED_NAMES.es.companion,
+    direct: SEED_NAMES.es.direct,
+    candidates: SEED_NAMES.es.candidates,
+    modify: SEED_NAMES.es.liveFlow,
+    off: "Apagado",
+    notifyOff: (p) => `[${p}] Cambiado a [0 Apagado]: Estado oculto \xB7 0 tokens`
+  },
+  fr: {
+    companion: SEED_NAMES.fr.companion,
+    direct: SEED_NAMES.fr.direct,
+    candidates: SEED_NAMES.fr.candidates,
+    modify: SEED_NAMES.fr.liveFlow,
+    off: "D\xE9sactiv\xE9",
+    notifyOff: (p) => `[${p}] Pass\xE9 en mode [0 D\xE9sactiv\xE9] : Statut masqu\xE9 \xB7 0 tokens`
+  },
+  de: {
+    companion: SEED_NAMES.de.companion,
+    direct: SEED_NAMES.de.direct,
+    candidates: SEED_NAMES.de.candidates,
+    modify: SEED_NAMES.de.liveFlow,
+    off: "Aus",
+    notifyOff: (p) => `[${p}] Gewechselt zu [0 Aus]: Status ausgeblendet \xB7 0 Tokens`
+  },
+  ru: {
+    companion: SEED_NAMES.ru.companion,
+    direct: SEED_NAMES.ru.direct,
+    candidates: SEED_NAMES.ru.candidates,
+    modify: SEED_NAMES.ru.liveFlow,
+    off: "\u0412\u044B\u043A\u043B",
+    notifyOff: (p) => `[${p}] \u041F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0435\u043D\u043E \u0432 \u0440\u0435\u0436\u0438\u043C [0 \u0412\u044B\u043A\u043B]: \u0441\u043A\u0440\u044B\u0442 \u0441\u0442\u0430\u0442\u0443\u0441 \xB7 0 \u0442\u043E\u043A\u0435\u043D\u043E\u0432`
+  },
   en: {
-    companion: "Companion",
-    direct: "Direct",
-    candidates: "Candidates",
-    modify: "Modify",
+    companion: SEED_NAMES.en.companion,
+    direct: SEED_NAMES.en.direct,
+    candidates: SEED_NAMES.en.candidates,
+    modify: SEED_NAMES.en.liveFlow,
     off: "Off",
     notifyOff: (p) => `[${p}] Switched to [0 Off] mode: Status hidden \xB7 listeners detached \xB7 0 tokens`
   }
@@ -4168,6 +4356,7 @@ export {
   MAX_TRANSLATION_LINES,
   PRESET_LOADOUTS,
   PROMPT_RULE_PRESETS,
+  SEED_NAMES,
   SLOT_PRESETS,
   SUPPORTED_LANG_CODES,
   addCustomMode,
@@ -4230,12 +4419,14 @@ export {
   resolveLabelsForLang,
   resolveLangPair,
   resolveLanguageName,
+  resolveModeDisplayName,
   resolveModeDisplaySpec,
   resolveModesFromConfig,
   resolveModifySlotsFromConfig,
   resolvePromptRulePreset,
   resolvePromptTargetLangName,
   resolveReleaseBannerLang,
+  resolveSeedNames,
   resolveSlotsForPreset,
   rewritePromptDirect,
   sanitizePromptForTranslation,

@@ -20,6 +20,9 @@ import {
   getPresetLoadout,
   listPresetLoadouts,
   defaultSlotsForMode,
+  resolveSeedNames,
+  resolveModeDisplayName,
+  SEED_NAMES,
 } from "../src/index.js";
 import type { CustomModeConfig } from "../src/types.js";
 import extensionFactory from "../src/extension.js";
@@ -476,4 +479,215 @@ test("modes: defaultSlotsForMode produces identical slots across helper, resolve
       }
     }
   }
+});
+
+test("modes: resolveSeedNames adheres 1:1 to 9-language matrix across all keys (A1)", () => {
+  const EXPECTED_MATRIX: Record<string, Record<string, string>> = {
+    en: {
+      companion: "Companion",
+      direct: "Logical Spec",
+      liveFlow: "Live Flow",
+      candidates: "Candidates",
+      loadoutSpec: "Brain-Dump Spec",
+      loadoutCommit: "Commit Dehydrator",
+      loadoutOss: "OSS Peer Comms",
+      loadoutYap: "Indie Shipper",
+      vocab: "Key Terms",
+      fixed: "Fixed",
+      native: "Native",
+      takeaway: "Takeaways",
+    },
+    zh: {
+      companion: "纯伴学",
+      direct: "规范直发",
+      liveFlow: "实战狂飙",
+      candidates: "挑候选",
+      loadoutSpec: "脑暴压铸",
+      loadoutCommit: "提交脱水",
+      loadoutOss: "开源对线",
+      loadoutYap: "极客发推",
+      vocab: "核心表达",
+      fixed: "原句修补",
+      native: "地道表达",
+      takeaway: "收获复盘",
+    },
+    tw: {
+      companion: "純伴學",
+      direct: "規範直發",
+      liveFlow: "實戰狂飆",
+      candidates: "挑候選",
+      loadoutSpec: "腦暴壓鑄",
+      loadoutCommit: "提交脫水",
+      loadoutOss: "開源對線",
+      loadoutYap: "極客發推",
+      vocab: "核心表達",
+      fixed: "原句修補",
+      native: "道地表達",
+      takeaway: "收穫複盤",
+    },
+    ja: {
+      companion: "伴走",
+      direct: "仕様直行",
+      liveFlow: "実戦疾走",
+      candidates: "候補選択",
+      loadoutSpec: "仕様鋳造",
+      loadoutCommit: "コミット脱水",
+      loadoutOss: "OSS対話",
+      loadoutYap: "発信投稿",
+      vocab: "重要語彙",
+      fixed: "原文修正",
+      native: "自然表現",
+      takeaway: "重要ポイント",
+    },
+    ko: {
+      companion: "동행학습",
+      direct: "논리정제",
+      liveFlow: "실전질주",
+      candidates: "후보선택",
+      loadoutSpec: "사양주조",
+      loadoutCommit: "커밋정제",
+      loadoutOss: "OSS대화",
+      loadoutYap: "개발자발신",
+      vocab: "핵심어휘",
+      fixed: "원문수정",
+      native: "자연스러운표현",
+      takeaway: "핵심포인트",
+    },
+    es: {
+      companion: "Aprendizaje",
+      direct: "Directo Lógico",
+      liveFlow: "Live Flow",
+      candidates: "Candidatos",
+      loadoutSpec: "Spec Lógica",
+      loadoutCommit: "Commit Dehidrado",
+      loadoutOss: "OSS Comms",
+      loadoutYap: "Post Indie",
+      vocab: "Términos clave",
+      fixed: "Corregido",
+      native: "Nativo",
+      takeaway: "Puntos clave",
+    },
+    fr: {
+      companion: "Compagnon",
+      direct: "Direct Logique",
+      liveFlow: "Live Flow",
+      candidates: "Candidats",
+      loadoutSpec: "Spécification",
+      loadoutCommit: "Commit Épuré",
+      loadoutOss: "Comms OSS",
+      loadoutYap: "Post Indie",
+      vocab: "Termes clés",
+      fixed: "Corrigé",
+      native: "Naturel",
+      takeaway: "Points clés",
+    },
+    de: {
+      companion: "Begleitung",
+      direct: "Direkte Logik",
+      liveFlow: "Live Flow",
+      candidates: "Kandidaten",
+      loadoutSpec: "Spezifikation",
+      loadoutCommit: "Commit-Kompakt",
+      loadoutOss: "OSS-Dialog",
+      loadoutYap: "Indie-Post",
+      vocab: "Schlüsselbegriffe",
+      fixed: "Korrigiert",
+      native: "Nativ",
+      takeaway: "Wichtige Punkte",
+    },
+    ru: {
+      companion: "Сопровождение",
+      direct: "Прямой поток",
+      liveFlow: "Live Flow",
+      candidates: "Кандидаты",
+      loadoutSpec: "Спецификация",
+      loadoutCommit: "Коммит-дехидрат",
+      loadoutOss: "OSS-диалог",
+      loadoutYap: "Инди-пост",
+      vocab: "Ключевые слова",
+      fixed: "Исправлено",
+      native: "Нативный",
+      takeaway: "Главное",
+    },
+  };
+
+  for (const [lang, expected] of Object.entries(EXPECTED_MATRIX)) {
+    const actual = resolveSeedNames(lang);
+    for (const [key, expectedVal] of Object.entries(expected)) {
+      assert.equal(
+        (actual as any)[key],
+        expectedVal,
+        `[${lang}] "${key}" must equal "${expectedVal}", got: "${(actual as any)[key]}"`
+      );
+    }
+  }
+});
+
+test("modes: non-English SEED_NAMES never accidentally fall back to English values (A1 anti-drift)", () => {
+  // Explicit whitelist: languages where liveFlow intentionally adopts the global "Live Flow" branding
+  const LIVE_FLOW_WHITELIST = new Set(["tw", "es", "fr", "de", "ru"]);
+
+  for (const [lang, keys] of Object.entries(SEED_NAMES)) {
+    if (lang === "en") continue;
+    for (const [key, val] of Object.entries(keys)) {
+      if (key === "liveFlow" && LIVE_FLOW_WHITELIST.has(lang)) {
+        continue;
+      }
+      const enVal = (SEED_NAMES.en as any)[key];
+      assert.notEqual(
+        val,
+        enVal,
+        `[${lang}] "${key}" must not equal English value "${enVal}", got: "${val}"`
+      );
+    }
+  }
+});
+
+test("modes: resolveModeDisplayName ensures structural consistency across badge, toast, and custom registry (A4)", async () => {
+  const registeredCommands: Record<string, any> = {};
+  const mockPi: any = {
+    on() {},
+    registerCommand(name: string, def: any) {
+      registeredCommands[name] = def;
+    },
+    registerShortcut() {},
+  };
+  extensionFactory(mockPi);
+
+  const notifications: string[] = [];
+  let statusBadge: any = null;
+  const mockCtx: any = {
+    hasUI: true,
+    model: { provider: "mock", id: "mock-model" },
+    ui: {
+      notify(msg: string) {
+        notifications.push(msg);
+      },
+      setStatus(_k: string, v: any) {
+        statusBadge = v;
+      },
+      theme: { fg: (_c: string, t: string) => t },
+    },
+  };
+
+  // Switch to zh
+  await registeredCommands["lang"].handler("zh en", mockCtx);
+
+  // Test resolveModeDisplayName directly for all canonical modes
+  assert.equal(resolveModeDisplayName("companion", "zh"), "纯伴学");
+  assert.equal(resolveModeDisplayName("direct", "zh"), "规范直发");
+  assert.equal(resolveModeDisplayName("live-flow", "zh"), "实战狂飙");
+  assert.equal(resolveModeDisplayName("candidates", "zh"), "挑候选");
+  assert.equal(resolveModeDisplayName("companion", "ja"), "伴走");
+  assert.equal(resolveModeDisplayName("direct", "ja"), "仕様直行");
+
+  // In factory registry: switch to direct
+  notifications.length = 0;
+  await registeredCommands["lingual"].handler("direct", mockCtx);
+  const toast = notifications[notifications.length - 1];
+  assert.ok(toast.includes("规范直发"), `Toast must contain 规范直发: ${toast}`);
+  assert.ok(String(statusBadge).includes("规范直发"), `Badge must contain 规范直发: ${statusBadge}`);
+
+  // Teardown back to 1
+  await registeredCommands["lingual"].handler("1", mockCtx);
 });

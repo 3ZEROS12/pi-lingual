@@ -41,6 +41,7 @@ import {
   formatReleaseBannerLines,
   resolveReleaseBannerLang,
   resolveModeDisplaySpec,
+  resolveModeDisplayName,
   normalizeLingualModeInput,
   CURRENT_FEATURE_BANNER_VERSION,
   getDefaultDirectSlots,
@@ -248,8 +249,7 @@ function updateFooter(ctx: ExtensionContext | null | undefined) {
       pair += ` · ${state.slotPreset}`;
     }
 
-    const modeSpec = resolveModeDisplaySpec(state.sourceLang);
-    const modeName = activeMode ? activeMode.name : (modeSpec as any)[canonicalKey] || state.mode;
+    const modeName = activeMode ? activeMode.name : resolveModeDisplayName(canonicalId, state.sourceLang);
     ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", `${pair} · ${modeName}`));
   } catch {
     // Gracefully ignore stale context during session replacement or teardown
