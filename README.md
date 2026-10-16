@@ -7,7 +7,7 @@ Code in your native language. See real-time Silicon Valley spoken phrasing and f
 [![npm version](https://img.shields.io/npm/v/pi-lingual?color=blue)](https://www.npmjs.com/package/pi-lingual)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Built for Pi](https://img.shields.io/badge/Built%20for-Pi%20Coding%20Agent-orange)](https://github.com/earendil-works/pi-coding-agent)
-[![Tests](https://img.shields.io/badge/Tests-156%2F156%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
+[![Tests](https://img.shields.io/badge/Tests-165%2F165%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict%20Zero%20Error-blue)](tsconfig.json)
 
 **English** | [简体中文](./README_zh.md)
@@ -172,12 +172,12 @@ Translating into English is the primary focus, but major languages are supported
 
 Switch language pairs anytime:
 ```bash
-/lang ja en      # Japanese to English
-/lang es en      # Spanish to English
-/lang de en      # German to English
-/lang en ja      # English to Japanese
-/lang zh ja      # Chinese to Japanese
-/lang 日语       # Natural language aliases supported
+/lingual lang ja en      # Japanese to English (or: /l lang ja en)
+/lingual lang es en      # Spanish to English
+/lingual lang de en      # German to English
+/lingual lang en ja      # English to Japanese
+/lingual lang zh ja      # Chinese to Japanese
+/lingual lang 日语       # Natural language aliases supported
 ```
 
 **Primary Language Sovereignty**: Switching languages updates status badges, command hints, and UI chrome with zero hardcoded residues.
@@ -186,6 +186,8 @@ Switch language pairs anytime:
 
 ## Engineering Highlights
 
+- 🎯 **Smart Language Sensor (0ms Auto-Bypass)**: Automatically detects when you are already typing in your target language (e.g. English in `zh ⇄ en`) and passes through at 0ms without redundant translations or token waste. In Direct Spec mode, prompts starting with active verbs (`Fix`, `Add`, `Refactor`) pass through instantly.
+- 🧭 **Interactive Capsule Mode Picker**: Simply type `/lingual` or `/l` to pop up an in-line capsule picker. Tap `1`, `2`, `3`, or `0` for instant hotkey switching without pressing Enter, or navigate with arrow keys and cancel with `Esc`.
 - 🛡️ **Zero Context Pollution**: Runs as an ambient TUI sidecar. Never injects translation tokens into your LLM chat history.
 - ⚡ **Instant & Non-Blocking**: Press Enter to clear cards immediately. Stale background requests abort on the fly via `AbortController`.
 - 📐 **Rock-Solid Terminal Layout**: Open tree branches (`· ┌ ├ └`) using Unicode UAX #11 metrics. Never breaks borders or wraps awkwardly on wide characters.
@@ -196,21 +198,25 @@ Switch language pairs anytime:
 
 ---
 
-## Streamlined 4-Command Matrix (Zero Autocomplete Clutter)
+## Streamlined Command Architecture (Single Super-Command `/lingual` & `/l`)
 
-To keep Pi's `/` autocomplete menu clean, `pi-lingual` registers only **4 top-level commands** and routes all management actions through `/lingual`:
+To prevent autocomplete pollution in Pi's `/` menu, `pi-lingual` registers strictly **2 top-level commands** (`/lingual` and its ultra-short alias `/l`) and routes all sub-functions through a unified command bus:
 
-| Core Command | Subcommands / Arguments | Description |
+| Command | Subcommands / Arguments | Description |
 | :--- | :--- | :--- |
-| **`/lingual`** | `/lingual [id\|index\|off]` | Smoothly cycles enabled modes; jump directly by number or ID |
-| ↳ Reasoning Effort | `/lingual reasoning [low\|medium\|high]` | Switch model reasoning depth (`low` for fast execution, `medium` for complex `spec`) |
-| ↳ Mode Registry | `/lingual mode [list\|add\|rm\|toggle\|reset]` | Manage custom modes, flow directions, and slots via CLI |
+| **`/lingual`** or **`/l`** | *(no arguments)* | Open interactive capsule mode picker (hotkeys `1`/`2`/`3`/`0`, arrows, `Esc`) |
+| ↳ Direct Switch | `/lingual 1` \| `2` \| `3` \| `0` | Instant mode switch by positional number or ID (`companion`, `direct`, `live-flow`, `off`) |
+| ↳ Quick Toggle | `/lingual on` \| `off` | Quickly enable companion mode or turn off (0 pixels, 0 listeners, 0 tokens) |
+| ↳ Language Pair | `/lingual lang [pair]` | Switch language direction (e.g. `/lingual lang ja en`, `/lingual lang 日语`) |
+| ↳ Replay Card | `/lingual last` \| `replay` | Replay the most recent companion or rewrite card |
+| ↳ Layout Mode | `/lingual compact` | Toggle dense single-line capsule mode vs open Left-Rail Tree HUD |
+| ↳ Mode Lock | `/lingual lock` \| `unlock` | Lock active mode to prevent external process or unrequested drift |
+| ↳ Reasoning Effort | `/lingual reasoning [low\|medium\|high]` | Switch model reasoning depth (`low` for responsive execution, `medium` for complex `spec`) |
+| ↳ Mode Registry | `/lingual mode [list\|add\|rm\|toggle\|reset]` | Manage custom declarative modes, flow directions, and slots via CLI |
 | ↳ Loadouts | `/lingual loadout [list\|apply <id>]` | Inspect or apply tactical loadouts (`spec`, `commit`, `oss`, `yap`) |
-| ↳ Subcommands | `/lingual compact` \| `model` \| `status` \| `news` \| `lock` | Toggle capsule, switch model, inspect cache, view news, or lock mode |
-| **`/tuner`** | `/tuner [request]` | Launch on-demand Bilingual Prompt Architect wizard directly |
-| **`/lang`** | `/lang <source> [target]` | Switch language pair (e.g. `/lang ja en`, `/lang 日语`) |
-| **`/slots`** | `/slots [add\|rm\|toggle\|reset]` | Manage active mode slots (adding slots automatically upgrades to Tree HUD if > 1 slot) |
-| **`/last`** | `/last` | Replay the most recent companion or rewrite card |
+| ↳ Slot Control | `/lingual slots [add\|rm\|toggle\|reset]` | Advanced slot inspection and dynamic slot customization |
+| ↳ Prompt Architect | `/lingual tuner [request]` | Launch on-demand Bilingual Prompt Architect wizard directly |
+| ↳ Status & Diagnostics | `/lingual status` | Comprehensive diagnostics and in-memory LRU cache statistics |
 
 *Keyboard shortcuts: `Alt+.` (next page), `Alt+,` (previous page). Standalone CLI: `lingual "prompt"`.*
 
@@ -221,11 +227,11 @@ To keep Pi's `/` autocomplete menu clean, `pi-lingual` registers only **4 top-le
 Never get locked into rigid, hardcoded templates. Every slot on your companion card—including the source text—is a decoupled building block:
 
 - **Hide original source text**:  
-  Run `/slots rm source` to completely remove the source text row. Cards will display clean translation branches directly.
+  Run `/lingual slots rm source` to completely remove the source text row. Cards will display clean translation branches directly.
 - **Add custom tone & style slots**:  
-  Run `/slots add twitter Tweet Short punchy tweet under 280 chars`. The LLM JSON schema and Tree HUD layout adapt dynamically in real-time.
+  Run `/lingual slots add twitter Tweet Short punchy tweet under 280 chars`. The LLM JSON schema and Tree HUD layout adapt dynamically in real-time.
 - **Toggle or reset slots**:  
-  Run `/slots toggle <id>` to temporarily mute a slot; run `/slots reset` to restore default initial slots anytime.
+  Run `/lingual slots toggle <id>` to temporarily mute a slot; run `/lingual slots reset` to restore default initial slots anytime.
 
 > 💡 **Agent Confirmation Protocol**: When asking your Agent to configure companion slots, your Agent will proactively confirm two things: **your desired slot count**, and **the specific style and role for each slot (including whether you want to keep or suppress the original text)**.
 

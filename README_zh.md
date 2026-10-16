@@ -7,7 +7,7 @@
 [![npm version](https://img.shields.io/npm/v/pi-lingual?color=blue)](https://www.npmjs.com/package/pi-lingual)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Built for Pi](https://img.shields.io/badge/Built%20for-Pi%20Coding%20Agent-orange)](https://github.com/earendil-works/pi-coding-agent)
-[![Tests](https://img.shields.io/badge/Tests-156%2F156%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
+[![Tests](https://img.shields.io/badge/Tests-165%2F165%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict%20Zero%20Error-blue)](tsconfig.json)
 
 [English](./README.md) | **简体中文**
@@ -172,12 +172,12 @@ pi install npm:pi-lingual
 
 随时通过命令切换语言对：
 ```bash
-/lang ja en      # 日语转英语
-/lang es en      # 西班牙语转英语
-/lang de en      # 德语转英语
-/lang en ja      # 英语转日语
-/lang zh ja      # 中文转日语
-/lang 日语       # 支持自然语言中文别名
+/lingual lang ja en      # 日语转英语（或简写: /l lang ja en）
+/lingual lang es en      # 西班牙语转英语
+/lingual lang de en      # 德语转英语
+/lingual lang en ja      # 英语转日语
+/lingual lang zh ja      # 中文转日语
+/lingual lang 日语       # 支持自然语言中文别名
 ```
 
 **绝对母语主权（Language Sovereignty）**：切换母语后，底栏状态、命令说明、视窗标签、错误提示全部 100% 动态本地化，绝无硬编码残留。
@@ -186,6 +186,8 @@ pi install npm:pi-lingual
 
 ## 底层硬核机制
 
+- **智能语向传感器（0ms 自动放行）**：自动探测用户直接使用目标语言（如 `zh ⇄ en` 下键入英文）的书写行为，0ms 原样直发 coding agent，不走冗余跨语言翻译、零额外 Token 消耗；在规范直发模式下，以标准祈使动词（`Fix`, `Add`, `Refactor` 等）开头的规范工程提示词直接 0ms 放行。
+- **交互式胶囊模式选择器**：只需在终端键入 `/lingual` 或超短别名 `/l`，即可原地展开高颜值胶囊条，按数字键 `1`/`2`/`3`/`0` 瞬间极速切换（无需按回车），也可通过方向键浏览高亮或按 `Esc` 安全取消。
 - **输入流拦截**：在 `pass-through` 伴学模式下通过 `{ action: "continue" }` 实现 0ms 零延迟放行；在 `transform` 规范模式下通过 `{ action: "transform", text }` 动态重写提示词；在 `target: "clipboard"` 模式下自动写入系统剪贴板。
 - **即时请求熔断**：敲回车或新输入到达时，单调递增世代令牌（Generation Token）立刻用 `AbortController` 物理掐断上一轮未完成的后台网络请求，杜绝幽灵响应与 Token 浪费。
 - **零延迟清屏与避峰**：敲回车瞬间立即清空旧卡片，底栏切换为 `polishing...`；在 `pass-through` 伴学模式下请求延迟 80ms 触发，让出连接池给主任务完成首包握手，彻底免除排队互斥。
@@ -195,21 +197,25 @@ pi install npm:pi-lingual
 
 ---
 
-## 精简命令矩阵（仅注册 4 个核心命令，零菜单刷屏）
+## 极简单一命令空间（全功能收拢于 `/lingual` 与 `/l`）
 
-为保持 Pi `/` 补全菜单干净清爽，`pi-lingual` 仅注册 4 个核心命令，其余低频管理全部收拢在 `/lingual` 子命令下：
+为保持 Pi `/` 补全菜单干净清爽，`pi-lingual` 严格仅注册 2 个第一公民命令（`/lingual` 及其超短别名 `/l`），将全部功能统一收拢收编：
 
 | 核心命令 | 子命令 / 传参 | 功能说明 |
 | :--- | :--- | :--- |
-| **`/lingual`** | `/lingual [id\|序号\|off]` | 平滑轮转当前已启用的模式；带数字或 ID 直接切换到对应模式 |
-| ↳ 思考深度 | `/lingual reasoning [low\|medium\|high]` | 调节模型推理思考深度（日常 `low` 秒级极速，结构化 `spec` 自适应 `medium`） |
+| **`/lingual`** 或 **`/l`** | *(无参数)* | 呼出交互式胶囊模式选择器（按数字 `1`/`2`/`3`/`0` 瞬切，支持方向键与 `Esc`） |
+| ↳ 序号直切 | `/lingual 1` \| `2` \| `3` \| `0` | 按位置序号或 ID 直切对应模式（`companion`, `direct`, `live-flow`, `off`） |
+| ↳ 快捷开关 | `/lingual on` \| `off` | 快捷开启伴学或完全关闭（关闭态 0 像素、0 监听、0 Token 消耗） |
+| ↳ 语言对切换 | `/lingual lang [pair]` | 切换伴学语言流向（如 `/lingual lang ja en`、`/lingual lang 日语`） |
+| ↳ 认知卡回放 | `/lingual last` \| `replay` | 重新浮现上一条伴学或改写认知卡片 |
+| ↳ 布局切换 | `/lingual compact` | 切换单行胶囊模式与开放式左导轨树状架构 |
+| ↳ 模式防漂移 | `/lingual lock` \| `unlock` | 锁定当前会话模式，防止外部进程或无意轮转覆盖 |
+| ↳ 思考深度 | `/lingual reasoning [low\|medium\|high]` | 调节模型推理思考深度（日常 `low` 快速响应（取决于模型提供商），结构化 `spec` 自适应 `medium`） |
 | ↳ 模式管理 | `/lingual mode [list\|add\|rm\|toggle\|reset]` | 查看模式注册表，通过命令行直接增删改查模式与流向 |
 | ↳ 战术配装 | `/lingual loadout [list\|apply <id>]` | 查看或一键装配战术配装（`spec`, `commit`, `oss`, `yap`） |
-| ↳ 快捷子命令 | `/lingual compact` \| `model` \| `status` \| `news` \| `lock` | 切换单行胶囊、切换模型、查看状态、版本说明或模式防漂移锁定 |
-| **`/tuner`** | `/tuner [自然语言需求]` | 直接唤醒双语架构师向导，对话式定制模式与提示词 |
-| **`/lang`** | `/lang <源> [目标]` | 切换语言对（如 `/lang ja en`、`/lang 日语`） |
-| **`/slots`** | `/slots [add\|rm\|toggle\|reset]` | 管理当前模式的槽位（添加槽位若超过 1 个译文槽自动升级树状 HUD） |
-| **`/last`** | `/last` | 重新浮现上一条伴学或改写卡片 |
+| ↳ 槽位控制 | `/lingual slots [add\|rm\|toggle\|reset]` | 查看或增删改查当前模式的认知槽位 |
+| ↳ 架构师向导 | `/lingual tuner [自然语言需求]` | 直接唤醒双语架构师向导，对话式定制模式与提示词 |
+| ↳ 运行报告 | `/lingual status` | 查看当前语言流向、模型、布局状态与内存缓存命中率 |
 
 *快捷键：`Alt+.`（下一页），`Alt+,`（上一页）。系统独立命令行：`lingual "输入需求"`。*
 
@@ -220,11 +226,11 @@ pi install npm:pi-lingual
 伴学卡片的每个槽位（包括原文）都是独立可插拔的构件，不强制绑定任何固定模板：
 
 - **不喜欢回显原文行**：  
-  运行 `/slots rm source` 物理移除原文槽位。卡片不占用顶行空间，直接渲染紧凑译文分支。
+  运行 `/lingual slots rm source` 物理移除原文槽位。卡片不占用顶行空间，直接渲染紧凑译文分支。
 - **添加自定义风格槽位**：  
-  运行 `/slots add twitter 推文 Short punchy tweet under 280 chars`。系统提示词输出结构与 HUD 树状图实时同步适配。
+  运行 `/lingual slots add twitter 推文 Short punchy tweet under 280 chars`。系统提示词输出结构与 HUD 树状图实时同步适配。
 - **一键开关与恢复初始**：  
-  运行 `/slots toggle <id>` 临时静音指定槽位；运行 `/slots reset` 恢复初始槽位。
+  运行 `/lingual slots toggle <id>` 临时静音指定槽位；运行 `/lingual slots reset` 恢复初始槽位。
 
 > 💡 **Agent 交互规范**：Agent 在协助你配置或优化伴学风格时，会主动向你确认两件事：**期望的槽位数**，以及**每个槽位具体想要的功能风格（包括是否保留原文）**，按你的真实习惯组装流水线。
 

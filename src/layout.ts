@@ -176,6 +176,91 @@ export function formatLoadingMessage(
   return truncateVisual(clean, maxCols);
 }
 
+export interface ModePickerOption {
+  num: number | string;
+  id: string;
+  name: string;
+  englishTag?: string;
+}
+
+/**
+ * Formats interactive mode picker capsule view lines bounded by terminal width.
+ * Invariant 12: VisualWidth <= live columns across all viewport sizes (20/30/40/80 cols).
+ */
+export function formatModePickerLines(
+  title: string,
+  hint: string,
+  pair: string,
+  options: ModePickerOption[],
+  selectedIndex: number,
+  maxCols = 78,
+  theme?: {
+    fg: (color: string, text: string) => string;
+    bold?: (text: string) => string;
+  }
+): string[] {
+  const cols = Math.max(20, maxCols);
+  const color = theme?.fg || ((_c: string, t: string) => t);
+  const bold = theme?.bold || ((t: string) => t);
+
+  const lines: string[] = [];
+  const dividerLength = Math.max(10, Math.min(cols, 76));
+  const divider = "─".repeat(dividerLength);
+
+  lines.push(color("muted", divider));
+
+  // Header line
+  const rawHeader = ` [lingual · ${pair}] ${title} (${hint})`;
+  lines.push(color("muted", truncateVisual(rawHeader, cols)));
+
+  // Determine whether to arrange in 2 columns or 1 column
+  const rawCapsules = options.map((opt) => {
+    const tag = opt.englishTag ? ` (${opt.englishTag})` : "";
+    return `[${opt.num}] ${opt.name}${tag}`;
+  });
+
+  const maxRawWidth = Math.max(...rawCapsules.map((c) => getVisualWidth(c)), 15);
+  const colWidth = maxRawWidth + 6;
+  const canDoTwoCols = cols >= 65 && colWidth * 2 <= cols;
+
+  if (canDoTwoCols) {
+    for (let i = 0; i < options.length; i += 2) {
+      const opt2 = options[i + 1];
+
+      const isSel1 = i === selectedIndex;
+      const c1Text = rawCapsules[i];
+      const cursor1 = isSel1 ? color("accent", "▸") : " ";
+      const body1 = isSel1 ? color("accent", bold(c1Text)) : color("text", c1Text);
+      const cell1Visual = 4 + getVisualWidth(c1Text);
+      const pad1 = " ".repeat(Math.max(0, colWidth - cell1Visual));
+      let line = `  ${cursor1} ${body1}${pad1}`;
+
+      if (opt2) {
+        const isSel2 = i + 1 === selectedIndex;
+        const c2Text = rawCapsules[i + 1];
+        const cursor2 = isSel2 ? color("accent", "▸") : " ";
+        const body2 = isSel2 ? color("accent", bold(c2Text)) : color("text", c2Text);
+        line += `  ${cursor2} ${body2}`;
+      }
+
+      lines.push(getVisualWidth(line) > cols ? truncateVisual(line, cols) : line);
+    }
+  } else {
+    // Single column for narrow terminals
+    for (let i = 0; i < options.length; i++) {
+      const isSel = i === selectedIndex;
+      const cText = rawCapsules[i];
+      const cursor = isSel ? color("accent", "▸") : " ";
+      const body = isSel ? color("accent", bold(cText)) : color("text", cText);
+      const rawLine = `  ${cursor} ${body}`;
+      lines.push(getVisualWidth(rawLine) > cols ? truncateVisual(rawLine, cols) : rawLine);
+    }
+  }
+
+  lines.push(color("muted", divider));
+  return lines;
+}
+
 /**
  * Visual text wrapping algorithm bounded by punctuation Kinsoku Shori and max visual width.
  */

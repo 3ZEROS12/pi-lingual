@@ -327,7 +327,7 @@ test("/lang command - every advertised code switches without an invalid-language
   for (const code of SUPPORTED_LANG_CODES) {
     notices.length = 0;
     status = null;
-    await commands["lang"].handler(`${code} en`, ctx);
+    await commands["lingual"].handler(`lang ${code} en`, ctx);
     assert.ok(status, `[${code}] pair switch must update the badge`);
     assert.ok(
       !notices.some((n) => /Invalid language code|无效的语言代码/.test(n)),
@@ -337,7 +337,7 @@ test("/lang command - every advertised code switches without an invalid-language
 
   notices.length = 0;
   status = null;
-  await commands["lang"].handler("klingon", ctx);
+  await commands["lingual"].handler("lang klingon", ctx);
   assert.equal(status, null, "Unknown codes must never switch the language pair");
   assert.ok(notices.length > 0, "Unknown codes must surface a localized warning");
 });
@@ -368,7 +368,7 @@ test("modes: registry-aware mode switch notifications and clean status badge acr
     statusBadge = null;
 
     // Switch language pair
-    await commands["lang"].handler(lang === "en" ? "en ja" : `${lang} en`, ctx);
+    await commands["lingual"].handler(lang === "en" ? "lang en ja" : `lang ${lang} en`, ctx);
 
     // 1. Switch to direct mode
     notices.length = 0;
@@ -417,7 +417,7 @@ test("zero-config cold boot - toast and badge use native mode name without diver
     },
   };
 
-  await commands["lang"].handler("zh en", ctx);
+  await commands["lingual"].handler("lang zh en", ctx);
   notices.length = 0;
   await commands["lingual"].handler("2", ctx);
   const zhModes = getDefaultFactoryModes("zh", "zh");
@@ -451,15 +451,15 @@ test("/lang switch - factory modes refresh to newSource native names unless cust
   };
 
   // 1. Fresh switch zh -> ja
-  await commands["lang"].handler("zh en", ctx);
+  await commands["lingual"].handler("lang zh en", ctx);
   await commands["lingual"].handler("1", ctx);
   assert.ok(String(statusBadge).includes("纯伴学"), `Initial zh badge must have 纯伴学: ${statusBadge}`);
 
-  await commands["lang"].handler("ja en", ctx);
+  await commands["lingual"].handler("lang ja en", ctx);
   assert.ok(String(statusBadge).includes("伴走"), `Switched ja badge must have 伴走: ${statusBadge}`);
 
   // 2. Teardown back to zh
-  await commands["lang"].handler("zh en", ctx);
+  await commands["lingual"].handler("lang zh en", ctx);
 });
 
 test("/lingual alias and out-of-bounds mode switching safety (R3)", async () => {
@@ -709,12 +709,12 @@ test("/lang target switch notification differs from full pair switch (F2-7)", as
 
   // 1. Full pair switch
   notices.length = 0;
-  await commands["lang"].handler("zh ja", ctx);
+  await commands["lingual"].handler("lang zh ja", ctx);
   const pairNotice = notices[notices.length - 1];
 
   // 2. Target-only switch (source stays zh)
   notices.length = 0;
-  await commands["lang"].handler("en", ctx);
+  await commands["lingual"].handler("lang en", ctx);
   const targetNotice = notices[notices.length - 1];
 
   assert.notEqual(
@@ -728,7 +728,7 @@ test("/lang target switch notification differs from full pair switch (F2-7)", as
   );
 
   // Teardown back to zh en
-  await commands["lang"].handler("zh en", ctx);
+  await commands["lingual"].handler("lang zh en", ctx);
 });
 
 test("/lingual command description across all presets reflects 3-core mode numbers (F2-8)", () => {

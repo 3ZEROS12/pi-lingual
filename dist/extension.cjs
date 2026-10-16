@@ -140,6 +140,55 @@ function formatLoadingMessage(rawMsg, maxCols = getBannerMaxCols()) {
   if (getVisualWidth(clean) <= maxCols) return clean;
   return truncateVisual(clean, maxCols);
 }
+function formatModePickerLines(title, hint, pair, options, selectedIndex, maxCols = 78, theme) {
+  const cols = Math.max(20, maxCols);
+  const color = theme?.fg || ((_c, t) => t);
+  const bold = theme?.bold || ((t) => t);
+  const lines = [];
+  const dividerLength = Math.max(10, Math.min(cols, 76));
+  const divider = "\u2500".repeat(dividerLength);
+  lines.push(color("muted", divider));
+  const rawHeader = ` [lingual \xB7 ${pair}] ${title} (${hint})`;
+  lines.push(color("muted", truncateVisual(rawHeader, cols)));
+  const rawCapsules = options.map((opt) => {
+    const tag = opt.englishTag ? ` (${opt.englishTag})` : "";
+    return `[${opt.num}] ${opt.name}${tag}`;
+  });
+  const maxRawWidth = Math.max(...rawCapsules.map((c) => getVisualWidth(c)), 15);
+  const colWidth = maxRawWidth + 6;
+  const canDoTwoCols = cols >= 65 && colWidth * 2 <= cols;
+  if (canDoTwoCols) {
+    for (let i = 0; i < options.length; i += 2) {
+      const opt2 = options[i + 1];
+      const isSel1 = i === selectedIndex;
+      const c1Text = rawCapsules[i];
+      const cursor1 = isSel1 ? color("accent", "\u25B8") : " ";
+      const body1 = isSel1 ? color("accent", bold(c1Text)) : color("text", c1Text);
+      const cell1Visual = 4 + getVisualWidth(c1Text);
+      const pad1 = " ".repeat(Math.max(0, colWidth - cell1Visual));
+      let line = `  ${cursor1} ${body1}${pad1}`;
+      if (opt2) {
+        const isSel2 = i + 1 === selectedIndex;
+        const c2Text = rawCapsules[i + 1];
+        const cursor2 = isSel2 ? color("accent", "\u25B8") : " ";
+        const body2 = isSel2 ? color("accent", bold(c2Text)) : color("text", c2Text);
+        line += `  ${cursor2} ${body2}`;
+      }
+      lines.push(getVisualWidth(line) > cols ? truncateVisual(line, cols) : line);
+    }
+  } else {
+    for (let i = 0; i < options.length; i++) {
+      const isSel = i === selectedIndex;
+      const cText = rawCapsules[i];
+      const cursor = isSel ? color("accent", "\u25B8") : " ";
+      const body = isSel ? color("accent", bold(cText)) : color("text", cText);
+      const rawLine = `  ${cursor} ${body}`;
+      lines.push(getVisualWidth(rawLine) > cols ? truncateVisual(rawLine, cols) : rawLine);
+    }
+  }
+  lines.push(color("muted", divider));
+  return lines;
+}
 function wrapVisualText(text, maxWidth) {
   if (maxWidth <= 0) return [text];
   const rawLines = [];
@@ -1906,6 +1955,8 @@ var LANGUAGE_PRESETS = {
     cmdDescLast: "Replay previous companion card: /last",
     shortcutNextPage: "Next companion page segment",
     shortcutPrevPage: "Previous companion page segment",
+    modePickerTitle: "Mode Switch",
+    modePickerHint: "Press 1/2/3/0 to switch, Esc to cancel",
     capsuleSlot1Prefix: "Spk",
     capsuleSlot2Prefix: "Wrt",
     layoutCapsule: "Single-Line Capsule (1-Line)",
@@ -1993,6 +2044,8 @@ var LANGUAGE_PRESETS = {
     cmdDescLast: "\u56DE\u770B\u4E0A\u4E00\u6761\u5361\u7247: /last",
     shortcutNextPage: "\u5207\u6362\u81F3\u4E0B\u4E00\u6BB5\u4F34\u5B66\u5207\u7247",
     shortcutPrevPage: "\u5207\u6362\u81F3\u4E0A\u4E00\u6BB5\u4F34\u5B66\u5207\u7247",
+    modePickerTitle: "\u4F34\u5B66\u6A21\u5F0F\u5207\u6362",
+    modePickerHint: "\u6309\u6570\u5B57\u952E 1/2/3/0 \u76F4\u63A5\u751F\u6548\uFF0CEsc \u53D6\u6D88",
     capsuleSlot1Prefix: "\u53E3",
     capsuleSlot2Prefix: "\u5199",
     layoutCapsule: "\u5355\u884C\u80F6\u56CA\u6781\u7B80\u6D41 (1-Line Capsule)",
@@ -2080,6 +2133,8 @@ var LANGUAGE_PRESETS = {
     cmdDescLast: "\u56DE\u770B\u4E0A\u4E00\u689D\u5361\u7247: /last",
     shortcutNextPage: "\u5207\u63DB\u81F3\u4E0B\u4E00\u6BB5\u4F34\u5B78\u5207\u7247",
     shortcutPrevPage: "\u5207\u63DB\u81F3\u4E0A\u4E00\u6BB5\u4F34\u5B78\u5207\u7247",
+    modePickerTitle: "\u4F34\u5B78\u6A21\u5F0F\u5207\u63DB",
+    modePickerHint: "\u6309\u6578\u5B57\u9375 1/2/3/0 \u76F4\u63A5\u751F\u6548\uFF0CEsc \u53D6\u6D88",
     capsuleSlot1Prefix: "\u53E3",
     capsuleSlot2Prefix: "\u5BEB",
     layoutCapsule: "\u55AE\u884C\u81A0\u56CA\u6975\u7C21\u6D41 (1-Line Capsule)",
@@ -2167,6 +2222,8 @@ var LANGUAGE_PRESETS = {
     cmdDescLast: "\u524D\u56DE\u30AB\u30FC\u30C9\u518D\u8868\u793A: /last",
     shortcutNextPage: "\u6B21\u306E\u30B9\u30E9\u30A4\u30B9\u3078\u79FB\u52D5",
     shortcutPrevPage: "\u524D\u306E\u30B9\u30E9\u30A4\u30B9\u3078\u79FB\u52D5",
+    modePickerTitle: "\u4F34\u8D70\u30E2\u30FC\u30C9\u5207\u66FF",
+    modePickerHint: "1/2/3/0 \u3067\u76F4\u884C\u3001Esc \u3067\u53D6\u6D88",
     capsuleSlot1Prefix: "\u53E3",
     capsuleSlot2Prefix: "\u6587",
     layoutCapsule: "1\u884C\u30AB\u30D7\u30BB\u30EB\u8868\u793A",
@@ -2261,6 +2318,8 @@ var LANGUAGE_PRESETS = {
     cmdDescAgent: "Ver gu\xEDa de personalizaci\xF3n y cambio de idioma: /lingual-agent",
     shortcutNextPage: "Cambiar al siguiente segmento",
     shortcutPrevPage: "Cambiar al segmento anterior",
+    modePickerTitle: "Cambiar modo",
+    modePickerHint: "1/2/3/0 para aplicar, Esc cancela",
     capsuleSlot1Prefix: "Col",
     capsuleSlot2Prefix: "Esc",
     layoutCapsule: "C\xE1psula de una l\xEDnea (1-Line Capsule)",
@@ -2372,6 +2431,8 @@ var LANGUAGE_PRESETS = {
     cmdDescAgent: "Afficher le guide de personnalisation et de changement de langue : /lingual-agent",
     shortcutNextPage: "Passer au segment suivant",
     shortcutPrevPage: "Passer au segment pr\xE9c\xE9dent",
+    modePickerTitle: "Changer de mode",
+    modePickerHint: "1/2/3/0 pour activer, \xC9chap annule",
     capsuleSlot1Prefix: "Oral",
     capsuleSlot2Prefix: "\xC9crit",
     layoutCapsule: "Capsule sur une ligne (1-Line Capsule)",
@@ -2485,6 +2546,8 @@ var LANGUAGE_PRESETS = {
     cmdDescAgent: "Anleitung zur Anpassung und Sprachumstellung anzeigen: /lingual-agent",
     shortcutNextPage: "Zum n\xE4chsten Segment wechseln",
     shortcutPrevPage: "Zum vorherigen Segment wechseln",
+    modePickerTitle: "Modus wechseln",
+    modePickerHint: "1/2/3/0 zum Umschalten, Esc bricht ab",
     capsuleSlot1Prefix: "Ges",
     capsuleSlot2Prefix: "Sch",
     layoutCapsule: "Einzeilige Kapsel (1-Line Capsule)",
@@ -2597,6 +2660,8 @@ var LANGUAGE_PRESETS = {
     cmdDescAgent: "\uC0AC\uC6A9\uC790 \uC124\uC815 \uAC00\uC774\uB4DC: /lingual-agent",
     shortcutNextPage: "\uB2E4\uC74C \uC138\uADF8\uBA3C\uD2B8\uB85C \uC774\uB3D9",
     shortcutPrevPage: "\uC774\uC804 \uC138\uADF8\uBA3C\uD2B8\uB85C \uC774\uB3D9",
+    modePickerTitle: "\uB3D9\uD589\uD559\uC2B5 \uBAA8\uB4DC \uC804\uD658",
+    modePickerHint: "\uC22B\uC790 \uD0A4 1/2/3/0 \uC989\uC2DC \uC801\uC6A9, Esc \uCDE8\uC18C",
     capsuleSlot1Prefix: "\uAD6C",
     capsuleSlot2Prefix: "\uBB38",
     layoutCapsule: "\uB2E8\uC77C \uD589 \uCEA1\uC290 (1-Line Capsule)",
@@ -2710,6 +2775,8 @@ var LANGUAGE_PRESETS = {
     cmdDescAgent: "\u0420\u0443\u043A\u043E\u0432\u043E\u0434\u0441\u0442\u0432\u043E \u043F\u043E \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0435: /lingual-agent",
     shortcutNextPage: "\u041F\u0435\u0440\u0435\u0439\u0442\u0438 \u043A \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u043C\u0443 \u0441\u0435\u0433\u043C\u0435\u043D\u0442\u0443",
     shortcutPrevPage: "\u041F\u0435\u0440\u0435\u0439\u0442\u0438 \u043A \u043F\u0440\u0435\u0434\u044B\u0434\u0443\u0449\u0435\u043C\u0443 \u0441\u0435\u0433\u043C\u0435\u043D\u0442\u0443",
+    modePickerTitle: "\u0421\u043C\u0435\u043D\u0430 \u0440\u0435\u0436\u0438\u043C\u0430",
+    modePickerHint: "1/2/3/0 \u0434\u043B\u044F \u0432\u044B\u0431\u043E\u0440\u0430, Esc \u043E\u0442\u043C\u0435\u043D\u0430",
     capsuleSlot1Prefix: "\u0420\u0430\u0437\u0433",
     capsuleSlot2Prefix: "\u0414\u0435\u043B",
     layoutCapsule: "\u041E\u0434\u043D\u043E\u0441\u0442\u0440\u043E\u0447\u043D\u0430\u044F \u043A\u0430\u043F\u0441\u0443\u043B\u0430 (1-Line Capsule)",
@@ -2968,6 +3035,119 @@ function shouldShieldBypass(text) {
     return true;
   }
   return false;
+}
+function hasSourceScript(text, sourceLang) {
+  const norm = (sourceLang || "zh").toLowerCase().split("-")[0];
+  switch (norm) {
+    case "zh":
+    case "tw":
+      return /[\u4e00-\u9fa5]/.test(text);
+    case "ja":
+      return /[\u3040-\u30ff\u4e00-\u9fa5]/.test(text);
+    case "ko":
+      return /[\uac00-\ud7af]/.test(text);
+    case "ru":
+      return /[\u0400-\u04ff]/.test(text);
+    case "es":
+    case "fr":
+    case "de":
+      return /[\u00c0-\u024f]/.test(text);
+    default:
+      return /[a-zA-Z]/.test(text);
+  }
+}
+var IMPERATIVE_ENGINEERING_VERBS = /* @__PURE__ */ new Set([
+  "fix",
+  "add",
+  "refactor",
+  "update",
+  "remove",
+  "delete",
+  "implement",
+  "replace",
+  "clean",
+  "create",
+  "optimize",
+  "ensure",
+  "extract",
+  "handle",
+  "support",
+  "use",
+  "simplify",
+  "upgrade",
+  "allow",
+  "block",
+  "prevent",
+  "enable",
+  "disable",
+  "init",
+  "setup",
+  "test",
+  "verify",
+  "pass",
+  "return",
+  "build",
+  "compile",
+  "sync",
+  "drop",
+  "bump",
+  "revert",
+  "merge",
+  "format",
+  "render",
+  "export",
+  "import",
+  "align",
+  "isolate",
+  "clamp",
+  "clampvisual",
+  "truncate",
+  "resolve",
+  "settle",
+  "dispatch"
+]);
+function isTargetLanguageOnly(text, sourceLang, targetLang = "en") {
+  const normSource = (sourceLang || "zh").toLowerCase().split("-")[0];
+  const normTarget = (targetLang || "en").toLowerCase().split("-")[0];
+  if (normTarget === "en") {
+    if (normSource !== "en" && hasSourceScript(text, normSource)) {
+      return false;
+    }
+    const words = text.trim().split(/\s+/).filter((w) => /[a-zA-Z]{2,}/.test(w));
+    return words.length >= 2;
+  }
+  if (normTarget === "ja") {
+    return /[\u3040-\u30ff]/.test(text);
+  }
+  if (normTarget === "ko") {
+    return /[\uac00-\ud7af]/.test(text);
+  }
+  if (normTarget === "zh" || normTarget === "tw") {
+    return /[\u4e00-\u9fa5]/.test(text);
+  }
+  return false;
+}
+function isImperativeEngineeringPrompt(text) {
+  const trimmed = text.trim();
+  const firstWordMatch = trimmed.match(/^[a-zA-Z]+/);
+  if (!firstWordMatch) return false;
+  const firstWord = firstWordMatch[0].toLowerCase();
+  return IMPERATIVE_ENGINEERING_VERBS.has(firstWord);
+}
+function detectScriptLanguage(text) {
+  if (/[\u3040-\u30ff]/.test(text)) {
+    return "ja";
+  }
+  if (/[\uac00-\ud7af]/.test(text)) {
+    return "ko";
+  }
+  if (/[\u0400-\u04ff]/.test(text)) {
+    return "ru";
+  }
+  if (/[\u4e00-\u9fa5]/.test(text)) {
+    return "zh";
+  }
+  return null;
 }
 
 // src/cache.ts
@@ -5338,16 +5518,131 @@ Usage: /lingual loadout [list | apply <id>] (e.g. /lingual loadout apply spec)`;
     );
     updateFooter(ctx);
   };
+  const openModePicker = async (ctx) => {
+    const diskForMode = loadUserLingualConfig();
+    const modes = Array.isArray(state.modes) && state.modes.length > 0 ? state.modes : resolveModesFromConfig(diskForMode);
+    const activeModes = modes.filter((m) => m.enabled !== false);
+    const offName = resolveModeDisplayName("off", state.sourceLang);
+    const pair = state.labels.hudTitle || `${state.sourceLang} \u21C4 ${state.targetLang}`;
+    const title = state.labels.modePickerTitle || "Mode Switch";
+    const hint = state.labels.modePickerHint || "Press 1/2/3/0 to switch, Esc to cancel";
+    const options = activeModes.map((m, idx) => ({
+      num: idx + 1,
+      id: m.id,
+      name: m.name,
+      englishTag: m.id === "companion" ? "Companion" : m.id === "direct" ? "Logical Spec" : m.id === "live-flow" ? "Live Flow" : void 0
+    }));
+    options.push({
+      num: 0,
+      id: "off",
+      name: offName,
+      englishTag: "Off"
+    });
+    const currentModeId = state.mode === "off" ? "off" : state.activeModeId || state.mode || options[0].id;
+    let initialIndex = options.findIndex((o) => o.id === currentModeId);
+    if (initialIndex === -1) initialIndex = 0;
+    if (hasActiveUI(ctx) && typeof ctx.ui.custom === "function") {
+      const chosen = await ctx.ui.custom(
+        (tui, theme, _kb, done) => {
+          let selectedIndex = initialIndex;
+          return {
+            render(width) {
+              return formatModePickerLines(
+                title,
+                hint,
+                pair,
+                options,
+                selectedIndex,
+                width,
+                theme
+              );
+            },
+            invalidate() {
+            },
+            handleInput(data) {
+              if (data === "0") {
+                done("off");
+                return;
+              }
+              const num = parseInt(data, 10);
+              if (!isNaN(num) && num >= 1 && num <= activeModes.length) {
+                done(activeModes[num - 1].id);
+                return;
+              }
+              if (data === "\x1B" || data === "q" || data === "") {
+                done(null);
+                return;
+              }
+              if (data === "\x1B[C" || data === "l" || data === "	") {
+                selectedIndex = (selectedIndex + 1) % options.length;
+                tui?.requestRender?.();
+                return;
+              }
+              if (data === "\x1B[D" || data === "h") {
+                selectedIndex = (selectedIndex - 1 + options.length) % options.length;
+                tui?.requestRender?.();
+                return;
+              }
+              if (data === "\x1B[B" || data === "j") {
+                selectedIndex = (selectedIndex + 2) % options.length;
+                tui?.requestRender?.();
+                return;
+              }
+              if (data === "\x1B[A" || data === "k") {
+                selectedIndex = (selectedIndex - 2 + options.length) % options.length;
+                tui?.requestRender?.();
+                return;
+              }
+              if (data === "\r" || data === "\n" || data === " ") {
+                done(options[selectedIndex]?.id || null);
+                return;
+              }
+            }
+          };
+        }
+      );
+      if (chosen !== null && chosen !== void 0) {
+        await setModeHandler(chosen, ctx);
+        return chosen;
+      }
+      return null;
+    }
+    if (hasActiveUI(ctx) && typeof ctx.ui.select === "function") {
+      const selectItems = options.map((opt) => ({
+        label: `[${opt.num}] ${opt.name}${opt.englishTag ? ` (${opt.englishTag})` : ""}`,
+        value: opt.id
+      }));
+      const chosen = await ctx.ui.select(
+        `[lingual \xB7 ${pair}] ${title} (${hint})`,
+        selectItems
+      );
+      if (chosen) {
+        await setModeHandler(chosen, ctx);
+        return chosen;
+      }
+      return null;
+    }
+    await setModeHandler("", ctx);
+    return null;
+  };
   const masterCommandHandler = async (args, ctx) => {
     const trimmed = args?.trim();
     if (!trimmed) {
-      await setModeHandler("", ctx);
+      await openModePicker(ctx);
       return;
     }
     const lower = trimmed.toLowerCase();
     const spaceIndex = lower.indexOf(" ");
     const sub = spaceIndex === -1 ? lower : lower.slice(0, spaceIndex);
     const subArgs = spaceIndex === -1 ? "" : trimmed.slice(spaceIndex + 1).trim();
+    if (sub === "on") {
+      await setModeHandler("1", ctx);
+      return;
+    }
+    if (sub === "off") {
+      await setModeHandler("0", ctx);
+      return;
+    }
     if (sub === "reasoning" || sub === "effort") {
       await setReasoningHandler(subArgs, ctx);
       return;
@@ -5384,7 +5679,7 @@ Usage: /lingual loadout [list | apply <id>] (e.g. /lingual loadout apply spec)`;
       await showStatusHandler(subArgs, ctx);
       return;
     }
-    if (sub === "last" || sub === "prev" || sub === "history") {
+    if (sub === "last" || sub === "prev" || sub === "history" || sub === "replay") {
       await showLastHandler(subArgs, ctx);
       return;
     }
@@ -5464,20 +5759,12 @@ Usage: /lingual loadout [list | apply <id>] (e.g. /lingual loadout apply spec)`;
     }
   };
   pi.registerCommand("lingual", {
-    description: state.labels.cmdDescMode || "Cycle mode (1:Companion \u2794 2:Direct \u2794 3:Live-Flow \u2794 0:Off) or manage: /lingual [1|2|3|0|tuner|lang|slots|compact|model|status|last]",
+    description: state.labels.cmdDescMode || "Interactive mode picker or manage: /lingual [1|2|3|0|on|off|lang|last|lock|status]",
     handler: masterCommandHandler
   });
-  pi.registerCommand("lang", {
-    description: state.labels.cmdDescLang || "Switch companion language: /lang <zh|ja|ko|en|es|fr|de|ru> [target]",
-    handler: switchLangHandler
-  });
-  pi.registerCommand("slots", {
-    description: state.labels.cmdDescSlots || "Inspect or customize companion & prompt slots: /slots [add|rm|toggle|reset]",
-    handler: switchSlotsHandler
-  });
-  pi.registerCommand("last", {
-    description: state.labels.cmdDescLast || "Replay previous companion card: /last",
-    handler: showLastHandler
+  pi.registerCommand("l", {
+    description: "Alias for /lingual",
+    handler: masterCommandHandler
   });
   if (typeof pi.registerShortcut === "function") {
     pi.registerShortcut("alt+.", {
@@ -5611,6 +5898,23 @@ Usage: /lingual loadout [list | apply <id>] (e.g. /lingual loadout apply spec)`;
     if (state.mode === "off") return { action: "continue" };
     const raw = event.text.trim();
     if (!raw) return { action: "continue" };
+    if (!latestDisk.sourceLang && state.sourceLang === "en" && (state.mode === "companion" || state.mode === "original")) {
+      const detected = detectScriptLanguage(raw);
+      if (detected && detected !== "en") {
+        state.sourceLang = detected;
+        state.targetLang = "en";
+        state.labels = resolveLabelsForLang(state.sourceLang, void 0, state.targetLang);
+        const isFactory = state.modes.length === 3 && state.modes.every((m) => ["companion", "direct", "live-flow"].includes(m.id));
+        if (isFactory) {
+          state.modes = getDefaultFactoryModes(state.sourceLang, state.targetLang);
+        }
+        if (hasActiveUI(ctx)) {
+          updateFooter(ctx);
+          const adaptNotice = state.labels.notifyLangSwitched ? state.labels.notifyLangSwitched.replace("{lang}", `${state.sourceLang} \u21C4 ${state.targetLang}`) : `[lingual] Adapted language pair to ${state.sourceLang} \u21C4 ${state.targetLang}`;
+          ctx.ui.notify(ctx.ui.theme.fg("accent", adaptNotice));
+        }
+      }
+    }
     if (raw.startsWith("/") || raw.startsWith("!")) {
       clearPendingTimers();
       session.abortActive();
@@ -5628,6 +5932,31 @@ Usage: /lingual loadout [list | apply <id>] (e.g. /lingual loadout apply spec)`;
     );
     const currentMode = latestModes.find((m) => m.id === activeModeId) || latestModes[0];
     const isPromptOptMode = currentMode ? currentMode.action !== "pass-through" : state.mode !== "original" && state.mode !== "off";
+    const isTargetInput = isTargetLanguageOnly(promptToTranslate, state.sourceLang, state.targetLang);
+    if (isTargetInput) {
+      if (!isPromptOptMode || currentMode.action === "pass-through") {
+        clearPendingTimers();
+        session.abortActive();
+        session.clearPagination();
+        if (hasActiveUI(ctx)) {
+          safeClearWidget(ctx);
+          ctx.ui.setStatus("lingual", ctx.ui.theme.fg("muted", `[${state.targetLang} \xB7 direct send]`));
+        }
+        return { action: "continue" };
+      }
+      if (currentMode.id === "direct" || currentMode.action === "transform" && currentMode.flow === "translate") {
+        if (isImperativeEngineeringPrompt(promptToTranslate)) {
+          clearPendingTimers();
+          session.abortActive();
+          session.clearPagination();
+          if (hasActiveUI(ctx)) {
+            safeClearWidget(ctx);
+            ctx.ui.setStatus("lingual", ctx.ui.theme.fg("muted", `[${state.targetLang} \xB7 spec ok]`));
+          }
+          return { action: "continue" };
+        }
+      }
+    }
     if (!sanitized.hasNaturalLanguage || !shouldTriggerTranslation(promptToTranslate, state.sourceLang, isPromptOptMode)) {
       clearPendingTimers();
       session.abortActive();

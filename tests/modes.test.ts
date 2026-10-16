@@ -671,7 +671,7 @@ test("modes: resolveModeDisplayName ensures structural consistency across badge,
   };
 
   // Switch to zh
-  await registeredCommands["lang"].handler("zh en", mockCtx);
+  await registeredCommands["lingual"].handler("lang zh en", mockCtx);
 
   // Test resolveModeDisplayName directly for all canonical modes
   assert.equal(resolveModeDisplayName("companion", "zh"), "纯伴学");

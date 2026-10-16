@@ -61,18 +61,20 @@ Out of the box, `pi-lingual` ships with exactly three golden baselines (with `0 
 - The active mode defaults cleanly to `companion` (pass-through + Left-Rail bilingual card).
 - Zero-Disk-Write Contract: The configuration file on disk is left untouched unless the developer explicitly mutates settings (via `/lang`, `/lingual`, `/slots`, or `lingual-tuner`). The only key written on cold boot is `lastSeenVersion` (gated upon successful delivery of the feature banner). The legacy `configured` flag is no longer written.
 
-### Invariant 8: Streamlined Command Matrix & Tactical Loadout CLI
-- Registered first-class commands:
-  - `/lingual`: Cycle modes, jump directly by ID/number, or route subcommands (`/lingual reasoning`, `/lingual tuner`, `/lingual mode`, `/lingual loadout`, `/lingual lock`).
-  - `/lang`: Switch language pair (`/lang <code|pair>`).
-  - `/slots`: Inspect or customize companion & prompt slots (`/slots [add|rm|toggle|reset]`).
-  - `/last`: Replay last companion/takeaway card.
-- Direct mode & loadout management commands:
+### Invariant 8: Single Super-Command Architecture & Interactive Capsule Picker
+- Registered first-class commands (strictly 2 in Pi global namespace):
+  - `/lingual`: Parameterless call opens the interactive capsule mode picker (`openModePicker`); bare numerals (`1|2|3|0`) or IDs switch mode instantly; routes subcommands (`/lingual on|off`, `/lingual lang`, `/lingual last|replay`, `/lingual compact`, `/lingual reasoning`, `/lingual mode`, `/lingual loadout`, `/lingual lock`, `/lingual status`).
+  - `/l`: Ultra-short 1st-class alias for `/lingual`.
+- Subcommand matrix:
+  - `/lingual on` / `/lingual off`: Quick enable/disable companion mode.
+  - `/lingual lang <code|pair>`: Switch language pair (e.g. `/lingual lang ja en`).
+  - `/lingual last` / `/lingual replay`: Replay previous companion/takeaway card.
   - `/lingual reasoning [low | medium | high]` (and alias `/lingual effort`)
   - `/lingual mode [list | add <id> <name> | rm <id> | toggle <id> | reset]`
   - `/lingual loadout [list | apply <spec|commit|oss|yap>]`
   - `/lingual lock` / `/lingual unlock`
 - **Positional Numeral Resolution (RFC 2119)**: Bare numerals (`/lingual 1|2|3`) ALWAYS resolve positionally within `1..activeModes.length` from the live registry. `MODE_ALIAS_MAP` serves strictly as out-of-bounds legacy fallback; factory seeds MUST NEVER hardcode numeral aliases.
+- **Smart Target-Language Auto-Bypass (RFC 2119)**: When the user authors directly in the target language (e.g. English in `zh ⇄ en`), the sensor automatically passes through at 0ms without redundant translations or token waste. In direct spec mode, prompts starting with active verbs (`Fix`, `Add`, `Refactor`) bypass immediately.
 
 ### Invariant 9: 3-Second Glanceability & Kinetic Budget Guard
 - HUD feedback cards MUST follow the 3-second glanceability rule:
@@ -110,7 +112,7 @@ Out of the box, `pi-lingual` ships with exactly three golden baselines (with `0 
   npm test
   # or from workspace root: node .scripts/fleet.mjs test pi-lingual
   ```
-  *Executes 156 test suites covering banner geometry, cache, chunker, commands, engine, layout, modes, prompts, sanitizer, shield, slots, sovereignty, and sandboxed cold-boot upgrades (100% green).*
+  *Executes 165 test suites covering banner geometry, cache, chunker, commands, engine, layout, modes, mode-picker, sensor, prompts, sanitizer, shield, slots, sovereignty, and sandboxed cold-boot upgrades (100% green).*
 
 - **Build Distribution Bundles**:
   ```bash

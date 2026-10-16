@@ -150,6 +150,10 @@ export interface LingualI18nLabels {
   shortcutNextPage?: string;
   shortcutPrevPage?: string;
 
+  // Localized interactive mode picker chrome
+  modePickerTitle?: string;
+  modePickerHint?: string;
+
   // Localized capsule prefixes
   capsuleSlot1Prefix?: string;
   capsuleSlot2Prefix?: string;

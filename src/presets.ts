@@ -671,6 +671,8 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     cmdDescLast: "Replay previous companion card: /last",
     shortcutNextPage: "Next companion page segment",
     shortcutPrevPage: "Previous companion page segment",
+    modePickerTitle: "Mode Switch",
+    modePickerHint: "Press 1/2/3/0 to switch, Esc to cancel",
 
     capsuleSlot1Prefix: "Spk",
     capsuleSlot2Prefix: "Wrt",
@@ -766,6 +768,8 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     cmdDescLast: "回看上一条卡片: /last",
     shortcutNextPage: "切换至下一段伴学切片",
     shortcutPrevPage: "切换至上一段伴学切片",
+    modePickerTitle: "伴学模式切换",
+    modePickerHint: "按数字键 1/2/3/0 直接生效，Esc 取消",
 
     capsuleSlot1Prefix: "口",
     capsuleSlot2Prefix: "写",
@@ -861,6 +865,8 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     cmdDescLast: "回看上一條卡片: /last",
     shortcutNextPage: "切換至下一段伴學切片",
     shortcutPrevPage: "切換至上一段伴學切片",
+    modePickerTitle: "伴學模式切換",
+    modePickerHint: "按數字鍵 1/2/3/0 直接生效，Esc 取消",
 
     capsuleSlot1Prefix: "口",
     capsuleSlot2Prefix: "寫",
@@ -956,6 +962,8 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     cmdDescLast: "前回カード再表示: /last",
     shortcutNextPage: "次のスライスへ移動",
     shortcutPrevPage: "前のスライスへ移動",
+    modePickerTitle: "伴走モード切替",
+    modePickerHint: "1/2/3/0 で直行、Esc で取消",
 
     capsuleSlot1Prefix: "口",
     capsuleSlot2Prefix: "文",
@@ -1058,6 +1066,8 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     cmdDescAgent: "Ver guía de personalización y cambio de idioma: /lingual-agent",
     shortcutNextPage: "Cambiar al siguiente segmento",
     shortcutPrevPage: "Cambiar al segmento anterior",
+    modePickerTitle: "Cambiar modo",
+    modePickerHint: "1/2/3/0 para aplicar, Esc cancela",
 
     capsuleSlot1Prefix: "Col",
     capsuleSlot2Prefix: "Esc",
@@ -1177,6 +1187,8 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     cmdDescAgent: "Afficher le guide de personnalisation et de changement de langue : /lingual-agent",
     shortcutNextPage: "Passer au segment suivant",
     shortcutPrevPage: "Passer au segment précédent",
+    modePickerTitle: "Changer de mode",
+    modePickerHint: "1/2/3/0 pour activer, Échap annule",
 
     capsuleSlot1Prefix: "Oral",
     capsuleSlot2Prefix: "Écrit",
@@ -1298,6 +1310,8 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     cmdDescAgent: "Anleitung zur Anpassung und Sprachumstellung anzeigen: /lingual-agent",
     shortcutNextPage: "Zum nächsten Segment wechseln",
     shortcutPrevPage: "Zum vorherigen Segment wechseln",
+    modePickerTitle: "Modus wechseln",
+    modePickerHint: "1/2/3/0 zum Umschalten, Esc bricht ab",
 
     capsuleSlot1Prefix: "Ges",
     capsuleSlot2Prefix: "Sch",
@@ -1418,6 +1432,8 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     cmdDescAgent: "사용자 설정 가이드: /lingual-agent",
     shortcutNextPage: "다음 세그먼트로 이동",
     shortcutPrevPage: "이전 세그먼트로 이동",
+    modePickerTitle: "동행학습 모드 전환",
+    modePickerHint: "숫자 키 1/2/3/0 즉시 적용, Esc 취소",
 
     capsuleSlot1Prefix: "구",
     capsuleSlot2Prefix: "문",
@@ -1539,6 +1555,8 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     cmdDescAgent: "Руководство по настройке: /lingual-agent",
     shortcutNextPage: "Перейти к следующему сегменту",
     shortcutPrevPage: "Перейти к предыдущему сегменту",
+    modePickerTitle: "Смена режима",
+    modePickerHint: "1/2/3/0 для выбора, Esc отмена",
 
     capsuleSlot1Prefix: "Разг",
     capsuleSlot2Prefix: "Дел",

@@ -13,7 +13,7 @@ import {
 } from "../src/engine.js";
 import { LingualLruCache } from "../src/cache.js";
 
-test("extension command matrix - registers 4 core commands without menu clutter", () => {
+test("extension command matrix - registers strictly /lingual and /l alias without menu clutter", () => {
   const registeredCommands: Record<string, any> = {};
 
   const mockPi: any = {
@@ -26,12 +26,16 @@ test("extension command matrix - registers 4 core commands without menu clutter"
 
   extensionFactory(mockPi);
 
-  // Register core developer commands in Pi's / menu
+  // Register strictly /lingual and /l alias in Pi's / menu (zero global namespace pollution)
   assert.deepEqual(
     Object.keys(registeredCommands).sort(),
-    ["lang", "last", "lingual", "slots"],
-    "Must register strictly the 4 core developer commands (/lingual, /lang, /slots, /last)"
+    ["l", "lingual"],
+    "Must register strictly the 2 core developer commands (/lingual and /l alias)"
   );
+  assert.equal(registeredCommands["l"].handler, registeredCommands["lingual"].handler, "/l must alias /lingual");
+  assert.equal(registeredCommands["lang"], undefined, "Must NOT pollute global /lang command");
+  assert.equal(registeredCommands["slots"], undefined, "Must NOT pollute global /slots command");
+  assert.equal(registeredCommands["last"], undefined, "Must NOT pollute global /last command");
   assert.equal(registeredCommands["compact"], undefined, "Must NOT occupy Pi core /compact command");
   assert.equal(registeredCommands["status"], undefined, "Must NOT hijack generic /status command");
 });
@@ -254,31 +258,31 @@ test("standalone /lang and language normalization - switches languages and handl
     },
   };
 
-  // 1. Direct /lang ja
-  await registeredCommands["lang"].handler("ja", mockCtx);
+  // 1. Direct /lingual lang ja
+  await registeredCommands["lingual"].handler("lang ja", mockCtx);
   assert.ok(notifications[notifications.length - 1].includes("ja"));
 
-  // 2. Natural language alias: /lang japanese
-  await registeredCommands["lang"].handler("japanese", mockCtx);
+  // 2. Natural language alias: /lingual lang japanese
+  await registeredCommands["lingual"].handler("lang japanese", mockCtx);
   assert.ok(notifications[notifications.length - 1].includes("ja"));
 
-  // 3. CJK alias: /lang 日语
-  await registeredCommands["lang"].handler("日语", mockCtx);
+  // 3. CJK alias: /lingual lang 日语
+  await registeredCommands["lingual"].handler("lang 日语", mockCtx);
   assert.ok(notifications[notifications.length - 1].includes("ja"));
 
-  // 4. Language pair: /lang zh ja
-  await registeredCommands["lang"].handler("zh ja", mockCtx);
+  // 4. Language pair: /lingual lang zh ja
+  await registeredCommands["lingual"].handler("lang zh ja", mockCtx);
   assert.ok(notifications[notifications.length - 1].includes("zh ⇄ ja"));
 
   // 4b. Help message includes tw (B2)
-  await registeredCommands["lang"].handler("help", mockCtx);
+  await registeredCommands["lingual"].handler("lang help", mockCtx);
   assert.ok(
     notifications[notifications.length - 1].includes("tw"),
     "/lang help message must include tw"
   );
 
   // 4c. Switch to tw
-  await registeredCommands["lang"].handler("tw", mockCtx);
+  await registeredCommands["lingual"].handler("lang tw", mockCtx);
   assert.ok(notifications[notifications.length - 1].includes("tw"));
 
   // 5. Subcommand /lingual compact
@@ -292,7 +296,7 @@ test("standalone /lang and language normalization - switches languages and handl
   );
 
   // Teardown: Restore to zh ➔ en and tree layout
-  await registeredCommands["lang"].handler("zh", mockCtx);
+  await registeredCommands["lingual"].handler("lang zh", mockCtx);
   await registeredCommands["lingual"].handler("compact", mockCtx);
 });
 
@@ -353,6 +357,36 @@ test("master command dispatcher - routes subcommands in /lingual smoothly", asyn
     notifications[notifications.length - 1].includes("Status") ||
     notifications[notifications.length - 1].includes("ステータス")
   );
+
+  // 7. Subcommands: /lingual on and /lingual off
+  await registeredCommands["lingual"].handler("off", mockCtx);
+  assert.ok(
+    notifications[notifications.length - 1].includes("已关闭") ||
+    notifications[notifications.length - 1].toLowerCase().includes("off")
+  );
+
+  await registeredCommands["lingual"].handler("on", mockCtx);
+  assert.ok(
+    notifications[notifications.length - 1].includes("纯伴学") ||
+    notifications[notifications.length - 1].toLowerCase().includes("companion")
+  );
+
+  // 8. Alias /l test: works identically to /lingual
+  await registeredCommands["l"].handler("off", mockCtx);
+  assert.ok(
+    notifications[notifications.length - 1].includes("已关闭") ||
+    notifications[notifications.length - 1].toLowerCase().includes("off")
+  );
+
+  await registeredCommands["l"].handler("1", mockCtx);
+  assert.ok(
+    notifications[notifications.length - 1].includes("纯伴学") ||
+    notifications[notifications.length - 1].toLowerCase().includes("companion")
+  );
+
+  // 9. Subcommands: /lingual last and /lingual replay
+  await registeredCommands["lingual"].handler("last", mockCtx);
+  await registeredCommands["lingual"].handler("replay", mockCtx);
 
   // Teardown: Restore to zh
   await registeredCommands["lingual"].handler("lang zh", mockCtx);

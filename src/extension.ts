@@ -33,6 +33,8 @@ import {
   formatVocabItemsAtomic,
   renderCardLayout,
   formatLoadingMessage,
+  formatModePickerLines,
+  ModePickerOption,
 } from "./layout.js";
 import {
   translatePrompt,
@@ -93,6 +95,11 @@ import { splitSemanticChunks } from "./chunker.js";
 import { LingualSessionController } from "./fsm.js";
 import { sanitizePromptForTranslation } from "./sanitizer.js";
 import { globalLingualCache } from "./cache.js";
+import {
+  isTargetLanguageOnly,
+  isImperativeEngineeringPrompt,
+  detectScriptLanguage,
+} from "./shield.js";
 
 interface ExtensionState {
   mode: LingualMode;
@@ -1342,12 +1349,150 @@ export default function (pi: ExtensionAPI) {
     updateFooter(ctx);
   };
 
+  // Interactive capsule mode picker (Invoked on parameterless /lingual or /l)
+  const openModePicker = async (ctx: ExtensionContext): Promise<string | null> => {
+    const diskForMode = loadUserLingualConfig();
+    const modes = Array.isArray(state.modes) && state.modes.length > 0
+      ? state.modes
+      : resolveModesFromConfig(diskForMode);
+    const activeModes = modes.filter((m) => m.enabled !== false);
+    const offName = resolveModeDisplayName("off", state.sourceLang);
+    const pair = state.labels.hudTitle || `${state.sourceLang} ⇄ ${state.targetLang}`;
+    const title = state.labels.modePickerTitle || "Mode Switch";
+    const hint = state.labels.modePickerHint || "Press 1/2/3/0 to switch, Esc to cancel";
+
+    const options: ModePickerOption[] = activeModes.map((m, idx) => ({
+      num: idx + 1,
+      id: m.id,
+      name: m.name,
+      englishTag:
+        m.id === "companion"
+          ? "Companion"
+          : m.id === "direct"
+          ? "Logical Spec"
+          : m.id === "live-flow"
+          ? "Live Flow"
+          : undefined,
+    }));
+
+    options.push({
+      num: 0,
+      id: "off",
+      name: offName,
+      englishTag: "Off",
+    });
+
+    const currentModeId =
+      state.mode === "off"
+        ? "off"
+        : state.activeModeId || state.mode || options[0].id;
+    let initialIndex = options.findIndex((o) => o.id === currentModeId);
+    if (initialIndex === -1) initialIndex = 0;
+
+    // 1. Interactive custom component via ctx.ui.custom
+    if (hasActiveUI(ctx) && typeof (ctx.ui as any).custom === "function") {
+      const chosen = await (ctx.ui as any).custom(
+        (tui: any, theme: any, _kb: any, done: (val: string | null) => void) => {
+          let selectedIndex = initialIndex;
+
+          return {
+            render(width: number): string[] {
+              return formatModePickerLines(
+                title,
+                hint,
+                pair,
+                options,
+                selectedIndex,
+                width,
+                theme
+              );
+            },
+            invalidate() {},
+            handleInput(data: string) {
+              // Direct numeric hotkeys 1..N and 0 (instant execution without Enter)
+              if (data === "0") {
+                done("off");
+                return;
+              }
+              const num = parseInt(data, 10);
+              if (!isNaN(num) && num >= 1 && num <= activeModes.length) {
+                done(activeModes[num - 1].id);
+                return;
+              }
+
+              // Esc, q, Ctrl+C (cancel without changing mode)
+              if (data === "\x1b" || data === "q" || data === "\x03") {
+                done(null);
+                return;
+              }
+
+              // Arrow navigation and vim keys
+              if (data === "\x1b[C" || data === "l" || data === "\t") {
+                selectedIndex = (selectedIndex + 1) % options.length;
+                tui?.requestRender?.();
+                return;
+              }
+              if (data === "\x1b[D" || data === "h") {
+                selectedIndex = (selectedIndex - 1 + options.length) % options.length;
+                tui?.requestRender?.();
+                return;
+              }
+              if (data === "\x1b[B" || data === "j") {
+                selectedIndex = (selectedIndex + 2) % options.length;
+                tui?.requestRender?.();
+                return;
+              }
+              if (data === "\x1b[A" || data === "k") {
+                selectedIndex = (selectedIndex - 2 + options.length) % options.length;
+                tui?.requestRender?.();
+                return;
+              }
+
+              // Enter or Space confirms selection
+              if (data === "\r" || data === "\n" || data === " ") {
+                done(options[selectedIndex]?.id || null);
+                return;
+              }
+            },
+          };
+        }
+      );
+
+      if (chosen !== null && chosen !== undefined) {
+        await setModeHandler(chosen, ctx);
+        return chosen;
+      }
+      return null;
+    }
+
+    // 2. Select dialog fallback when ctx.ui.custom is not supported
+    if (hasActiveUI(ctx) && typeof (ctx.ui as any).select === "function") {
+      const selectItems = options.map((opt) => ({
+        label: `[${opt.num}] ${opt.name}${opt.englishTag ? ` (${opt.englishTag})` : ""}`,
+        value: opt.id,
+      }));
+      const chosen = await (ctx.ui as any).select(
+        `[lingual · ${pair}] ${title} (${hint})`,
+        selectItems
+      );
+      if (chosen) {
+        await setModeHandler(chosen, ctx);
+        return chosen;
+      }
+      return null;
+    }
+
+    // 3. Headless / CLI non-interactive fallback
+    await setModeHandler("", ctx);
+    return null;
+  };
+
   // Master command bus: handles subcommands and mode cycling
   const masterCommandHandler = async (args: string, ctx: ExtensionContext) => {
     const trimmed = args?.trim();
     if (!trimmed) {
-      // No args: cycle through active modes and off
-      await setModeHandler("", ctx);
+      // Parameterless /lingual or /l: open interactive capsule mode picker
+      await openModePicker(ctx);
       return;
     }
 
@@ -1355,6 +1500,16 @@ export default function (pi: ExtensionAPI) {
     const spaceIndex = lower.indexOf(" ");
     const sub = spaceIndex === -1 ? lower : lower.slice(0, spaceIndex);
     const subArgs = spaceIndex === -1 ? "" : trimmed.slice(spaceIndex + 1).trim();
+
+    // Quick toggle subcommands: on and off
+    if (sub === "on") {
+      await setModeHandler("1", ctx);
+      return;
+    }
+    if (sub === "off") {
+      await setModeHandler("0", ctx);
+      return;
+    }
 
     // 0. Subcommand: reasoning effort level (/lingual reasoning [low|medium|high])
     if (sub === "reasoning" || sub === "effort") {
@@ -1410,8 +1565,8 @@ export default function (pi: ExtensionAPI) {
       return;
     }
 
-    // 5. Subcommand: replay last card (/lingual last)
-    if (sub === "last" || sub === "prev" || sub === "history") {
+    // 5. Subcommand: replay last card (/lingual last | /lingual replay)
+    if (sub === "last" || sub === "prev" || sub === "history" || sub === "replay") {
       await showLastHandler(subArgs, ctx);
       return;
     }
@@ -1524,27 +1679,17 @@ export default function (pi: ExtensionAPI) {
     } catch {}
   };
 
-  // Core command matrix: register first-class commands (/lingual, /lang, /tuner, /lingual-mode, /slots, /last)
+  // Core command matrix: register first-class commands (/lingual, /l)
   pi.registerCommand("lingual", {
     description:
       state.labels.cmdDescMode ||
-      "Cycle mode (1:Companion ➔ 2:Direct ➔ 3:Live-Flow ➔ 0:Off) or manage: /lingual [1|2|3|0|tuner|lang|slots|compact|model|status|last]",
+      "Interactive mode picker or manage: /lingual [1|2|3|0|on|off|lang|last|lock|status]",
     handler: masterCommandHandler,
   });
 
-  pi.registerCommand("lang", {
-    description: state.labels.cmdDescLang || "Switch companion language: /lang <zh|ja|ko|en|es|fr|de|ru> [target]",
-    handler: switchLangHandler,
-  });
-
-  pi.registerCommand("slots", {
-    description: state.labels.cmdDescSlots || "Inspect or customize companion & prompt slots: /slots [add|rm|toggle|reset]",
-    handler: switchSlotsHandler,
-  });
-
-  pi.registerCommand("last", {
-    description: state.labels.cmdDescLast || "Replay previous companion card: /last",
-    handler: showLastHandler,
+  pi.registerCommand("l", {
+    description: "Alias for /lingual",
+    handler: masterCommandHandler,
   });
 
   if (typeof pi.registerShortcut === "function") {
@@ -1717,6 +1862,29 @@ export default function (pi: ExtensionAPI) {
     const raw = event.text.trim();
     if (!raw) return { action: "continue" };
 
+    // Input-driven locale adaptation on cold boot (English OS fallback safeguard)
+    if (!latestDisk.sourceLang && state.sourceLang === "en" && (state.mode === "companion" || state.mode === "original")) {
+      const detected = detectScriptLanguage(raw);
+      if (detected && detected !== "en") {
+        state.sourceLang = detected;
+        state.targetLang = "en";
+        state.labels = resolveLabelsForLang(state.sourceLang, undefined, state.targetLang);
+        const isFactory =
+          state.modes.length === 3 &&
+          state.modes.every((m) => ["companion", "direct", "live-flow"].includes(m.id));
+        if (isFactory) {
+          state.modes = getDefaultFactoryModes(state.sourceLang, state.targetLang);
+        }
+        if (hasActiveUI(ctx)) {
+          updateFooter(ctx);
+          const adaptNotice = state.labels.notifyLangSwitched
+            ? state.labels.notifyLangSwitched.replace("{lang}", `${state.sourceLang} ⇄ ${state.targetLang}`)
+            : `[lingual] Adapted language pair to ${state.sourceLang} ⇄ ${state.targetLang}`;
+          ctx.ui.notify(ctx.ui.theme.fg("accent", adaptNotice));
+        }
+      }
+    }
+
     // Skip commands and shell escapes (abort any in-flight translation from previous turn)
     if (raw.startsWith("/") || raw.startsWith("!")) {
       clearPendingTimers();
@@ -1737,6 +1905,36 @@ export default function (pi: ExtensionAPI) {
     );
     const currentMode = latestModes.find((m) => m.id === activeModeId) || latestModes[0];
     const isPromptOptMode = currentMode ? currentMode.action !== "pass-through" : (state.mode !== "original" && state.mode !== "off");
+
+    // G3 Target-language direct input bypass (zero token waste when user writes directly in target language)
+    const isTargetInput = isTargetLanguageOnly(promptToTranslate, state.sourceLang, state.targetLang);
+    if (isTargetInput) {
+      if (!isPromptOptMode || currentMode.action === "pass-through") {
+        // Companion mode: 0ms pass-through, user already authored directly in target language
+        clearPendingTimers();
+        session.abortActive();
+        session.clearPagination();
+        if (hasActiveUI(ctx)) {
+          safeClearWidget(ctx);
+          ctx.ui.setStatus("lingual", ctx.ui.theme.fg("muted", `[${state.targetLang} · direct send]`));
+        }
+        return { action: "continue" };
+      }
+
+      if (currentMode.id === "direct" || (currentMode.action === "transform" && currentMode.flow === "translate")) {
+        if (isImperativeEngineeringPrompt(promptToTranslate)) {
+          // Direct spec mode: prompt already begins with an imperative engineering verb (e.g. Fix, Add, Refactor)
+          clearPendingTimers();
+          session.abortActive();
+          session.clearPagination();
+          if (hasActiveUI(ctx)) {
+            safeClearWidget(ctx);
+            ctx.ui.setStatus("lingual", ctx.ui.theme.fg("muted", `[${state.targetLang} · spec ok]`));
+          }
+          return { action: "continue" };
+        }
+      }
+    }
 
     // Condition 1: Pure code/stack traces with no natural language intent
     // Condition 2: CLI shield bypass or below character threshold

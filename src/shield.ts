@@ -117,3 +117,107 @@ export function shouldShieldBypass(text: string): boolean {
 
   return false;
 }
+
+/**
+ * Checks if the text contains script characters native to the configured source language.
+ */
+export function hasSourceScript(text: string, sourceLang: string): boolean {
+  const norm = (sourceLang || "zh").toLowerCase().split("-")[0];
+  switch (norm) {
+    case "zh":
+    case "tw":
+      return /[\u4e00-\u9fa5]/.test(text);
+    case "ja":
+      return /[\u3040-\u30ff\u4e00-\u9fa5]/.test(text);
+    case "ko":
+      return /[\uac00-\ud7af]/.test(text);
+    case "ru":
+      return /[\u0400-\u04ff]/.test(text);
+    case "es":
+    case "fr":
+    case "de":
+      return /[\u00c0-\u024f]/.test(text);
+    default:
+      return /[a-zA-Z]/.test(text);
+  }
+}
+
+/**
+ * Common active imperative engineering verbs for spec and coding instructions.
+ */
+const IMPERATIVE_ENGINEERING_VERBS = new Set([
+  "fix", "add", "refactor", "update", "remove", "delete", "implement", "replace",
+  "clean", "create", "optimize", "ensure", "extract", "handle", "support", "use",
+  "simplify", "upgrade", "allow", "block", "prevent", "enable", "disable", "init",
+  "setup", "test", "verify", "pass", "return", "build", "compile", "sync", "drop",
+  "bump", "revert", "merge", "format", "render", "export", "import", "align",
+  "isolate", "clamp", "clampvisual", "truncate", "resolve", "settle", "dispatch"
+]);
+
+/**
+ * Determines whether text is already written directly in the target language (e.g. English).
+ * When sourceLang is CJK and input contains 0 CJK characters but >= 2 English words,
+ * the developer is already authoring fluently in the target language.
+ */
+export function isTargetLanguageOnly(
+  text: string,
+  sourceLang: string,
+  targetLang = "en"
+): boolean {
+  const normSource = (sourceLang || "zh").toLowerCase().split("-")[0];
+  const normTarget = (targetLang || "en").toLowerCase().split("-")[0];
+
+  if (normTarget === "en") {
+    if (normSource !== "en" && hasSourceScript(text, normSource)) {
+      return false;
+    }
+    const words = text.trim().split(/\s+/).filter((w) => /[a-zA-Z]{2,}/.test(w));
+    return words.length >= 2;
+  }
+
+  // Non-English target language verification
+  if (normTarget === "ja") {
+    return /[\u3040-\u30ff]/.test(text);
+  }
+  if (normTarget === "ko") {
+    return /[\uac00-\ud7af]/.test(text);
+  }
+  if (normTarget === "zh" || normTarget === "tw") {
+    return /[\u4e00-\u9fa5]/.test(text);
+  }
+
+  return false;
+}
+
+/**
+ * Checks if the text starts with a standard imperative engineering verb.
+ * If true, input is already an actionable engineering specification.
+ */
+export function isImperativeEngineeringPrompt(text: string): boolean {
+  const trimmed = text.trim();
+  const firstWordMatch = trimmed.match(/^[a-zA-Z]+/);
+  if (!firstWordMatch) return false;
+  const firstWord = firstWordMatch[0].toLowerCase();
+  return IMPERATIVE_ENGINEERING_VERBS.has(firstWord);
+}
+
+/**
+ * Detects the natural language writing system present in the input text.
+ * Used for input-driven locale adaptation on cold boot.
+ */
+export function detectScriptLanguage(text: string): string | null {
+  if (/[\u3040-\u30ff]/.test(text)) {
+    return "ja";
+  }
+  if (/[\uac00-\ud7af]/.test(text)) {
+    return "ko";
+  }
+  if (/[\u0400-\u04ff]/.test(text)) {
+    return "ru";
+  }
+  if (/[\u4e00-\u9fa5]/.test(text)) {
+    return "zh";
+  }
+  return null;
+}
+

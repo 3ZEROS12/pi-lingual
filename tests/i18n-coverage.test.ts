@@ -113,6 +113,10 @@ test("i18n invariant (b): all language-to-string tables cover all 9 languages wi
     assert.ok(!/[\u{1F300}-\u{1FAFF}]/u.test(p.loadingOptimizePrompt), `[${lang}] loadingOptimizePrompt must have zero emoji`);
     assert.ok(!/[\u{1F300}-\u{1FAFF}]/u.test(p.loadingFixSyntax), `[${lang}] loadingFixSyntax must have zero emoji`);
     assert.ok(!/[\u{1F300}-\u{1FAFF}]/u.test(p.loadingCandidates), `[${lang}] loadingCandidates must have zero emoji`);
+
+    // 6. Interactive mode picker
+    assert.ok(p.modePickerTitle, `[${lang}] modePickerTitle missing`);
+    assert.ok(p.modePickerHint, `[${lang}] modePickerHint missing`);
   }
 });
 
