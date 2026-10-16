@@ -6,6 +6,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import {
   LANGUAGE_PRESETS,
+  SEED_NAMES,
   SUPPORTED_LANG_CODES,
   isSupportedLangCode,
   normalizeLangCode,
@@ -732,6 +733,7 @@ test("/lang target switch notification differs from full pair switch (F2-7)", as
 });
 
 test("/lingual command description across all presets reflects 3-core mode numbers (F2-8)", () => {
+  // Checkpoint 1 & 2: Command & preset hygiene and native mode names across all 9 languages
   for (const lang of SUPPORTED_LANG_CODES) {
     const labels = resolveLabelsForLang(lang);
     const desc = labels.cmdDescMode || "";
@@ -742,5 +744,35 @@ test("/lingual command description across all presets reflects 3-core mode numbe
     assert.ok(!desc.includes("Candidates") && !desc.includes("Modify"),
       `[${lang}] cmdDescMode must not contain legacy Candidates or Modify: ${desc}`
     );
+
+    // 1. Zero legacy hyphenated commands in any string field of preset
+    const rawPreset = LANGUAGE_PRESETS[lang] as unknown as Record<string, unknown>;
+    for (const [k, v] of Object.entries(rawPreset)) {
+      if (typeof v === "string") {
+        assert.ok(
+          !/\/lingual-[a-z]+/i.test(v),
+          `[${lang}] key "${k}" contains forbidden legacy hyphenated command: "${v}"`
+        );
+      }
+    }
+
+    // 2. All 7 target fields present and reflecting modern /lingual architecture
+    assert.ok(labels.cmdDescMode?.includes("/lingual"), `[${lang}] cmdDescMode must contain /lingual`);
+    assert.ok(labels.cmdDescStatus?.includes("/lingual status"), `[${lang}] cmdDescStatus must contain /lingual status`);
+    assert.ok(labels.cmdDescModel?.includes("/lingual model"), `[${lang}] cmdDescModel must contain /lingual model`);
+    assert.ok(labels.cmdDescLang?.includes("/lingual lang") || labels.cmdDescLang?.includes("/lang"), `[${lang}] cmdDescLang must contain /lingual lang or /lang`);
+    assert.ok(labels.cmdDescLast?.includes("/lingual last") || labels.cmdDescLast?.includes("/last"), `[${lang}] cmdDescLast must contain /lingual last or /last`);
+    assert.ok(labels.statusReportShortcuts?.includes("/lingual"), `[${lang}] statusReportShortcuts must contain /lingual`);
+    assert.ok(labels.modelAvailableListHeader?.includes("/lingual model"), `[${lang}] modelAvailableListHeader must reference /lingual model`);
+
+    // 3. Mode picker UI strings idiomatic and defined
+    assert.ok(labels.modePickerTitle && labels.modePickerTitle.length > 0, `[${lang}] modePickerTitle defined`);
+    assert.ok(labels.modePickerHint && labels.modePickerHint.length > 0, `[${lang}] modePickerHint defined`);
   }
+
+  // Checkpoint 2: Genuine native translations for liveFlow across es, fr, de, ru
+  assert.equal(SEED_NAMES.es.liveFlow, "Flujo en Vivo", "Spanish liveFlow must be Flujo en Vivo");
+  assert.equal(SEED_NAMES.fr.liveFlow, "Flux en Direct", "French liveFlow must be Flux en Direct");
+  assert.equal(SEED_NAMES.de.liveFlow, "Live-Fluss", "German liveFlow must be Live-Fluss");
+  assert.equal(SEED_NAMES.ru.liveFlow, "Живой поток", "Russian liveFlow must be Живой поток");
 });

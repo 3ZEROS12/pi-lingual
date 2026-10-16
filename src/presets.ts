@@ -667,8 +667,10 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     statusLoadingCandidates: "[lingual] generating candidates...",
 
     cmdDescMode: "Interactive mode picker or manage: /lingual [1|2|3|0|on|off|lang|last|lock|status]",
-    cmdDescLang: "Switch language pair [en ⇄ ja]: /lang <source> [target]",
-    cmdDescLast: "Replay previous companion card: /last",
+    cmdDescStatus: "Display companion status report & model diagnostics: /lingual status",
+    cmdDescModel: "View or change companion model: /lingual model [model-id|auto]",
+    cmdDescLang: "Switch companion language: /lingual lang <pair> or /lang <pair>",
+    cmdDescLast: "Replay previous companion card: /lingual last (or /last)",
     shortcutNextPage: "Next companion page segment",
     shortcutPrevPage: "Previous companion page segment",
     modePickerTitle: "Mode Switch",
@@ -686,7 +688,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     statusReportCache: "Cache",
     statusReportLayout: "Layout: Trifecta Minimalist Left-Rail Tree",
     statusReportAuth: "Auth: Pi Native In-Process Credentials",
-    statusReportShortcuts: "Shortcuts: /lingual · /slots · /lang · /last",
+    statusReportShortcuts: "Shortcuts: /lingual (or /l) · /lingual lang (or /lang) · /lingual last · /lingual compact",
     statusReportTuner: "Slot Tuner: Built-in lingual-tuner skill",
     modeDescOriginal: "Companion · 0ms pass-through",
     modeDescEnglish: "Direct · Deep code reasoning",
@@ -694,6 +696,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
 
     modelCurrentLabel: "Current companion model",
     modelFollowSession: "follow session",
+    modelAvailableListHeader: "Available models (/lingual model <id>):",
 
     langUsageHint: "Usage: /lang <source> [target] (e.g. /lang ja en or /lang en zh)",
     langList: ["• zh", "• ja", "• en", "• es", "• fr", "• de", "• ru", "• ko"],
@@ -764,8 +767,10 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     statusLoadingCandidates: "[lingual] 候选生成中...",
 
     cmdDescMode: "交互式伴学模式切换或管理: /lingual [1|2|3|0|on|off|lang|last|lock|status]",
-    cmdDescLang: "切换伴学语言: /lang <code>",
-    cmdDescLast: "回看上一条卡片: /last",
+    cmdDescStatus: "查看伴学状态与模型诊断: /lingual status",
+    cmdDescModel: "查看或切换伴学模型: /lingual model [model-id|auto]",
+    cmdDescLang: "切换伴学语言: /lingual lang <代码> 或 /lang <代码>",
+    cmdDescLast: "回看上一条伴学卡片: /lingual last (或 /last)",
     shortcutNextPage: "切换至下一段伴学切片",
     shortcutPrevPage: "切换至上一段伴学切片",
     modePickerTitle: "伴学模式切换",
@@ -783,7 +788,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     statusReportCache: "会话缓存",
     statusReportLayout: "HUD布局: Trifecta 开放式左导轨树状架构",
     statusReportAuth: "凭据模式: Pi 原生进程内认证 (Zero Config)",
-    statusReportShortcuts: "快捷操作: /lingual · /slots · /lang · /last",
+    statusReportShortcuts: "快捷操作: /lingual (或 /l) · /lingual lang (或 /lang) · /lingual last · /lingual compact",
     statusReportTuner: "槽位调优: 内置 lingual-tuner 槽位调优技能（直接向 Agent 描述即可免命令定制）",
     modeDescOriginal: "原文直通 · 0ms非阻塞",
     modeDescEnglish: "英文模式 · 深度代码推理",
@@ -791,6 +796,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
 
     modelCurrentLabel: "当前伴学模型",
     modelFollowSession: "跟随会话",
+    modelAvailableListHeader: "可用模型列表 (/lingual model <id>):",
 
     langUsageHint: "用法: /lang <zh|ja|en|es|fr|de> [target] (如 /lang ja 或 /lang zh ja)",
     langList: ["• zh", "• ja", "• en", "• es", "• fr", "• de", "• ko", "• ru"],
@@ -861,8 +867,10 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     statusLoadingCandidates: "[lingual] 候選生成中...",
 
     cmdDescMode: "互動式伴學模式切換或管理: /lingual [1|2|3|0|on|off|lang|last|lock|status]",
-    cmdDescLang: "切換伴學語言: /lang <code>",
-    cmdDescLast: "回看上一條卡片: /last",
+    cmdDescStatus: "查看伴學狀態與模型診斷: /lingual status",
+    cmdDescModel: "查看或切換伴學模型: /lingual model [model-id|auto]",
+    cmdDescLang: "切換伴學語言: /lingual lang <代碼> 或 /lang <代碼>",
+    cmdDescLast: "回看上一條伴學卡片: /lingual last (或 /last)",
     shortcutNextPage: "切換至下一段伴學切片",
     shortcutPrevPage: "切換至上一段伴學切片",
     modePickerTitle: "伴學模式切換",
@@ -880,7 +888,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     statusReportCache: "會話快取",
     statusReportLayout: "HUD佈局: Trifecta 開放式左導軌樹狀架構",
     statusReportAuth: "憑據模式: Pi 原生進程內認證 (Zero Config)",
-    statusReportShortcuts: "快捷指令: /lingual · /slots · /lang · /last",
+    statusReportShortcuts: "快捷指令: /lingual (或 /l) · /lingual lang (或 /lang) · /lingual last · /lingual compact",
     statusReportTuner: "槽位調優: 內建 lingual-tuner 槽位調優技能",
     modeDescOriginal: "原文直通 · 0ms 非阻塞",
     modeDescEnglish: "英文模式 · 深度代碼推理",
@@ -888,6 +896,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
 
     modelCurrentLabel: "當前伴學模型",
     modelFollowSession: "跟隨會話",
+    modelAvailableListHeader: "可用模型清單 (/lingual model <id>):",
 
     langUsageHint: "用法: /lang <zh|tw|ja|en|es|fr|de> [target]",
     langList: ["• zh", "• tw", "• ja", "• en", "• es", "• fr", "• de", "• ko", "• ru"],
@@ -958,8 +967,10 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     statusLoadingCandidates: "[lingual] 候補生成中...",
 
     cmdDescMode: "対話式モード切替・管理: /lingual [1|2|3|0|on|off|lang|last|lock|status]",
-    cmdDescLang: "言語切替: /lang <code>",
-    cmdDescLast: "前回カード再表示: /last",
+    cmdDescStatus: "ステータスレポートと診断を表示: /lingual status",
+    cmdDescModel: "学習モデルの確認・切替: /lingual model [model-id|auto]",
+    cmdDescLang: "言語切替: /lingual lang <code> または /lang <code>",
+    cmdDescLast: "前回カード再表示: /lingual last (または /last)",
     shortcutNextPage: "次のスライスへ移動",
     shortcutPrevPage: "前のスライスへ移動",
     modePickerTitle: "伴走モード切替",
@@ -977,7 +988,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     statusReportCache: "キャッシュ",
     statusReportLayout: "レイアウト: Trifecta ツリー表示",
     statusReportAuth: "認証方式: Pi ネイティブインプロセス認証",
-    statusReportShortcuts: "ショートカット: /lingual · /slots · /lang · /last",
+    statusReportShortcuts: "ショートカット: /lingual (または /l) · /lingual lang (または /lang) · /lingual last · /lingual compact",
     statusReportTuner: "チューナー: lingual-tuner スキル",
     modeDescOriginal: "原文パススルー · 0ms非同期",
     modeDescEnglish: "直行 · コード推論",
@@ -985,7 +996,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
 
     modelCurrentLabel: "現在の学習モデル",
     modelFollowSession: "セッション連動",
-    modelAvailableListHeader: "利用可能なモデル:",
+    modelAvailableListHeader: "利用可能なモデル (/lingual model <id>):",
 
     langUsageHint: "使い方: /lang <source> [target] (例: /lang ja en)",
     langList: ["• ja", "• en", "• zh", "• es", "• fr", "• de", "• ko", "• ru"],
@@ -1058,12 +1069,12 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
 
     cmdDescMode: "Selector interactivo de modo o gestión: /lingual [1|2|3|0|on|off|lang|last|lock|status]",
     cmdDescStatus: "Mostrar diagnóstico y estado del modelo: /lingual status",
-    cmdDescModel: "Consultar o cambiar modelo: /lingual-model [model-id|auto]",
-    cmdDescLang: "Ver o cambiar idioma nativo: /lingual-lang [zh|ja|en|es|fr|de]",
-    cmdDescSlots: "Inspeccionar o cambiar ranuras: /slots [developer|social|japanese|academic|compact2]",
-    cmdDescCompact: "Alternar modo cápsula de una línea: /lingual-compact",
-    cmdDescLast: "Reaparecer tarjeta anterior: /lingual-last",
-    cmdDescAgent: "Ver guía de personalización y cambio de idioma: /lingual-agent",
+    cmdDescModel: "Consultar o cambiar modelo: /lingual model [model-id|auto]",
+    cmdDescLang: "Ver o cambiar idioma de asistencia: /lingual lang [código] o /lang [par]",
+    cmdDescSlots: "Inspeccionar o cambiar ranuras: /lingual slots [add|rm|toggle|reset]",
+    cmdDescCompact: "Alternar modo cápsula de una línea: /lingual compact",
+    cmdDescLast: "Reaparecer tarjeta anterior: /lingual last (o /last)",
+    cmdDescAgent: "Activar asistente de personalización: /lingual tuner",
     shortcutNextPage: "Cambiar al siguiente segmento",
     shortcutPrevPage: "Cambiar al segmento anterior",
     modePickerTitle: "Selector de modo",
@@ -1081,7 +1092,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     statusReportCache: "Caché de sesión",
     statusReportLayout: "Diseño HUD: Trifecta árbol de guía izquierda (· ┌ ├ └)",
     statusReportAuth: "Autenticación: Proceso nativo de Pi (Sin config · Seguro)",
-    statusReportShortcuts: "Accesos directos: /lingual (modo) · /slots (ranuras) · /lang (idioma) · /lingual-compact (diseño)",
+    statusReportShortcuts: "Accesos directos: /lingual (o /l) · /lingual lang (o /lang) · /lingual last · /lingual compact",
     statusReportTuner: "Ajuste de ranuras: Habilidad lingual-tuner integrada (configure hablando con su Agente)",
     modeDescOriginal: "Directo · 0ms no bloqueante",
     modeDescEnglish: "Modo inglés · Razonamiento profundo",
@@ -1089,9 +1100,9 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
 
     modelCurrentLabel: "Modelo actual",
     modelFollowSession: "Siguiendo sesión",
-    modelAvailableListHeader: "Modelos disponibles (ejecute /lingual-model <id>):",
+    modelAvailableListHeader: "Modelos disponibles (ejecute /lingual model <id>):",
     modelAutoFollowDesc: "auto (Sigue automáticamente el modelo de la sesión)",
-    modelSelectHint: "Use /lingual-model <id> o auto para asignar un modelo.",
+    modelSelectHint: "Use /lingual model <id> o auto para asignar un modelo.",
 
     langUsageHint: "Uso: /lang <zh|ja|en|es|fr|de> [target] (ej. /lang ja o /lang zh ja)",
     langList: [
@@ -1180,11 +1191,11 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
 
     cmdDescMode: "Sélecteur interactif de mode ou gestion : /lingual [1|2|3|0|on|off|lang|last|lock|status]",
     cmdDescStatus: "Afficher le rapport d'état et le diagnostic: /lingual status",
-    cmdDescModel: "Consulter ou changer de modèle: /lingual-model [model-id|auto]",
-    cmdDescLang: "Afficher ou changer la langue maternelle: /lingual-lang [zh|ja|en|es|fr|de]",
-    cmdDescCompact: "Basculer le mode capsule sur une ligne: /lingual-compact",
-    cmdDescLast: "Réafficher la carte précédente: /lingual-last",
-    cmdDescAgent: "Afficher le guide de personnalisation et de changement de langue : /lingual-agent",
+    cmdDescModel: "Consulter ou changer de modèle : /lingual model [model-id|auto]",
+    cmdDescLang: "Afficher ou changer la langue d'assistance : /lingual lang [code] ou /lang [paire]",
+    cmdDescCompact: "Basculer le mode capsule sur une ligne : /lingual compact",
+    cmdDescLast: "Réafficher la carte précédente : /lingual last (ou /last)",
+    cmdDescAgent: "Lancer l'assistant de personnalisation : /lingual tuner",
     shortcutNextPage: "Passer au segment suivant",
     shortcutPrevPage: "Passer au segment précédent",
     modePickerTitle: "Sélecteur de mode",
@@ -1202,7 +1213,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     statusReportCache: "Cache de session",
     statusReportLayout: "Disposition HUD : Arbre guide gauche Trifecta (· ┌ ├ └)",
     statusReportAuth: "Authentification : Processus interne Pi natif (Zéro config · Sécurisé)",
-    statusReportShortcuts: "Raccourcis : /lingual (mode) · /slots (emplacements) · /lang (langue) · /lingual-compact (mise en page)",
+    statusReportShortcuts: "Raccourcis : /lingual (ou /l) · /lingual lang (ou /lang) · /lingual last · /lingual compact",
     statusReportTuner: "Ajustement d'emplacements : Compétence lingual-tuner intégrée (décrivez vos préférences à l'Agent)",
     modeDescOriginal: "Passerelle directe · 0ms non bloquant",
     modeDescEnglish: "Mode anglais · Raisonnement approfondi",
@@ -1210,9 +1221,9 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
 
     modelCurrentLabel: "Modèle actuel",
     modelFollowSession: "Suit la session",
-    modelAvailableListHeader: "Modèles disponibles (tapez /lingual-model <id>):",
+    modelAvailableListHeader: "Modèles disponibles (tapez /lingual model <id>):",
     modelAutoFollowDesc: "auto (Suit automatiquement le modèle principal)",
-    modelSelectHint: "Entrez /lingual-model <id> ou auto pour définir le modèle.",
+    modelSelectHint: "Entrez /lingual model <id> ou auto pour définir le modèle.",
 
     langUsageHint: "Utilisation : /lang <zh|ja|en|es|fr|de> [target] (ex : /lang ja ou /lang zh ja)",
     langList: [
@@ -1302,12 +1313,12 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
 
     cmdDescMode: "Interaktiver Modus-Wähler oder Verwaltung: /lingual [1|2|3|0|on|off|lang|last|lock|status]",
     cmdDescStatus: "Statusbericht und Modell-Diagnose anzeigen: /lingual status",
-    cmdDescModel: "Modell prüfen oder wechseln: /lingual-model [model-id|auto]",
-    cmdDescLang: "Muttersprache anzeigen oder wechseln: /lingual-lang [zh|ja|en|es|fr|de]",
-    cmdDescSlots: "Slot-Architektur anzeigen/umstellen: /slots [developer|social|japanese|academic|compact2]",
-    cmdDescCompact: "Einzeiligen Kapselmodus umschalten: /lingual-compact",
-    cmdDescLast: "Vorherige Karte erneut anzeigen: /lingual-last",
-    cmdDescAgent: "Anleitung zur Anpassung und Sprachumstellung anzeigen: /lingual-agent",
+    cmdDescModel: "Modell prüfen oder wechseln: /lingual model [model-id|auto]",
+    cmdDescLang: "Muttersprache anzeigen oder wechseln: /lingual lang [Code] oder /lang [Paar]",
+    cmdDescSlots: "Slot-Architektur anzeigen/umstellen: /lingual slots [add|rm|toggle|reset]",
+    cmdDescCompact: "Einzeiligen Kapselmodus umschalten: /lingual compact",
+    cmdDescLast: "Vorherige Karte erneut anzeigen: /lingual last (oder /last)",
+    cmdDescAgent: "Anleitung zur Anpassung und Sprachumstellung anzeigen: /lingual tuner",
     shortcutNextPage: "Zum nächsten Segment wechseln",
     shortcutPrevPage: "Zum vorherigen Segment wechseln",
     modePickerTitle: "Modus-Auswahl",
@@ -1325,7 +1336,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     statusReportCache: "Sitzungscache",
     statusReportLayout: "HUD-Layout: Trifecta Minimalistische Baumstruktur (· ┌ ├ └)",
     statusReportAuth: "Authentifizierung: Pi nativer In-Process Modus (Zero Config · Sicher)",
-    statusReportShortcuts: "Befehle: /lingual (Modus) · /slots (Slots) · /lang (Sprache) · /lingual-compact (Layout)",
+    statusReportShortcuts: "Befehle: /lingual (oder /l) · /lingual lang (oder /lang) · /lingual last · /lingual compact",
     statusReportTuner: "Slot-Anpassung: Integrierter lingual-tuner Skill (Präferenzen einfach dem Agenten beschreiben)",
     modeDescOriginal: "Direkt · 0ms nicht blockierend",
     modeDescEnglish: "Englisch-Modus · Tiefgreifende Logik",
@@ -1333,9 +1344,9 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
 
     modelCurrentLabel: "Aktuelles Modell",
     modelFollowSession: "Sitzungsmodell",
-    modelAvailableListHeader: "Verfügbare Modelle (/lingual-model <id> ausführen):",
+    modelAvailableListHeader: "Verfügbare Modelle (/lingual model <id> ausführen):",
     modelAutoFollowDesc: "auto (Folgt automatisch dem aktiven Sitzungsmodell)",
-    modelSelectHint: "Geben Sie /lingual-model <id> oder auto ein.",
+    modelSelectHint: "Geben Sie /lingual model <id> oder auto ein.",
 
     langUsageHint: "Verwendung: /lang <zh|ja|en|es|fr|de> [target] (z.B. /lang ja oder /lang zh ja)",
     langList: [
@@ -1424,12 +1435,12 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
 
     cmdDescMode: "대화형 모드 전환 및 관리: /lingual [1|2|3|0|on|off|lang|last|lock|status]",
     cmdDescStatus: "상태 보고서 및 진단 확인: /lingual status",
-    cmdDescModel: "모델 확인 및 변경: /lingual-model [model-id|auto]",
-    cmdDescLang: "모국어 확인 및 변경: /lingual-lang",
-    cmdDescSlots: "슬롯 구성 변경: /slots",
-    cmdDescCompact: "단일 행 캡슐 모드 토글: /lingual-compact",
-    cmdDescLast: "이전 카드 다시 보기: /lingual-last",
-    cmdDescAgent: "사용자 설정 가이드: /lingual-agent",
+    cmdDescModel: "모델 확인 및 변경: /lingual model [model-id|auto]",
+    cmdDescLang: "모국어 확인 및 변경: /lingual lang [코드] 또는 /lang [언어쌍]",
+    cmdDescSlots: "슬롯 구성 변경: /lingual slots [add|rm|toggle|reset]",
+    cmdDescCompact: "단일 행 캡슐 모드 토글: /lingual compact",
+    cmdDescLast: "이전 카드 다시 보기: /lingual last (또는 /last)",
+    cmdDescAgent: "사용자 설정 가이드: /lingual tuner",
     shortcutNextPage: "다음 세그먼트로 이동",
     shortcutPrevPage: "이전 세그먼트로 이동",
     modePickerTitle: "동행학습 모드 전환",
@@ -1447,7 +1458,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     statusReportCache: "세션 캐시",
     statusReportLayout: "HUD 레이아웃: Trifecta 좌측 레일 트리 (· ┌ ├ └)",
     statusReportAuth: "인증 모드: Pi 프로세스 내 직접 인증 (Zero Config)",
-    statusReportShortcuts: "명령어: /lingual (모드) · /slots (슬롯) · /lang (언어) · /lingual-compact (레이아웃)",
+    statusReportShortcuts: "명령어: /lingual (또는 /l) · /lingual lang (또는 /lang) · /lingual last · /lingual compact",
     statusReportTuner: "슬롯 튜너: lingual-tuner 내장",
     modeDescOriginal: "원문 직통 · 0ms 비차단",
     modeDescEnglish: "영어 모드 · 심층 코드 추론",
@@ -1455,9 +1466,9 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
 
     modelCurrentLabel: "현재 모델",
     modelFollowSession: "세션 따름",
-    modelAvailableListHeader: "사용 가능한 모델 (/lingual-model <id>):",
+    modelAvailableListHeader: "사용 가능한 모델 (/lingual model <id>):",
     modelAutoFollowDesc: "auto (현재 세션 주 모델 자동 추종)",
-    modelSelectHint: "/lingual-model <id> 또는 auto 지정.",
+    modelSelectHint: "/lingual model <id> 또는 auto 지정.",
 
     langUsageHint: "사용법: /lang <코드> [목표언어]",
     langList: [
@@ -1547,12 +1558,12 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
 
     cmdDescMode: "Интерактивный выбор режима или управление: /lingual [1|2|3|0|on|off|lang|last|lock|status]",
     cmdDescStatus: "Отчет о состоянии и диагностика: /lingual status",
-    cmdDescModel: "Проверить или сменить модель: /lingual-model [model-id|auto]",
-    cmdDescLang: "Проверить или сменить язык: /lingual-lang",
-    cmdDescSlots: "Настроить слоты: /slots",
-    cmdDescCompact: "Переключить режим капсулы: /lingual-compact",
-    cmdDescLast: "Показать предыдущую карточку: /lingual-last",
-    cmdDescAgent: "Руководство по настройке: /lingual-agent",
+    cmdDescModel: "Проверить или сменить модель: /lingual model [model-id|auto]",
+    cmdDescLang: "Проверить или сменить язык: /lingual lang [код] или /lang [пара]",
+    cmdDescSlots: "Настроить слоты: /lingual slots [add|rm|toggle|reset]",
+    cmdDescCompact: "Переключить режим капсулы: /lingual compact",
+    cmdDescLast: "Показать предыдущую карточку: /lingual last (или /last)",
+    cmdDescAgent: "Запустить мастер настройки: /lingual tuner",
     shortcutNextPage: "Перейти к следующему сегменту",
     shortcutPrevPage: "Перейти к предыдущему сегменту",
     modePickerTitle: "Выбор режима",
@@ -1570,7 +1581,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     statusReportCache: "Кэш сессии",
     statusReportLayout: "HUD: Trifecta левонаправленное дерево (· ┌ ├ └)",
     statusReportAuth: "Аутентификация: Встроенный процесс Pi (Zero Config)",
-    statusReportShortcuts: "Команды: /lingual (режим) · /slots (слоты) · /lang (язык)",
+    statusReportShortcuts: "Команды: /lingual (или /l) · /lingual lang (или /lang) · /lingual last · /lingual compact",
     statusReportTuner: "Настройка слотов: встроенный навык lingual-tuner",
     modeDescOriginal: "Оригинал · 0мс без блокировки",
     modeDescEnglish: "Английский режим · глубокое рассуждение",
@@ -1578,9 +1589,9 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
 
     modelCurrentLabel: "Текущая модель",
     modelFollowSession: "Следовать за сессией",
-    modelAvailableListHeader: "Доступные модели (/lingual-model <id>):",
+    modelAvailableListHeader: "Доступные модели (/lingual model <id>):",
     modelAutoFollowDesc: "auto (автоматически следовать за моделью сессии)",
-    modelSelectHint: "Используйте /lingual-model <id> или auto.",
+    modelSelectHint: "Используйте /lingual model <id> или auto.",
 
     langUsageHint: "Использование: /lang <код> [целевой_язык]",
     langList: [
@@ -1759,7 +1770,7 @@ export function formatStatusReport(
     `• ${labels.statusReportLayout || "Layout"}: ${layoutDesc}`,
     `• ${labels.statusReportAuth || "Auth: Pi Native In-Process Auth"}`,
     `• ${labels.statusReportTuner || "Slot Tuner: Built-in lingual-tuner skill (Just describe preferences to Agent)"}`,
-    `• ${labels.statusReportShortcuts || "Shortcuts: /lingual · /slots · /lang · /last"}`
+    `• ${labels.statusReportShortcuts || "Shortcuts: /lingual (or /l) · /lingual lang (or /lang) · /lingual last · /lingual compact"}`
   );
   return lines.join("\n");
 }
