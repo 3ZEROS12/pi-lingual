@@ -198,23 +198,39 @@ Switch language pairs anytime:
 
 ---
 
+## Two-Tier Cognitive Model: Everyday Simplicity + AI-Driven Customization
+
+`pi-lingual` strictly adheres to a core developer philosophy: **"Master basic usage in seconds; delegate all configuration to your AI Agent."** You never need to be a JSON configuration engineer or memorize complex CLI subcommands:
+
+### 1. Tier 1: Everyday Usage (5 Seconds to Master)
+During normal daily coding, you only ever need two actions:
+* **Switch Mode**: Type `/lingual` or ultra-short alias `/l` to pop up an interactive capsule picker. Tap `1` (Companion), `2` (Logical Spec), `3` (Live Flow), or `0` (Off) for instant 0ms switching without Enter (or jump directly with `/lingual 1`, `/lingual 2`, etc.).
+* **Switch Language**: Type `/lang ja` or `/lingual lang ja` to switch your target language on the fly.
+* **Smart Auto-Bypass**: Type your native tongue for rich companion cards; type pure English (0 CJK) for instant 0ms pass-through directly to your coding agent without artificial translation friction.
+
+### 2. Tier 2: Zero-Manual Configuration via AI Skill
+For any advanced custom requirements, **simply speak to your Pi Coding Agent in plain conversational language**. The built-in `lingual-tuner` architect skill understands your intent, inspects your configuration safely, and updates it on demand:
+* *"Configure a Conventional Commit mode for me"* ➔ Automatically attaches commit dehydrator loadout.
+* *"The companion card is too tall, simplify it into a single-line capsule"* ➔ Automatically sets dense layout.
+* *"Change target language to German with English explanations"* ➔ Automatically updates language pair and cognitive explainLang.
+* *"Clean up unused modes and keep only Companion and Logical Spec"* ➔ Safely inspects installed modes and trims them.
+
+---
+
 ## Streamlined Command Architecture (Single Super-Command `/lingual` & `/l`)
 
-To prevent autocomplete pollution in Pi's `/` menu, `pi-lingual` registers strictly **2 top-level commands** (`/lingual` and its ultra-short alias `/l`) and routes all sub-functions through a unified command bus:
+To prevent autocomplete pollution in Pi's `/` menu, `pi-lingual` registers strictly **2 top-level commands** (`/lingual` and its ultra-short alias `/l`, with `/lang` preserved as an ergonomic bridge) and routes all sub-functions through a unified command bus:
 
 | Command | Subcommands / Arguments | Description |
 | :--- | :--- | :--- |
 | **`/lingual`** or **`/l`** | *(no arguments)* | Open interactive capsule mode picker (hotkeys `1`/`2`/`3`/`0`, arrows, `Esc`) |
 | ↳ Direct Switch | `/lingual 1` \| `2` \| `3` \| `0` | Instant mode switch by positional number or ID (`companion`, `direct`, `live-flow`, `off`) |
 | ↳ Quick Toggle | `/lingual on` \| `off` | Quickly enable companion mode or turn off (0 pixels, 0 listeners, 0 tokens) |
-| ↳ Language Pair | `/lingual lang [pair]` | Switch language direction (e.g. `/lingual lang ja en`, `/lingual lang 日语`) |
+| ↳ Language Pair | `/lingual lang [pair]` or `/lang` | Switch language direction (e.g. `/lang ja`, `/lingual lang ja en`) |
 | ↳ Replay Card | `/lingual last` \| `replay` | Replay the most recent companion or rewrite card |
 | ↳ Layout Mode | `/lingual compact` | Toggle dense single-line capsule mode vs open Left-Rail Tree HUD |
-| ↳ Mode Lock | `/lingual lock` \| `unlock` | Lock active mode to prevent external process or unrequested drift |
+| ↳ Mode Lock | `/lingual lock` \| `unlock` | Lock active mode to prevent external process drift (human commands always 100% priority) |
 | ↳ Reasoning Effort | `/lingual reasoning [low\|medium\|high]` | Switch model reasoning depth (`low` for responsive execution, `medium` for complex `spec`) |
-| ↳ Mode Registry | `/lingual mode [list\|add\|rm\|toggle\|reset]` | Manage custom declarative modes, flow directions, and slots via CLI |
-| ↳ Loadouts | `/lingual loadout [list\|apply <id>]` | Inspect or apply tactical loadouts (`spec`, `commit`, `oss`, `yap`) |
-| ↳ Slot Control | `/lingual slots [add\|rm\|toggle\|reset]` | Advanced slot inspection and dynamic slot customization |
 | ↳ Prompt Architect | `/lingual tuner [request]` | Launch on-demand Bilingual Prompt Architect wizard directly |
 | ↳ Status & Diagnostics | `/lingual status` | Comprehensive diagnostics and in-memory LRU cache statistics |
 
