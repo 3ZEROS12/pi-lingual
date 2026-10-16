@@ -58,10 +58,16 @@ test("renderCardLayout - guarantees output <= 9 lines on long multi-clause input
   const lines45 = renderCardLayout(card, labels, { maxCols: 45, maxLines: 9 });
   assert.ok(lines45.length <= 9, `Lines in 45 cols must be <= 9 (got ${lines45.length})`);
 
-  // 3. 极窄屏 30 列 (自动降级为单行胶囊模式)
+  // 3. 极窄屏 30 列与 20 列 (自动降级为单行胶囊模式且严格满足 VisualWidth <= columns)
   const lines30 = renderCardLayout(card, labels, { maxCols: 30, maxLines: 9 });
   assert.equal(lines30.length, 1, "Extreme narrow width must degrade to 1-line capsule");
   assert.ok(lines30[0].includes("⇄ ["), "Capsule line must contain header title");
+  assert.ok(getVisualWidth(lines30[0]) <= 30, `Capsule line must be <= 30 columns (got ${getVisualWidth(lines30[0])})`);
+
+  // 4. 极端 20 列窗口 (Invariant 12)
+  const lines20 = renderCardLayout(card, labels, { maxCols: 20, maxLines: 9 });
+  assert.equal(lines20.length, 1, "20-column width must degrade to 1-line capsule");
+  assert.ok(getVisualWidth(lines20[0]) <= 20, `Capsule line must be <= 20 columns (got ${getVisualWidth(lines20[0])})`);
 });
 
 test("renderCardLayout - explicit compact mode generates 1 line capsule with page tag", () => {

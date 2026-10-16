@@ -734,7 +734,10 @@ export function renderCardLayout(
   // 1. Compact capsule fallback when requested or when viewport is < 35 columns
   if (isCompact || maxCols < 35) {
     const tagWidth = getVisualWidth(pageTag);
-    const availCols = Math.max(10, maxCols - tagWidth);
+    const targetCols = typeof options.maxCols === "number" && options.maxCols > 0
+      ? Math.min(options.maxCols, maxCols)
+      : maxCols;
+    const availCols = Math.max(10, targetCols - tagWidth);
     if (contentBranches.length === 0) {
       return [truncateVisual(`⇄ [${labels.hudTitle}] ${card.sourceText}`, availCols) + pageTag];
     }
