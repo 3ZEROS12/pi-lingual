@@ -154,8 +154,20 @@ function formatLoadingMessage(rawMsg, maxCols = getBannerMaxCols()) {
 }
 function formatModePickerLines(title, hint, pair, options, selectedIndex, maxCols = 78, theme) {
   const cols = Math.max(20, maxCols);
-  const color = theme?.fg || ((_c, t) => t);
-  const bold = theme?.bold || ((t) => t);
+  const color = (c, t) => {
+    try {
+      return theme && typeof theme.fg === "function" ? theme.fg(c, t) : t;
+    } catch {
+      return t;
+    }
+  };
+  const bold = (t) => {
+    try {
+      return theme && typeof theme.bold === "function" ? theme.bold(t) : t;
+    } catch {
+      return t;
+    }
+  };
   const lines = [];
   const dividerLength = Math.max(10, Math.min(cols, 76));
   const divider = "\u2500".repeat(dividerLength);
@@ -1952,7 +1964,7 @@ var LANGUAGE_PRESETS = {
     notifyModeLockedCycleBlocked: "[{pair}] Mode is locked to [{mode}]. Run /lingual unlock to cycle modes or specify mode directly.",
     notifyModeLockedSuccess: "[{pair}] Session mode locked to [{mode}]. Mode cycling is blocked. Run /lingual unlock to release.",
     notifyModeUnlockedSuccess: "[{pair}] Mode lock released. Free mode cycling and configuration sync restored.",
-    notifyUnrecognizedSubcommand: '[{pair}] Unrecognized subcommand: "{cmd}". Current mode unchanged. Available: /lingual [1|2|3|0|lock|unlock|tuner|lang|slots|compact|status]',
+    notifyUnrecognizedSubcommand: '[{pair}] Unrecognized subcommand: "{cmd}". Current mode unchanged. Available: /lingual [1|2|3|0|on|off|lang|last|lock|status] or /l',
     notifyClipboardCopied: "Copied to clipboard (prompt intercepted - not sent to agent). Ready to paste into GitHub, PR, or X.",
     notifyTargetSwitched: "Target language switched to: {target} (native {source} unchanged)",
     langHelpText: "[Companion Language: {flow}]\n\u2022 Quick switch: /lang ja (target Japanese) \xB7 /lang en (target English)\n\u2022 Pair switch: /lang en ja \xB7 /lang ja en \xB7 /lang es en\n\u2022 Supported codes: zh, tw, ja, ko, en, es, fr, de, ru",
@@ -2041,7 +2053,7 @@ var LANGUAGE_PRESETS = {
     notifyModeLockedCycleBlocked: "[{pair}] \u5F53\u524D\u6A21\u5F0F\u5DF2\u9501\u5B9A\u5728\u3010{mode}\u3011\u3002\u5982\u9700\u8F6E\u8F6C\uFF0C\u8BF7\u5148\u8F93\u5165 /lingual unlock \u89E3\u9501\uFF0C\u6216\u4F7F\u7528 /lingual 1|2|3|0 \u663E\u5F0F\u6307\u5B9A\u3002",
     notifyModeLockedSuccess: "[{pair}] \u4F1A\u8BDD\u6A21\u5F0F\u5DF2\u9501\u5B9A\u5728\u3010{mode}\u3011\u3002\u9632\u6B62\u5916\u90E8\u8FDB\u7A0B\u8986\u76D6\u4E0E\u65E0\u610F\u8F6E\u8F6C\uFF0C\u8F93\u5165 /lingual unlock \u53EF\u89E3\u9501\u3002",
     notifyModeUnlockedSuccess: "[{pair}] \u6A21\u5F0F\u9501\u5B9A\u5DF2\u89E3\u9664\uFF08\u5DF2\u89E3\u9501\uFF09\uFF0C\u6062\u590D\u81EA\u7531\u8F6E\u8F6C\u4E0E\u5916\u90E8\u914D\u7F6E\u540C\u6B65\u3002",
-    notifyUnrecognizedSubcommand: '[{pair}] \u672A\u8BC6\u522B\u7684\u5B50\u547D\u4EE4: "{cmd}"\u3002\u5F53\u524D\u6A21\u5F0F\u4FDD\u6301\u4E0D\u53D8\u3002\u53EF\u7528\u547D\u4EE4: /lingual [1|2|3|0|lock|unlock|tuner|lang|slots|compact|status]',
+    notifyUnrecognizedSubcommand: '[{pair}] \u672A\u8BC6\u522B\u7684\u5B50\u547D\u4EE4: "{cmd}"\u3002\u5F53\u524D\u6A21\u5F0F\u4FDD\u6301\u4E0D\u53D8\u3002\u53EF\u7528\u547D\u4EE4: /lingual [1|2|3|0|on|off|lang|last|lock|status] \u6216 /l',
     notifyClipboardCopied: "\u5DF2\u590D\u5236\u5230\u526A\u8D34\u677F\uFF08\u5DF2\u62E6\u622A\u63D0\u793A\u8BCD\uFF0C\u672A\u53D1\u7ED9 Agent\uFF09\u3002\u53EF\u76F4\u63A5\u7C98\u8D34\u81F3 GitHub\u3001PR \u6216\u53D1\u63A8\u3002",
     notifyTargetSwitched: "\u76EE\u6807\u8BED\u8A00\u5DF2\u5207\u6362\u4E3A: {target}\uFF08\u6BCD\u8BED {source} \u4FDD\u6301\u4E0D\u53D8\uFF09",
     langHelpText: "[\u5F53\u524D\u4F34\u5B66\u8BED\u8A00: {flow}]\n\u2022 \u5E38\u7528\u5207\u6362: /lang ja (\u5207\u6362\u76EE\u6807\u4E3A\u65E5\u8BED) \xB7 /lang en (\u5207\u6362\u76EE\u6807\u4E3A\u82F1\u8BED)\n\u2022 \u53CC\u5411\u5207\u6362: /lang zh ja \xB7 /lang ja en \xB7 /lang en zh\n\u2022 \u652F\u6301\u8BED\u79CD: zh (\u4E2D\u6587), tw (\u7E41\u4E2D), ja (\u65E5\u8BED), ko (\u97E9\u8BED), en (\u82F1\u8BED), es (\u897F\u8BED), fr (\u6CD5\u8BED), de (\u5FB7\u8BED), ru (\u4FC4\u8BED)",
@@ -2130,7 +2142,7 @@ var LANGUAGE_PRESETS = {
     notifyModeLockedCycleBlocked: "[{pair}] \u7576\u524D\u6A21\u5F0F\u5DF2\u9396\u5B9A\u5728\u3010{mode}\u3011\u3002\u5982\u9700\u8F2A\u8F49\uFF0C\u8ACB\u5148\u8F38\u5165 /lingual unlock \u89E3\u9396\uFF0C\u6216\u4F7F\u7528 /lingual 1|2|3|0 \u986F\u5F0F\u6307\u5B9A\u3002",
     notifyModeLockedSuccess: "[{pair}] \u6703\u8A71\u6A21\u5F0F\u5DF2\u9396\u5B9A\u5728\u3010{mode}\u3011\u3002\u9632\u6B62\u5916\u90E8\u9032\u7A0B\u8986\u84CB\u8207\u7121\u610F\u8F2A\u8F49\uFF0C\u8F38\u5165 /lingual unlock \u53EF\u89E3\u9396\u3002",
     notifyModeUnlockedSuccess: "[{pair}] \u6A21\u5F0F\u9396\u5B9A\u5DF2\u89E3\u9664\uFF08\u5DF2\u89E3\u9396\uFF09\uFF0C\u6062\u5FA9\u81EA\u7531\u8F2A\u8F49\u8207\u5916\u90E8\u914D\u7F6E\u540C\u6B65\u3002",
-    notifyUnrecognizedSubcommand: '[{pair}] \u672A\u8B58\u5225\u7684\u5B50\u547D\u4EE4: "{cmd}"\u3002\u7576\u524D\u6A21\u5F0F\u4FDD\u6301\u4E0D\u8B8A\u3002\u53EF\u7528\u547D\u4EE4: /lingual [1|2|3|0|lock|unlock|tuner|lang|slots|compact|status]',
+    notifyUnrecognizedSubcommand: '[{pair}] \u672A\u8B58\u5225\u7684\u5B50\u547D\u4EE4: "{cmd}"\u3002\u7576\u524D\u6A21\u5F0F\u4FDD\u6301\u4E0D\u8B8A\u3002\u53EF\u7528\u547D\u4EE4: /lingual [1|2|3|0|on|off|lang|last|lock|status] \u6216 /l',
     notifyClipboardCopied: "\u5DF2\u8907\u88FD\u5230\u526A\u8CBC\u7C3F\uFF08\u5DF2\u6514\u622A\u63D0\u793A\u8A5E\uFF0C\u672A\u767C\u7D66 Agent\uFF09\u3002\u53EF\u76F4\u63A5\u8CBC\u4E0A\u81F3 GitHub\u3001PR \u6216\u767C\u63A8\u3002",
     notifyTargetSwitched: "\u76EE\u6A19\u8A9E\u8A00\u5DF2\u5207\u63DB\u70BA: {target}\uFF08\u6BCD\u8A9E {source} \u4FDD\u6301\u4E0D\u8B8A\uFF09",
     langHelpText: "[\u7576\u524D\u4F34\u5B78\u8A9E\u8A00: {flow}]\n\u2022 \u5E38\u7528\u5207\u63DB: /lang ja (\u5207\u63DB\u76EE\u6A19\u70BA\u65E5\u8A9E) \xB7 /lang en (\u5207\u63DB\u76EE\u6A19\u70BA\u82F1\u8A9E)\n\u2022 \u96D9\u5411\u5207\u63DB: /lang tw ja \xB7 /lang ja en \xB7 /lang en zh\n\u2022 \u652F\u63F4\u8A9E\u7A2E: zh (\u4E2D\u6587), tw (\u7E41\u4E2D), ja (\u65E5\u8A9E), ko (\u97D3\u8A9E), en (\u82F1\u8A9E), es (\u897F\u8A9E), fr (\u6CD5\u8A9E), de (\u5FB7\u8A9E), ru (\u4FC4\u8A9E)",
@@ -2219,7 +2231,7 @@ var LANGUAGE_PRESETS = {
     notifyModeLockedCycleBlocked: "[{pair}] \u73FE\u5728\u306E\u30E2\u30FC\u30C9\u306F\u3010{mode}\u3011\u306B\u56FA\u5B9A\u3055\u308C\u3066\u3044\u307E\u3059\u3002\u5DE1\u56DE\u5207\u66FF\u306B\u306F /lingual unlock \u3067\u89E3\u9664\u3059\u308B\u304B\u3001/lingual 1|2|3|0 \u3067\u76F4\u63A5\u6307\u5B9A\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
     notifyModeLockedSuccess: "[{pair}] \u30BB\u30C3\u30B7\u30E7\u30F3\u30E2\u30FC\u30C9\u3092\u3010{mode}\u3011\u306B\u56FA\u5B9A\u3057\u307E\u3057\u305F\u3002\u5916\u90E8\u5909\u66F4\u3084\u610F\u56F3\u3057\u306A\u3044\u5207\u66FF\u3092\u9632\u6B62\u3057\u307E\u3059\u3002/lingual unlock \u3067\u89E3\u9664\u53EF\u80FD\u3002",
     notifyModeUnlockedSuccess: "[{pair}] \u30E2\u30FC\u30C9\u56FA\u5B9A\u3092\u89E3\u9664\u3057\u307E\u3057\u305F\u3002\u81EA\u7531\u5207\u66FF\u3068\u8A2D\u5B9A\u540C\u671F\u3092\u518D\u958B\u3057\u307E\u3059\u3002",
-    notifyUnrecognizedSubcommand: '[{pair}] \u672A\u8A8D\u8B58\u306E\u30B5\u30D6\u30B3\u30DE\u30F3\u30C9: "{cmd}"\u3002\u73FE\u5728\u306E\u30E2\u30FC\u30C9\u3092\u7DAD\u6301\u3057\u307E\u3059\u3002\u5229\u7528\u53EF\u80FD: /lingual [1|2|3|0|lock|unlock|tuner|lang|slots|compact|status]',
+    notifyUnrecognizedSubcommand: '[{pair}] \u672A\u8A8D\u8B58\u306E\u30B5\u30D6\u30B3\u30DE\u30F3\u30C9: "{cmd}"\u3002\u73FE\u5728\u306E\u30E2\u30FC\u30C9\u3092\u7DAD\u6301\u3057\u307E\u3059\u3002\u5229\u7528\u53EF\u80FD: /lingual [1|2|3|0|on|off|lang|last|lock|status] \u307E\u305F\u306F /l',
     notifyClipboardCopied: "\u30AF\u30EA\u30C3\u30D7\u30DC\u30FC\u30C9\u306B\u30B3\u30D4\u30FC\u3057\u307E\u3057\u305F\uFF08Agent\u672A\u9001\u4FE1\uFF09\u3002GitHub\u3001PR\u3001SNS\u7B49\u3078\u8CBC\u308A\u4ED8\u3051\u53EF\u80FD\u3002",
     notifyTargetSwitched: "\u30BF\u30FC\u30B2\u30C3\u30C8\u8A00\u8A9E\u3092 {target} \u306B\u5909\u66F4\u3057\u307E\u3057\u305F\uFF08\u6BCD\u8A9E {source} \u306F\u7DAD\u6301\uFF09",
     langHelpText: "[\u73FE\u5728\u306E\u8A00\u8A9E\u30DA\u30A2: {flow}]\n\u2022 \u30AF\u30A4\u30C3\u30AF\u5207\u66FF: /lang en (\u82F1\u8A9E\u3078) \xB7 /lang ja (\u65E5\u672C\u8A9E\u3078)\n\u2022 \u53CC\u65B9\u5411\u5207\u66FF: /lang ja en \xB7 /lang en ja \xB7 /lang ja zh\n\u2022 \u5BFE\u5FDC\u30B3\u30FC\u30C9: zh, tw, ja, ko, en, es, fr, de, ru",
@@ -2310,7 +2322,7 @@ var LANGUAGE_PRESETS = {
     notifyModeLockedCycleBlocked: "[{pair}] El modo est\xE1 bloqueado en [{mode}]. Use /lingual unlock para liberar o especifique el modo directamente.",
     notifyModeLockedSuccess: "[{pair}] Modo de sesi\xF3n bloqueado en [{mode}]. Ciclo bloqueado. Use /lingual unlock para liberar.",
     notifyModeUnlockedSuccess: "[{pair}] Bloqueo de modo liberado. Ciclo libre y sincronizaci\xF3n restaurados.",
-    notifyUnrecognizedSubcommand: '[{pair}] Subcomando no reconocido: "{cmd}". Modo actual sin cambios. Disponibles: /lingual [1|2|3|0|lock|unlock|tuner|lang|slots|compact|status]',
+    notifyUnrecognizedSubcommand: '[{pair}] Subcomando no reconocido: "{cmd}". Modo actual sin cambios. Disponibles: /lingual [1|2|3|0|on|off|lang|last|lock|status] o /l',
     notifyClipboardCopied: "Copiado al portapapeles (prompt interceptado, no enviado al agente). Listo para pegar.",
     notifyTargetSwitched: "Idioma de destino cambiado a: {target} (nativo {source} sin cambios)",
     langHelpText: "[Idioma de asistencia: {flow}]\n\u2022 Cambio r\xE1pido: /lang ja (japon\xE9s) \xB7 /lang en (ingl\xE9s)\n\u2022 Cambio de par: /lang es en \xB7 /lang en es \xB7 /lang es ja\n\u2022 C\xF3digos admitidos: zh, tw, ja, ko, en, es, fr, de, ru",
@@ -2424,7 +2436,7 @@ var LANGUAGE_PRESETS = {
     notifyModeLockedCycleBlocked: "[{pair}] Le mode est verrouill\xE9 sur [{mode}]. Ex\xE9cutez /lingual unlock pour d\xE9verrouiller ou sp\xE9cifiez le mode directement.",
     notifyModeLockedSuccess: "[{pair}] Mode de session verrouill\xE9 sur [{mode}]. D\xE9filement bloqu\xE9. Ex\xE9cutez /lingual unlock pour lib\xE9rer.",
     notifyModeUnlockedSuccess: "[{pair}] Verrouillage du mode d\xE9sactiv\xE9. D\xE9filement libre et synchronisation restaur\xE9s.",
-    notifyUnrecognizedSubcommand: '[{pair}] Sous-commande non reconnue : "{cmd}". Mode actuel inchang\xE9. Disponibles : /lingual [1|2|3|0|lock|unlock|tuner|lang|slots|compact|status]',
+    notifyUnrecognizedSubcommand: '[{pair}] Sous-commande non reconnue : "{cmd}". Mode actuel inchang\xE9. Disponibles : /lingual [1|2|3|0|on|off|lang|last|lock|status] ou /l',
     notifyClipboardCopied: "Copi\xE9 dans le presse-papiers (prompt intercept\xE9, non envoy\xE9 \xE0 l'agent). Pr\xEAt \xE0 coller.",
     notifyTargetSwitched: "Langue cible chang\xE9e en : {target} (langue native {source} inchang\xE9e)",
     langHelpText: "[Paire de langues : {flow}]\n\u2022 Changement rapide : /lang ja (japonais) \xB7 /lang en (anglais)\n\u2022 Changement de paire : /lang fr en \xB7 /lang en fr\n\u2022 Codes pris en charge : zh, tw, ja, ko, en, es, fr, de, ru",
@@ -2538,7 +2550,7 @@ var LANGUAGE_PRESETS = {
     notifyModeLockedCycleBlocked: "[{pair}] Modus ist auf [{mode}] gesperrt. F\xFChren Sie /lingual unlock aus oder geben Sie den Modus direkt an.",
     notifyModeLockedSuccess: "[{pair}] Sitzungsmodus auf [{mode}] gesperrt. Moduswechsel gesperrt. /lingual unlock zum Entsperren.",
     notifyModeUnlockedSuccess: "[{pair}] Modussperre aufgehoben. Freier Wechsel und Synchronisation wiederhergestellt.",
-    notifyUnrecognizedSubcommand: '[{pair}] Unbekannter Unterbefehl: "{cmd}". Aktueller Modus unver\xE4ndert. Verf\xFCgbar: /lingual [1|2|3|0|lock|unlock|tuner|lang|slots|compact|status]',
+    notifyUnrecognizedSubcommand: '[{pair}] Unbekannter Unterbefehl: "{cmd}". Aktueller Modus unver\xE4ndert. Verf\xFCgbar: /lingual [1|2|3|0|on|off|lang|last|lock|status] oder /l',
     notifyClipboardCopied: "In die Zwischenablage kopiert (Prompt abgefangen, nicht an Agent gesendet). Bereit zum Einf\xFCgen.",
     notifyTargetSwitched: "Zielsprache ge\xE4ndert zu: {target} (Muttersprache {source} unver\xE4ndert)",
     langHelpText: "[Sprachpaar: {flow}]\n\u2022 Schneller Wechsel: /lang ja (Japanisch) \xB7 /lang en (Englisch)\n\u2022 Paar-Wechsel: /lang de en \xB7 /lang en de\n\u2022 Unterst\xFCtzte Codes: zh, tw, ja, ko, en, es, fr, de, ru",
@@ -2652,7 +2664,7 @@ var LANGUAGE_PRESETS = {
     notifyModeLockedCycleBlocked: "[{pair}] \uD604\uC7AC \uBAA8\uB4DC\uAC00 \u3010{mode}\u3011(\uC73C)\uB85C \uC7A0\uACA8 \uC788\uC2B5\uB2C8\uB2E4. \uC21C\uD658\uD558\uB824\uBA74 /lingual unlock \uC73C\uB85C \uD574\uC81C\uD558\uAC70\uB098 /lingual 1|2|3|0 \uC73C\uB85C \uC9C1\uC811 \uC9C0\uC815\uD558\uC138\uC694.",
     notifyModeLockedSuccess: "[{pair}] \uC138\uC158 \uBAA8\uB4DC\uAC00 \u3010{mode}\u3011(\uC73C)\uB85C \uACE0\uC815\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uC678\uBD80 \uBCC0\uACBD \uBC0F \uC758\uB3C4\uCE58 \uC54A\uC740 \uC804\uD658\uC744 \uBC29\uC9C0\uD569\uB2C8\uB2E4. /lingual unlock \uC73C\uB85C \uD574\uC81C \uAC00\uB2A5.",
     notifyModeUnlockedSuccess: "[{pair}] \uBAA8\uB4DC \uC7A0\uAE08\uC774 \uD574\uC81C\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uC790\uC720 \uC804\uD658\uACFC \uC124\uC815 \uB3D9\uAE30\uD654\uAC00 \uBCF5\uC6D0\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
-    notifyUnrecognizedSubcommand: '[{pair}] \uC778\uC2DD\uD560 \uC218 \uC5C6\uB294 \uD558\uC704 \uBA85\uB839: "{cmd}". \uD604\uC7AC \uBAA8\uB4DC\uAC00 \uC720\uC9C0\uB429\uB2C8\uB2E4. \uC0AC\uC6A9 \uAC00\uB2A5: /lingual [1|2|3|0|lock|unlock|tuner|lang|slots|compact|status]',
+    notifyUnrecognizedSubcommand: '[{pair}] \uC778\uC2DD\uD560 \uC218 \uC5C6\uB294 \uD558\uC704 \uBA85\uB839: "{cmd}". \uD604\uC7AC \uBAA8\uB4DC\uAC00 \uC720\uC9C0\uB429\uB2C8\uB2E4. \uC0AC\uC6A9 \uAC00\uB2A5: /lingual [1|2|3|0|on|off|lang|last|lock|status] \uB610\uB294 /l',
     notifyClipboardCopied: "\uD074\uB9BD\uBCF4\uB4DC\uC5D0 \uBCF5\uC0AC\uB418\uC5C8\uC2B5\uB2C8\uB2E4 (Agent \uBBF8\uC804\uC1A1). GitHub, PR \uB610\uB294 SNS\uC5D0 \uBD99\uC5EC\uB123\uAE30 \uAC00\uB2A5.",
     notifyTargetSwitched: "\uBAA9\uD45C \uC5B8\uC5B4\uAC00 {target}(\uC73C)\uB85C \uBCC0\uACBD\uB418\uC5C8\uC2B5\uB2C8\uB2E4 (\uBAA8\uAD6D\uC5B4 {source} \uC720\uC9C0)",
     langHelpText: "[\uD604\uC7AC \uB3D9\uBC18 \uC5B8\uC5B4: {flow}]\n\u2022 \uBE60\uB978 \uC804\uD658: /lang ja (\uC77C\uBCF8\uC5B4\uB85C) \xB7 /lang en (\uC601\uC5B4\uB85C)\n\u2022 \uC591\uBC29\uD5A5 \uC804\uD658: /lang ko en \xB7 /lang en ko \xB7 /lang ko ja\n\u2022 \uC9C0\uC6D0 \uCF54\uB4DC: zh, tw, ja, ko, en, es, fr, de, ru",
@@ -2767,7 +2779,7 @@ var LANGUAGE_PRESETS = {
     notifyModeLockedCycleBlocked: "[{pair}] \u0420\u0435\u0436\u0438\u043C \u0437\u0430\u0431\u043B\u043E\u043A\u0438\u0440\u043E\u0432\u0430\u043D \u043D\u0430 [{mode}]. \u0412\u044B\u043F\u043E\u043B\u043D\u0438\u0442\u0435 /lingual unlock \u0434\u043B\u044F \u0440\u0430\u0437\u0431\u043B\u043E\u043A\u0438\u0440\u043E\u0432\u043A\u0438 \u0438\u043B\u0438 \u0443\u043A\u0430\u0436\u0438\u0442\u0435 \u0440\u0435\u0436\u0438\u043C \u043D\u0430\u043F\u0440\u044F\u043C\u0443\u044E.",
     notifyModeLockedSuccess: "[{pair}] \u0420\u0435\u0436\u0438\u043C \u0441\u0435\u0441\u0441\u0438\u0438 \u0437\u0430\u0431\u043B\u043E\u043A\u0438\u0440\u043E\u0432\u0430\u043D \u043D\u0430 [{mode}]. \u041F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0435 \u0437\u0430\u0431\u043B\u043E\u043A\u0438\u0440\u043E\u0432\u0430\u043D\u043E. \u0412\u0432\u0435\u0434\u0438\u0442\u0435 /lingual unlock \u0434\u043B\u044F \u0441\u0431\u0440\u043E\u0441\u0430.",
     notifyModeUnlockedSuccess: "[{pair}] \u0411\u043B\u043E\u043A\u0438\u0440\u043E\u0432\u043A\u0430 \u0440\u0435\u0436\u0438\u043C\u0430 \u0441\u043D\u044F\u0442\u0430. \u0412\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u043E \u0441\u0432\u043E\u0431\u043E\u0434\u043D\u043E\u0435 \u043F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0435 \u0438 \u0441\u0438\u043D\u0445\u0440\u043E\u043D\u0438\u0437\u0430\u0446\u0438\u044F.",
-    notifyUnrecognizedSubcommand: '[{pair}] \u041D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u0430\u044F \u043F\u043E\u0434\u043A\u043E\u043C\u0430\u043D\u0434\u0430: "{cmd}". \u0422\u0435\u043A\u0443\u0449\u0438\u0439 \u0440\u0435\u0436\u0438\u043C \u043D\u0435 \u0438\u0437\u043C\u0435\u043D\u0435\u043D. \u0414\u043E\u0441\u0442\u0443\u043F\u043D\u043E: /lingual [1|2|3|0|lock|unlock|tuner|lang|slots|compact|status]',
+    notifyUnrecognizedSubcommand: '[{pair}] \u041D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u0430\u044F \u043F\u043E\u0434\u043A\u043E\u043C\u0430\u043D\u0434\u0430: "{cmd}". \u0422\u0435\u043A\u0443\u0449\u0438\u0439 \u0440\u0435\u0436\u0438\u043C \u043D\u0435 \u0438\u0437\u043C\u0435\u043D\u0435\u043D. \u0414\u043E\u0441\u0442\u0443\u043F\u043D\u043E: /lingual [1|2|3|0|on|off|lang|last|lock|status] \u0438\u043B\u0438 /l',
     notifyClipboardCopied: "\u0421\u043A\u043E\u043F\u0438\u0440\u043E\u0432\u0430\u043D\u043E \u0432 \u0431\u0443\u0444\u0435\u0440 \u043E\u0431\u043C\u0435\u043D\u0430 (\u043F\u0440\u043E\u043C\u043F\u0442 \u043F\u0435\u0440\u0435\u0445\u0432\u0430\u0447\u0435\u043D, \u043D\u0435 \u043E\u0442\u043F\u0440\u0430\u0432\u043B\u0435\u043D \u0430\u0433\u0435\u043D\u0442\u0443). \u0413\u043E\u0442\u043E\u0432\u043E \u043A \u0432\u0441\u0442\u0430\u0432\u043A\u0435.",
     notifyTargetSwitched: "\u0426\u0435\u043B\u0435\u0432\u043E\u0439 \u044F\u0437\u044B\u043A \u043F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0435\u043D \u043D\u0430: {target} (\u0440\u043E\u0434\u043D\u043E\u0439 {source} \u0431\u0435\u0437 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0439)",
     langHelpText: "[\u042F\u0437\u044B\u043A\u043E\u0432\u0430\u044F \u043F\u0430\u0440\u0430: {flow}]\n\u2022 \u0411\u044B\u0441\u0442\u0440\u043E\u0435 \u043F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0435: /lang ja (\u044F\u043F\u043E\u043D\u0441\u043A\u0438\u0439) \xB7 /lang en (\u0430\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u0438\u0439)\n\u2022 \u0421\u043C\u0435\u043D\u0430 \u043F\u0430\u0440\u044B: /lang ru en \xB7 /lang en ru\n\u2022 \u041F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u043C\u044B\u0435 \u043A\u043E\u0434\u044B: zh, tw, ja, ko, en, es, fr, de, ru",
@@ -4900,17 +4912,6 @@ function extension_default(pi) {
         nextMode = trimmed;
       }
     } else {
-      if (state.modeLocked) {
-        const currentModeObj = activeModes.find((m) => m.id === state.mode);
-        const currentName = currentModeObj ? currentModeObj.name : state.mode === "off" ? modeSpec.off : state.mode;
-        const template2 = state.labels.notifyModeLockedCycleBlocked || "[{pair}] Mode is locked to [{mode}]. Run /lingual unlock to cycle modes or specify mode directly.";
-        const lockWarning = template2.replace("{pair}", pair).replace("{mode}", currentName);
-        try {
-          ctx.ui.notify(lockWarning, "warning");
-        } catch {
-        }
-        return;
-      }
       if (hasCustomModesOnDisk) {
         const cycleList = [...activeModes.map((m) => m.id), "off"];
         const currentIdx = cycleList.indexOf(state.mode);
@@ -4920,6 +4921,17 @@ function extension_default(pi) {
       }
     }
     const canonical = nextMode === "original" ? "companion" : nextMode === "english" ? "direct" : nextMode === "select" ? "candidates" : nextMode === "modify" ? "live-flow" : nextMode;
+    if (state.modeLocked && canonical !== state.mode && nextMode !== state.mode) {
+      const currentModeObj = activeModes.find((m) => m.id === state.mode);
+      const currentName = currentModeObj ? currentModeObj.name : state.mode === "off" ? modeSpec.off : state.mode;
+      const template2 = state.labels.notifyModeLockedCycleBlocked || "[{pair}] Mode is locked to [{mode}]. Run /lingual unlock to cycle modes or specify mode directly.";
+      const lockWarning = template2.replace("{pair}", pair).replace("{mode}", currentName);
+      try {
+        ctx.ui.notify(lockWarning, "warning");
+      } catch {
+      }
+      return;
+    }
     if (nextMode === "off") {
       state.mode = "off";
       state.activeModeId = "off";
@@ -5540,7 +5552,8 @@ Usage: /lingual loadout [list | apply <id>] (e.g. /lingual loadout apply spec)`;
     const modes = Array.isArray(state.modes) && state.modes.length > 0 ? state.modes : resolveModesFromConfig(diskForMode);
     const activeModes = modes.filter((m) => m.enabled !== false);
     const offName = resolveModeDisplayName("off", state.sourceLang);
-    const pair = state.labels.hudTitle || `${state.sourceLang} \u21C4 ${state.targetLang}`;
+    const lockIndicator = state.modeLocked ? state.sourceLang === "zh" ? " \xB7 \u9501\u5B9A" : state.sourceLang === "tw" ? " \xB7 \u9396\u5B9A" : state.sourceLang === "ja" ? " \xB7 \u30ED\u30C3\u30AF" : " \xB7 Locked" : "";
+    const pair = `${state.labels.hudTitle || `${state.sourceLang} \u21C4 ${state.targetLang}`}${lockIndicator}`;
     const title = state.labels.modePickerTitle || "Mode Switch";
     const hint = state.labels.modePickerHint || "Press 1/2/3/0 to switch, Esc to cancel";
     const options = activeModes.map((m, idx) => ({
@@ -5562,32 +5575,52 @@ Usage: /lingual loadout [list | apply <id>] (e.g. /lingual loadout apply spec)`;
       const chosen = await ctx.ui.custom(
         (tui, theme, _kb, done) => {
           let selectedIndex = initialIndex;
+          let finished = false;
+          const finish = (val) => {
+            if (finished) return;
+            finished = true;
+            done(val);
+          };
           return {
             render(width) {
-              return formatModePickerLines(
-                title,
-                hint,
-                pair,
-                options,
-                selectedIndex,
-                width,
-                theme
-              );
+              try {
+                return formatModePickerLines(
+                  title,
+                  hint,
+                  pair,
+                  options,
+                  selectedIndex,
+                  width,
+                  theme
+                );
+              } catch {
+                return formatModePickerLines(
+                  title,
+                  hint,
+                  pair,
+                  options,
+                  selectedIndex,
+                  width
+                );
+              }
             },
             invalidate() {
             },
             handleInput(data) {
+              if (data.startsWith("\x1B[<") || data.startsWith("\x1B[M") || data.startsWith("\x1B[200~")) {
+                return;
+              }
               if (data === "0") {
-                done("off");
+                finish("off");
                 return;
               }
               const num = parseInt(data, 10);
               if (!isNaN(num) && num >= 1 && num <= activeModes.length) {
-                done(activeModes[num - 1].id);
+                finish(activeModes[num - 1].id);
                 return;
               }
               if (data === "\x1B" || data === "q" || data === "") {
-                done(null);
+                finish(null);
                 return;
               }
               if (data === "\x1B[C" || data === "\x1B[B" || data === "l" || data === "j" || data === "	") {
@@ -5600,8 +5633,8 @@ Usage: /lingual loadout [list | apply <id>] (e.g. /lingual loadout apply spec)`;
                 tui?.requestRender?.();
                 return;
               }
-              if (data === "\r" || data === "\n" || data === " ") {
-                done(options[selectedIndex]?.id || null);
+              if (data === "\r" || data === "\n" || data === "\r\n" || data === " ") {
+                finish(options[selectedIndex]?.id || null);
                 return;
               }
             }
@@ -5758,7 +5791,7 @@ Usage: /lingual loadout [list | apply <id>] (e.g. /lingual loadout apply spec)`;
       return;
     }
     const pair = state.labels.hudTitle || `${state.sourceLang} \u21C4 ${state.targetLang}`;
-    const template = state.labels.notifyUnrecognizedSubcommand || '[{pair}] Unrecognized subcommand: "{cmd}". Current mode unchanged. Available: /lingual [1|2|3|0|lock|unlock|tuner|lang|slots|compact|status]';
+    const template = state.labels.notifyUnrecognizedSubcommand || '[{pair}] Unrecognized subcommand: "{cmd}". Current mode unchanged. Available: /lingual [1|2|3|0|on|off|lang|last|lock|status] or /l';
     const unrecMsg = template.replace("{pair}", pair).replace("{cmd}", trimmed);
     try {
       ctx.ui.notify(unrecMsg, "warning");
@@ -5772,6 +5805,10 @@ Usage: /lingual loadout [list | apply <id>] (e.g. /lingual loadout apply spec)`;
   pi.registerCommand("l", {
     description: "Alias for /lingual",
     handler: masterCommandHandler
+  });
+  pi.registerCommand("lang", {
+    description: "Switch companion language (alias for /lingual lang): /lang <pair>",
+    handler: switchLangHandler
   });
   if (typeof pi.registerShortcut === "function") {
     pi.registerShortcut("alt+.", {

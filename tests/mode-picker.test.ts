@@ -271,3 +271,157 @@ test("mode picker interactive custom UI - Down/Up keys advance and retreat linea
   capturedComponent.handleInput("\r");
   assert.equal(chosenValue, "off", "Down key three times must move from index 0 to index 3 (off)");
 });
+
+class StrictThemeClassMock {
+  private tokenAnsi = new Map([
+    ["accent", "\x1b[32m"],
+    ["muted", "\x1b[90m"],
+    ["dim", "\x1b[2m"],
+    ["text", "\x1b[0m"],
+  ]);
+
+  fg(color: string, text: string) {
+    if (!this || !(this instanceof StrictThemeClassMock)) {
+      throw new TypeError("Cannot read properties of undefined (reading 'tokenAnsi')");
+    }
+    const prefix = this.tokenAnsi.get(color) || "";
+    return `${prefix}${text}\x1b[39m`;
+  }
+
+  bold(text: string) {
+    if (!this || !(this instanceof StrictThemeClassMock)) {
+      throw new TypeError("Cannot read properties of undefined (reading 'bold')");
+    }
+    return `\x1b[1m${text}\x1b[22m`;
+  }
+}
+
+test("mode picker resilience - StrictThemeClassMock verifies zero method-detachment crashes (Module 1)", async () => {
+  const strictTheme = new StrictThemeClassMock();
+
+  // 1. Direct call to formatModePickerLines with strict class mock
+  const lines = formatModePickerLines(
+    "伴学模式切换",
+    "按数字键 1/2/3/0 直接生效，Esc 取消",
+    "zh ⇄ en",
+    DEFAULT_OPTIONS,
+    0,
+    80,
+    strictTheme as any
+  );
+  assert.ok(lines.length >= 4, "formatModePickerLines must succeed with StrictThemeClassMock");
+  assert.ok(lines.join("\n").includes("纯伴学"));
+
+  // 2. Integration test in openModePicker via ctx.ui.custom
+  const registeredCommands: Record<string, any> = {};
+  const mockPi: any = {
+    on() {},
+    registerCommand(name: string, def: any) {
+      registeredCommands[name] = def;
+    },
+    registerShortcut() {},
+  };
+
+  extensionFactory(mockPi);
+
+  let capturedComponent: any = null;
+  const mockCtx: any = {
+    hasUI: true,
+    ui: {
+      custom(factory: any) {
+        return new Promise((resolve) => {
+          capturedComponent = factory(
+            { requestRender() {} },
+            strictTheme,
+            null,
+            (chosen: string | null) => resolve(chosen)
+          );
+        });
+      },
+      notify() {},
+      setStatus() {},
+      setWidget() {},
+      theme: strictTheme,
+    },
+  };
+
+  // Switch to zh en to test standard localized rendering
+  await registeredCommands["lingual"].handler("lang zh en", mockCtx);
+
+  // Launch picker and render using strict theme class instance
+  registeredCommands["lingual"].handler("", mockCtx);
+  assert.ok(capturedComponent, "Component must be initialized");
+  const rendered = capturedComponent.render(80);
+  assert.ok(Array.isArray(rendered), "render(80) must return string array without this-detachment TypeError");
+  assert.ok(
+    rendered.join("\n").includes("纯伴学") || rendered.join("\n").includes("Companion"),
+    "Rendered output must include options"
+  );
+});
+
+test("mode picker interaction - CRLF \\r\\n support, double-done prevention, and locked indicator (Module 2 & 3)", async () => {
+  const registeredCommands: Record<string, any> = {};
+  const mockPi: any = {
+    on() {},
+    registerCommand(name: string, def: any) {
+      registeredCommands[name] = def;
+    },
+    registerShortcut() {},
+  };
+
+  extensionFactory(mockPi);
+
+  let doneCallCount = 0;
+  let chosenValue: string | null = null;
+  let capturedComponent: any = null;
+
+  const mockCtx: any = {
+    hasUI: true,
+    ui: {
+      custom(factory: any) {
+        return new Promise((resolve) => {
+          capturedComponent = factory(
+            { requestRender() {} },
+            { fg: (_c: string, t: string) => t, bold: (t: string) => t },
+            null,
+            (chosen: string | null) => {
+              doneCallCount++;
+              chosenValue = chosen;
+              resolve(chosen);
+            }
+          );
+        });
+      },
+      notify() {},
+      setStatus() {},
+      setWidget() {},
+      theme: { fg: (_c: string, t: string) => t },
+    },
+  };
+
+  // 1. CRLF \r\n confirmation support
+  await registeredCommands["lingual"].handler("1", mockCtx);
+  registeredCommands["lingual"].handler("", mockCtx);
+  capturedComponent.handleInput("\r\n");
+  assert.equal(chosenValue, "companion", "CRLF \\r\\n must confirm currently highlighted item");
+
+  // 2. Double-done guard: consecutive hotkey + Enter must only trigger done once
+  doneCallCount = 0;
+  registeredCommands["lingual"].handler("", mockCtx);
+  capturedComponent.handleInput("2");
+  capturedComponent.handleInput("\r");
+  assert.equal(doneCallCount, 1, "Double-done guard must ensure done is triggered at most once");
+
+  // 3. Locked indicator in mode picker
+  await registeredCommands["lingual"].handler("lock", mockCtx);
+  registeredCommands["lingual"].handler("", mockCtx);
+  const lockedLines = capturedComponent.render(80);
+  const lockedHeader = lockedLines.join("\n");
+  assert.ok(
+    lockedHeader.includes("锁定") || lockedHeader.includes("Locked") || lockedHeader.includes("鎖定"),
+    "Mode picker header must show locked indicator when mode is locked"
+  );
+
+  // Teardown unlock
+  await registeredCommands["lingual"].handler("unlock", mockCtx);
+});

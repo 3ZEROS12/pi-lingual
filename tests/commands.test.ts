@@ -13,7 +13,7 @@ import {
 } from "../src/engine.js";
 import { LingualLruCache } from "../src/cache.js";
 
-test("extension command matrix - registers strictly /lingual and /l alias without menu clutter", () => {
+test("extension command matrix - registers strictly /lingual, /l alias, and /lang bridge without menu clutter", () => {
   const registeredCommands: Record<string, any> = {};
 
   const mockPi: any = {
@@ -26,14 +26,14 @@ test("extension command matrix - registers strictly /lingual and /l alias withou
 
   extensionFactory(mockPi);
 
-  // Register strictly /lingual and /l alias in Pi's / menu (zero global namespace pollution)
+  // Register strictly /lingual, /l alias, and /lang bridge in Pi's / menu (zero global namespace pollution)
   assert.deepEqual(
     Object.keys(registeredCommands).sort(),
-    ["l", "lingual"],
-    "Must register strictly the 2 core developer commands (/lingual and /l alias)"
+    ["l", "lang", "lingual"],
+    "Must register strictly the 3 core developer commands (/lingual, /l alias, and /lang bridge)"
   );
   assert.equal(registeredCommands["l"].handler, registeredCommands["lingual"].handler, "/l must alias /lingual");
-  assert.equal(registeredCommands["lang"], undefined, "Must NOT pollute global /lang command");
+  assert.ok(registeredCommands["lang"], "/lang bridge must be registered");
   assert.equal(registeredCommands["slots"], undefined, "Must NOT pollute global /slots command");
   assert.equal(registeredCommands["last"], undefined, "Must NOT pollute global /last command");
   assert.equal(registeredCommands["compact"], undefined, "Must NOT occupy Pi core /compact command");
@@ -798,6 +798,15 @@ test("extension /lingual anti-drift: blocks unrecognized subcommands and support
   notifications.length = 0;
   await registeredCommands["lingual"].handler("", mockCtx);
   assert.ok(notifications.some((n) => n.msg.includes("已锁定在") && n.type === "warning"), "Must warn that mode is locked and refuse blind cycling");
+
+  // 4b. While locked, explicit /lingual 2 or /lingual off MUST ALSO be blocked (Universal Mode Lock Guard M2)
+  notifications.length = 0;
+  await registeredCommands["lingual"].handler("2", mockCtx);
+  assert.ok(notifications.some((n) => n.msg.includes("已锁定在") && n.type === "warning"), "Universal lock must block explicit mode jumps");
+
+  notifications.length = 0;
+  await registeredCommands["lingual"].handler("0", mockCtx);
+  assert.ok(notifications.some((n) => n.msg.includes("已锁定在") && n.type === "warning"), "Universal lock must block explicit off switch");
 
   // 5. Unlock mode via /lingual unlock
   notifications.length = 0;

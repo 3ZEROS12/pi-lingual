@@ -210,8 +210,20 @@ export function formatModePickerLines(
   }
 ): string[] {
   const cols = Math.max(20, maxCols);
-  const color = theme?.fg || ((_c: string, t: string) => t);
-  const bold = theme?.bold || ((t: string) => t);
+  const color = (c: string, t: string): string => {
+    try {
+      return theme && typeof theme.fg === "function" ? theme.fg(c as any, t) : t;
+    } catch {
+      return t;
+    }
+  };
+  const bold = (t: string): string => {
+    try {
+      return theme && typeof theme.bold === "function" ? theme.bold(t) : t;
+    } catch {
+      return t;
+    }
+  };
 
   const lines: string[] = [];
   const dividerLength = Math.max(10, Math.min(cols, 76));

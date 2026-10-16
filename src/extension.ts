@@ -569,26 +569,6 @@ export default function (pi: ExtensionAPI) {
         nextMode = trimmed;
       }
     } else {
-      // Check if active mode is locked
-      if (state.modeLocked) {
-        const currentModeObj = activeModes.find((m) => m.id === state.mode);
-        const currentName = currentModeObj
-          ? currentModeObj.name
-          : state.mode === "off"
-            ? modeSpec.off
-            : state.mode;
-        const template =
-          state.labels.notifyModeLockedCycleBlocked ||
-          "[{pair}] Mode is locked to [{mode}]. Run /lingual unlock to cycle modes or specify mode directly.";
-        const lockWarning = template
-          .replace("{pair}", pair)
-          .replace("{mode}", currentName);
-        try {
-          ctx.ui.notify(lockWarning, "warning");
-        } catch {}
-        return;
-      }
-
       if (hasCustomModesOnDisk) {
         const cycleList = [...activeModes.map((m) => m.id), "off"];
         const currentIdx = cycleList.indexOf(state.mode);
@@ -616,6 +596,26 @@ export default function (pi: ExtensionAPI) {
       nextMode === "english"  ? "direct"    :
       nextMode === "select"   ? "candidates":
       nextMode === "modify"   ? "live-flow" : nextMode;
+
+    // Universal Mode Lock Guard: blocks any unauthorized mode drift whether parameterless or explicit
+    if (state.modeLocked && canonical !== state.mode && nextMode !== state.mode) {
+      const currentModeObj = activeModes.find((m) => m.id === state.mode);
+      const currentName = currentModeObj
+        ? currentModeObj.name
+        : state.mode === "off"
+          ? modeSpec.off
+          : state.mode;
+      const template =
+        state.labels.notifyModeLockedCycleBlocked ||
+        "[{pair}] Mode is locked to [{mode}]. Run /lingual unlock to cycle modes or specify mode directly.";
+      const lockWarning = template
+        .replace("{pair}", pair)
+        .replace("{mode}", currentName);
+      try {
+        ctx.ui.notify(lockWarning, "warning");
+      } catch {}
+      return;
+    }
 
     if (nextMode === "off") {
       state.mode = "off";
@@ -1357,7 +1357,16 @@ export default function (pi: ExtensionAPI) {
       : resolveModesFromConfig(diskForMode);
     const activeModes = modes.filter((m) => m.enabled !== false);
     const offName = resolveModeDisplayName("off", state.sourceLang);
-    const pair = state.labels.hudTitle || `${state.sourceLang} ⇄ ${state.targetLang}`;
+    const lockIndicator = state.modeLocked
+      ? state.sourceLang === "zh"
+        ? " · 锁定"
+        : state.sourceLang === "tw"
+        ? " · 鎖定"
+        : state.sourceLang === "ja"
+        ? " · ロック"
+        : " · Locked"
+      : "";
+    const pair = `${state.labels.hudTitle || `${state.sourceLang} ⇄ ${state.targetLang}`}${lockIndicator}`;
     const title = state.labels.modePickerTitle || "Mode Switch";
     const hint = state.labels.modePickerHint || "Press 1/2/3/0 to switch, Esc to cancel";
 
@@ -1394,35 +1403,57 @@ export default function (pi: ExtensionAPI) {
       const chosen = await (ctx.ui as any).custom(
         (tui: any, theme: any, _kb: any, done: (val: string | null) => void) => {
           let selectedIndex = initialIndex;
+          let finished = false;
+          const finish = (val: string | null) => {
+            if (finished) return;
+            finished = true;
+            done(val);
+          };
 
           return {
             render(width: number): string[] {
-              return formatModePickerLines(
-                title,
-                hint,
-                pair,
-                options,
-                selectedIndex,
-                width,
-                theme
-              );
+              try {
+                return formatModePickerLines(
+                  title,
+                  hint,
+                  pair,
+                  options,
+                  selectedIndex,
+                  width,
+                  theme
+                );
+              } catch {
+                return formatModePickerLines(
+                  title,
+                  hint,
+                  pair,
+                  options,
+                  selectedIndex,
+                  width
+                );
+              }
             },
             invalidate() {},
             handleInput(data: string) {
+              // Ignore mouse tracking escapes and bracketed paste sequences
+              if (data.startsWith("\x1b[<") || data.startsWith("\x1b[M") || data.startsWith("\x1b[200~")) {
+                return;
+              }
+
               // Direct numeric hotkeys 1..N and 0 (instant execution without Enter)
               if (data === "0") {
-                done("off");
+                finish("off");
                 return;
               }
               const num = parseInt(data, 10);
               if (!isNaN(num) && num >= 1 && num <= activeModes.length) {
-                done(activeModes[num - 1].id);
+                finish(activeModes[num - 1].id);
                 return;
               }
 
               // Esc, q, Ctrl+C (cancel without changing mode)
               if (data === "\x1b" || data === "q" || data === "\x03") {
-                done(null);
+                finish(null);
                 return;
               }
 
@@ -1438,9 +1469,9 @@ export default function (pi: ExtensionAPI) {
                 return;
               }
 
-              // Enter or Space confirms selection
-              if (data === "\r" || data === "\n" || data === " ") {
-                done(options[selectedIndex]?.id || null);
+              // Enter, CRLF or Space confirms selection
+              if (data === "\r" || data === "\n" || data === "\r\n" || data === " ") {
+                finish(options[selectedIndex]?.id || null);
                 return;
               }
             },
@@ -1660,7 +1691,7 @@ export default function (pi: ExtensionAPI) {
     const pair = state.labels.hudTitle || `${state.sourceLang} ⇄ ${state.targetLang}`;
     const template =
       state.labels.notifyUnrecognizedSubcommand ||
-      "[{pair}] Unrecognized subcommand: \"{cmd}\". Current mode unchanged. Available: /lingual [1|2|3|0|lock|unlock|tuner|lang|slots|compact|status]";
+      "[{pair}] Unrecognized subcommand: \"{cmd}\". Current mode unchanged. Available: /lingual [1|2|3|0|on|off|lang|last|lock|status] or /l";
     const unrecMsg = template
       .replace("{pair}", pair)
       .replace("{cmd}", trimmed);
@@ -1669,7 +1700,7 @@ export default function (pi: ExtensionAPI) {
     } catch {}
   };
 
-  // Core command matrix: register first-class commands (/lingual, /l)
+  // Core command matrix: register first-class commands (/lingual, /l, /lang)
   pi.registerCommand("lingual", {
     description:
       state.labels.cmdDescMode ||
@@ -1680,6 +1711,11 @@ export default function (pi: ExtensionAPI) {
   pi.registerCommand("l", {
     description: "Alias for /lingual",
     handler: masterCommandHandler,
+  });
+
+  pi.registerCommand("lang", {
+    description: "Switch companion language (alias for /lingual lang): /lang <pair>",
+    handler: switchLangHandler,
   });
 
   if (typeof pi.registerShortcut === "function") {
