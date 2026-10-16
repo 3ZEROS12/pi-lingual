@@ -7,7 +7,7 @@
 [![npm version](https://img.shields.io/npm/v/pi-lingual?color=blue)](https://www.npmjs.com/package/pi-lingual)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Built for Pi](https://img.shields.io/badge/Built%20for-Pi%20Coding%20Agent-orange)](https://github.com/earendil-works/pi-coding-agent)
-[![Tests](https://img.shields.io/badge/Tests-138%2F138%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
+[![Tests](https://img.shields.io/badge/Tests-141%2F141%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict%20Zero%20Error-blue)](tsconfig.json)
 
 [English](./README.md) | **简体中文**
@@ -79,14 +79,10 @@ pi install npm:pi-lingual
 
 ---
 
-### 首次启动语言握手 (First-Run Language Handshake)
-在新用户首次安装且缺少配置文件时，`session_start` 会自动嗅探系统原生语言环境，唤起单行预填闪电填空：
-```text
-✦ [pi-lingual Setup] Native ⇄ Target language (detected: zh):
-> zh en
-```
-- **0.2 秒直过**：猜对了直接敲 `Enter`，一键落盘；想换语言直接退格修改；
-- **0 视觉残留**：按下回车瞬间物理卸载输入挂件，屏幕恢复绝对纯净；数据一次落盘终生有效，后续不再弹窗打扰。
+### 零配置冷启动 (Zero-Config Cold Boot)
+在新用户首次安装且缺少配置文件时，`session_start` 会自动嗅探系统原生语言环境，无需任何弹窗或设置对话：
+- **自动对齐母语**：自动启用探测到的原生语言并以标准缩写对呈现（如 `zh ⇄ en`、`ja ⇄ en`）；
+- **零磁盘写入契约**：首次启动不写入任何配置文件；仅当用户显式修改设置（通过 `/lang`、`/lingual`、`/slots` 或 `/tuner`）时才持久化落盘。
 
 ---
 

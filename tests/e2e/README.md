@@ -33,6 +33,8 @@ When `PI_LINGUAL_E2E` is not set or when `pi` is offline, all lanes skip gracefu
 | **L4** | **Tuner Loop** | `tuner.e2e.ts` | Real LLM config schema synthesis, valid JSON output, seamless registration into live CLI |
 | **L5** | **Clipboard** | `clipboard.e2e.ts` | Windows PowerShell clipboard pipeline, Conventional Commits format, $\le 72$ chars first line |
 | **L6** | **Visuals** | `visual.e2e.ts` | Terminal box model stability, no CJK border tears, graceful ultra-narrow degradation |
+| **L7** | **Cold Boot** | `coldboot.e2e.ts` | 9-language zero-prompt boot, native status badge, 0-write disk hygiene |
+| **L8** | **Suppression** | `coldboot.e2e.ts` | 1-time release banner suppression on repeat boots, persistent config adherence |
 
 ## Note on Shield & Tuner
 In interactive mode, `pi-lingual`'s Context Shield strips the `lingual-tuner` skill block to conserve tokens, only exposing it when armed via `/lingual tuner`.

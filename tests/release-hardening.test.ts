@@ -232,6 +232,11 @@ test("release banner - 9 sandboxed cold boots render natively with zero 80-col c
     }
 
     // Zero-Config Cold Boot: only lastSeenVersion is persisted after banner delivery; zero prompt; zero extra keys.
+    const seed = getDefaultFactoryModes(lang, lang);
+    assert.ok(
+      out.effectiveStatus?.includes(seed[0].name),
+      `[${lang}] badge must embed native mode name "${seed[0].name}": ${out.effectiveStatus}`
+    );
     assert.equal(out.configAfter.lastSeenVersion, "0.6.0", `[${lang}] banner delivery must be recorded`);
     assert.equal(out.configAfter.sourceLang, undefined, `[${lang}] sourceLang must not be written to disk on cold boot`);
     assert.equal(out.configAfter.mode, undefined, `[${lang}] mode must not be written to disk on cold boot`);
@@ -384,4 +389,116 @@ test("modes: registry-aware mode switch notifications and clean status badge acr
     assert.ok(statusBadge, `[${lang}] status badge must be active`);
     assert.ok(!String(statusBadge).includes("no-src"), `[${lang}] status badge contains no-src: ${statusBadge}`);
   }
+});
+
+test("zero-config cold boot - toast and badge use native mode name without divergence (R1)", async () => {
+  const { default: extensionFactory } = await import("../dist/extension.js");
+  const commands: Record<string, any> = {};
+  extensionFactory({
+    on() {},
+    registerCommand: (name: string, def: any) => (commands[name] = def),
+    registerShortcut() {},
+  } as any);
+
+  const notices: string[] = [];
+  let statusBadge: any = null;
+  const ctx: any = {
+    hasUI: true,
+    ui: {
+      notify: (msg: string) => notices.push(String(msg)),
+      setStatus: (_k: string, v: any) => (statusBadge = v),
+      setWidget() {},
+      theme: { fg: (_c: string, t: string) => t },
+    },
+  };
+
+  await commands["lang"].handler("zh en", ctx);
+  notices.length = 0;
+  await commands["lingual"].handler("2", ctx);
+  const zhModes = getDefaultFactoryModes("zh", "zh");
+  const directName = zhModes[1].name; // "规范直发"
+  const toast = notices[notices.length - 1] || "";
+  assert.ok(toast.includes(directName), `zh /lingual 2 toast must include "${directName}": ${toast}`);
+  assert.ok(String(statusBadge).includes(directName), `zh status badge must include "${directName}": ${statusBadge}`);
+
+  // Teardown back to mode 1
+  await commands["lingual"].handler("1", ctx);
+});
+
+test("/lang switch - factory modes refresh to newSource native names unless customized on disk (R2)", async () => {
+  const { default: extensionFactory } = await import("../dist/extension.js");
+  const commands: Record<string, any> = {};
+  extensionFactory({
+    on() {},
+    registerCommand: (name: string, def: any) => (commands[name] = def),
+    registerShortcut() {},
+  } as any);
+
+  let statusBadge: any = null;
+  const ctx: any = {
+    hasUI: true,
+    ui: {
+      notify() {},
+      setStatus: (_k: string, v: any) => (statusBadge = v),
+      setWidget() {},
+      theme: { fg: (_c: string, t: string) => t },
+    },
+  };
+
+  // 1. Fresh switch zh -> ja
+  await commands["lang"].handler("zh en", ctx);
+  await commands["lingual"].handler("1", ctx);
+  assert.ok(String(statusBadge).includes("纯伴学"), `Initial zh badge must have 纯伴学: ${statusBadge}`);
+
+  await commands["lang"].handler("ja en", ctx);
+  assert.ok(String(statusBadge).includes("伴走"), `Switched ja badge must have 伴走: ${statusBadge}`);
+
+  // 2. Teardown back to zh
+  await commands["lang"].handler("zh en", ctx);
+});
+
+test("/lingual alias and out-of-bounds mode switching safety (R3)", async () => {
+  const { default: extensionFactory } = await import("../dist/extension.js");
+  const commands: Record<string, any> = {};
+  extensionFactory({
+    on() {},
+    registerCommand: (name: string, def: any) => (commands[name] = def),
+    registerShortcut() {},
+  } as any);
+
+  const notices: string[] = [];
+  let statusBadge: any = null;
+  const ctx: any = {
+    hasUI: true,
+    ui: {
+      notify: (msg: string) => notices.push(String(msg)),
+      setStatus: (_k: string, v: any) => (statusBadge = v),
+      setWidget() {},
+      theme: { fg: (_c: string, t: string) => t },
+    },
+  };
+
+  // 1. Factory registry: /lingual select must NOT switch to candidates
+  await commands["lingual"].handler("1", ctx);
+  notices.length = 0;
+  await commands["lingual"].handler("select", ctx);
+  assert.ok(
+    notices.some((n) => n.includes("不在当前注册表") || n.includes("not in your active registry")),
+    `Must notify that mode is not in registry: ${notices.join(" | ")}`
+  );
+  assert.ok(!String(statusBadge).includes("Candidates"), `Badge must NOT announce Candidates: ${statusBadge}`);
+
+  // 2. Single canonical persistence across alias entries (raw, polish, 4)
+  notices.length = 0;
+  await commands["lingual"].handler("raw", ctx);
+  const rawNotice = notices[notices.length - 1] || "";
+  assert.ok(rawNotice.includes("live-flow"), `raw switch notice must include live-flow: ${rawNotice}`);
+
+  notices.length = 0;
+  await commands["lingual"].handler("4", ctx);
+  const numNotice = notices[notices.length - 1] || "";
+  assert.ok(numNotice.includes("live-flow"), `num 4 notice must include live-flow: ${numNotice}`);
+
+  // Teardown back to 1
+  await commands["lingual"].handler("1", ctx);
 });

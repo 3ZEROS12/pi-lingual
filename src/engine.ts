@@ -825,10 +825,10 @@ export function defaultSlotsForMode(
     : getDefaultDirectSlots(sourceLang);
 }
 
-export function resolveModesFromConfig(cfg: Partial<LingualConfig>): CustomModeConfig[] {
+export function resolveModesFromConfig(cfg: Partial<LingualConfig>, fallbackSourceLang = "en"): CustomModeConfig[] {
+  const sourceLang = cfg.sourceLang || fallbackSourceLang;
+  const explainLang = cfg.explainLang || sourceLang;
   if (Array.isArray(cfg.modes) && cfg.modes.length > 0) {
-    const sourceLang = cfg.sourceLang || "en";
-    const explainLang = cfg.explainLang;
     // Keep every user-authored mode; populate clean defaults for missing/empty slots by flow
     const valid = cfg.modes
       .filter((m) => m && typeof m.id === "string" && m.id.trim())
@@ -847,8 +847,6 @@ export function resolveModesFromConfig(cfg: Partial<LingualConfig>): CustomModeC
     Array.isArray(cfg.modifySlots);
 
   if (hasLegacyCustomSlots) {
-    const sourceLang = cfg.sourceLang || "en";
-    const explainLang = cfg.explainLang;
     const directSlots = resolveDirectSlotsFromConfig({ sourceLang, directSlots: cfg.directSlots });
     const modifySlots = resolveModifySlotsFromConfig({ sourceLang, explainLang, modifySlots: cfg.modifySlots });
     const promptSlots = resolveCandidateSlotsFromConfig({ sourceLang, promptSlots: cfg.promptSlots });
@@ -901,8 +899,8 @@ export function resolveModesFromConfig(cfg: Partial<LingualConfig>): CustomModeC
     ];
   }
 
-  // Brand-new install default: Return the 2 golden defaults!
-  return getDefaultFactoryModes(cfg.sourceLang, cfg.explainLang);
+  // Brand-new install default: Return the 3 golden defaults!
+  return getDefaultFactoryModes(sourceLang, explainLang);
 }
 
 export function normalizeActiveModeId(cfg: Partial<LingualConfig>, modes: CustomModeConfig[]): string {

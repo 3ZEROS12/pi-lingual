@@ -478,6 +478,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     notifyCompactOff: "[en ⇄ ja] Tree branch mode enabled: full multi-slot view",
     notifyTimeout: "[en ⇄ ja] Prompt rewrite timed out; original prompt passed",
     notifyError: "[en ⇄ ja] Prompt rewrite error; original prompt passed",
+    notifyModeNotFound: "[{pair}] Mode [{mode}] is not in your active registry. Run /lingual mode list to view available modes.",
     modeSwitchedTemplate: "[{pair}] Switched to [{num}. {name} ({id})] ({slot})",
 
     cmdDescMode: "Cycle companion mode [en ⇄ ja]: [Companion] ➔ [Direct] ➔ [Off]",
@@ -559,6 +560,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     notifyCompactOff: "[zh ⇄ en] 已切换为左导轨树状架构：展示完整多槽与语感",
     notifyTimeout: "[zh ⇄ en] 提示词优化请求未就绪或超时，本次已放行原文",
     notifyError: "[zh ⇄ en] 提示词优化请求异常，本次已放行原文",
+    notifyModeNotFound: "[{pair}] 模式【{mode}】不在当前注册表中。输入 /lingual mode list 查看可用模式。",
     modeSwitchedTemplate: "[{pair}] 已切换至【{num}. {name} ({id})】({slot})",
 
     cmdDescMode: "切换伴学模式: /lingual",
@@ -640,6 +642,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     notifyCompactOff: "[ja ⇄ en] ツリー表示を有効化しました",
     notifyTimeout: "[ja ⇄ en] タイムアウトのため原文を送信しました",
     notifyError: "[ja ⇄ en] エラーのため原文を送信しました",
+    notifyModeNotFound: "[{pair}] モード【{mode}】は現在の登録表に存在しません。/lingual mode list で確認してください。",
     modeSwitchedTemplate: "[{pair}] 【{num}. {name} ({id})】に切り替えました ({slot})",
 
     cmdDescMode: "モード切替: /lingual",
@@ -723,6 +726,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     notifySlotSwitched: "[es ⇄ en] Arquitectura de ranuras cambiada a [{preset}]: {desc}",
     notifyTimeout: "[es ⇄ en] La traducción al inglés agotó el tiempo; se envió el texto original",
     notifyError: "[es ⇄ en] Error en la traducción al inglés; se envió el texto original",
+    notifyModeNotFound: "[{pair}] El modo [{mode}] no está en el registro activo. Ejecute /lingual mode list para ver los modos disponibles.",
     modeSwitchedTemplate: "[{pair}] Cambiado a [{num}. {name} ({id})] ({slot})",
 
     cmdDescMode: "Cambiar modo [es ⇄ en]: [Original] ➔ [Inglés] ➔ [Apagado]",
@@ -826,6 +830,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     notifyCompactOff: "[fr ⇄ en] Mode arborescence complète restauré",
     notifyTimeout: "[fr ⇄ en] La traduction en anglais a expiré ; le prompt original a été transmis",
     notifyError: "[fr ⇄ en] Erreur de traduction en anglais ; le prompt original a été transmis",
+    notifyModeNotFound: "[{pair}] Le mode [{mode}] n'est pas dans votre registre actif. Exécutez /lingual mode list pour voir les modes disponibles.",
     modeSwitchedTemplate: "[{pair}] Changé en [{num}. {name} ({id})] ({slot})",
 
     cmdDescMode: "Changer de mode [fr ⇄ en]: [Original] ➔ [Anglais] ➔ [Désactivé]",
@@ -929,6 +934,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     notifySlotSwitched: "[de ⇄ en] Slot-Architektur auf [{preset}] umgestellt: {desc}",
     notifyTimeout: "[de ⇄ en] Englische Übersetzung hat das Zeitlimit überschritten; Originaltext wurde übergeben",
     notifyError: "[de ⇄ en] Fehler bei der englischen Übersetzung; Originaltext wurde übergeben",
+    notifyModeNotFound: "[{pair}] Modus [{mode}] ist nicht im aktiven Register. Führen Sie /lingual mode list aus, um verfügbare Modi anzuzeigen.",
     modeSwitchedTemplate: "[{pair}] Gewechselt zu [{num}. {name} ({id})] ({slot})",
 
     cmdDescMode: "Modus umschalten [de ⇄ en]: [Original] ➔ [Englisch] ➔ [Aus]",
@@ -1032,6 +1038,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     notifyCompactOff: "[ko ⇄ en] 트리 레이아웃 복원됨",
     notifyTimeout: "[ko ⇄ en] 번역 시간 초과; 원문이 그대로 전달되었습니다",
     notifyError: "[ko ⇄ en] 번역 오류; 원문이 그대로 전달되었습니다",
+    notifyModeNotFound: "[{pair}] 모드 [{mode}]가 활성 레지스트리에 없습니다. /lingual mode list로 확인하세요.",
     modeSwitchedTemplate: "[{pair}] 【{num}. {name} ({id})】(으)로 전환되었습니다 ({slot})",
 
     cmdDescMode: "모드 전환 [ko ⇄ en]: [원문] ➔ [영어] ➔ [끔]",
@@ -1136,6 +1143,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     notifyCompactOff: "[ru ⇄ en] Полное дерево восстановлено",
     notifyTimeout: "[ru ⇄ en] Время ожидания перевода истекло; передан оригинал",
     notifyError: "[ru ⇄ en] Ошибка перевода; передан оригинал",
+    notifyModeNotFound: "[{pair}] Режим [{mode}] не найден в активном реестре. Введите /lingual mode list для списка.",
     modeSwitchedTemplate: "[{pair}] Переключено на [{num}. {name} ({id})] ({slot})",
 
     cmdDescMode: "Переключить режим [ru ⇄ en]: [Оригинал] ➔ [Английский] ➔ [Выкл]",

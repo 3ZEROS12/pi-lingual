@@ -18,7 +18,7 @@
 - When `sourceLang !== "zh"` (e.g. `en ⇄ zh`, `en ⇄ ja`, `es ⇄ en`):
   - UI chrome, status badges, prompts, and notifications MUST contain **ZERO Chinese characters (`[\u4e00-\u9fa5]`)**.
   - All developer-facing comments across `src/**/*.ts` MUST be authored 100% in pure English.
-- **Language Surface Parity (RFC 2119)**: Every code listed in `SUPPORTED_LANG_CODES` (`zh, tw, ja, ko, en, es, fr, de, ru`) MUST be switchable through `/lang`, the first-run handshake, and the release banner. Advertising a language while rejecting it at `/lang` is FORBIDDEN. Codes without a dedicated chrome preset fall back to the Universal English baseline (`tw` intentionally reuses the Chinese chrome baseline).
+- **Language Surface Parity (RFC 2119)**: Every code listed in `SUPPORTED_LANG_CODES` (`zh, tw, ja, ko, en, es, fr, de, ru`) MUST be switchable through `/lang` and the release banner. Advertising a language while rejecting it at `/lang` is FORBIDDEN. Codes without a dedicated chrome preset fall back to the Universal English baseline (`tw` intentionally reuses the Chinese chrome baseline).
 
 ### Invariant 2: Mode as Configuration (Declarative State Machine Architecture)
 - The entire extension operates on a declarative `modes: CustomModeConfig[]` pipeline stored in `~/.pi/agent/lingual.json`.
@@ -110,7 +110,7 @@ Out of the box, `pi-lingual` ships with exactly three golden baselines (with `0 
   npm test
   # or from workspace root: node .scripts/fleet.mjs test pi-lingual
   ```
-  *Executes 138 test suites covering banner geometry, cache, chunker, commands, engine, layout, modes, prompts, sanitizer, shield, slots, sovereignty, and sandboxed cold-boot upgrades (100% green).*
+  *Executes 141 test suites covering banner geometry, cache, chunker, commands, engine, layout, modes, prompts, sanitizer, shield, slots, sovereignty, and sandboxed cold-boot upgrades (100% green).*
 
 - **Build Distribution Bundles**:
   ```bash

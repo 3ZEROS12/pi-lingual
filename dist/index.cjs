@@ -1268,6 +1268,7 @@ var LANGUAGE_PRESETS = {
     notifyCompactOff: "[en \u21C4 ja] Tree branch mode enabled: full multi-slot view",
     notifyTimeout: "[en \u21C4 ja] Prompt rewrite timed out; original prompt passed",
     notifyError: "[en \u21C4 ja] Prompt rewrite error; original prompt passed",
+    notifyModeNotFound: "[{pair}] Mode [{mode}] is not in your active registry. Run /lingual mode list to view available modes.",
     modeSwitchedTemplate: "[{pair}] Switched to [{num}. {name} ({id})] ({slot})",
     cmdDescMode: "Cycle companion mode [en \u21C4 ja]: [Companion] \u2794 [Direct] \u2794 [Off]",
     cmdDescLang: "Switch language pair [en \u21C4 ja]: /lang <source> [target]",
@@ -1341,6 +1342,7 @@ var LANGUAGE_PRESETS = {
     notifyCompactOff: "[zh \u21C4 en] \u5DF2\u5207\u6362\u4E3A\u5DE6\u5BFC\u8F68\u6811\u72B6\u67B6\u6784\uFF1A\u5C55\u793A\u5B8C\u6574\u591A\u69FD\u4E0E\u8BED\u611F",
     notifyTimeout: "[zh \u21C4 en] \u63D0\u793A\u8BCD\u4F18\u5316\u8BF7\u6C42\u672A\u5C31\u7EEA\u6216\u8D85\u65F6\uFF0C\u672C\u6B21\u5DF2\u653E\u884C\u539F\u6587",
     notifyError: "[zh \u21C4 en] \u63D0\u793A\u8BCD\u4F18\u5316\u8BF7\u6C42\u5F02\u5E38\uFF0C\u672C\u6B21\u5DF2\u653E\u884C\u539F\u6587",
+    notifyModeNotFound: "[{pair}] \u6A21\u5F0F\u3010{mode}\u3011\u4E0D\u5728\u5F53\u524D\u6CE8\u518C\u8868\u4E2D\u3002\u8F93\u5165 /lingual mode list \u67E5\u770B\u53EF\u7528\u6A21\u5F0F\u3002",
     modeSwitchedTemplate: "[{pair}] \u5DF2\u5207\u6362\u81F3\u3010{num}. {name} ({id})\u3011({slot})",
     cmdDescMode: "\u5207\u6362\u4F34\u5B66\u6A21\u5F0F: /lingual",
     cmdDescLang: "\u5207\u6362\u4F34\u5B66\u8BED\u8A00: /lang <code>",
@@ -1414,6 +1416,7 @@ var LANGUAGE_PRESETS = {
     notifyCompactOff: "[ja \u21C4 en] \u30C4\u30EA\u30FC\u8868\u793A\u3092\u6709\u52B9\u5316\u3057\u307E\u3057\u305F",
     notifyTimeout: "[ja \u21C4 en] \u30BF\u30A4\u30E0\u30A2\u30A6\u30C8\u306E\u305F\u3081\u539F\u6587\u3092\u9001\u4FE1\u3057\u307E\u3057\u305F",
     notifyError: "[ja \u21C4 en] \u30A8\u30E9\u30FC\u306E\u305F\u3081\u539F\u6587\u3092\u9001\u4FE1\u3057\u307E\u3057\u305F",
+    notifyModeNotFound: "[{pair}] \u30E2\u30FC\u30C9\u3010{mode}\u3011\u306F\u73FE\u5728\u306E\u767B\u9332\u8868\u306B\u5B58\u5728\u3057\u307E\u305B\u3093\u3002/lingual mode list \u3067\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
     modeSwitchedTemplate: "[{pair}] \u3010{num}. {name} ({id})\u3011\u306B\u5207\u308A\u66FF\u3048\u307E\u3057\u305F ({slot})",
     cmdDescMode: "\u30E2\u30FC\u30C9\u5207\u66FF: /lingual",
     cmdDescLang: "\u8A00\u8A9E\u5207\u66FF: /lang <code>",
@@ -1489,6 +1492,7 @@ var LANGUAGE_PRESETS = {
     notifySlotSwitched: "[es \u21C4 en] Arquitectura de ranuras cambiada a [{preset}]: {desc}",
     notifyTimeout: "[es \u21C4 en] La traducci\xF3n al ingl\xE9s agot\xF3 el tiempo; se envi\xF3 el texto original",
     notifyError: "[es \u21C4 en] Error en la traducci\xF3n al ingl\xE9s; se envi\xF3 el texto original",
+    notifyModeNotFound: "[{pair}] El modo [{mode}] no est\xE1 en el registro activo. Ejecute /lingual mode list para ver los modos disponibles.",
     modeSwitchedTemplate: "[{pair}] Cambiado a [{num}. {name} ({id})] ({slot})",
     cmdDescMode: "Cambiar modo [es \u21C4 en]: [Original] \u2794 [Ingl\xE9s] \u2794 [Apagado]",
     cmdDescStatus: "Mostrar diagn\xF3stico y estado del modelo: /lingual-status",
@@ -1585,6 +1589,7 @@ var LANGUAGE_PRESETS = {
     notifyCompactOff: "[fr \u21C4 en] Mode arborescence compl\xE8te restaur\xE9",
     notifyTimeout: "[fr \u21C4 en] La traduction en anglais a expir\xE9 ; le prompt original a \xE9t\xE9 transmis",
     notifyError: "[fr \u21C4 en] Erreur de traduction en anglais ; le prompt original a \xE9t\xE9 transmis",
+    notifyModeNotFound: "[{pair}] Le mode [{mode}] n'est pas dans votre registre actif. Ex\xE9cutez /lingual mode list pour voir les modes disponibles.",
     modeSwitchedTemplate: "[{pair}] Chang\xE9 en [{num}. {name} ({id})] ({slot})",
     cmdDescMode: "Changer de mode [fr \u21C4 en]: [Original] \u2794 [Anglais] \u2794 [D\xE9sactiv\xE9]",
     cmdDescStatus: "Afficher le rapport d'\xE9tat et le diagnostic: /lingual-status",
@@ -1681,6 +1686,7 @@ var LANGUAGE_PRESETS = {
     notifySlotSwitched: "[de \u21C4 en] Slot-Architektur auf [{preset}] umgestellt: {desc}",
     notifyTimeout: "[de \u21C4 en] Englische \xDCbersetzung hat das Zeitlimit \xFCberschritten; Originaltext wurde \xFCbergeben",
     notifyError: "[de \u21C4 en] Fehler bei der englischen \xDCbersetzung; Originaltext wurde \xFCbergeben",
+    notifyModeNotFound: "[{pair}] Modus [{mode}] ist nicht im aktiven Register. F\xFChren Sie /lingual mode list aus, um verf\xFCgbare Modi anzuzeigen.",
     modeSwitchedTemplate: "[{pair}] Gewechselt zu [{num}. {name} ({id})] ({slot})",
     cmdDescMode: "Modus umschalten [de \u21C4 en]: [Original] \u2794 [Englisch] \u2794 [Aus]",
     cmdDescStatus: "Statusbericht und Modell-Diagnose anzeigen: /lingual-status",
@@ -1777,6 +1783,7 @@ var LANGUAGE_PRESETS = {
     notifyCompactOff: "[ko \u21C4 en] \uD2B8\uB9AC \uB808\uC774\uC544\uC6C3 \uBCF5\uC6D0\uB428",
     notifyTimeout: "[ko \u21C4 en] \uBC88\uC5ED \uC2DC\uAC04 \uCD08\uACFC; \uC6D0\uBB38\uC774 \uADF8\uB300\uB85C \uC804\uB2EC\uB418\uC5C8\uC2B5\uB2C8\uB2E4",
     notifyError: "[ko \u21C4 en] \uBC88\uC5ED \uC624\uB958; \uC6D0\uBB38\uC774 \uADF8\uB300\uB85C \uC804\uB2EC\uB418\uC5C8\uC2B5\uB2C8\uB2E4",
+    notifyModeNotFound: "[{pair}] \uBAA8\uB4DC [{mode}]\uAC00 \uD65C\uC131 \uB808\uC9C0\uC2A4\uD2B8\uB9AC\uC5D0 \uC5C6\uC2B5\uB2C8\uB2E4. /lingual mode list\uB85C \uD655\uC778\uD558\uC138\uC694.",
     modeSwitchedTemplate: "[{pair}] \u3010{num}. {name} ({id})\u3011(\uC73C)\uB85C \uC804\uD658\uB418\uC5C8\uC2B5\uB2C8\uB2E4 ({slot})",
     cmdDescMode: "\uBAA8\uB4DC \uC804\uD658 [ko \u21C4 en]: [\uC6D0\uBB38] \u2794 [\uC601\uC5B4] \u2794 [\uB054]",
     cmdDescStatus: "\uC0C1\uD0DC \uBCF4\uACE0\uC11C \uBC0F \uC9C4\uB2E8 \uD655\uC778: /lingual-status",
@@ -1874,6 +1881,7 @@ var LANGUAGE_PRESETS = {
     notifyCompactOff: "[ru \u21C4 en] \u041F\u043E\u043B\u043D\u043E\u0435 \u0434\u0435\u0440\u0435\u0432\u043E \u0432\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u043E",
     notifyTimeout: "[ru \u21C4 en] \u0412\u0440\u0435\u043C\u044F \u043E\u0436\u0438\u0434\u0430\u043D\u0438\u044F \u043F\u0435\u0440\u0435\u0432\u043E\u0434\u0430 \u0438\u0441\u0442\u0435\u043A\u043B\u043E; \u043F\u0435\u0440\u0435\u0434\u0430\u043D \u043E\u0440\u0438\u0433\u0438\u043D\u0430\u043B",
     notifyError: "[ru \u21C4 en] \u041E\u0448\u0438\u0431\u043A\u0430 \u043F\u0435\u0440\u0435\u0432\u043E\u0434\u0430; \u043F\u0435\u0440\u0435\u0434\u0430\u043D \u043E\u0440\u0438\u0433\u0438\u043D\u0430\u043B",
+    notifyModeNotFound: "[{pair}] \u0420\u0435\u0436\u0438\u043C [{mode}] \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D \u0432 \u0430\u043A\u0442\u0438\u0432\u043D\u043E\u043C \u0440\u0435\u0435\u0441\u0442\u0440\u0435. \u0412\u0432\u0435\u0434\u0438\u0442\u0435 /lingual mode list \u0434\u043B\u044F \u0441\u043F\u0438\u0441\u043A\u0430.",
     modeSwitchedTemplate: "[{pair}] \u041F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0435\u043D\u043E \u043D\u0430 [{num}. {name} ({id})] ({slot})",
     cmdDescMode: "\u041F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0438\u0442\u044C \u0440\u0435\u0436\u0438\u043C [ru \u21C4 en]: [\u041E\u0440\u0438\u0433\u0438\u043D\u0430\u043B] \u2794 [\u0410\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u0438\u0439] \u2794 [\u0412\u044B\u043A\u043B]",
     cmdDescStatus: "\u041E\u0442\u0447\u0435\u0442 \u043E \u0441\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u0438 \u0438 \u0434\u0438\u0430\u0433\u043D\u043E\u0441\u0442\u0438\u043A\u0430: /lingual-status",
@@ -3772,10 +3780,10 @@ function defaultSlotsForMode(mode, sourceLang, explainLang) {
   if (mode.action === "select") return getDefaultPromptSlots(sourceLang);
   return mode.flow === "proofread" ? getDefaultModifySlots(sourceLang, explainLang) : getDefaultDirectSlots(sourceLang);
 }
-function resolveModesFromConfig(cfg) {
+function resolveModesFromConfig(cfg, fallbackSourceLang = "en") {
+  const sourceLang = cfg.sourceLang || fallbackSourceLang;
+  const explainLang = cfg.explainLang || sourceLang;
   if (Array.isArray(cfg.modes) && cfg.modes.length > 0) {
-    const sourceLang = cfg.sourceLang || "en";
-    const explainLang = cfg.explainLang;
     const valid = cfg.modes.filter((m) => m && typeof m.id === "string" && m.id.trim()).map((m) => {
       if (Array.isArray(m.slots) && m.slots.length > 0) return m;
       return { ...m, slots: defaultSlotsForMode(m, sourceLang, explainLang) };
@@ -3784,8 +3792,6 @@ function resolveModesFromConfig(cfg) {
   }
   const hasLegacyCustomSlots = Array.isArray(cfg.slots) || Array.isArray(cfg.directSlots) || Array.isArray(cfg.promptSlots) || Array.isArray(cfg.modifySlots);
   if (hasLegacyCustomSlots) {
-    const sourceLang = cfg.sourceLang || "en";
-    const explainLang = cfg.explainLang;
     const directSlots = resolveDirectSlotsFromConfig({ sourceLang, directSlots: cfg.directSlots });
     const modifySlots = resolveModifySlotsFromConfig({ sourceLang, explainLang, modifySlots: cfg.modifySlots });
     const promptSlots = resolveCandidateSlotsFromConfig({ sourceLang, promptSlots: cfg.promptSlots });
@@ -3835,7 +3841,7 @@ function resolveModesFromConfig(cfg) {
       }
     ];
   }
-  return getDefaultFactoryModes(cfg.sourceLang, cfg.explainLang);
+  return getDefaultFactoryModes(sourceLang, explainLang);
 }
 function normalizeActiveModeId(cfg, modes) {
   if (cfg.mode === "off") return "off";

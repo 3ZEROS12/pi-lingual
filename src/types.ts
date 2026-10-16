@@ -122,6 +122,7 @@ export interface LingualI18nLabels {
   notifyCompactOff?: string;
   notifyTimeout?: string;
   notifyError?: string;
+  notifyModeNotFound?: string;
   modeSwitchedTemplate?: string;
 
   // Localized command descriptions

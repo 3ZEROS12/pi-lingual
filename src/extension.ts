@@ -124,7 +124,7 @@ const initialPromptSlots = Array.isArray(initialDiskConfig.promptSlots) && initi
 const initialModifySlots = Array.isArray(initialDiskConfig.modifySlots) && initialDiskConfig.modifySlots.length > 0
   ? initialDiskConfig.modifySlots
   : getDefaultModifySlots(initialSourceLang);
-const initialModes = resolveModesFromConfig(initialDiskConfig);
+const initialModes = resolveModesFromConfig(initialDiskConfig, initialSourceLang);
 const initialLabels = resolveLabelsForLang(initialSourceLang, initialDiskConfig.labels, initialTargetLang);
 
 const state: ExtensionState = {
@@ -235,7 +235,7 @@ function updateFooter(ctx: ExtensionContext | null | undefined) {
     const inMemory = Array.isArray(state.modes) ? state.modes : [];
     const activeMode =
       inMemory.find((m) => m.id === state.mode || m.id === canonicalId) ||
-      resolveModesFromConfig(loadUserLingualConfig()).find((m) => m.id === state.mode || m.id === canonicalId);
+      resolveModesFromConfig(loadUserLingualConfig(), state.sourceLang).find((m) => m.id === state.mode || m.id === canonicalId);
     const modeSlots = activeMode && Array.isArray(activeMode.slots) ? activeMode.slots : [];
     const enabledSlots = (modeSlots.length > 0 ? modeSlots : state.slots || []).filter((s) => s.enabled !== false);
     const nonSourceCount = enabledSlots.filter((s) => s.role !== "source").length;
@@ -448,7 +448,7 @@ export default function (pi: ExtensionAPI) {
     if (Array.isArray(diskCfg.modes) && diskCfg.modes.length > 0) {
       state.modes = diskCfg.modes;
     } else {
-      state.modes = resolveModesFromConfig(diskCfg);
+      state.modes = resolveModesFromConfig(diskCfg, state.sourceLang);
     }
     if (diskCfg.activeModeId && !state.modeLocked) {
       state.activeModeId = diskCfg.activeModeId;
@@ -597,74 +597,68 @@ export default function (pi: ExtensionAPI) {
       }
     }
 
-    state.mode = nextMode as LingualMode;
-    state.activeModeId = nextMode;
-    // Persist mode immediately to ~/.pi/agent/lingual.json on each mode switch
-    saveUserLingualConfig({ mode: nextMode as LingualMode, activeModeId: nextMode });
-    syncResizeListener();
+    const canonical =
+      nextMode === "original" ? "companion" :
+      nextMode === "english"  ? "direct"    :
+      nextMode === "select"   ? "candidates":
+      nextMode === "modify"   ? "live-flow" : nextMode;
+
     if (nextMode === "off") {
+      state.mode = "off";
+      state.activeModeId = "off";
+      saveUserLingualConfig({ mode: "off", activeModeId: "off" });
+      syncResizeListener();
       clearPendingTimers();
       session.reset();
       globalLingualCache.clear();
       safeClearWidget(ctx);
-    }
-    updateFooter(ctx);
-
-    const canonicalKey =
-      nextMode === "select" ? "candidates" :
-      nextMode === "english" ? "direct" :
-      nextMode === "original" ? "companion" :
-      nextMode === "modify" || nextMode === "live-flow" ? "modify" :
-      nextMode;
-
-    const canonicalId =
-      nextMode === "select" ? "candidates" :
-      nextMode === "english" ? "direct" :
-      nextMode === "original" ? "companion" :
-      nextMode === "modify" ? "live-flow" :
-      nextMode;
-
-    const targetMode = activeModes.find(
-      (m) =>
-        m.id === nextMode ||
-        m.id === canonicalId
-    );
-
-    if (nextMode === "off") {
+      updateFooter(ctx);
       try {
         ctx.ui.notify(modeSpec.notifyOff(pair), "info");
       } catch {}
-    } else {
-      const modeIdx = targetMode ? activeModes.indexOf(targetMode) : -1;
-      const modeNum = modeIdx >= 0
-        ? modeIdx + 1
-        : (nextMode === "companion" || nextMode === "original"
-            ? 1
-            : nextMode === "english" || nextMode === "direct"
-              ? 2
-              : nextMode === "select" || nextMode === "candidates"
-                ? 3
-                : nextMode === "modify" || nextMode === "live-flow"
-                  ? 4
-                  : activeModes.length + 1);
-      const modeName = targetMode?.name || (modeSpec as any)[canonicalKey] || nextMode;
-      const firstSlotLabel =
-        targetMode?.slots.find((s) => s.role !== "vocab")?.label ||
-        targetMode?.slots[0]?.label ||
-        modeName;
-      const template =
-        state.labels.modeSwitchedTemplate ||
-        "[{pair}] Switched to [{num}. {name} ({id})] ({slot})";
-      const msg = template
+      return;
+    }
+
+    const targetMode = activeModes.find((m) => m.id === canonical || m.id === nextMode);
+    if (!targetMode) {
+      const notFoundTemplate =
+        state.labels.notifyModeNotFound ||
+        "[{pair}] Mode [{mode}] is not in your active registry. Run /lingual mode list to view available modes.";
+      const msg = notFoundTemplate
         .replace("{pair}", pair)
-        .replace("{num}", String(modeNum))
-        .replace("{name}", modeName)
-        .replace("{id}", targetMode?.id || canonicalId)
-        .replace("{slot}", firstSlotLabel);
+        .replace("{mode}", trimmed || nextMode);
       try {
         ctx.ui.notify(msg, "info");
       } catch {}
+      return;
     }
+
+    const finalId = targetMode.id;
+    state.mode = finalId as any;
+    state.activeModeId = finalId;
+    saveUserLingualConfig({ mode: finalId as any, activeModeId: finalId });
+    syncResizeListener();
+    updateFooter(ctx);
+
+    const modeIdx = activeModes.indexOf(targetMode);
+    const modeNum = modeIdx >= 0 ? modeIdx + 1 : 1;
+    const modeName = targetMode.name;
+    const firstSlotLabel =
+      targetMode.slots.find((s) => s.role !== "vocab")?.label ||
+      targetMode.slots[0]?.label ||
+      modeName;
+    const template =
+      state.labels.modeSwitchedTemplate ||
+      "[{pair}] Switched to [{num}. {name} ({id})] ({slot})";
+    const msg = template
+      .replace("{pair}", pair)
+      .replace("{num}", String(modeNum))
+      .replace("{name}", modeName)
+      .replace("{id}", finalId)
+      .replace("{slot}", firstSlotLabel);
+    try {
+      ctx.ui.notify(msg, "info");
+    } catch {}
   };
 
   const setModelHandler = async (args: string, ctx: ExtensionContext) => {
@@ -762,6 +756,12 @@ export default function (pi: ExtensionAPI) {
     }
     if (!diskBeforeSwitch.promptSlots || diskBeforeSwitch.promptSlots.length === 0) {
       state.promptSlots = getDefaultPromptSlots(newSource);
+    }
+    // Only refresh factory modes to newSource defaults if user has NOT customized them on disk
+    if (!diskBeforeSwitch.modes || diskBeforeSwitch.modes.length === 0) {
+      state.modes = getDefaultFactoryModes(newSource, newSource);
+      state.mode = normalizeActiveModeId({ mode: state.mode, activeModeId: state.activeModeId }, state.modes) as any;
+      state.activeModeId = state.mode;
     }
     saveUserLingualConfig({
       sourceLang: newSource,

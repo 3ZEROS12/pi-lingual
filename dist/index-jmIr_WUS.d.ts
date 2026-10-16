@@ -111,6 +111,7 @@ interface LingualI18nLabels {
     notifyCompactOff?: string;
     notifyTimeout?: string;
     notifyError?: string;
+    notifyModeNotFound?: string;
     modeSwitchedTemplate?: string;
     cmdDescMode?: string;
     cmdDescStatus?: string;
@@ -538,7 +539,7 @@ declare function resolveModifySlotsFromConfig(cfg: {
 }): PromptSlotConfig[];
 /** Resolves default slots for a custom mode based on its action and flow. */
 declare function defaultSlotsForMode(mode: Pick<CustomModeConfig, "action" | "flow">, sourceLang: string, explainLang?: string): SlotConfig[];
-declare function resolveModesFromConfig(cfg: Partial<LingualConfig>): CustomModeConfig[];
+declare function resolveModesFromConfig(cfg: Partial<LingualConfig>, fallbackSourceLang?: string): CustomModeConfig[];
 declare function normalizeActiveModeId(cfg: Partial<LingualConfig>, modes: CustomModeConfig[]): string;
 declare function compileModeSystemPrompt(mode: CustomModeConfig, options: {
     sourceLang?: string;

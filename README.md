@@ -7,7 +7,7 @@ Code in your native language. See real-time Silicon Valley spoken phrasing and f
 [![npm version](https://img.shields.io/npm/v/pi-lingual?color=blue)](https://www.npmjs.com/package/pi-lingual)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Built for Pi](https://img.shields.io/badge/Built%20for-Pi%20Coding%20Agent-orange)](https://github.com/earendil-works/pi-coding-agent)
-[![Tests](https://img.shields.io/badge/Tests-138%2F138%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
+[![Tests](https://img.shields.io/badge/Tests-141%2F141%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict%20Zero%20Error-blue)](tsconfig.json)
 
 **English** | [简体中文](./README_zh.md)
@@ -79,14 +79,10 @@ Traditional closed rectangular boxes (`│ ... │`) fracture when character wid
 
 ---
 
-### First-Run Language Handshake (Zero Visual Residue)
-When a new developer installs `pi-lingual` on a fresh system, `session_start` sniffs the native OS locale and presents an ephemeral pre-filled input:
-```text
-✦ [pi-lingual Setup] Native ⇄ Target language (detected: ja):
-> ja en
-```
-- **0.2s Confirmation**: Press `Enter` immediately to confirm the detected default; backspace to modify to any language pair.
-- **Zero Visual Residue**: The input prompt physically unmounts upon pressing Enter, restoring a pristine terminal screen; persisted permanently to `~/.pi/agent/lingual.json` and never prompts again.
+### Zero-Config Cold Boot (Detected Pair, Zero Writes)
+When a developer installs `pi-lingual` on a fresh system, `session_start` auto-detects the native OS locale without any setup dialogs or input interruptions:
+- **Detected Language Pair**: Automatically activates the detected native language with standard abbreviation notation (e.g. `zh ⇄ en`, `ja ⇄ en`).
+- **Zero-Disk-Write Contract**: No configuration file is written on cold boot; settings materialize only when you explicitly customize them (via `/lang`, `/lingual`, `/slots`, or `/tuner`).
 
 ---
 
