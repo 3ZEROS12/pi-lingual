@@ -3600,14 +3600,14 @@ function renderCardLayout(card, labels, options = {}) {
   }
   if (isCompact || maxCols < 35) {
     const tagWidth = getVisualWidth(pageTag);
-    const availCols = Math.max(20, maxCols - tagWidth);
+    const availCols = Math.max(10, maxCols - tagWidth);
     if (contentBranches.length === 0) {
       return [truncateVisual(`\u21C4 [${labels.hudTitle}] ${card.sourceText}`, availCols) + pageTag];
     }
     const prefix = `\u21C4 [${labels.hudTitle}] `;
     const prefixW = getVisualWidth(prefix);
     const sepW = (contentBranches.length - 1) * 3;
-    const perBranchBudget = Math.max(12, Math.floor((availCols - prefixW - sepW) / contentBranches.length));
+    const perBranchBudget = Math.max(6, Math.floor((availCols - prefixW - sepW) / contentBranches.length));
     const parts = contentBranches.map((b) => {
       const shortLabel = b.label.slice(0, 4);
       return truncateVisual(`${shortLabel}: ${b.content}`, perBranchBudget);
