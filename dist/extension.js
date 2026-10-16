@@ -4265,7 +4265,7 @@ function extension_default(pi) {
       } else if (explicitLegacy) {
         nextMode = explicitLegacy;
       } else {
-        nextMode = activeModes[0]?.id || "companion";
+        nextMode = trimmed;
       }
     } else {
       if (state.modeLocked) {

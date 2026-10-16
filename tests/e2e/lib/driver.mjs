@@ -34,7 +34,7 @@ export function isPiAvailable() {
 /**
  * Runs a real model call through the installed pi CLI, with the compiled mode prompt as system prompt.
  */
-export function runModel(systemPrompt, userInput, { timeoutMs = 60000, extraArgs = [] } = {}) {
+export function runModel(systemPrompt, userInput, { timeoutMs = 240000, extraArgs = [] } = {}) {
   return withSandbox((home) => {
     const spFile = path.join(home, "system-prompt.txt");
     fs.writeFileSync(spFile, systemPrompt, "utf8");

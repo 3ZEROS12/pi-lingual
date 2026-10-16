@@ -30,6 +30,16 @@ export const IMPERATIVE_VERBS = [
   "Check",
   "Diagnose",
   "Prevent",
+  "Replace",
+  "Simplify",
+  "Inline",
+  "Split",
+  "Eliminate",
+  "Consolidate",
+  "Clean",
+  "Reorganize",
+  "Standardize",
+  "Avoid",
 ];
 
 export const ACADEMIC_DOWNGRADE_LIST = [

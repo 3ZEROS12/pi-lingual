@@ -557,7 +557,7 @@ export default function (pi: ExtensionAPI) {
       } else if (explicitLegacy) {
         nextMode = explicitLegacy;
       } else {
-        nextMode = activeModes[0]?.id || "companion";
+        nextMode = trimmed;
       }
     } else {
       // Check if active mode is locked

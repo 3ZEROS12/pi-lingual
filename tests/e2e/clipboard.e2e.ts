@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import os from "node:os";
-import { execSync } from "node:child_process";
+import { execSync, spawnSync } from "node:child_process";
 import { e2eEnabled, isPiAvailable, runModel } from "./lib/driver.mjs";
 import { getPresetLoadout, compileModeSystemPrompt, repairAndParseJsonObject } from "../../dist/index.js";
 
@@ -32,8 +32,11 @@ test("L5: Clipboard loadouts (commit dehydrator on Windows)", async (t) => {
   const parsed = repairAndParseJsonObject(out) || {};
   const commitMsg = parsed.commit_msg || parsed.commit || out;
 
-  // Set to Windows clipboard via PowerShell
-  execSync(`powershell -NoProfile -Command "Set-Clipboard -Value '${commitMsg.replace(/'/g, "''")}'"`);
+  // Set to Windows clipboard via PowerShell (pipe via stdin for multi-line immunity)
+  spawnSync("powershell", ["-NoProfile", "-Command", "$input | Set-Clipboard"], {
+    input: commitMsg,
+    encoding: "utf8",
+  });
 
   // Read back from clipboard
   const cb = execSync("powershell -NoProfile -Command \"Get-Clipboard\"", { encoding: "utf8" }).trim();
