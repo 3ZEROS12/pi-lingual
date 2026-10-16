@@ -556,10 +556,10 @@ test("modes: resolveSeedNames adheres 1:1 to 9-language matrix across all keys (
     es: {
       companion: "Aprendizaje",
       direct: "Directo Lógico",
-      liveFlow: "Live Flow",
+      liveFlow: "Flujo en Vivo",
       candidates: "Candidatos",
       loadoutSpec: "Spec Lógica",
-      loadoutCommit: "Commit Dehidrado",
+      loadoutCommit: "Commit Deshidratado",
       loadoutOss: "OSS Comms",
       loadoutYap: "Post Indie",
       vocab: "Términos clave",
@@ -570,7 +570,7 @@ test("modes: resolveSeedNames adheres 1:1 to 9-language matrix across all keys (
     fr: {
       companion: "Compagnon",
       direct: "Direct Logique",
-      liveFlow: "Live Flow",
+      liveFlow: "Flux en Direct",
       candidates: "Candidats",
       loadoutSpec: "Spécification",
       loadoutCommit: "Commit Épuré",
@@ -584,7 +584,7 @@ test("modes: resolveSeedNames adheres 1:1 to 9-language matrix across all keys (
     de: {
       companion: "Begleitung",
       direct: "Direkte Logik",
-      liveFlow: "Live Flow",
+      liveFlow: "Live-Fluss",
       candidates: "Kandidaten",
       loadoutSpec: "Spezifikation",
       loadoutCommit: "Commit-Kompakt",
@@ -598,7 +598,7 @@ test("modes: resolveSeedNames adheres 1:1 to 9-language matrix across all keys (
     ru: {
       companion: "Сопровождение",
       direct: "Прямой поток",
-      liveFlow: "Live Flow",
+      liveFlow: "Живой поток",
       candidates: "Кандидаты",
       loadoutSpec: "Спецификация",
       loadoutCommit: "Коммит-дехидрат",
@@ -624,15 +624,9 @@ test("modes: resolveSeedNames adheres 1:1 to 9-language matrix across all keys (
 });
 
 test("modes: non-English SEED_NAMES never accidentally fall back to English values (A1 anti-drift)", () => {
-  // Explicit whitelist: languages where liveFlow intentionally adopts the global "Live Flow" branding
-  const LIVE_FLOW_WHITELIST = new Set(["tw", "es", "fr", "de", "ru"]);
-
   for (const [lang, keys] of Object.entries(SEED_NAMES)) {
     if (lang === "en") continue;
     for (const [key, val] of Object.entries(keys)) {
-      if (key === "liveFlow" && LIVE_FLOW_WHITELIST.has(lang)) {
-        continue;
-      }
       const enVal = (SEED_NAMES.en as any)[key];
       assert.notEqual(
         val,

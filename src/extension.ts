@@ -1321,6 +1321,16 @@ export default function (pi: ExtensionAPI) {
         ? " · 鎖定"
         : state.sourceLang === "ja"
         ? " · ロック"
+        : state.sourceLang === "ko"
+        ? " · 잠김"
+        : state.sourceLang === "es"
+        ? " · Bloqueado"
+        : state.sourceLang === "fr"
+        ? " · Verrouillé"
+        : state.sourceLang === "de"
+        ? " · Gesperrt"
+        : state.sourceLang === "ru"
+        ? " · Блокировано"
         : " · Locked"
       : "";
     const pair = `${state.labels.hudTitle || `${state.sourceLang} ⇄ ${state.targetLang}`}${lockIndicator}`;
