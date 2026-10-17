@@ -798,7 +798,7 @@ export default function (pi: ExtensionAPI) {
     } else {
       newSource = normalizeLangCode(parts[0]);
       newTarget = normalizeLangCode(parts[1]);
-      if (!isSupportedLangCode(newSource)) {
+      if (!isSupportedLangCode(newSource) || !isSupportedLangCode(newTarget)) {
         ctx.ui.notify(
           "[lingual] invalid language code. supported: zh, tw, ja, ko, en, es, fr, de, ru",
           "warning"

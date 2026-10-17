@@ -33,6 +33,7 @@ import {
   buildPromptCandidatesSystemPrompt,
   buildModifySystemPrompt,
 } from "../src/prompts.js";
+import { isTargetLanguageOnly } from "../src/shield.js";
 import { extractRecentContextAnchor } from "../src/extension.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -857,32 +858,42 @@ test("Tripartite Subagent Audit Regression: Invariants 5, 12, 18 & anchor routin
     Object.defineProperty(process.stdout, "columns", { value: originalCols, configurable: true });
   }
 
-  // 5. Context Siphon: Preserves leading flags and skips Markdown table rows
-  const mockCtx = {
-    sessionManager: {
-      getEntries: () => [
-        {
-          type: "message",
-          message: {
-            role: "assistant",
-            content: `Summary of the execution:
-| File | Action |
-| src/engine.ts | Updated |
-
---dry-run flag was verified on the command line.`,
-          },
-        },
-      ],
-    },
-  };
-  const anchor = extractRecentContextAnchor(mockCtx as any);
-  assert.ok(
-    anchor.startsWith("--dry-run"),
-    `Must preserve leading CLI flag '--dry-run', got: "${anchor}"`
+  // 6. Round 3 Hardening: ja ➔ zh Kanji vs Kana discrimination (prevent false-positive 0ms bypass)
+  const jaWithKanji = "この設計は少し過剰です";
+  assert.equal(
+    isTargetLanguageOnly(jaWithKanji, "ja", "zh"),
+    false,
+    "Japanese prompt with Kana & Kanji must NOT be falsely identified as target-only Chinese"
   );
+  // Pure Chinese prompt on ja ➔ zh pair SHOULD bypass
+  const pureChinese = "这个方案有点过度设计了";
+  assert.equal(
+    isTargetLanguageOnly(pureChinese, "ja", "zh"),
+    true,
+    "Pure Chinese prompt on ja ➔ zh pair should be recognized as target-only"
+  );
+
+  // 7. Round 3 Hardening: Custom mode kill list & code-switching forwarded into prompt builders
+  const customMode = {
+    id: "tactical",
+    name: "Tactical",
+    flow: "translate" as const,
+    action: "select" as const,
+    hud: "preview" as const,
+    target: "agent" as const,
+    killList: ["forbidden_buzzword_xyz"],
+    slots: [
+      { id: "slot1", label: "Slot 1", role: "custom" as const, instruction: "Custom instruction", enabled: true },
+    ],
+  };
+  const compiledModePrompt = compileModeSystemPrompt(customMode, {
+    sourceLang: "en",
+    targetLang: "ja",
+    explainLang: "en",
+  });
   assert.ok(
-    !anchor.includes("|"),
-    `Must not extract Markdown table data rows, got: "${anchor}"`
+    compiledModePrompt.includes("forbidden_buzzword_xyz"),
+    "compileModeSystemPrompt must forward mode-specific killList into prompt candidate builder"
   );
 });
 

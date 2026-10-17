@@ -335,6 +335,8 @@ declare function buildPromptCandidatesSystemPrompt(options: {
     promptSlots?: PromptSlotConfig[];
     learnInRewrite?: boolean;
     context?: string;
+    killList?: string[];
+    globalKillList?: string[];
 }): string;
 /**
  * Universal Proofreading & Surgical Repair Prompt Builder (flow: "proofread").
@@ -348,6 +350,10 @@ declare function buildModifySystemPrompt(options: {
     customSlots?: PromptSlotConfig[];
     promptSlots?: PromptSlotConfig[];
     context?: string;
+    killList?: string[];
+    globalKillList?: string[];
+    preserveCodeSwitching?: boolean;
+    systemHint?: string | string[];
 }): string;
 
 interface SlotPresetDefinition {

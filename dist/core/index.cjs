@@ -1098,7 +1098,7 @@ ${taskLines.join("\n")}
 - **100% Semantic Fidelity**: Translate or refine EVERY sentence, clause, and detail from the user's input from start to finish. NEVER summarize, truncate, or drop details unless a slot explicitly asks for condensation.
 - **Respect Slot Role & Register**: If a slot asks for spoken/colloquial translation, output natural spoken flow; if it asks for formal/written translation, output polished written prose; if it asks for prompt structuring, compile clear objectives, isolate negative constraints (minimal diff, blast radius guard), and eliminate robotic AI filler.
 - **Zero Hallucination**: Never invent unmentioned files, bug reports, or speculative features.
-- **Code & Symbol Shield**: Preserve all CLI flags (e.g. \`--dry-run\`, \`-rf\`, \`--no-verify\`), package scopes/decorators, inline code, file paths, and technical identifiers 100% verbatim in every slot.${contextBlock}${customRuleBlock}${compileKillListInstruction(void 0, DEFAULT_KILL_LIST)}
+- **Code & Symbol Shield**: Preserve all CLI flags (e.g. \`--dry-run\`, \`-rf\`, \`--no-verify\`), package scopes/decorators, inline code, file paths, and technical identifiers 100% verbatim in every slot.${contextBlock}${customRuleBlock}${compileKillListInstruction(options.killList, options.globalKillList)}
 
 Strict JSON format:
 {
@@ -1168,6 +1168,24 @@ function buildModifySystemPrompt(options) {
 ${options.context.trim().slice(0, 500)}
 """
 CRITICAL: Use context strictly to resolve anaphoric pronouns ("here", "this function", "as discussed") and domain terminology. NEVER invent unmentioned requirements or copy unrelated code.` : "";
+  let codeSwitchingBlock = "";
+  if (options.preserveCodeSwitching) {
+    codeSwitchingBlock = `
+
+[CODE-SWITCHING PRESERVATION]:
+If the user's input draft contains native ${options.sourceLang || "en"} words or expressions mixed in, seamlessly translate them into ${outLangName} in the fixed and native outputs, and explicitly record the translation in the takeaways ("fixes").`;
+  }
+  let systemHintBlock = "";
+  if (options.systemHint) {
+    const rawHints = Array.isArray(options.systemHint) ? options.systemHint : [options.systemHint];
+    const hints = rawHints.map((h) => interpolatePromptVariables(h, { sourceLang: options.sourceLang || "en", targetLang: options.targetLang || "en", explainLang: options.explainLang || expNorm }).trim()).filter(Boolean);
+    if (hints.length > 0) {
+      systemHintBlock = `
+
+[USER SPECIFIED MODE RULES - MANDATORY]:
+${hints.map((h, i) => `(${i + 1}) ${h}`).join("\n")}`;
+    }
+  }
   return `You are an elite Developer Language Editor and Real-Time Proofreader.
 The user is writing directly in ${outLangName}, but their draft may contain fast typing slips, grammatical errors, wrong prepositions, or non-native phrasing.
 Perform proofreading according to the following tasks:
@@ -1180,7 +1198,7 @@ ${taskLines.join("\n")}
 - 100% preserve user's original words, rhythm, and cadence!${linguisticProfile}${contextBlock}
 ${anchorBlock ? `
 ${anchorBlock}
-` : ""}${compileKillListInstruction(void 0, DEFAULT_KILL_LIST)}
+` : ""}${codeSwitchingBlock}${systemHintBlock}${compileKillListInstruction(options.killList, options.globalKillList)}
 Strict JSON format:
 {
 ${jsonProps.join(",\n")}
@@ -2971,6 +2989,9 @@ function isTargetLanguageOnly(text, sourceLang, targetLang = "en") {
     return /[\uac00-\ud7af]/.test(text);
   }
   if (normTarget === "zh" || normTarget === "tw") {
+    if (normSource === "ja" && /[\u3040-\u30ff]/.test(text)) {
+      return false;
+    }
     return /[\u4e00-\u9fa5]/.test(text);
   }
   return false;

@@ -1123,6 +1123,8 @@ export function buildPromptCandidatesSystemPrompt(options: {
   promptSlots?: PromptSlotConfig[];
   learnInRewrite?: boolean;
   context?: string;
+  killList?: string[];
+  globalKillList?: string[];
 }): string {
   const normSource = (options.sourceLang || "en").toLowerCase().split("-")[0];
   const defaultTarget = normSource === "en" ? "ja" : "en";
@@ -1194,7 +1196,7 @@ ${taskLines.join("\n")}
 - **100% Semantic Fidelity**: Translate or refine EVERY sentence, clause, and detail from the user's input from start to finish. NEVER summarize, truncate, or drop details unless a slot explicitly asks for condensation.
 - **Respect Slot Role & Register**: If a slot asks for spoken/colloquial translation, output natural spoken flow; if it asks for formal/written translation, output polished written prose; if it asks for prompt structuring, compile clear objectives, isolate negative constraints (minimal diff, blast radius guard), and eliminate robotic AI filler.
 - **Zero Hallucination**: Never invent unmentioned files, bug reports, or speculative features.
-- **Code & Symbol Shield**: Preserve all CLI flags (e.g. \`--dry-run\`, \`-rf\`, \`--no-verify\`), package scopes/decorators, inline code, file paths, and technical identifiers 100% verbatim in every slot.${contextBlock}${customRuleBlock}${compileKillListInstruction(undefined, DEFAULT_KILL_LIST)}
+- **Code & Symbol Shield**: Preserve all CLI flags (e.g. \`--dry-run\`, \`-rf\`, \`--no-verify\`), package scopes/decorators, inline code, file paths, and technical identifiers 100% verbatim in every slot.${contextBlock}${customRuleBlock}${compileKillListInstruction(options.killList, options.globalKillList)}
 
 Strict JSON format:
 {
@@ -1215,6 +1217,10 @@ export function buildModifySystemPrompt(options: {
   customSlots?: PromptSlotConfig[];
   promptSlots?: PromptSlotConfig[];
   context?: string;
+  killList?: string[];
+  globalKillList?: string[];
+  preserveCodeSwitching?: boolean;
+  systemHint?: string | string[];
 }): string {
   const normSource = (options.sourceLang || "en").toLowerCase().split("-")[0];
   const expNorm = (options.explainLang || normSource).toLowerCase().split("-")[0];
@@ -1288,6 +1294,22 @@ ${options.context.trim().slice(0, 500)}
 CRITICAL: Use context strictly to resolve anaphoric pronouns ("here", "this function", "as discussed") and domain terminology. NEVER invent unmentioned requirements or copy unrelated code.`
     : "";
 
+  let codeSwitchingBlock = "";
+  if (options.preserveCodeSwitching) {
+    codeSwitchingBlock = `\n\n[CODE-SWITCHING PRESERVATION]:\nIf the user's input draft contains native ${options.sourceLang || "en"} words or expressions mixed in, seamlessly translate them into ${outLangName} in the fixed and native outputs, and explicitly record the translation in the takeaways ("fixes").`;
+  }
+
+  let systemHintBlock = "";
+  if (options.systemHint) {
+    const rawHints = Array.isArray(options.systemHint) ? options.systemHint : [options.systemHint];
+    const hints = rawHints
+      .map((h) => interpolatePromptVariables(h, { sourceLang: options.sourceLang || "en", targetLang: options.targetLang || "en", explainLang: options.explainLang || expNorm }).trim())
+      .filter(Boolean);
+    if (hints.length > 0) {
+      systemHintBlock = `\n\n[USER SPECIFIED MODE RULES - MANDATORY]:\n${hints.map((h, i) => `(${i + 1}) ${h}`).join("\n")}`;
+    }
+  }
+
   return `You are an elite Developer Language Editor and Real-Time Proofreader.
 The user is writing directly in ${outLangName}, but their draft may contain fast typing slips, grammatical errors, wrong prepositions, or non-native phrasing.
 Perform proofreading according to the following tasks:
@@ -1298,7 +1320,7 @@ ${taskLines.join("\n")}
 - **Zero Tone Sanitization**: NEVER censor swear words or raw emotions (e.g. 'fuck', 'suck', 'shit')—passion and emotional heat are natural and MUST be preserved 100%!
 - **Zero Punctuation/Casing Nitpicking**: Do NOT obsess over casual casing or missing periods.
 - 100% preserve user's original words, rhythm, and cadence!${linguisticProfile}${contextBlock}
-${anchorBlock ? `\n${anchorBlock}\n` : ""}${compileKillListInstruction(undefined, DEFAULT_KILL_LIST)}
+${anchorBlock ? `\n${anchorBlock}\n` : ""}${codeSwitchingBlock}${systemHintBlock}${compileKillListInstruction(options.killList, options.globalKillList)}
 Strict JSON format:
 {
 ${jsonProps.join(",\n")}

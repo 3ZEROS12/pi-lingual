@@ -1602,7 +1602,7 @@ ${taskLines.join("\n")}
 - **100% Semantic Fidelity**: Translate or refine EVERY sentence, clause, and detail from the user's input from start to finish. NEVER summarize, truncate, or drop details unless a slot explicitly asks for condensation.
 - **Respect Slot Role & Register**: If a slot asks for spoken/colloquial translation, output natural spoken flow; if it asks for formal/written translation, output polished written prose; if it asks for prompt structuring, compile clear objectives, isolate negative constraints (minimal diff, blast radius guard), and eliminate robotic AI filler.
 - **Zero Hallucination**: Never invent unmentioned files, bug reports, or speculative features.
-- **Code & Symbol Shield**: Preserve all CLI flags (e.g. \`--dry-run\`, \`-rf\`, \`--no-verify\`), package scopes/decorators, inline code, file paths, and technical identifiers 100% verbatim in every slot.${contextBlock}${customRuleBlock}${compileKillListInstruction(void 0, DEFAULT_KILL_LIST)}
+- **Code & Symbol Shield**: Preserve all CLI flags (e.g. \`--dry-run\`, \`-rf\`, \`--no-verify\`), package scopes/decorators, inline code, file paths, and technical identifiers 100% verbatim in every slot.${contextBlock}${customRuleBlock}${compileKillListInstruction(options.killList, options.globalKillList)}
 
 Strict JSON format:
 {
@@ -1672,6 +1672,24 @@ function buildModifySystemPrompt(options) {
 ${options.context.trim().slice(0, 500)}
 """
 CRITICAL: Use context strictly to resolve anaphoric pronouns ("here", "this function", "as discussed") and domain terminology. NEVER invent unmentioned requirements or copy unrelated code.` : "";
+  let codeSwitchingBlock = "";
+  if (options.preserveCodeSwitching) {
+    codeSwitchingBlock = `
+
+[CODE-SWITCHING PRESERVATION]:
+If the user's input draft contains native ${options.sourceLang || "en"} words or expressions mixed in, seamlessly translate them into ${outLangName} in the fixed and native outputs, and explicitly record the translation in the takeaways ("fixes").`;
+  }
+  let systemHintBlock = "";
+  if (options.systemHint) {
+    const rawHints = Array.isArray(options.systemHint) ? options.systemHint : [options.systemHint];
+    const hints = rawHints.map((h) => interpolatePromptVariables(h, { sourceLang: options.sourceLang || "en", targetLang: options.targetLang || "en", explainLang: options.explainLang || expNorm }).trim()).filter(Boolean);
+    if (hints.length > 0) {
+      systemHintBlock = `
+
+[USER SPECIFIED MODE RULES - MANDATORY]:
+${hints.map((h, i) => `(${i + 1}) ${h}`).join("\n")}`;
+    }
+  }
   return `You are an elite Developer Language Editor and Real-Time Proofreader.
 The user is writing directly in ${outLangName}, but their draft may contain fast typing slips, grammatical errors, wrong prepositions, or non-native phrasing.
 Perform proofreading according to the following tasks:
@@ -1684,7 +1702,7 @@ ${taskLines.join("\n")}
 - 100% preserve user's original words, rhythm, and cadence!${linguisticProfile}${contextBlock}
 ${anchorBlock ? `
 ${anchorBlock}
-` : ""}${compileKillListInstruction(void 0, DEFAULT_KILL_LIST)}
+` : ""}${codeSwitchingBlock}${systemHintBlock}${compileKillListInstruction(options.killList, options.globalKillList)}
 Strict JSON format:
 {
 ${jsonProps.join(",\n")}
@@ -3387,6 +3405,9 @@ function isTargetLanguageOnly(text, sourceLang, targetLang = "en") {
     return /[\uac00-\ud7af]/.test(text);
   }
   if (normTarget === "zh" || normTarget === "tw") {
+    if (normSource === "ja" && /[\u3040-\u30ff]/.test(text)) {
+      return false;
+    }
     return /[\u4e00-\u9fa5]/.test(text);
   }
   return false;
@@ -3750,12 +3771,14 @@ function parseLlmResponse(raw) {
 async function executeLlmCompletion(text, sysPrompt, cfg) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), cfg.timeoutMs);
+  let onAbort;
   if (cfg.signal) {
     if (cfg.signal.aborted) {
       clearTimeout(timer);
       return null;
     }
-    cfg.signal.addEventListener("abort", () => controller.abort(), { once: true });
+    onAbort = () => controller.abort();
+    cfg.signal.addEventListener("abort", onAbort, { once: true });
   }
   try {
     if (typeof cfg.complete === "function") {
@@ -3791,6 +3814,9 @@ async function executeLlmCompletion(text, sysPrompt, cfg) {
     return null;
   } finally {
     clearTimeout(timer);
+    if (cfg.signal && onAbort) {
+      cfg.signal.removeEventListener("abort", onAbort);
+    }
   }
 }
 function isDynamicLongInput(text, sourceLang = "en") {
@@ -4024,42 +4050,17 @@ function compileModeSystemPrompt(mode, options) {
   }));
   const slotKillLists = rawSlots.flatMap((s) => s.killList || []);
   const combinedKillList = [...mode.killList || [], ...slotKillLists];
-  const killListBlock = compileKillListInstruction(combinedKillList, options.globalKillList);
-  let systemHintBlock = "";
-  if (mode.systemHint) {
-    const rawHints = Array.isArray(mode.systemHint) ? mode.systemHint : [mode.systemHint];
-    const hints = rawHints.map((h) => interpolatePromptVariables(h, { sourceLang, targetLang, explainLang }).trim()).filter(Boolean);
-    if (hints.length > 0) {
-      systemHintBlock = `
-
-[USER SPECIFIED MODE RULES - MANDATORY]:
-${hints.map((h, i) => `(${i + 1}) ${h}`).join("\n")}`;
-    }
-  }
-  let codeSwitchingBlock = "";
-  if (mode.preserveCodeSwitching && mode.flow === "proofread") {
-    codeSwitchingBlock = `
-
-[CODE-SWITCHING PRESERVATION]:
-If the user's input draft contains native ${sourceLang} words or expressions mixed in, seamlessly translate them into ${targetLang} in the fixed and native outputs, and explicitly record the translation in the takeaways ("fixes").`;
-  }
-  let contextBlock = "";
-  if (options.context && options.context.trim()) {
-    contextBlock = `
-
-[CONVERSATION & PROJECT CONTEXT - USE FOR PRONOUN RESOLUTION]:
-"""
-${options.context.trim().slice(0, 500)}
-"""
-CRITICAL: Use context strictly to resolve anaphoric pronouns ("here", "this function", "as discussed") and domain terminology. NEVER invent unmentioned requirements or copy unrelated code.`;
-  }
   if (mode.flow === "proofread") {
     return buildModifySystemPrompt({
       sourceLang,
       targetLang,
       explainLang,
       customSlots: interpolatedSlots,
-      context: options.context
+      context: options.context,
+      killList: combinedKillList,
+      globalKillList: options.globalKillList,
+      preserveCodeSwitching: mode.preserveCodeSwitching,
+      systemHint: mode.systemHint
     });
   }
   return buildPromptCandidatesSystemPrompt({
@@ -4067,7 +4068,9 @@ CRITICAL: Use context strictly to resolve anaphoric pronouns ("here", "this func
     targetLang,
     promptSlots: interpolatedSlots,
     context: options.context,
-    promptRule: mode.systemHint
+    promptRule: mode.systemHint,
+    killList: combinedKillList,
+    globalKillList: options.globalKillList
   });
 }
 async function executeModeRunner(text, mode, userConfig = {}) {
@@ -5320,7 +5323,7 @@ function extension_default(pi) {
     } else {
       newSource = normalizeLangCode(parts[0]);
       newTarget = normalizeLangCode(parts[1]);
-      if (!isSupportedLangCode(newSource)) {
+      if (!isSupportedLangCode(newSource) || !isSupportedLangCode(newTarget)) {
         ctx.ui.notify(
           "[lingual] invalid language code. supported: zh, tw, ja, ko, en, es, fr, de, ru",
           "warning"

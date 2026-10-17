@@ -191,6 +191,9 @@ export function isTargetLanguageOnly(
     return /[\uac00-\ud7af]/.test(text);
   }
   if (normTarget === "zh" || normTarget === "tw") {
+    if (normSource === "ja" && /[\u3040-\u30ff]/.test(text)) {
+      return false;
+    }
     return /[\u4e00-\u9fa5]/.test(text);
   }
 

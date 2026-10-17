@@ -569,13 +569,15 @@ async function executeLlmCompletion(
 ): Promise<string | null> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), cfg.timeoutMs);
+  let onAbort: (() => void) | undefined;
 
   if (cfg.signal) {
     if (cfg.signal.aborted) {
       clearTimeout(timer);
       return null;
     }
-    cfg.signal.addEventListener("abort", () => controller.abort(), { once: true });
+    onAbort = () => controller.abort();
+    cfg.signal.addEventListener("abort", onAbort, { once: true });
   }
 
   try {
@@ -613,6 +615,9 @@ async function executeLlmCompletion(
     return null;
   } finally {
     clearTimeout(timer);
+    if (cfg.signal && onAbort) {
+      cfg.signal.removeEventListener("abort", onAbort);
+    }
   }
 }
 
@@ -988,32 +993,6 @@ export function compileModeSystemPrompt(
 
   const slotKillLists = rawSlots.flatMap((s) => s.killList || []);
   const combinedKillList = [...(mode.killList || []), ...slotKillLists];
-  const killListBlock = compileKillListInstruction(combinedKillList, options.globalKillList);
-
-  let systemHintBlock = "";
-  if (mode.systemHint) {
-    const rawHints = Array.isArray(mode.systemHint) ? mode.systemHint : [mode.systemHint];
-    const hints = rawHints
-      .map((h) => interpolatePromptVariables(h, { sourceLang, targetLang, explainLang }).trim())
-      .filter(Boolean);
-    if (hints.length > 0) {
-      systemHintBlock = `\n\n[USER SPECIFIED MODE RULES - MANDATORY]:\n${hints.map((h, i) => `(${i + 1}) ${h}`).join("\n")}`;
-    }
-  }
-
-  let codeSwitchingBlock = "";
-  if (mode.preserveCodeSwitching && mode.flow === "proofread") {
-    codeSwitchingBlock = `\n\n[CODE-SWITCHING PRESERVATION]:\nIf the user's input draft contains native ${sourceLang} words or expressions mixed in, seamlessly translate them into ${targetLang} in the fixed and native outputs, and explicitly record the translation in the takeaways ("fixes").`;
-  }
-
-  let contextBlock = "";
-  if (options.context && options.context.trim()) {
-    contextBlock = `\n\n[CONVERSATION & PROJECT CONTEXT - USE FOR PRONOUN RESOLUTION]:
-"""
-${options.context.trim().slice(0, 500)}
-"""
-CRITICAL: Use context strictly to resolve anaphoric pronouns ("here", "this function", "as discussed") and domain terminology. NEVER invent unmentioned requirements or copy unrelated code.`;
-  }
 
   if (mode.flow === "proofread") {
     return buildModifySystemPrompt({
@@ -1022,6 +1001,10 @@ CRITICAL: Use context strictly to resolve anaphoric pronouns ("here", "this func
       explainLang,
       customSlots: interpolatedSlots,
       context: options.context,
+      killList: combinedKillList,
+      globalKillList: options.globalKillList,
+      preserveCodeSwitching: mode.preserveCodeSwitching,
+      systemHint: mode.systemHint,
     });
   }
 
@@ -1031,6 +1014,8 @@ CRITICAL: Use context strictly to resolve anaphoric pronouns ("here", "this func
     promptSlots: interpolatedSlots,
     context: options.context,
     promptRule: mode.systemHint,
+    killList: combinedKillList,
+    globalKillList: options.globalKillList,
   });
 }
 
