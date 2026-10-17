@@ -5,12 +5,13 @@ A bilingual terminal HUD and prompt transformer for Pi Coding Agent.
 Code in your native language. See real-time Silicon Valley spoken phrasing and formal technical prose—or transform prompts into clean technical English to keep your code, comments, and commits consistent.
 
 [![npm version](https://img.shields.io/npm/v/pi-lingual?color=blue)](https://www.npmjs.com/package/pi-lingual)
+[![npm downloads](https://img.shields.io/npm/dm/pi-lingual?color=22c55e&label=downloads)](https://www.npmjs.com/package/pi-lingual)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Built for Pi](https://img.shields.io/badge/Built%20for-Pi%20Coding%20Agent-orange)](https://github.com/earendil-works/pi-coding-agent)
 [![Tests](https://img.shields.io/badge/Tests-178%2F178%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict%20Zero%20Error-blue)](tsconfig.json)
 
-**English** | [简体中文](./README_zh.md)
+**English** | [简体中文](./README_zh.md) | [日本語](./README_ja.md)
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/3ZEROS12/pi-lingual/main/assets/demo.gif" alt="pi-lingual Terminal Companion HUD Experience" width="840">
@@ -307,9 +308,23 @@ I hope everyone takes the time to tune a prompt that works best for them, catche
 
 ```bash
 npm run typecheck   # Strict tsc --noEmit check (0 errors)
-npm test            # 138/138 test assertions passing (100% green)
+npm test            # 178/178 test assertions passing (100% green)
 npm run build       # Multi-entry compilation via tsup (extension + core engine)
 ```
+
+---
+
+## Ecosystem: Pi Terminal & Desktop Suite
+
+Each extension occupies a distinct terminal or desktop slot so all tools run together with zero interference:
+
+| Package | Environment & Slot | Mechanism & Responsibility | Install / Link |
+| :--- | :--- | :--- | :--- |
+| **[`pi-lingual`](https://github.com/3ZEROS12/pi-lingual)** *(Current)* | Terminal `aboveEditor` HUD | Dynamic dual-register companion card (≤9 lines, UAX #11 tree) & 0-token prompt rewrites | `pi install npm:pi-lingual` |
+| **[`lingual-desktop`](https://github.com/3ZEROS12/lingual-desktop)** | Windows Desktop Dynamic Island | Driver-level low-level keyboard hook (`WH_KEYBOARD_LL`), roof-docked 3s card & system-wide input bridge | [GitHub Release](https://github.com/3ZEROS12/lingual-desktop/releases) |
+| **[`toolflow`](https://github.com/3ZEROS12/toolflow)** | Terminal Tool Sandbox | Stage-gated capability mounting & >40-line log dehydration to disk (-95% context tokens) | `pi install npm:toolflow` |
+| **[`pi-tui-status-beautifier`](https://github.com/3ZEROS12/pi-tui-status-beautifier)** | Terminal Footer Status Bar | 6 badge presets, `<80`-col idle folding `(+N idle)`, 0 render-loop disk reads | `pi install npm:pi-tui-status-beautifier` |
+| **[`pi-anchor`](https://github.com/3ZEROS12/anchor)** | Terminal `belowEditor` Dock | 1-line sticky strip, 0ms `pin:` intercept, `[■■□□]` step bar & `↪` session jump | `pi install npm:pi-anchor` |
 
 ---
 

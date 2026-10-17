@@ -5,12 +5,13 @@
 敲母语写代码。输入框上方实时显示地道技术口语与书面语；也可一键将提示词转写为规范技术英文，保持代码、注释与提交全英文规范。
 
 [![npm version](https://img.shields.io/npm/v/pi-lingual?color=blue)](https://www.npmjs.com/package/pi-lingual)
+[![npm downloads](https://img.shields.io/npm/dm/pi-lingual?color=22c55e&label=downloads)](https://www.npmjs.com/package/pi-lingual)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Built for Pi](https://img.shields.io/badge/Built%20for-Pi%20Coding%20Agent-orange)](https://github.com/earendil-works/pi-coding-agent)
 [![Tests](https://img.shields.io/badge/Tests-178%2F178%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict%20Zero%20Error-blue)](tsconfig.json)
 
-[English](./README.md) | **简体中文**
+[English](./README.md) | **简体中文** | [日本語](./README_ja.md)
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/3ZEROS12/pi-lingual/main/assets/demo.gif" alt="pi-lingual 终端伴学视窗交互实录" width="840">
@@ -306,9 +307,23 @@ pi install npm:pi-lingual
 
 ```bash
 npm run typecheck   # TypeScript 严格类型检查 (0 错误)
-npm test            # 全套自动化单元测试 (138/138 全绿通过)
+npm test            # 全套自动化单元测试 (178/178 全绿通过)
 npm run build       # 多入口生产构建 (插件 + 核心语言引擎)
 ```
+
+---
+
+## 生态协同：Pi 终端与桌面套件
+
+每个工具均占用互斥的终端或桌面插槽，协同运行零干扰：
+
+| 工具包 | 运行环境与插槽 | 机制与职责 | 安装 / 链接 |
+| :--- | :--- | :--- | :--- |
+| **[`pi-lingual`](https://github.com/3ZEROS12/pi-lingual)** *(当前)* | 终端 `aboveEditor` 视窗 | 双语双寄存器伴学卡片（≤9 行，UAX #11 树状）与 0-token 提示词规范化 | `pi install npm:pi-lingual` |
+| **[`lingual-desktop`](https://github.com/3ZEROS12/lingual-desktop)** | Windows 桌面极简灵动岛 | 底层低级键盘钩子（`WH_KEYBOARD_LL`），顶部原位 3 秒卡片与全局输入桥接 | [GitHub Release](https://github.com/3ZEROS12/lingual-desktop/releases) |
+| **[`toolflow`](https://github.com/3ZEROS12/toolflow)** | 终端工具沙箱 | 阶段门控工具挂载与 >40 行冗长日志落盘脱水（-95% 上下文消耗） | `pi install npm:toolflow` |
+| **[`pi-tui-status-beautifier`](https://github.com/3ZEROS12/pi-tui-status-beautifier)** | 终端底部状态栏 | 6 套预设徽章，`<80` 列静默折叠（`+N idle`），0 渲染循环读盘开销 | `pi install npm:pi-tui-status-beautifier` |
+| **[`pi-anchor`](https://github.com/3ZEROS12/anchor)** | 终端 `belowEditor` 便签条 | 1 行常驻便签，0ms `pin:` 拦截，`[■■□□]` 进度条与 `↪` 会话跳转 | `pi install npm:pi-anchor` |
 
 ---
 
