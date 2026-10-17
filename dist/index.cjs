@@ -3463,9 +3463,15 @@ function getBannerMaxCols() {
 function getVisualWidth(str) {
   let width = 0;
   const clean = str.replace(ANSI_ESCAPE_REGEX, "");
+  let afterZWJ = false;
   for (const char of clean) {
     const code = char.codePointAt(0) || 0;
-    if (code === 8205 || code === 65039 || code === 65038 || code >= 768 && code <= 879 || code >= 8203 && code <= 8207) {
+    if (code === 8205 || code === 65039 || code === 65038 || code >= 127995 && code <= 127999 || code >= 768 && code <= 879 || code >= 6832 && code <= 6911 || code >= 7616 && code <= 7679 || code >= 8400 && code <= 8447 || code >= 65056 && code <= 65071 || code >= 917760 && code <= 917999 || code >= 8203 && code <= 8207) {
+      if (code === 8205) afterZWJ = true;
+      continue;
+    }
+    if (afterZWJ) {
+      afterZWJ = false;
       continue;
     }
     if (code >= 4352 && code <= 4447 || code >= 8986 && code <= 9215 || code >= 9728 && code <= 10175 || code >= 11904 && code <= 42191 || code >= 44032 && code <= 55203 || code >= 63744 && code <= 64255 || code >= 65040 && code <= 65049 || code >= 65072 && code <= 65135 || code >= 65280 && code <= 65376 || code >= 65504 && code <= 65510 || code >= 127744 && code <= 128591 || code >= 128640 && code <= 128767 || code >= 129280 && code <= 129791 || code >= 131072 && code <= 195103) {

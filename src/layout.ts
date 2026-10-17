@@ -68,17 +68,31 @@ export function getBannerMaxCols(): number {
 export function getVisualWidth(str: string): number {
   let width = 0;
   const clean = str.replace(ANSI_ESCAPE_REGEX, "");
+  let afterZWJ = false;
   for (const char of clean) {
     const code = char.codePointAt(0) || 0;
     if (
       code === 0x200d ||
       code === 0xfe0f ||
       code === 0xfe0e ||
+      (code >= 0x1f3fb && code <= 0x1f3ff) ||
       (code >= 0x0300 && code <= 0x036f) ||
+      (code >= 0x1ab0 && code <= 0x1aff) ||
+      (code >= 0x1dc0 && code <= 0x1dff) ||
+      (code >= 0x20d0 && code <= 0x20ff) ||
+      (code >= 0xfe20 && code <= 0xfe2f) ||
+      (code >= 0xe0100 && code <= 0xe01ef) ||
       (code >= 0x200b && code <= 0x200f)
     ) {
+      if (code === 0x200d) afterZWJ = true;
       continue;
     }
+
+    if (afterZWJ) {
+      afterZWJ = false;
+      continue;
+    }
+
     if (
       (code >= 0x1100 && code <= 0x115f) ||
       (code >= 0x231a && code <= 0x23ff) ||

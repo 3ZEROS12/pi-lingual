@@ -264,12 +264,14 @@ function copyToClipboard(text: string): boolean {
   try {
     if (process.platform === "win32") {
       const proc = spawn("clip.exe", { stdio: ["pipe", "ignore", "ignore"] });
+      proc.on("error", () => {});
       proc.stdin.on("error", () => {});
       proc.stdin.write(text, "utf8");
       proc.stdin.end();
       return true;
     } else if (process.platform === "darwin") {
       const proc = spawn("pbcopy", { stdio: ["pipe", "ignore", "ignore"] });
+      proc.on("error", () => {});
       proc.stdin.on("error", () => {});
       proc.stdin.write(text, "utf8");
       proc.stdin.end();
@@ -277,15 +279,16 @@ function copyToClipboard(text: string): boolean {
     } else {
       // Linux: try wl-copy then fallback to xclip
       const proc = spawn("wl-copy", { stdio: ["pipe", "ignore", "ignore"] });
-      proc.stdin.on("error", () => {});
       proc.on("error", () => {
         try {
           const procX = spawn("xclip", ["-selection", "clipboard"], { stdio: ["pipe", "ignore", "ignore"] });
+          procX.on("error", () => {});
           procX.stdin.on("error", () => {});
           procX.stdin.write(text, "utf8");
           procX.stdin.end();
         } catch {}
       });
+      proc.stdin.on("error", () => {});
       proc.stdin.write(text, "utf8");
       proc.stdin.end();
       return true;
@@ -469,8 +472,15 @@ export default function (pi: ExtensionAPI) {
     if (state.mode === "off") return;
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
+      if (!hasActiveUI(lastContext)) return;
+      if (showingReleaseBanner) {
+        renderReleaseBanner(lastContext);
+        return;
+      }
+      const activeObj = state.modes.find((m) => m.id === state.mode);
+      if (activeObj?.hud === "none") return;
       const active = session.getActiveResult() || session.getLastResult();
-      if (active && hasActiveUI(lastContext)) {
+      if (active) {
         renderActiveCard(lastContext);
       }
     }, 120);

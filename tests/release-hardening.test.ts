@@ -979,5 +979,22 @@ index abc1234..def5678 100644
       `[${l}] langList must contain exactly 9 supported language items`
     );
   }
+
+  // 13. Round 7 Hardening: Emoji Fitzpatrick Modifiers & ZWJ Sequence Visual Cell Width
+  assert.equal(
+    getVisualWidth("👍"),
+    2,
+    "Standard emoji must be 2 visual cells"
+  );
+  assert.equal(
+    getVisualWidth("👍🏽"),
+    2,
+    "Emoji with Fitzpatrick skin tone modifier must remain 2 visual cells (not 4)"
+  );
+  assert.equal(
+    getVisualWidth("👨‍💻"),
+    2,
+    "Composite ZWJ emoji sequence (developer) must remain 2 visual cells (not 4)"
+  );
 });
 
