@@ -27,13 +27,17 @@ export function getEffectiveMaxCols(requested?: number): number {
   const terminalCols =
     process.stdout?.columns ||
     (process.env.COLUMNS ? parseInt(process.env.COLUMNS, 10) : undefined);
+  if (typeof requested === "number") {
+    return Math.max(25, requested);
+  }
   const raw =
-    typeof requested === "number"
-      ? requested
-      : typeof terminalCols === "number" && terminalCols > 0
-        ? terminalCols - 8
-        : 120;
-  return Math.max(25, raw); // Physical minimum 25 columns to prevent negative width overflow
+    typeof terminalCols === "number" && terminalCols > 0
+      ? terminalCols - 8
+      : 120;
+  if (typeof terminalCols === "number" && terminalCols > 0) {
+    return Math.min(terminalCols, Math.max(10, raw));
+  }
+  return Math.max(25, raw);
 }
 
 const ANSI_ESCAPE_REGEX = /\x1b\[[0-9;?]*[a-zA-Z]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g;

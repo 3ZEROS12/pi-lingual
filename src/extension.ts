@@ -209,7 +209,13 @@ export function extractRecentContextAnchor(ctx: ExtensionContext | null | undefi
           .trim()
           .split("\n")
           .map((l: string) => l.trim())
-          .filter((l: string) => l.length > 0 && !/^```/.test(l) && !/^\|[-:\s|]+\|$/.test(l));
+          .filter(
+            (l: string) =>
+              l.length > 0 &&
+              !/^```/.test(l) &&
+              !/^\|[-:\s|]+\|$/.test(l) &&
+              !/^\s*\|.*\|/.test(l)
+          );
 
         if (rawLines.length === 0) continue;
 
@@ -227,7 +233,7 @@ export function extractRecentContextAnchor(ctx: ExtensionContext | null | undefi
             /\b(function|class|const|def|return|import|error|bug|test|file|path|route|api)\b/i.test(line);
 
           if (isTechnical && line.length >= 10) {
-            return line.replace(/^[-*•\d\.\s]+/, "").slice(0, 160);
+            return line.replace(/^(\s*[-*•]\s+|\s*\d+\.\s+)/, "").slice(0, 160);
           }
         }
 
@@ -235,7 +241,7 @@ export function extractRecentContextAnchor(ctx: ExtensionContext | null | undefi
         for (let j = rawLines.length - 1; j >= 0; j--) {
           const line = rawLines[j];
           if (!conversationalClosers.some((re) => re.test(line)) && line.length >= 8) {
-            return line.replace(/^[-*•\d\.\s]+/, "").slice(0, 160);
+            return line.replace(/^(\s*[-*•]\s+|\s*\d+\.\s+)/, "").slice(0, 160);
           }
         }
 
@@ -472,15 +478,20 @@ export default function (pi: ExtensionAPI) {
 
   const syncResizeListener = () => {
     const prevResize = (globalThis as any).__piLingualResizeListener;
-    if (prevResize && process.stdout && typeof (process.stdout as any).off === "function") {
+    if (prevResize && prevResize !== onResize && process.stdout && typeof (process.stdout as any).off === "function") {
       (process.stdout as any).off("resize", prevResize);
     }
     if (state.mode === "off") {
+      if (prevResize === onResize) {
+        (process.stdout as any)?.off?.("resize", onResize);
+      }
       (globalThis as any).__piLingualResizeListener = undefined;
       return;
     }
-    (globalThis as any).__piLingualResizeListener = onResize;
-    process.stdout?.on("resize", onResize);
+    if (prevResize !== onResize) {
+      (globalThis as any).__piLingualResizeListener = onResize;
+      process.stdout?.on("resize", onResize);
+    }
   };
   syncResizeListener();
 

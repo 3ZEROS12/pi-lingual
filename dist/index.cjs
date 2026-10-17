@@ -799,7 +799,7 @@ function resolveLanguagePairAnchors(sourceLang = "en", targetLang = "en") {
     const zhKey = `zh->${normTarget}`;
     if (LANGUAGE_PAIR_ANCHORS[zhKey]) return LANGUAGE_PAIR_ANCHORS[zhKey];
   }
-  if (normSource === "en") {
+  if (normSource === "en" && normTarget === "en") {
     return LANGUAGE_SPECS.en?.anchors || [];
   }
   return [];
@@ -1104,12 +1104,18 @@ function buildPromptCandidatesSystemPrompt(options) {
   const spec = LANGUAGE_SPECS[normSource] || LANGUAGE_SPECS.en;
   const slots = (Array.isArray(options.promptSlots) && options.promptSlots.length > 0 ? options.promptSlots : getDefaultPromptSlots(normSource)).filter((s) => s.enabled !== false && s.role !== "source");
   const taskLines = slots.map((s, idx) => {
+    const rawInstruction = s.instruction || (s.role === "vocab" ? "Extract 2-3 high-value authentic technical expressions or collocations relevant to the input." : `Express the message in ${s.label} style in authentic ${outLangName}.`);
+    const instruction = interpolatePromptVariables(rawInstruction, {
+      sourceLang: options.sourceLang || "en",
+      targetLang: options.targetLang || defaultTarget,
+      explainLang: options.sourceLang || "en"
+    });
     if (s.role === "vocab") {
-      return `${idx + 1}. "${s.id}" (${s.label}): ${s.instruction || "Extract 2-3 high-value authentic technical expressions or collocations relevant to the input."} ${spec.vocabInstruction}`;
+      return `${idx + 1}. "${s.id}" (${s.label}): ${instruction} ${spec.vocabInstruction}`;
     }
-    const hasCustomLangDirective = /target language|output in|日本語|中文|english|spanish|french|german|korean|russian|portuguese/i.test(s.instruction || "");
+    const hasCustomLangDirective = /target language|output in|日本語|中文|english|spanish|french|german|korean|russian|portuguese/i.test(instruction);
     const langSuffix = hasCustomLangDirective ? "" : ` (Default language: **${outLangName}** unless instruction specifies otherwise)`;
-    return `${idx + 1}. "${s.id}" (${s.label}): ${s.instruction}${langSuffix}`;
+    return `${idx + 1}. "${s.id}" (${s.label}): ${instruction}${langSuffix}`;
   });
   const jsonProps = [];
   slots.forEach((s) => {
@@ -1145,7 +1151,7 @@ ${taskLines.join("\n")}
 - **100% Semantic Fidelity**: Translate or refine EVERY sentence, clause, and detail from the user's input from start to finish. NEVER summarize, truncate, or drop details unless a slot explicitly asks for condensation.
 - **Respect Slot Role & Register**: If a slot asks for spoken/colloquial translation, output natural spoken flow; if it asks for formal/written translation, output polished written prose; if it asks for prompt structuring, compile clear objectives, isolate negative constraints (minimal diff, blast radius guard), and eliminate robotic AI filler.
 - **Zero Hallucination**: Never invent unmentioned files, bug reports, or speculative features.
-- **Code & Symbol Shield**: Preserve all CLI flags (e.g. \`--dry-run\`, \`-rf\`, \`--no-verify\`), package scopes/decorators, inline code, file paths, and technical identifiers 100% verbatim in every slot.${contextBlock}${customRuleBlock}
+- **Code & Symbol Shield**: Preserve all CLI flags (e.g. \`--dry-run\`, \`-rf\`, \`--no-verify\`), package scopes/decorators, inline code, file paths, and technical identifiers 100% verbatim in every slot.${contextBlock}${customRuleBlock}${compileKillListInstruction(void 0, DEFAULT_KILL_LIST)}
 
 Strict JSON format:
 {
@@ -1176,7 +1182,7 @@ function buildModifySystemPrompt(options) {
 [TARGET-LANGUAGE LINGUISTIC PROFILE: JAPANESE]:
 - Fix particles (\u52A9\u8A5E: \u306F, \u304C, \u3092, \u306B, \u3067) and natural verb-predicate dependencies.
 - Maintain pragmatic consistency between casual team conversation and polite business context.`;
-  } else {
+  } else if (outLangCode === "en") {
     linguisticProfile = `
 [TARGET-LANGUAGE LINGUISTIC PROFILE: ENGLISH]:
 - Fix prepositions (websites/platforms take 'on': 'on X', 'on GitHub', 'on Slack'), articles ('a' vs 'an'), and verb tenses.
@@ -1186,10 +1192,13 @@ function buildModifySystemPrompt(options) {
   const slots = (Array.isArray(rawSlots) && rawSlots.length > 0 ? rawSlots : getDefaultModifySlots(options.sourceLang, options.explainLang)).filter((s) => s.enabled !== false && s.role !== "source");
   const taskLines = slots.map((s, idx) => {
     const num = idx + 1;
-    if (s.role === "vocab" || s.id === "fixes") {
-      return `${num}. "${s.id}" (${s.label}): ${s.instruction || explainLangDesc}`;
-    }
-    return `${num}. "${s.id}" (${s.label}): ${s.instruction}`;
+    const rawInst = s.role === "vocab" || s.id === "fixes" ? s.instruction || explainLangDesc : s.instruction || "";
+    const instruction = interpolatePromptVariables(rawInst, {
+      sourceLang: options.sourceLang || "en",
+      targetLang: options.targetLang || "en",
+      explainLang: options.explainLang || expNorm
+    });
+    return `${num}. "${s.id}" (${s.label}): ${instruction}`;
   });
   const jsonProps = [];
   slots.forEach((s) => {
@@ -1217,7 +1226,7 @@ ${taskLines.join("\n")}
 - 100% preserve user's original words, rhythm, and cadence!${linguisticProfile}
 ${anchorBlock ? `
 ${anchorBlock}
-` : ""}
+` : ""}${compileKillListInstruction(void 0, DEFAULT_KILL_LIST)}
 Strict JSON format:
 {
 ${jsonProps.join(",\n")}
@@ -3378,7 +3387,13 @@ var CANNOT_START_LINE_CHARS = /* @__PURE__ */ new Set([
 ]);
 function getEffectiveMaxCols(requested) {
   const terminalCols = process.stdout?.columns || (process.env.COLUMNS ? parseInt(process.env.COLUMNS, 10) : void 0);
-  const raw = typeof requested === "number" ? requested : typeof terminalCols === "number" && terminalCols > 0 ? terminalCols - 8 : 120;
+  if (typeof requested === "number") {
+    return Math.max(25, requested);
+  }
+  const raw = typeof terminalCols === "number" && terminalCols > 0 ? terminalCols - 8 : 120;
+  if (typeof terminalCols === "number" && terminalCols > 0) {
+    return Math.min(terminalCols, Math.max(10, raw));
+  }
   return Math.max(25, raw);
 }
 var ANSI_ESCAPE_REGEX = /\x1b\[[0-9;?]*[a-zA-Z]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g;
@@ -4331,7 +4346,15 @@ function saveUserLingualConfig(patch) {
     const tmpFile = `${configFile}.${Date.now()}.${Math.random().toString(36).slice(2, 6)}.tmp`;
     try {
       import_node_fs.default.writeFileSync(tmpFile, content, "utf8");
-      import_node_fs.default.renameSync(tmpFile, configFile);
+      try {
+        import_node_fs.default.renameSync(tmpFile, configFile);
+      } catch {
+        try {
+          import_node_fs.default.unlinkSync(configFile);
+        } catch {
+        }
+        import_node_fs.default.renameSync(tmpFile, configFile);
+      }
     } catch {
       try {
         import_node_fs.default.writeFileSync(configFile, content, "utf8");
@@ -4374,7 +4397,7 @@ function shouldTriggerTranslation(text, sourceLang = "en", allowSameLangPromptOp
     const words2 = trimmed.split(/\s+/);
     return words2.length >= 2 && /[a-zA-Z]{2,}/.test(trimmed);
   }
-  const normSource = (sourceLang || "zh").toLowerCase().split("-")[0];
+  const normSource = (sourceLang || "en").toLowerCase().split("-")[0];
   const nonLatinLangs = /* @__PURE__ */ new Set(["zh", "tw", "ja", "ko", "ru", "ar"]);
   if (nonLatinLangs.has(normSource)) {
     return isNonEnglish(trimmed);
@@ -4546,11 +4569,12 @@ async function executeLlmCompletion(text, sysPrompt, cfg) {
         messages: [
           { role: "system", content: sysPrompt },
           { role: "user", content: text }
-        ],
-        temperature: cfg.temperature
+        ]
       };
       if (cfg.reasoning) {
         requestBody.reasoning = cfg.reasoning;
+      } else if (cfg.temperature !== void 0) {
+        requestBody.temperature = cfg.temperature;
       }
       const response = await fetch(cfg.endpoint, {
         method: "POST",
@@ -4610,7 +4634,7 @@ var stripLinguaAnnotation = stripLingualAnnotation;
 function isDynamicLongInput(text, sourceLang = "en") {
   const trimmed = text.trim();
   if (!trimmed) return false;
-  const normSource = (sourceLang || "zh").toLowerCase().split("-")[0];
+  const normSource = (sourceLang || "en").toLowerCase().split("-")[0];
   const hasCjk = /[\u4e00-\u9fa5\u3040-\u30ff\uac00-\ud7af]/.test(trimmed);
   const isCjk = normSource === "zh" || normSource === "tw" || normSource === "ja" || normSource === "ko" || hasCjk;
   if (isCjk) {

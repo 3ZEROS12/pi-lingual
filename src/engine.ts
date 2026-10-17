@@ -303,7 +303,13 @@ export function saveUserLingualConfig(patch: Record<string, any>): void {
 
     try {
       fs.writeFileSync(tmpFile, content, "utf8");
-      fs.renameSync(tmpFile, configFile);
+      try {
+        fs.renameSync(tmpFile, configFile);
+      } catch {
+        // Windows NTFS EPERM fallback: unlink destination before renaming
+        try { fs.unlinkSync(configFile); } catch {}
+        fs.renameSync(tmpFile, configFile);
+      }
     } catch {
       try { fs.writeFileSync(configFile, content, "utf8"); } catch {}
       try { if (fs.existsSync(tmpFile)) fs.unlinkSync(tmpFile); } catch {}
@@ -349,7 +355,7 @@ export function shouldTriggerTranslation(text: string, sourceLang = "en", allowS
     return words.length >= 2 && /[a-zA-Z]{2,}/.test(trimmed);
   }
 
-  const normSource = (sourceLang || "zh").toLowerCase().split("-")[0];
+  const normSource = (sourceLang || "en").toLowerCase().split("-")[0];
   const nonLatinLangs = new Set(["zh", "tw", "ja", "ko", "ru", "ar"]);
   if (nonLatinLangs.has(normSource)) {
     return isNonEnglish(trimmed);
@@ -585,10 +591,12 @@ async function executeLlmCompletion(
           { role: "system", content: sysPrompt },
           { role: "user", content: text },
         ],
-        temperature: cfg.temperature,
       };
+      // Invariant 5: Never pass temperature when reasoning effort is enabled
       if (cfg.reasoning) {
         requestBody.reasoning = cfg.reasoning;
+      } else if (cfg.temperature !== undefined) {
+        requestBody.temperature = cfg.temperature;
       }
       const response = await fetch(cfg.endpoint, {
         method: "POST",
@@ -665,7 +673,7 @@ export function isDynamicLongInput(text: string, sourceLang = "en"): boolean {
   const trimmed = text.trim();
   if (!trimmed) return false;
 
-  const normSource = (sourceLang || "zh").toLowerCase().split("-")[0];
+  const normSource = (sourceLang || "en").toLowerCase().split("-")[0];
   const hasCjk = /[\u4e00-\u9fa5\u3040-\u30ff\uac00-\ud7af]/.test(trimmed);
   const isCjk = normSource === "zh" || normSource === "tw" || normSource === "ja" || normSource === "ko" || hasCjk;
   if (isCjk) {
