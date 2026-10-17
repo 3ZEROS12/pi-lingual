@@ -24,8 +24,16 @@ import {
   compileModeSystemPrompt,
   normalizeActiveModeId,
   resolveSelectPrompts,
+  shouldTriggerTranslation,
+  isDynamicLongInput,
 } from "../src/engine.js";
-import { getBannerMaxCols, getVisualWidth } from "../src/layout.js";
+import { getBannerMaxCols, getVisualWidth, getEffectiveMaxCols } from "../src/layout.js";
+import {
+  resolveLanguagePairAnchors,
+  buildPromptCandidatesSystemPrompt,
+  buildModifySystemPrompt,
+} from "../src/prompts.js";
+import { extractRecentContextAnchor } from "../src/extension.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SANDBOX = path.join(ROOT, ".tmp", "test-sandboxes");
@@ -776,3 +784,105 @@ test("/lingual command description across all presets reflects 3-core mode numbe
   assert.equal(SEED_NAMES.de.liveFlow, "Live-Fluss", "German liveFlow must be Live-Fluss");
   assert.equal(SEED_NAMES.ru.liveFlow, "Живой поток", "Russian liveFlow must be Живой поток");
 });
+
+test("Tripartite Subagent Audit Regression: Invariants 5, 12, 18 & anchor routing hardening", () => {
+  // 1. Invariant 18: Universal English baseline fallback (must never assume Chinese on empty/undefined)
+  // When sourceLang is undefined, English sentence should trigger normal translation (not be treated as English-on-Chinese)
+  assert.equal(
+    shouldTriggerTranslation("run git status to verify", undefined as any),
+    true,
+    "shouldTriggerTranslation must default to en sourceLang and trigger translation for English input"
+  );
+  // An 80-char English sentence should NOT trigger long input condensation threshold of CJK (45 chars)
+  const english70Chars = "This is a clean and concise English sentence that does not need condensation.";
+  assert.equal(
+    isDynamicLongInput(english70Chars, undefined as any),
+    false,
+    "isDynamicLongInput must not apply CJK 45-char threshold when sourceLang is undefined"
+  );
+
+  // 2. Misleading Anchor Routing: en ➔ foreign pairs must NOT inject English monolingual rewrites
+  const enDeAnchors = resolveLanguagePairAnchors("en", "de");
+  assert.deepEqual(enDeAnchors, [], "en ➔ de without custom pair must return empty anchors, not English rewrites");
+  const enFrAnchors = resolveLanguagePairAnchors("en", "fr");
+  assert.deepEqual(enFrAnchors, [], "en ➔ fr without custom pair must return empty anchors, not English rewrites");
+
+  // 3. Mode 3 & Mode 4: Semantic variable interpolation & Kill list injection
+  const candidatePrompt = buildPromptCandidatesSystemPrompt({
+    sourceLang: "zh",
+    targetLang: "ja",
+    promptSlots: [
+      { id: "custom", label: "Custom", role: "custom", instruction: "Translate into ${targetLang} strictly", enabled: true },
+    ],
+  });
+  assert.ok(
+    candidatePrompt.includes("Translate into Japanese strictly"),
+    "Mode 3 must interpolate ${targetLang} into Japanese in slot instruction"
+  );
+  assert.ok(
+    candidatePrompt.includes("[KILL LIST - FORBIDDEN AI BUZZWORDS - ZERO TOLERANCE]"),
+    "Mode 3 must inject kill list before JSON schema"
+  );
+
+  const modifyPrompt = buildModifySystemPrompt({
+    sourceLang: "es",
+    targetLang: "es",
+    customSlots: [
+      { id: "fix", label: "Fix", role: "custom", instruction: "Fix typos in ${targetLang}", enabled: true },
+    ],
+  });
+  assert.ok(
+    modifyPrompt.includes("Fix typos in Spanish"),
+    "Mode 4 must interpolate ${targetLang} into Spanish in slot instruction"
+  );
+  assert.ok(
+    !modifyPrompt.includes("[TARGET-LANGUAGE LINGUISTIC PROFILE: ENGLISH]"),
+    "Mode 4 proofreading in Spanish must not inject English preposition rules"
+  );
+  assert.ok(
+    modifyPrompt.includes("[KILL LIST - FORBIDDEN AI BUZZWORDS - ZERO TOLERANCE]"),
+    "Mode 4 must inject kill list before JSON schema"
+  );
+
+  // 4. Invariant 12: Extreme terminal geometry clamp (COLUMNS=20 must not exceed 20)
+  const originalCols = process.stdout.columns;
+  try {
+    Object.defineProperty(process.stdout, "columns", { value: 20, configurable: true });
+    const effectiveCols = getEffectiveMaxCols();
+    assert.ok(
+      effectiveCols <= 20,
+      `getEffectiveMaxCols() on a 20-col terminal must not exceed live columns (got ${effectiveCols})`
+    );
+  } finally {
+    Object.defineProperty(process.stdout, "columns", { value: originalCols, configurable: true });
+  }
+
+  // 5. Context Siphon: Preserves leading flags and skips Markdown table rows
+  const mockCtx = {
+    sessionManager: {
+      getEntries: () => [
+        {
+          type: "message",
+          message: {
+            role: "assistant",
+            content: `Summary of the execution:
+| File | Action |
+| src/engine.ts | Updated |
+
+--dry-run flag was verified on the command line.`,
+          },
+        },
+      ],
+    },
+  };
+  const anchor = extractRecentContextAnchor(mockCtx as any);
+  assert.ok(
+    anchor.startsWith("--dry-run"),
+    `Must preserve leading CLI flag '--dry-run', got: "${anchor}"`
+  );
+  assert.ok(
+    !anchor.includes("|"),
+    `Must not extract Markdown table data rows, got: "${anchor}"`
+  );
+});
+
