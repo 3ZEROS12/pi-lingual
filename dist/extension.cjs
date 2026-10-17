@@ -812,6 +812,74 @@ function resolveSlotLabels(lang = "en") {
   const norm = (lang || "en").toLowerCase().split("-")[0];
   return SLOT_LABELS_BY_LANG[norm] || SLOT_LABELS_BY_LANG.en;
 }
+function localizeSlotLabel(slotId, currentLabel, sourceLang = "en") {
+  const isChineseSource = sourceLang === "zh" || sourceLang === "tw";
+  const hasChinese = /[\u4e00-\u9fa5]/.test(currentLabel || "");
+  const sl = resolveSlotLabels(sourceLang);
+  const normId = (slotId || "").toLowerCase();
+  if (!isChineseSource && (hasChinese || !currentLabel)) {
+    switch (normId) {
+      case "source":
+        return sl.source;
+      case "spoken":
+        return sl.spoken;
+      case "written":
+        return sl.written;
+      case "direct_vocab":
+        return sl.direct_vocab;
+      case "prompt_vocab":
+        return sl.prompt_vocab;
+      case "vocab":
+        if (currentLabel === "\u6838\u5FC3\u8868\u8FBE" || currentLabel === "\u6838\u5FC3\u8868\u9054" || currentLabel === "\u91CD\u8981\u8A9E\u5F59" || currentLabel === "\u91CD\u8981\u8868\u73FE") {
+          return sl.direct_vocab;
+        }
+        return sl.vocab;
+      case "direct_spec":
+      case "en_direct":
+      case "spec":
+        return sl.en_direct;
+      case "fixed":
+        return sl.fixed;
+      case "native":
+        return sl.native;
+      case "fixes":
+      case "takeaways":
+      case "takeaway":
+        return sl.fixes;
+      default:
+        if (normId.includes("source")) return sl.source;
+        if (normId.includes("spoken")) return sl.spoken;
+        if (normId.includes("written")) return sl.written;
+        if (normId.includes("vocab")) return sl.vocab;
+        if (normId.includes("spec") || normId.includes("direct")) return sl.en_direct;
+        if (normId.includes("fix")) return sl.fixed;
+        if (normId.includes("native")) return sl.native;
+        return normId;
+    }
+  }
+  if (!currentLabel) {
+    switch (normId) {
+      case "source":
+        return sl.source;
+      case "spoken":
+        return sl.spoken;
+      case "written":
+        return sl.written;
+      case "vocab":
+        return sl.vocab;
+      case "direct_spec":
+      case "en_direct":
+        return sl.en_direct;
+      case "fixed":
+        return sl.fixed;
+      case "native":
+        return sl.native;
+      case "fixes":
+        return sl.fixes;
+    }
+  }
+  return currentLabel || slotId;
+}
 function getDefaultDirectSlots(sourceLang = "en") {
   const sl = resolveSlotLabels(sourceLang);
   return [
@@ -1885,6 +1953,32 @@ function resolveModeDisplayName(modeId, lang = "en") {
     default:
       return modeId;
   }
+}
+function localizeModeName(modeId, currentName, sourceLang = "en") {
+  const isChineseSource = sourceLang === "zh" || sourceLang === "tw";
+  const hasChinese = /[\u4e00-\u9fa5]/.test(currentName || "");
+  const normId = (modeId || "").toLowerCase();
+  if (!isChineseSource && (hasChinese || !currentName)) {
+    return resolveModeDisplayName(normId, sourceLang);
+  }
+  if (!isChineseSource && (normId === "companion" || normId === "original" || normId === "direct" || normId === "live-flow" || normId === "off" || normId === "candidates")) {
+    return resolveModeDisplayName(normId, sourceLang);
+  }
+  return currentName || resolveModeDisplayName(normId, sourceLang);
+}
+function localizeModes(modes, sourceLang = "en", explainLang) {
+  return modes.map((m) => {
+    const localizedName = localizeModeName(m.id, m.name, sourceLang);
+    const localizedSlots = Array.isArray(m.slots) ? m.slots.map((s) => ({
+      ...s,
+      label: localizeSlotLabel(s.id, s.label, sourceLang)
+    })) : [];
+    return {
+      ...m,
+      name: localizedName,
+      slots: localizedSlots
+    };
+  });
 }
 function getDefaultFactoryModes(sourceLang = "en", explainLang) {
   const n = resolveSeedNames(sourceLang);
@@ -3967,7 +4061,7 @@ function resolveModesFromConfig(cfg, fallbackSourceLang = "en") {
       if (Array.isArray(m.slots) && m.slots.length > 0) return m;
       return { ...m, slots: defaultSlotsForMode(m, sourceLang, explainLang) };
     });
-    if (valid.length > 0) return valid;
+    if (valid.length > 0) return localizeModes(valid, sourceLang, explainLang);
   }
   const hasLegacyCustomSlots = Array.isArray(cfg.slots) || Array.isArray(cfg.directSlots) || Array.isArray(cfg.promptSlots) || Array.isArray(cfg.modifySlots);
   if (hasLegacyCustomSlots) {
@@ -4856,12 +4950,19 @@ var initialPromptSlots = Array.isArray(initialDiskConfig.promptSlots) && initial
 var initialModifySlots = Array.isArray(initialDiskConfig.modifySlots) && initialDiskConfig.modifySlots.length > 0 ? initialDiskConfig.modifySlots : getDefaultModifySlots(initialSourceLang);
 var initialModes = resolveModesFromConfig(initialDiskConfig, initialSourceLang);
 var initialLabels = resolveLabelsForLang(initialSourceLang, initialDiskConfig.labels, initialTargetLang);
+var initialRawMode = initialDiskConfig.activeModeId || initialDiskConfig.mode || "companion";
+var initialNormalizedMode = normalizeActiveModeId(
+  { mode: initialRawMode, activeModeId: initialRawMode },
+  initialModes
+);
 var state = {
-  mode: initialDiskConfig.mode || "original",
+  mode: initialNormalizedMode,
+  activeModeId: initialNormalizedMode,
   modeLocked: Boolean(initialDiskConfig.modeLocked),
   compact: Boolean(initialDiskConfig.compact),
   sourceLang: initialSourceLang,
   targetLang: initialTargetLang,
+  explainLang: initialDiskConfig.explainLang || (initialSourceLang === "zh" || initialSourceLang === "tw" ? "zh" : initialSourceLang),
   selectedModel: initialDiskConfig.selectedModel || "auto",
   slotPreset: initialSlotPreset || "",
   slots: initialSlots,
@@ -5176,11 +5277,10 @@ function extension_default(pi) {
     if (diskCfg.targetLang) {
       state.targetLang = diskCfg.targetLang;
     }
-    if (diskCfg.labels) {
-      state.labels = resolveLabelsForLang(state.sourceLang, diskCfg.labels, state.targetLang);
-    }
+    state.explainLang = diskCfg.explainLang || (state.sourceLang === "zh" || state.sourceLang === "tw" ? "zh" : state.sourceLang);
+    state.labels = resolveLabelsForLang(state.sourceLang, diskCfg.labels, state.targetLang);
     if (Array.isArray(diskCfg.modes) && diskCfg.modes.length > 0) {
-      state.modes = diskCfg.modes;
+      state.modes = localizeModes(diskCfg.modes, state.sourceLang, state.explainLang || state.sourceLang);
     } else {
       state.modes = resolveModesFromConfig(diskCfg, state.sourceLang);
     }
@@ -5191,13 +5291,19 @@ function extension_default(pi) {
     );
     state.activeModeId = state.mode;
     if (diskCfg.slots && Array.isArray(diskCfg.slots) && diskCfg.slots.length > 0) {
-      state.slots = diskCfg.slots;
+      state.slots = state.sourceLang === "zh" || state.sourceLang === "tw" ? diskCfg.slots : diskCfg.slots.map((s) => ({ ...s, label: localizeSlotLabel(s.id, s.label, state.sourceLang) }));
     }
     if (diskCfg.directSlots && Array.isArray(diskCfg.directSlots) && diskCfg.directSlots.length > 0) {
       state.directSlots = diskCfg.directSlots;
     }
     if (diskCfg.promptSlots && Array.isArray(diskCfg.promptSlots) && diskCfg.promptSlots.length > 0) {
       state.promptSlots = diskCfg.promptSlots;
+    }
+    if (state.sourceLang !== "zh" && state.sourceLang !== "tw") {
+      const serialized = JSON.stringify(diskCfg.modes || "");
+      if (/[\u4e00-\u9fa5]/.test(serialized)) {
+        saveUserLingualConfig({ modes: state.modes, explainLang: state.explainLang });
+      }
     }
     syncResizeListener();
     if (hasActiveUI(ctx)) {
@@ -5252,7 +5358,7 @@ function extension_default(pi) {
     if (trimmed) {
       const lower = trimmed.toLowerCase();
       const matched = activeModes.find(
-        (m) => m.id.toLowerCase() === lower || m.name.toLowerCase() === lower || Array.isArray(m.aliases) && m.aliases.some((a) => a.toLowerCase() === lower)
+        (m) => m.id.toLowerCase() === lower || m.name.toLowerCase() === lower || Array.isArray(m.aliases) && m.aliases.some((a) => a.toLowerCase() === lower) || resolveModeDisplayName(m.id, state.sourceLang).toLowerCase() === lower || m.id === "direct" && (lower === "spec" || lower === "logical spec" || lower === "specification" || lower === "direct spec") || m.id === "companion" && (lower === "companion" || lower === "companion mode" || lower === "original") || m.id === "live-flow" && (lower === "live flow" || lower === "flow" || lower === "live" || lower === "modify" || lower === "raw")
       );
       const numIdx = parseInt(trimmed, 10);
       const isNum = !isNaN(numIdx) && String(numIdx) === trimmed;
@@ -5262,6 +5368,12 @@ function extension_default(pi) {
         nextMode = matched.id;
       } else if (explicitLegacy) {
         nextMode = explicitLegacy;
+      } else if (lower === "spec" || lower === "logical spec" || lower === "specification") {
+        nextMode = "direct";
+      } else if (lower === "companion" || lower === "companion mode") {
+        nextMode = "companion";
+      } else if (lower === "live flow" || lower === "flow" || lower === "live") {
+        nextMode = "live-flow";
       } else {
         nextMode = trimmed;
       }
@@ -5300,7 +5412,9 @@ function extension_default(pi) {
       }
       return;
     }
-    const targetMode = activeModes.find((m) => m.id === canonical || m.id === nextMode);
+    const targetMode = activeModes.find(
+      (m) => m.id === canonical || m.id === nextMode || m.name.toLowerCase() === (trimmed || nextMode).toLowerCase() || resolveModeDisplayName(m.id, state.sourceLang).toLowerCase() === (trimmed || nextMode).toLowerCase()
+    );
     if (!targetMode) {
       try {
         ctx.ui.notify(`[lingual] mode [${trimmed || nextMode}] not in your active registry. Run /lingual mode list to view available modes.`, "warning");
@@ -5316,7 +5430,7 @@ function extension_default(pi) {
     updateFooter(ctx);
     const modeIdx = activeModes.indexOf(targetMode);
     const modeNum = modeIdx >= 0 ? modeIdx + 1 : 1;
-    const modeName = targetMode.name;
+    const modeName = localizeModeName(targetMode.id, targetMode.name, state.sourceLang);
     try {
       ctx.ui.notify(`[${pair}] ${modeNum}. ${modeName} (${finalId})`, "info");
     } catch {
@@ -5380,36 +5494,34 @@ function extension_default(pi) {
     const diskBeforeSwitch = loadUserLingualConfig();
     state.sourceLang = newSource;
     state.targetLang = newTarget;
+    if (!diskBeforeSwitch.explainLang || diskBeforeSwitch.explainLang === previousSource || diskBeforeSwitch.explainLang === "zh") {
+      state.explainLang = newSource === "zh" || newSource === "tw" ? "zh" : newSource;
+    } else {
+      state.explainLang = diskBeforeSwitch.explainLang;
+    }
     state.labels = resolveLabelsForLang(newSource, void 0, newTarget);
     if (state.slotPreset) {
       state.slots = resolveSlotsForPreset(state.slotPreset, newSource);
     } else {
-      const freshDefaults = getDefaultSlots(newSource);
-      const freshMap = new Map(freshDefaults.map((s) => [s.id, s]));
-      state.slots = (state.slots || freshDefaults).map((s) => {
-        const match = freshMap.get(s.id);
-        return match ? {
-          ...match,
-          enabled: s.enabled,
-          showMeaning: s.showMeaning,
-          ...s.instruction ? { instruction: s.instruction } : {}
-        } : s;
-      });
+      state.slots = getDefaultSlots(newSource);
     }
-    if (!diskBeforeSwitch.directSlots || diskBeforeSwitch.directSlots.length === 0) {
-      state.directSlots = getDefaultDirectSlots(newSource);
+    state.directSlots = getDefaultDirectSlots(newSource);
+    state.promptSlots = getDefaultPromptSlots(newSource);
+    state.modifySlots = getDefaultModifySlots(newSource, state.explainLang);
+    const currentModes = Array.isArray(state.modes) && state.modes.length > 0 ? state.modes : resolveModesFromConfig(diskBeforeSwitch, newSource);
+    const isFactory = !diskBeforeSwitch.modes || diskBeforeSwitch.modes.length === 0 || currentModes.length === 3 && currentModes.every((m) => ["companion", "direct", "live-flow"].includes(m.id));
+    if (isFactory) {
+      state.modes = getDefaultFactoryModes(newSource, state.explainLang);
+    } else {
+      state.modes = localizeModes(currentModes, newSource, state.explainLang);
     }
-    if (!diskBeforeSwitch.promptSlots || diskBeforeSwitch.promptSlots.length === 0) {
-      state.promptSlots = getDefaultPromptSlots(newSource);
-    }
-    if (!diskBeforeSwitch.modes || diskBeforeSwitch.modes.length === 0) {
-      state.modes = getDefaultFactoryModes(newSource, newSource);
-      state.mode = normalizeActiveModeId({ mode: state.mode, activeModeId: state.activeModeId }, state.modes);
-      state.activeModeId = state.mode;
-    }
+    state.mode = normalizeActiveModeId({ mode: state.mode, activeModeId: state.activeModeId }, state.modes);
+    state.activeModeId = state.mode;
     saveUserLingualConfig({
       sourceLang: newSource,
       targetLang: newTarget,
+      explainLang: state.explainLang,
+      modes: state.modes,
       slots: state.slots,
       directSlots: state.directSlots,
       promptSlots: state.promptSlots
@@ -5902,8 +6014,8 @@ Usage: /lingual loadout [list | apply <id>] (e.g. /lingual loadout apply spec)`;
     const options = activeModes.map((m, idx) => ({
       num: idx + 1,
       id: m.id,
-      name: m.name,
-      englishTag: m.id === "companion" ? "Companion" : m.id === "direct" ? "Logical Spec" : m.id === "live-flow" ? "Live Flow" : void 0
+      name: localizeModeName(m.id, m.name, state.sourceLang),
+      englishTag: state.sourceLang === "en" ? void 0 : m.id === "companion" ? "Companion" : m.id === "direct" ? "Logical Spec" : m.id === "live-flow" ? "Live Flow" : void 0
     }));
     options.push({
       num: 0,
@@ -5915,95 +6027,101 @@ Usage: /lingual loadout [list | apply <id>] (e.g. /lingual loadout apply spec)`;
     let initialIndex = options.findIndex((o) => o.id === currentModeId);
     if (initialIndex === -1) initialIndex = 0;
     if (hasActiveUI(ctx) && typeof ctx.ui.custom === "function") {
-      const chosen = await ctx.ui.custom(
-        (tui, theme, _kb, done) => {
-          let selectedIndex = initialIndex;
-          let finished = false;
-          const finish = (val) => {
-            if (finished) return;
-            finished = true;
-            done(val);
-          };
-          return {
-            render(width) {
-              try {
-                return formatModePickerLines(
-                  title,
-                  hint,
-                  pair,
-                  options,
-                  selectedIndex,
-                  width,
-                  theme
-                );
-              } catch {
-                return formatModePickerLines(
-                  title,
-                  hint,
-                  pair,
-                  options,
-                  selectedIndex,
-                  width
-                );
+      try {
+        const chosen = await ctx.ui.custom(
+          (tui, theme, _kb, done) => {
+            let selectedIndex = initialIndex;
+            let finished = false;
+            const finish = (val) => {
+              if (finished) return;
+              finished = true;
+              done(val);
+            };
+            return {
+              render(width) {
+                try {
+                  return formatModePickerLines(
+                    title,
+                    hint,
+                    pair,
+                    options,
+                    selectedIndex,
+                    width,
+                    theme
+                  );
+                } catch {
+                  return formatModePickerLines(
+                    title,
+                    hint,
+                    pair,
+                    options,
+                    selectedIndex,
+                    width
+                  );
+                }
+              },
+              invalidate() {
+              },
+              handleInput(data) {
+                if (data.startsWith("\x1B[<") || data.startsWith("\x1B[M") || data.startsWith("\x1B[200~")) {
+                  return;
+                }
+                if (data === "0") {
+                  finish("off");
+                  return;
+                }
+                const num = parseInt(data, 10);
+                if (!isNaN(num) && num >= 1 && num <= activeModes.length) {
+                  finish(activeModes[num - 1].id);
+                  return;
+                }
+                if (data === "\x1B" || data === "q" || data === "") {
+                  finish(null);
+                  return;
+                }
+                if (data === "\x1B[C" || data === "\x1B[B" || data === "l" || data === "j" || data === "	") {
+                  selectedIndex = (selectedIndex + 1) % options.length;
+                  tui?.requestRender?.();
+                  return;
+                }
+                if (data === "\x1B[D" || data === "\x1B[A" || data === "h" || data === "k") {
+                  selectedIndex = (selectedIndex - 1 + options.length) % options.length;
+                  tui?.requestRender?.();
+                  return;
+                }
+                if (data === "\r" || data === "\n" || data === "\r\n" || data === " ") {
+                  finish(options[selectedIndex]?.id || null);
+                  return;
+                }
               }
-            },
-            invalidate() {
-            },
-            handleInput(data) {
-              if (data.startsWith("\x1B[<") || data.startsWith("\x1B[M") || data.startsWith("\x1B[200~")) {
-                return;
-              }
-              if (data === "0") {
-                finish("off");
-                return;
-              }
-              const num = parseInt(data, 10);
-              if (!isNaN(num) && num >= 1 && num <= activeModes.length) {
-                finish(activeModes[num - 1].id);
-                return;
-              }
-              if (data === "\x1B" || data === "q" || data === "") {
-                finish(null);
-                return;
-              }
-              if (data === "\x1B[C" || data === "\x1B[B" || data === "l" || data === "j" || data === "	") {
-                selectedIndex = (selectedIndex + 1) % options.length;
-                tui?.requestRender?.();
-                return;
-              }
-              if (data === "\x1B[D" || data === "\x1B[A" || data === "h" || data === "k") {
-                selectedIndex = (selectedIndex - 1 + options.length) % options.length;
-                tui?.requestRender?.();
-                return;
-              }
-              if (data === "\r" || data === "\n" || data === "\r\n" || data === " ") {
-                finish(options[selectedIndex]?.id || null);
-                return;
-              }
-            }
-          };
+            };
+          }
+        );
+        if (chosen !== null && chosen !== void 0) {
+          await setModeHandler(chosen, ctx);
+          return chosen;
         }
-      );
-      if (chosen !== null && chosen !== void 0) {
-        await setModeHandler(chosen, ctx);
-        return chosen;
+        return null;
+      } catch {
       }
-      return null;
     }
     if (hasActiveUI(ctx) && typeof ctx.ui.select === "function") {
-      const selectItems = options.map((opt) => ({
-        label: `[${opt.num}] ${opt.name}${opt.englishTag ? ` (${opt.englishTag})` : ""}`,
-        value: opt.id
-      }));
-      const chosen = await ctx.ui.select(
-        `[lingual \xB7 ${pair}] ${title} (${hint})`,
-        selectItems
-      );
-      if (chosen) {
-        await setModeHandler(chosen, ctx);
-        return chosen;
+      try {
+        const selectItems = options.map((opt) => ({
+          label: `[${opt.num}] ${opt.name}${opt.englishTag ? ` (${opt.englishTag})` : ""}`,
+          value: opt.id
+        }));
+        const chosen = await ctx.ui.select(
+          `[lingual \xB7 ${pair}] ${title} (${hint})`,
+          selectItems
+        );
+        if (chosen) {
+          await setModeHandler(chosen, ctx);
+          return chosen;
+        }
+        return null;
+      } catch {
       }
-      return null;
     }
     await setModeHandler("", ctx);
     return null;
@@ -6011,7 +6129,14 @@ Usage: /lingual loadout [list | apply <id>] (e.g. /lingual loadout apply spec)`;
   const masterCommandHandler = async (args, ctx) => {
     const trimmed = args?.trim();
     if (!trimmed) {
-      await openModePicker(ctx);
+      try {
+        await openModePicker(ctx);
+      } catch {
+        try {
+          await setModeHandler("", ctx);
+        } catch {
+        }
+      }
       return;
     }
     const lower = trimmed.toLowerCase();
@@ -6110,13 +6235,21 @@ Usage: /lingual loadout [list | apply <id>] (e.g. /lingual loadout apply spec)`;
       updateFooter(ctx);
       return;
     }
-    const currentModes = Array.isArray(state.modes) && state.modes.length > 0 ? state.modes : resolveModesFromConfig(loadUserLingualConfig());
-    const isMatchedMode = currentModes.some(
-      (m) => m.id.toLowerCase() === sub || m.name.toLowerCase() === sub || Array.isArray(m.aliases) && m.aliases.some((a) => a.toLowerCase() === sub)
-    );
+    const currentModes = Array.isArray(state.modes) && state.modes.length > 0 ? state.modes : resolveModesFromConfig(loadUserLingualConfig(), state.sourceLang);
+    const isMatchedMode = currentModes.some((m) => {
+      const idMatch = m.id.toLowerCase() === sub || m.id.toLowerCase() === lower;
+      const nameMatch = m.name.toLowerCase() === sub || m.name.toLowerCase() === lower;
+      const aliasMatch = Array.isArray(m.aliases) && m.aliases.some((a) => a.toLowerCase() === sub || a.toLowerCase() === lower);
+      const locName = resolveModeDisplayName(m.id, state.sourceLang).toLowerCase();
+      const locMatch = locName === sub || locName === lower;
+      const specMatch = m.id === "direct" && (sub === "spec" || lower === "spec" || lower === "logical spec" || lower === "specification" || lower === "direct spec");
+      const compMatch = m.id === "companion" && (sub === "companion" || lower === "companion" || lower === "companion mode" || lower === "original");
+      const flowMatch = m.id === "live-flow" && (sub === "flow" || lower === "flow" || lower === "live flow" || lower === "live" || lower === "modify" || lower === "raw");
+      return idMatch || nameMatch || aliasMatch || locMatch || specMatch || compMatch || flowMatch;
+    });
     const numIdx = parseInt(sub, 10);
     const isNum = !isNaN(numIdx) && String(numIdx) === sub;
-    const isKnownMode = sub === "mode" || isMatchedMode || isNum && numIdx >= 0 && numIdx <= currentModes.length || normalizeLingualModeInput(sub) !== null;
+    const isKnownMode = sub === "mode" || isMatchedMode || isNum && numIdx >= 0 && numIdx <= currentModes.length || normalizeLingualModeInput(sub) !== null || normalizeLingualModeInput(lower) !== null;
     if (isKnownMode) {
       await setModeHandler(sub === "mode" ? subArgs : trimmed, ctx);
       return;

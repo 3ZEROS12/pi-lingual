@@ -65,6 +65,10 @@ import {
   defaultSlotsForMode,
   shouldInjectNativeReplyGuard,
   formatNativeReplyGuardHint,
+  localizeModes,
+  localizeModeName,
+  localizeSlotLabel,
+  resolveSlotLabels,
 } from "./engine.js";
 import {
   resolveLabelsForLang,
@@ -107,6 +111,7 @@ interface ExtensionState {
   compact: boolean;
   sourceLang: string;
   targetLang: string;
+  explainLang?: string;
   selectedModel: string;
   slotPreset: string;
   slots: SlotConfig[];
@@ -137,12 +142,20 @@ const initialModifySlots = Array.isArray(initialDiskConfig.modifySlots) && initi
 const initialModes = resolveModesFromConfig(initialDiskConfig, initialSourceLang);
 const initialLabels = resolveLabelsForLang(initialSourceLang, initialDiskConfig.labels, initialTargetLang);
 
+const initialRawMode = initialDiskConfig.activeModeId || initialDiskConfig.mode || "companion";
+const initialNormalizedMode = normalizeActiveModeId(
+  { mode: initialRawMode, activeModeId: initialRawMode },
+  initialModes
+) as LingualMode;
+
 const state: ExtensionState = {
-  mode: initialDiskConfig.mode || "original",
+  mode: initialNormalizedMode,
+  activeModeId: initialNormalizedMode,
   modeLocked: Boolean(initialDiskConfig.modeLocked),
   compact: Boolean(initialDiskConfig.compact),
   sourceLang: initialSourceLang,
   targetLang: initialTargetLang,
+  explainLang: initialDiskConfig.explainLang || (initialSourceLang === "zh" || initialSourceLang === "tw" ? "zh" : initialSourceLang),
   selectedModel: initialDiskConfig.selectedModel || "auto",
   slotPreset: initialSlotPreset || "",
   slots: initialSlots,
@@ -550,11 +563,11 @@ export default function (pi: ExtensionAPI) {
     if (diskCfg.targetLang) {
       state.targetLang = diskCfg.targetLang;
     }
-    if (diskCfg.labels) {
-      state.labels = resolveLabelsForLang(state.sourceLang, diskCfg.labels, state.targetLang);
-    }
+    state.explainLang = diskCfg.explainLang || (state.sourceLang === "zh" || state.sourceLang === "tw" ? "zh" : state.sourceLang);
+    state.labels = resolveLabelsForLang(state.sourceLang, diskCfg.labels, state.targetLang);
+
     if (Array.isArray(diskCfg.modes) && diskCfg.modes.length > 0) {
-      state.modes = diskCfg.modes;
+      state.modes = localizeModes(diskCfg.modes, state.sourceLang, state.explainLang || state.sourceLang);
     } else {
       state.modes = resolveModesFromConfig(diskCfg, state.sourceLang);
     }
@@ -566,13 +579,23 @@ export default function (pi: ExtensionAPI) {
     );
     state.activeModeId = state.mode;
     if (diskCfg.slots && Array.isArray(diskCfg.slots) && diskCfg.slots.length > 0) {
-      state.slots = diskCfg.slots;
+      state.slots = (state.sourceLang === "zh" || state.sourceLang === "tw")
+        ? diskCfg.slots
+        : diskCfg.slots.map((s) => ({ ...s, label: localizeSlotLabel(s.id, s.label, state.sourceLang) }));
     }
     if (diskCfg.directSlots && Array.isArray(diskCfg.directSlots) && diskCfg.directSlots.length > 0) {
       state.directSlots = diskCfg.directSlots;
     }
     if (diskCfg.promptSlots && Array.isArray(diskCfg.promptSlots) && diskCfg.promptSlots.length > 0) {
       state.promptSlots = diskCfg.promptSlots;
+    }
+
+    // Auto-heal Chinese residue on disk if sourceLang is not Chinese (RFC 2119 Invariant 18)
+    if (state.sourceLang !== "zh" && state.sourceLang !== "tw") {
+      const serialized = JSON.stringify(diskCfg.modes || "");
+      if (/[\u4e00-\u9fa5]/.test(serialized)) {
+        saveUserLingualConfig({ modes: state.modes, explainLang: state.explainLang });
+      }
     }
     syncResizeListener();
     if (hasActiveUI(ctx)) {
@@ -650,7 +673,11 @@ export default function (pi: ExtensionAPI) {
         (m) =>
           m.id.toLowerCase() === lower ||
           m.name.toLowerCase() === lower ||
-          (Array.isArray(m.aliases) && m.aliases.some((a) => a.toLowerCase() === lower))
+          (Array.isArray(m.aliases) && m.aliases.some((a) => a.toLowerCase() === lower)) ||
+          resolveModeDisplayName(m.id, state.sourceLang).toLowerCase() === lower ||
+          (m.id === "direct" && (lower === "spec" || lower === "logical spec" || lower === "specification" || lower === "direct spec")) ||
+          (m.id === "companion" && (lower === "companion" || lower === "companion mode" || lower === "original")) ||
+          (m.id === "live-flow" && (lower === "live flow" || lower === "flow" || lower === "live" || lower === "modify" || lower === "raw"))
       );
       const numIdx = parseInt(trimmed, 10);
       const isNum = !isNaN(numIdx) && String(numIdx) === trimmed;
@@ -661,6 +688,12 @@ export default function (pi: ExtensionAPI) {
         nextMode = matched.id;
       } else if (explicitLegacy) {
         nextMode = explicitLegacy;
+      } else if (lower === "spec" || lower === "logical spec" || lower === "specification") {
+        nextMode = "direct";
+      } else if (lower === "companion" || lower === "companion mode") {
+        nextMode = "companion";
+      } else if (lower === "live flow" || lower === "flow" || lower === "live") {
+        nextMode = "live-flow";
       } else {
         nextMode = trimmed;
       }
@@ -723,7 +756,13 @@ export default function (pi: ExtensionAPI) {
       return;
     }
 
-    const targetMode = activeModes.find((m) => m.id === canonical || m.id === nextMode);
+    const targetMode = activeModes.find(
+      (m) =>
+        m.id === canonical ||
+        m.id === nextMode ||
+        m.name.toLowerCase() === (trimmed || nextMode).toLowerCase() ||
+        resolveModeDisplayName(m.id, state.sourceLang).toLowerCase() === (trimmed || nextMode).toLowerCase()
+    );
     if (!targetMode) {
       try {
         ctx.ui.notify(`[lingual] mode [${trimmed || nextMode}] not in your active registry. Run /lingual mode list to view available modes.`, "warning");
@@ -740,7 +779,7 @@ export default function (pi: ExtensionAPI) {
 
     const modeIdx = activeModes.indexOf(targetMode);
     const modeNum = modeIdx >= 0 ? modeIdx + 1 : 1;
-    const modeName = targetMode.name;
+    const modeName = localizeModeName(targetMode.id, targetMode.name, state.sourceLang);
     try {
       ctx.ui.notify(`[${pair}] ${modeNum}. ${modeName} (${finalId})`, "info");
     } catch {}
@@ -820,40 +859,44 @@ export default function (pi: ExtensionAPI) {
     const diskBeforeSwitch = loadUserLingualConfig();
     state.sourceLang = newSource;
     state.targetLang = newTarget;
+    if (!diskBeforeSwitch.explainLang || diskBeforeSwitch.explainLang === previousSource || diskBeforeSwitch.explainLang === "zh") {
+      state.explainLang = (newSource === "zh" || newSource === "tw") ? "zh" : newSource;
+    } else {
+      state.explainLang = diskBeforeSwitch.explainLang;
+    }
     state.labels = resolveLabelsForLang(newSource, undefined, newTarget);
     if (state.slotPreset) {
       state.slots = resolveSlotsForPreset(state.slotPreset, newSource);
     } else {
-      const freshDefaults = getDefaultSlots(newSource);
-      const freshMap = new Map(freshDefaults.map((s) => [s.id, s]));
-      state.slots = (state.slots || freshDefaults).map((s) => {
-        const match = freshMap.get(s.id);
-        return match
-          ? {
-              ...match,
-              enabled: s.enabled,
-              showMeaning: s.showMeaning,
-              ...(s.instruction ? { instruction: s.instruction } : {}),
-            }
-          : s;
-      });
+      state.slots = getDefaultSlots(newSource);
     }
-    // Only reset directSlots / promptSlots to newSource defaults if user has NOT customized them on disk
-    if (!diskBeforeSwitch.directSlots || diskBeforeSwitch.directSlots.length === 0) {
-      state.directSlots = getDefaultDirectSlots(newSource);
+    state.directSlots = getDefaultDirectSlots(newSource);
+    state.promptSlots = getDefaultPromptSlots(newSource);
+    state.modifySlots = getDefaultModifySlots(newSource, state.explainLang);
+
+    // Refresh modes: either full default factory modes or localized modes
+    const currentModes = Array.isArray(state.modes) && state.modes.length > 0
+      ? state.modes
+      : resolveModesFromConfig(diskBeforeSwitch, newSource);
+
+    const isFactory =
+      !diskBeforeSwitch.modes ||
+      diskBeforeSwitch.modes.length === 0 ||
+      (currentModes.length === 3 && currentModes.every((m) => ["companion", "direct", "live-flow"].includes(m.id)));
+
+    if (isFactory) {
+      state.modes = getDefaultFactoryModes(newSource, state.explainLang);
+    } else {
+      state.modes = localizeModes(currentModes, newSource, state.explainLang);
     }
-    if (!diskBeforeSwitch.promptSlots || diskBeforeSwitch.promptSlots.length === 0) {
-      state.promptSlots = getDefaultPromptSlots(newSource);
-    }
-    // Only refresh factory modes to newSource defaults if user has NOT customized them on disk
-    if (!diskBeforeSwitch.modes || diskBeforeSwitch.modes.length === 0) {
-      state.modes = getDefaultFactoryModes(newSource, newSource);
-      state.mode = normalizeActiveModeId({ mode: state.mode, activeModeId: state.activeModeId }, state.modes) as any;
-      state.activeModeId = state.mode;
-    }
+    state.mode = normalizeActiveModeId({ mode: state.mode, activeModeId: state.activeModeId }, state.modes) as any;
+    state.activeModeId = state.mode;
+
     saveUserLingualConfig({
       sourceLang: newSource,
       targetLang: newTarget,
+      explainLang: state.explainLang,
+      modes: state.modes,
       slots: state.slots,
       directSlots: state.directSlots,
       promptSlots: state.promptSlots,
@@ -1442,9 +1485,11 @@ export default function (pi: ExtensionAPI) {
     const options: ModePickerOption[] = activeModes.map((m, idx) => ({
       num: idx + 1,
       id: m.id,
-      name: m.name,
+      name: localizeModeName(m.id, m.name, state.sourceLang),
       englishTag:
-        m.id === "companion"
+        state.sourceLang === "en"
+          ? undefined
+          : m.id === "companion"
           ? "Companion"
           : m.id === "direct"
           ? "Logical Spec"
@@ -1469,107 +1514,115 @@ export default function (pi: ExtensionAPI) {
 
     // 1. Interactive custom component via ctx.ui.custom
     if (hasActiveUI(ctx) && typeof (ctx.ui as any).custom === "function") {
-      const chosen = await (ctx.ui as any).custom(
-        (tui: any, theme: any, _kb: any, done: (val: string | null) => void) => {
-          let selectedIndex = initialIndex;
-          let finished = false;
-          const finish = (val: string | null) => {
-            if (finished) return;
-            finished = true;
-            done(val);
-          };
+      try {
+        const chosen = await (ctx.ui as any).custom(
+          (tui: any, theme: any, _kb: any, done: (val: string | null) => void) => {
+            let selectedIndex = initialIndex;
+            let finished = false;
+            const finish = (val: string | null) => {
+              if (finished) return;
+              finished = true;
+              done(val);
+            };
 
-          return {
-            render(width: number): string[] {
-              try {
-                return formatModePickerLines(
-                  title,
-                  hint,
-                  pair,
-                  options,
-                  selectedIndex,
-                  width,
-                  theme
-                );
-              } catch {
-                return formatModePickerLines(
-                  title,
-                  hint,
-                  pair,
-                  options,
-                  selectedIndex,
-                  width
-                );
-              }
-            },
-            invalidate() {},
-            handleInput(data: string) {
-              // Ignore mouse tracking escapes and bracketed paste sequences
-              if (data.startsWith("\x1b[<") || data.startsWith("\x1b[M") || data.startsWith("\x1b[200~")) {
-                return;
-              }
+            return {
+              render(width: number): string[] {
+                try {
+                  return formatModePickerLines(
+                    title,
+                    hint,
+                    pair,
+                    options,
+                    selectedIndex,
+                    width,
+                    theme
+                  );
+                } catch {
+                  return formatModePickerLines(
+                    title,
+                    hint,
+                    pair,
+                    options,
+                    selectedIndex,
+                    width
+                  );
+                }
+              },
+              invalidate() {},
+              handleInput(data: string) {
+                // Ignore mouse tracking escapes and bracketed paste sequences
+                if (data.startsWith("\x1b[<") || data.startsWith("\x1b[M") || data.startsWith("\x1b[200~")) {
+                  return;
+                }
 
-              // Direct numeric hotkeys 1..N and 0 (instant execution without Enter)
-              if (data === "0") {
-                finish("off");
-                return;
-              }
-              const num = parseInt(data, 10);
-              if (!isNaN(num) && num >= 1 && num <= activeModes.length) {
-                finish(activeModes[num - 1].id);
-                return;
-              }
+                // Direct numeric hotkeys 1..N and 0 (instant execution without Enter)
+                if (data === "0") {
+                  finish("off");
+                  return;
+                }
+                const num = parseInt(data, 10);
+                if (!isNaN(num) && num >= 1 && num <= activeModes.length) {
+                  finish(activeModes[num - 1].id);
+                  return;
+                }
 
-              // Esc, q, Ctrl+C (cancel without changing mode)
-              if (data === "\x1b" || data === "q" || data === "\x03") {
-                finish(null);
-                return;
-              }
+                // Esc, q, Ctrl+C (cancel without changing mode)
+                if (data === "\x1b" || data === "q" || data === "\x03") {
+                  finish(null);
+                  return;
+                }
 
-              // Arrow navigation and vim keys (Down/Right/j/l/Tab advances; Up/Left/k/h retreats)
-              if (data === "\x1b[C" || data === "\x1b[B" || data === "l" || data === "j" || data === "\t") {
-                selectedIndex = (selectedIndex + 1) % options.length;
-                tui?.requestRender?.();
-                return;
-              }
-              if (data === "\x1b[D" || data === "\x1b[A" || data === "h" || data === "k") {
-                selectedIndex = (selectedIndex - 1 + options.length) % options.length;
-                tui?.requestRender?.();
-                return;
-              }
+                // Arrow navigation and vim keys (Down/Right/j/l/Tab advances; Up/Left/k/h retreats)
+                if (data === "\x1b[C" || data === "\x1b[B" || data === "l" || data === "j" || data === "\t") {
+                  selectedIndex = (selectedIndex + 1) % options.length;
+                  tui?.requestRender?.();
+                  return;
+                }
+                if (data === "\x1b[D" || data === "\x1b[A" || data === "h" || data === "k") {
+                  selectedIndex = (selectedIndex - 1 + options.length) % options.length;
+                  tui?.requestRender?.();
+                  return;
+                }
 
-              // Enter, CRLF or Space confirms selection
-              if (data === "\r" || data === "\n" || data === "\r\n" || data === " ") {
-                finish(options[selectedIndex]?.id || null);
-                return;
-              }
-            },
-          };
+                // Enter, CRLF or Space confirms selection
+                if (data === "\r" || data === "\n" || data === "\r\n" || data === " ") {
+                  finish(options[selectedIndex]?.id || null);
+                  return;
+                }
+              },
+            };
+          }
+        );
+
+        if (chosen !== null && chosen !== undefined) {
+          await setModeHandler(chosen, ctx);
+          return chosen;
         }
-      );
-
-      if (chosen !== null && chosen !== undefined) {
-        await setModeHandler(chosen, ctx);
-        return chosen;
+        return null;
+      } catch {
+        // Fall back gracefully to select or headless
       }
-      return null;
     }
 
     // 2. Select dialog fallback when ctx.ui.custom is not supported
     if (hasActiveUI(ctx) && typeof (ctx.ui as any).select === "function") {
-      const selectItems = options.map((opt) => ({
-        label: `[${opt.num}] ${opt.name}${opt.englishTag ? ` (${opt.englishTag})` : ""}`,
-        value: opt.id,
-      }));
-      const chosen = await (ctx.ui as any).select(
-        `[lingual · ${pair}] ${title} (${hint})`,
-        selectItems
-      );
-      if (chosen) {
-        await setModeHandler(chosen, ctx);
-        return chosen;
+      try {
+        const selectItems = options.map((opt) => ({
+          label: `[${opt.num}] ${opt.name}${opt.englishTag ? ` (${opt.englishTag})` : ""}`,
+          value: opt.id,
+        }));
+        const chosen = await (ctx.ui as any).select(
+          `[lingual · ${pair}] ${title} (${hint})`,
+          selectItems
+        );
+        if (chosen) {
+          await setModeHandler(chosen, ctx);
+          return chosen;
+        }
+        return null;
+      } catch {
+        // Fall back to headless
       }
-      return null;
     }
 
     // 3. Headless / CLI non-interactive fallback
@@ -1582,7 +1635,13 @@ export default function (pi: ExtensionAPI) {
     const trimmed = args?.trim();
     if (!trimmed) {
       // Parameterless /lingual or /l: open interactive capsule mode picker
-      await openModePicker(ctx);
+      try {
+        await openModePicker(ctx);
+      } catch {
+        try {
+          await setModeHandler("", ctx);
+        } catch {}
+      }
       return;
     }
 
@@ -1716,20 +1775,26 @@ export default function (pi: ExtensionAPI) {
     // 7. Mode jump by number, keyword, or registered custom mode ID (/lingual 1|2|3|0|commit|spec|...)
     const currentModes = Array.isArray(state.modes) && state.modes.length > 0
       ? state.modes
-      : resolveModesFromConfig(loadUserLingualConfig());
-    const isMatchedMode = currentModes.some(
-      (m) =>
-        m.id.toLowerCase() === sub ||
-        m.name.toLowerCase() === sub ||
-        (Array.isArray(m.aliases) && m.aliases.some((a) => a.toLowerCase() === sub))
-    );
+      : resolveModesFromConfig(loadUserLingualConfig(), state.sourceLang);
+    const isMatchedMode = currentModes.some((m) => {
+      const idMatch = m.id.toLowerCase() === sub || m.id.toLowerCase() === lower;
+      const nameMatch = m.name.toLowerCase() === sub || m.name.toLowerCase() === lower;
+      const aliasMatch = Array.isArray(m.aliases) && m.aliases.some((a) => a.toLowerCase() === sub || a.toLowerCase() === lower);
+      const locName = resolveModeDisplayName(m.id, state.sourceLang).toLowerCase();
+      const locMatch = locName === sub || locName === lower;
+      const specMatch = m.id === "direct" && (sub === "spec" || lower === "spec" || lower === "logical spec" || lower === "specification" || lower === "direct spec");
+      const compMatch = m.id === "companion" && (sub === "companion" || lower === "companion" || lower === "companion mode" || lower === "original");
+      const flowMatch = m.id === "live-flow" && (sub === "flow" || lower === "flow" || lower === "live flow" || lower === "live" || lower === "modify" || lower === "raw");
+      return idMatch || nameMatch || aliasMatch || locMatch || specMatch || compMatch || flowMatch;
+    });
     const numIdx = parseInt(sub, 10);
     const isNum = !isNaN(numIdx) && String(numIdx) === sub;
     const isKnownMode =
       sub === "mode" ||
       isMatchedMode ||
       (isNum && numIdx >= 0 && numIdx <= currentModes.length) ||
-      normalizeLingualModeInput(sub) !== null;
+      normalizeLingualModeInput(sub) !== null ||
+      normalizeLingualModeInput(lower) !== null;
 
     if (isKnownMode) {
       await setModeHandler(sub === "mode" ? subArgs : trimmed, ctx);

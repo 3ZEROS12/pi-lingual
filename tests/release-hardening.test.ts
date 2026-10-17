@@ -17,6 +17,10 @@ import {
   getDefaultDirectSlots,
   getDefaultPromptSlots,
   getDefaultModifySlots,
+  localizeModes,
+  localizeModeName,
+  localizeSlotLabel,
+  resolveModeDisplayName,
 } from "../src/presets.js";
 import {
   resolveModesFromConfig,
@@ -996,5 +1000,172 @@ index abc1234..def5678 100644
     2,
     "Composite ZWJ emoji sequence (developer) must remain 2 visual cells (not 4)"
   );
+
+  // 14. Non-Chinese sourceLang dynamic slot & mode localization (Zero Chinese Residue)
+  const legacyChineseDiskConfig = {
+    sourceLang: "en",
+    targetLang: "ru",
+    explainLang: "zh",
+    modes: [
+      {
+        id: "companion",
+        name: "纯伴学",
+        flow: "translate",
+        action: "pass-through",
+        hud: "tree",
+        slots: [
+          { id: "source", label: "原文", role: "source", enabled: true },
+          { id: "spoken", label: "口语", role: "translation", enabled: true },
+          { id: "written", label: "写作", role: "translation", enabled: true },
+          { id: "vocab", label: "重点", role: "vocab", enabled: true },
+        ],
+        enabled: true,
+      },
+      {
+        id: "direct",
+        name: "规范直发",
+        flow: "translate",
+        action: "transform",
+        hud: "preview",
+        slots: [
+          { id: "direct_spec", label: "规范直发", role: "rewrite", enabled: true },
+          { id: "vocab", label: "核心表达", role: "vocab", enabled: true },
+        ],
+        enabled: true,
+      },
+      {
+        id: "live-flow",
+        name: "实战狂飙",
+        flow: "proofread",
+        action: "transform",
+        hud: "adaptive-takeaway",
+        slots: [
+          { id: "fixed", label: "原句修补", role: "rewrite", enabled: true },
+          { id: "native", label: "地道表达", role: "rewrite", enabled: true },
+          { id: "fixes", label: "收获复盘", role: "vocab", enabled: true },
+        ],
+        enabled: true,
+      },
+    ],
+  };
+
+  const resolvedEnModes = resolveModesFromConfig(legacyChineseDiskConfig as any, "en");
+  assert.equal(resolvedEnModes[0].name, "Companion", "Mode 1 name must be localized to Companion in English");
+  assert.deepEqual(
+    resolvedEnModes[0].slots?.map((s) => s.label),
+    ["Original", "Spoken", "Written", "Vocab"],
+    "Mode 1 slot labels must be localized to English with zero Chinese"
+  );
+  assert.equal(resolvedEnModes[1].name, "Logical Spec", "Mode 2 name must be localized to Logical Spec in English");
+  assert.deepEqual(
+    resolvedEnModes[1].slots?.map((s) => s.label),
+    ["Logical Spec", "Key Terms"],
+    "Mode 2 slot labels must be localized to English with zero Chinese"
+  );
+  assert.equal(resolvedEnModes[2].name, "Live Flow", "Mode 3 name must be localized to Live Flow in English");
+  assert.deepEqual(
+    resolvedEnModes[2].slots?.map((s) => s.label),
+    ["Fixed", "Native", "Takeaway"],
+    "Mode 3 slot labels must be localized to English with zero Chinese"
+  );
+  assert.equal(
+    /[\u4e00-\u9fa5]/.test(JSON.stringify(resolvedEnModes)),
+    false,
+    "When sourceLang is English, resolved modes and slots must contain ZERO Chinese characters"
+  );
+
+  // 15. Russian sourceLang dynamic slot & mode localization
+  const legacyRussianDiskConfig = { ...legacyChineseDiskConfig, sourceLang: "ru" };
+  const resolvedRuModes = resolveModesFromConfig(legacyRussianDiskConfig as any, "ru");
+  assert.equal(resolvedRuModes[0].name, "Сопровождение", "Mode 1 name must be localized to Russian");
+  assert.deepEqual(
+    resolvedRuModes[0].slots?.map((s) => s.label),
+    ["Оригинал", "Разговорный", "Деловой", "Лексика"],
+    "Mode 1 slot labels must be localized to Russian"
+  );
+  assert.equal(
+    /[\u4e00-\u9fa5]/.test(JSON.stringify(resolvedRuModes)),
+    false,
+    "When sourceLang is Russian, resolved modes and slots must contain ZERO Chinese characters"
+  );
+});
+
+test("/lingual command execution - handles parameterless, multi-word modes, aliases, and Russian names", async () => {
+  const registeredCommands: Record<string, any> = {};
+  const mockPi: any = {
+    on() {},
+    registerCommand(name: string, def: any) {
+      registeredCommands[name] = def;
+    },
+    registerShortcut() {},
+  };
+
+  const extensionModule = await import("../dist/extension.js");
+  const extensionFactory = extensionModule.default || extensionModule;
+  extensionFactory(mockPi);
+
+  const notifications: { msg: string; level?: string }[] = [];
+  const mockCtx: any = {
+    hasUI: true,
+    ui: {
+      notify(msg: string, level?: string) {
+        notifications.push({ msg, level });
+      },
+      setStatus() {},
+      setWidget() {},
+      custom() {
+        return Promise.resolve(null);
+      },
+    },
+    sessionManager: {
+      getEntries() {
+        return [];
+      },
+    },
+    modelRegistry: {},
+  };
+
+  const lingualCmd = registeredCommands["lingual"];
+  assert.ok(lingualCmd, "/lingual command must be registered");
+
+  // 1. Direct entry with multi-word "Logical Spec"
+  notifications.length = 0;
+  await lingualCmd.handler("Logical Spec", mockCtx);
+  assert.equal(notifications.length, 1);
+  assert.ok(
+    notifications[0].msg.includes("Logical Spec") || notifications[0].msg.includes("2"),
+    `Must switch to Logical Spec: got "${notifications[0].msg}"`
+  );
+  assert.notEqual(notifications[0].level, "warning", "Must not produce unknown command warning");
+
+  // 2. Direct entry with alias "spec"
+  notifications.length = 0;
+  await lingualCmd.handler("spec", mockCtx);
+  assert.equal(notifications.length, 1);
+  assert.notEqual(notifications[0].level, "warning", "Must recognize 'spec' alias without warning");
+
+  // 3. Direct entry with multi-word "Live Flow"
+  notifications.length = 0;
+  await lingualCmd.handler("Live Flow", mockCtx);
+  assert.equal(notifications.length, 1);
+  assert.notEqual(notifications[0].level, "warning", "Must recognize 'Live Flow' without warning");
+
+  // 4. Direct entry with alias "flow"
+  notifications.length = 0;
+  await lingualCmd.handler("flow", mockCtx);
+  assert.equal(notifications.length, 1);
+  assert.notEqual(notifications[0].level, "warning", "Must recognize 'flow' alias without warning");
+
+  // 5. Direct entry with "companion"
+  notifications.length = 0;
+  await lingualCmd.handler("companion", mockCtx);
+  assert.equal(notifications.length, 1);
+  assert.notEqual(notifications[0].level, "warning", "Must recognize 'companion' without warning");
+
+  // 6. Direct entry without args (parameterless /lingual)
+  notifications.length = 0;
+  await lingualCmd.handler("", mockCtx);
+  // Parameterless opens mode picker, which resolves cleanly without error
+  assert.ok(true, "Parameterless /lingual must complete without unhandled rejections");
 });
 

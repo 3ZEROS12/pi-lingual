@@ -7,8 +7,8 @@ export interface SlotPresetDefinition {
   slots: (sourceLang?: string) => SlotConfig[];
 }
 
-export { getDefaultSlots, getDefaultDirectSlots, getDefaultPromptSlots, getDefaultModifySlots } from "./prompts.js";
-import { getDefaultDirectSlots, getDefaultModifySlots, getDefaultSlots, getDefaultPromptSlots } from "./prompts.js";
+export { getDefaultSlots, getDefaultDirectSlots, getDefaultPromptSlots, getDefaultModifySlots, localizeSlotLabel } from "./prompts.js";
+import { getDefaultDirectSlots, getDefaultModifySlots, getDefaultSlots, getDefaultPromptSlots, localizeSlotLabel } from "./prompts.js";
 
 export interface SeedNames {
   companion: string;
@@ -195,6 +195,53 @@ export function resolveModeDisplayName(modeId: string, lang = "en"): string {
     default:
       return modeId;
   }
+}
+
+/**
+ * Dynamically localizes standard mode names to the active native language.
+ * Guarantees zero Chinese characters appear in UI mode names when sourceLang is not Chinese (RFC 2119 Invariant 18).
+ */
+export function localizeModeName(modeId: string, currentName: string, sourceLang = "en"): string {
+  const isChineseSource = sourceLang === "zh" || sourceLang === "tw";
+  const hasChinese = /[\u4e00-\u9fa5]/.test(currentName || "");
+  const normId = (modeId || "").toLowerCase();
+
+  // If source is not Chinese and name has Chinese or is empty, or matches known standard modes
+  if (!isChineseSource && (hasChinese || !currentName)) {
+    return resolveModeDisplayName(normId, sourceLang);
+  }
+
+  // If standard factory modes, ensure canonical display name matches sourceLang
+  if (!isChineseSource && (normId === "companion" || normId === "original" || normId === "direct" || normId === "live-flow" || normId === "off" || normId === "candidates")) {
+    return resolveModeDisplayName(normId, sourceLang);
+  }
+
+  return currentName || resolveModeDisplayName(normId, sourceLang);
+}
+
+/**
+ * Normalizes and dynamically localizes a list of modes and their nested slots to sourceLang.
+ */
+export function localizeModes(
+  modes: CustomModeConfig[],
+  sourceLang = "en",
+  explainLang?: string
+): CustomModeConfig[] {
+  return modes.map((m) => {
+    const localizedName = localizeModeName(m.id, m.name, sourceLang);
+    const localizedSlots = Array.isArray(m.slots)
+      ? m.slots.map((s) => ({
+          ...s,
+          label: localizeSlotLabel(s.id, s.label, sourceLang),
+        }))
+      : [];
+
+    return {
+      ...m,
+      name: localizedName,
+      slots: localizedSlots,
+    };
+  });
 }
 
 /**

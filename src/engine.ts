@@ -41,6 +41,9 @@ import {
   resolveSeedNames,
   resolveModeDisplayName,
   SEED_NAMES,
+  localizeModeName,
+  localizeModes,
+  localizeSlotLabel,
 } from "./presets.js";
 import {
   buildSystemPrompt,
@@ -57,11 +60,16 @@ import {
   compileKillListInstruction,
   resolveLanguagePairAnchors,
   LANGUAGE_PAIR_ANCHORS,
+  resolveSlotLabels,
 } from "./prompts.js";
 import { shouldShieldBypass, isNonEnglish } from "./shield.js";
 import { LingualLruCache, globalLingualCache } from "./cache.js";
 
 export {
+  localizeModeName,
+  localizeModes,
+  localizeSlotLabel,
+  resolveSlotLabels,
   getVisualWidth,
   truncateVisual,
   wrapVisualText,
@@ -859,7 +867,7 @@ export function resolveModesFromConfig(cfg: Partial<LingualConfig>, fallbackSour
         if (Array.isArray(m.slots) && m.slots.length > 0) return m;
         return { ...m, slots: defaultSlotsForMode(m, sourceLang, explainLang) };
       });
-    if (valid.length > 0) return valid;
+    if (valid.length > 0) return localizeModes(valid, sourceLang, explainLang);
   }
 
   // Legacy fallback: If user has legacy slots on disk, map them seamlessly into modes

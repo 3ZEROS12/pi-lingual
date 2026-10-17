@@ -69,6 +69,9 @@ __export(core_exports, {
   isSupportedLangCode: () => isSupportedLangCode,
   isTargetLanguageOnly: () => isTargetLanguageOnly,
   listPresetLoadouts: () => listPresetLoadouts,
+  localizeModeName: () => localizeModeName,
+  localizeModes: () => localizeModes,
+  localizeSlotLabel: () => localizeSlotLabel,
   moveSlotInList: () => moveSlotInList,
   normalizeLangCode: () => normalizeLangCode,
   normalizePromptRules: () => normalizePromptRules,
@@ -85,6 +88,7 @@ __export(core_exports, {
   resolvePromptRulePreset: () => resolvePromptRulePreset,
   resolvePromptTargetLangName: () => resolvePromptTargetLangName,
   resolveSeedNames: () => resolveSeedNames,
+  resolveSlotLabels: () => resolveSlotLabels,
   resolveSlotsForPreset: () => resolveSlotsForPreset,
   sanitizePromptForTranslation: () => sanitizePromptForTranslation,
   shouldShieldBypass: () => shouldShieldBypass,
@@ -237,6 +241,74 @@ var SLOT_LABELS_BY_LANG = {
 function resolveSlotLabels(lang = "en") {
   const norm = (lang || "en").toLowerCase().split("-")[0];
   return SLOT_LABELS_BY_LANG[norm] || SLOT_LABELS_BY_LANG.en;
+}
+function localizeSlotLabel(slotId, currentLabel, sourceLang = "en") {
+  const isChineseSource = sourceLang === "zh" || sourceLang === "tw";
+  const hasChinese = /[\u4e00-\u9fa5]/.test(currentLabel || "");
+  const sl = resolveSlotLabels(sourceLang);
+  const normId = (slotId || "").toLowerCase();
+  if (!isChineseSource && (hasChinese || !currentLabel)) {
+    switch (normId) {
+      case "source":
+        return sl.source;
+      case "spoken":
+        return sl.spoken;
+      case "written":
+        return sl.written;
+      case "direct_vocab":
+        return sl.direct_vocab;
+      case "prompt_vocab":
+        return sl.prompt_vocab;
+      case "vocab":
+        if (currentLabel === "\u6838\u5FC3\u8868\u8FBE" || currentLabel === "\u6838\u5FC3\u8868\u9054" || currentLabel === "\u91CD\u8981\u8A9E\u5F59" || currentLabel === "\u91CD\u8981\u8868\u73FE") {
+          return sl.direct_vocab;
+        }
+        return sl.vocab;
+      case "direct_spec":
+      case "en_direct":
+      case "spec":
+        return sl.en_direct;
+      case "fixed":
+        return sl.fixed;
+      case "native":
+        return sl.native;
+      case "fixes":
+      case "takeaways":
+      case "takeaway":
+        return sl.fixes;
+      default:
+        if (normId.includes("source")) return sl.source;
+        if (normId.includes("spoken")) return sl.spoken;
+        if (normId.includes("written")) return sl.written;
+        if (normId.includes("vocab")) return sl.vocab;
+        if (normId.includes("spec") || normId.includes("direct")) return sl.en_direct;
+        if (normId.includes("fix")) return sl.fixed;
+        if (normId.includes("native")) return sl.native;
+        return normId;
+    }
+  }
+  if (!currentLabel) {
+    switch (normId) {
+      case "source":
+        return sl.source;
+      case "spoken":
+        return sl.spoken;
+      case "written":
+        return sl.written;
+      case "vocab":
+        return sl.vocab;
+      case "direct_spec":
+      case "en_direct":
+        return sl.en_direct;
+      case "fixed":
+        return sl.fixed;
+      case "native":
+        return sl.native;
+      case "fixes":
+        return sl.fixes;
+    }
+  }
+  return currentLabel || slotId;
 }
 function getDefaultDirectSlots(sourceLang = "en") {
   const sl = resolveSlotLabels(sourceLang);
@@ -1380,6 +1452,32 @@ function resolveModeDisplayName(modeId, lang = "en") {
     default:
       return modeId;
   }
+}
+function localizeModeName(modeId, currentName, sourceLang = "en") {
+  const isChineseSource = sourceLang === "zh" || sourceLang === "tw";
+  const hasChinese = /[\u4e00-\u9fa5]/.test(currentName || "");
+  const normId = (modeId || "").toLowerCase();
+  if (!isChineseSource && (hasChinese || !currentName)) {
+    return resolveModeDisplayName(normId, sourceLang);
+  }
+  if (!isChineseSource && (normId === "companion" || normId === "original" || normId === "direct" || normId === "live-flow" || normId === "off" || normId === "candidates")) {
+    return resolveModeDisplayName(normId, sourceLang);
+  }
+  return currentName || resolveModeDisplayName(normId, sourceLang);
+}
+function localizeModes(modes, sourceLang = "en", explainLang) {
+  return modes.map((m) => {
+    const localizedName = localizeModeName(m.id, m.name, sourceLang);
+    const localizedSlots = Array.isArray(m.slots) ? m.slots.map((s) => ({
+      ...s,
+      label: localizeSlotLabel(s.id, s.label, sourceLang)
+    })) : [];
+    return {
+      ...m,
+      name: localizedName,
+      slots: localizedSlots
+    };
+  });
 }
 function getDefaultFactoryModes(sourceLang = "en", explainLang) {
   const n = resolveSeedNames(sourceLang);
@@ -3550,6 +3648,9 @@ function sanitizePromptForTranslation(raw) {
   isSupportedLangCode,
   isTargetLanguageOnly,
   listPresetLoadouts,
+  localizeModeName,
+  localizeModes,
+  localizeSlotLabel,
   moveSlotInList,
   normalizeLangCode,
   normalizePromptRules,
@@ -3566,6 +3667,7 @@ function sanitizePromptForTranslation(raw) {
   resolvePromptRulePreset,
   resolvePromptTargetLangName,
   resolveSeedNames,
+  resolveSlotLabels,
   resolveSlotsForPreset,
   sanitizePromptForTranslation,
   shouldShieldBypass,

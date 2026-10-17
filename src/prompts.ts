@@ -154,9 +154,79 @@ const SLOT_LABELS_BY_LANG: Record<string, SlotLabelsDef> = {
   },
 };
 
-function resolveSlotLabels(lang = "en"): SlotLabelsDef {
+export function resolveSlotLabels(lang = "en"): SlotLabelsDef {
   const norm = (lang || "en").toLowerCase().split("-")[0];
   return SLOT_LABELS_BY_LANG[norm] || SLOT_LABELS_BY_LANG.en;
+}
+
+/**
+ * Dynamically localizes standard slot labels to the active native language.
+ * Guarantees zero Chinese characters appear in UI labels when sourceLang is not Chinese (RFC 2119 Invariant 18).
+ */
+export function localizeSlotLabel(slotId: string, currentLabel: string, sourceLang = "en"): string {
+  const isChineseSource = sourceLang === "zh" || sourceLang === "tw";
+  const hasChinese = /[\u4e00-\u9fa5]/.test(currentLabel || "");
+  const sl = resolveSlotLabels(sourceLang);
+  const normId = (slotId || "").toLowerCase();
+
+  // If source is not Chinese, and label contains Chinese or is empty or matches known factory labels, localize it
+  if (!isChineseSource && (hasChinese || !currentLabel)) {
+    switch (normId) {
+      case "source":
+        return sl.source;
+      case "spoken":
+        return sl.spoken;
+      case "written":
+        return sl.written;
+      case "direct_vocab":
+        return sl.direct_vocab;
+      case "prompt_vocab":
+        return sl.prompt_vocab;
+      case "vocab":
+        if (currentLabel === "核心表达" || currentLabel === "核心表達" || currentLabel === "重要語彙" || currentLabel === "重要表現") {
+          return sl.direct_vocab;
+        }
+        return sl.vocab;
+      case "direct_spec":
+      case "en_direct":
+      case "spec":
+        return sl.en_direct;
+      case "fixed":
+        return sl.fixed;
+      case "native":
+        return sl.native;
+      case "fixes":
+      case "takeaways":
+      case "takeaway":
+        return sl.fixes;
+      default:
+        if (normId.includes("source")) return sl.source;
+        if (normId.includes("spoken")) return sl.spoken;
+        if (normId.includes("written")) return sl.written;
+        if (normId.includes("vocab")) return sl.vocab;
+        if (normId.includes("spec") || normId.includes("direct")) return sl.en_direct;
+        if (normId.includes("fix")) return sl.fixed;
+        if (normId.includes("native")) return sl.native;
+        return normId;
+    }
+  }
+
+  // If source is Chinese (zh/tw), ensure empty labels fall back to localized names
+  if (!currentLabel) {
+    switch (normId) {
+      case "source": return sl.source;
+      case "spoken": return sl.spoken;
+      case "written": return sl.written;
+      case "vocab": return sl.vocab;
+      case "direct_spec":
+      case "en_direct": return sl.en_direct;
+      case "fixed": return sl.fixed;
+      case "native": return sl.native;
+      case "fixes": return sl.fixes;
+    }
+  }
+
+  return currentLabel || slotId;
 }
 
 /**
