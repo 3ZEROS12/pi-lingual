@@ -1454,9 +1454,14 @@ export default function (pi: ExtensionAPI) {
   // Interactive capsule mode picker (Invoked on parameterless /lingual or /l)
   const openModePicker = async (ctx: ExtensionContext): Promise<string | null> => {
     const diskForMode = loadUserLingualConfig();
+    const diskMode = diskForMode.activeModeId || diskForMode.mode;
+    if (diskMode && diskMode !== state.mode) {
+      state.mode = normalizeActiveModeId({ mode: diskMode, activeModeId: diskMode }, state.modes);
+      state.activeModeId = state.mode;
+    }
     const modes = Array.isArray(state.modes) && state.modes.length > 0
       ? state.modes
-      : resolveModesFromConfig(diskForMode);
+      : resolveModesFromConfig(diskForMode, state.sourceLang);
     const activeModes = modes.filter((m) => m.enabled !== false);
     const offName = resolveModeDisplayName("off", state.sourceLang);
     const lockIndicator = state.modeLocked
@@ -1632,6 +1637,15 @@ export default function (pi: ExtensionAPI) {
 
   // Master command bus: handles subcommands and mode cycling
   const masterCommandHandler = async (args: string, ctx: ExtensionContext) => {
+    const diskForMode = loadUserLingualConfig();
+    const diskMode = diskForMode.activeModeId || diskForMode.mode;
+    if (diskMode && diskMode !== state.mode) {
+      state.mode = normalizeActiveModeId({ mode: diskMode, activeModeId: diskMode }, state.modes);
+      state.activeModeId = state.mode;
+      syncResizeListener();
+      updateFooter(ctx);
+    }
+
     const trimmed = args?.trim();
     if (!trimmed) {
       // Parameterless /lingual or /l: open interactive capsule mode picker

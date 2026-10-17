@@ -119,6 +119,10 @@ export function getVisualWidth(str: string): number {
 
 /** Returns the closing delimiters needed to rebalance a hard-clipped fragment ("" when balanced). */
 function closingDelimitersFor(text: string): string {
+  // Strip ANSI color escape sequences BEFORE balancing delimiters.
+  // ANSI escapes start with '\x1b[' and end with 'm', which was causing '\x1b['
+  // to be miscounted as unclosed square brackets '[' and appending stray ']]]...'.
+  const clean = text.replace(ANSI_ESCAPE_REGEX, "");
   const pairs: [RegExp, RegExp, string][] = [
     [/\(/g, /\)/g, ")"],
     [/\[/g, /\]/g, "]"],
@@ -130,8 +134,8 @@ function closingDelimitersFor(text: string): string {
   ];
   let closers = "";
   for (const [openRe, closeRe, closer] of pairs) {
-    const o = (text.match(openRe) || []).length;
-    const c = (text.match(closeRe) || []).length;
+    const o = (clean.match(openRe) || []).length;
+    const c = (clean.match(closeRe) || []).length;
     if (o > c) {
       closers += closer.repeat(o - c);
     }
@@ -175,6 +179,15 @@ export function truncateVisual(str: string, maxVisualCols: number): string {
       result += ch;
       curWidth += w;
       i += charLen;
+    }
+
+    // Invariant 11: clamp to clean word boundaries for natural language prose (Latin / Cyrillic)
+    const cleanTail = result.replace(ANSI_ESCAPE_REGEX, "");
+    if (/[a-zA-Z\u0400-\u04FF]$/.test(cleanTail)) {
+      const lastSpace = result.lastIndexOf(" ");
+      if (lastSpace > limit * 0.45) {
+        result = result.slice(0, lastSpace);
+      }
     }
 
     return result.replace(/\s*[\(\[\{（【]$/, "");
@@ -859,8 +872,12 @@ export function renderCardLayout(
 
   // 4. Kinetic Line Budget Guard: lines.length <= maxLines constraint solver
   if (lines.length > maxLines) {
-    // Tier 1 constraint: clamp source text to at most 1-2 lines
-    const maxSourceRows = numBranches >= maxLines - 1 ? 1 : 2;
+    // Tier 1 constraint: clamp source text to at most 1 line when content branches need room, otherwise 2 lines
+    const totalBranchLines = contentBranches.reduce((acc, b) => {
+      const len = wrapVisualText(b.content, Math.max(25, maxCols - 14)).length;
+      return acc + Math.max(1, len);
+    }, 0);
+    const maxSourceRows = totalBranchLines >= maxLines - 2 || numBranches >= maxLines - 2 ? 1 : 2;
     let clampedSourceLines = sourceLines;
     if (sourceLines.length > maxSourceRows) {
       if (maxSourceRows === 1) {
@@ -972,8 +989,8 @@ export function renderCardLayout(
           } else {
             const branchesLeftAfterThis = numBranches - 1 - i;
             const maxPossible = Math.max(1, remainingBudget - branchesLeftAfterThis);
-            const evenShare = Math.max(1, Math.floor(remainingBudget / Math.max(1, numBranches - i)));
-            branchBudget = Math.min(maxPossible, Math.min(branchRendered.length, Math.max(evenShare, 2)));
+            // Allow translation slots (Spoken, Written) up to 3 lines if budget permits to avoid cutting off natural prose
+            branchBudget = Math.min(maxPossible, Math.min(branchRendered.length, 3));
             transHandled++;
           }
 

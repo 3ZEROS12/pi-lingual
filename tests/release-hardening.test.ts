@@ -2,6 +2,7 @@ import { test, after } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import os from "node:os";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import {
@@ -31,7 +32,7 @@ import {
   shouldTriggerTranslation,
   isDynamicLongInput,
 } from "../src/engine.js";
-import { getBannerMaxCols, getVisualWidth, getEffectiveMaxCols } from "../src/layout.js";
+import { getBannerMaxCols, getVisualWidth, getEffectiveMaxCols, renderCardLayout, truncateVisual } from "../src/layout.js";
 import {
   resolveLanguagePairAnchors,
   buildPromptCandidatesSystemPrompt,
@@ -1167,5 +1168,124 @@ test("/lingual command execution - handles parameterless, multi-word modes, alia
   await lingualCmd.handler("", mockCtx);
   // Parameterless opens mode picker, which resolves cleanly without error
   assert.ok(true, "Parameterless /lingual must complete without unhandled rejections");
+});
+
+test("layout regression: truncateVisual with ANSI escapes never injects stray ']]]' before '...'", () => {
+  // Simulate vocab line decorated with ANSI color codes (the exact bug from user screenshot)
+  const ansiDecoratedVocabLine =
+    "\x1b[90m  └ \x1b[38;2;120;120;120m[Vocab]\x1b[0m \x1b[38;2;200;200;200mуменьшительно-ласкательная форма (diminutive-hypocoristic form) · ровесники / сверстники в повседневном общении\x1b[0m";
+
+  for (const cols of [40, 50, 60, 70, 80]) {
+    const truncated = truncateVisual(ansiDecoratedVocabLine, cols);
+    assert.ok(
+      !truncated.includes("]]]"),
+      `Truncated line must NEVER contain stray ']]]' at cols=${cols}: got "${truncated}"`
+    );
+    assert.ok(
+      !truncated.includes("]]"),
+      `Truncated line must NEVER contain stray ']]' at cols=${cols}: got "${truncated}"`
+    );
+    assert.ok(
+      getVisualWidth(truncated) <= cols,
+      `Visual width must be <= cols: got ${getVisualWidth(truncated)} at cols=${cols}`
+    );
+  }
+});
+
+test("layout regression: long target language translation allocates 3 lines to Written without mid-sentence clipping", () => {
+  // The exact user case from the screenshot:
+  const dummyRussianCard = {
+    sourceText: "Explaining Russian naming conventions: full formal names versus everyday diminutive nicknames among peers.",
+    spoken: "У нас тут у всех есть полное имя и обычное, уменьшительное. Друзья, коллеги и вообще ровесники в повседневном общении почти всегда называют друг друга сокращенно.",
+    written: "Каждый человек имеет официальное (полное) имя и уменьшительно-ласкательную форму. В повседневном общении между друзьями, коллегами и сверстниками преимущественно используется краткая форма.",
+    vocab: "полное имя (full/official name) · уменьшительное имя (diminutive/short name) · уменьшительно-ласкательная форма (diminutive-hypocoristic form)",
+    annotated: "",
+  };
+  const labels = resolveLabelsForLang("en");
+
+  const lines = renderCardLayout(dummyRussianCard, labels, { maxCols: 90, maxLines: 9 });
+  assert.ok(lines.length <= 9, `Total card lines must be <= 9: got ${lines.length}`);
+
+  // Written slot must NOT be cut off into "преимущественно..."
+  const fullOutput = lines.join("\n");
+  assert.ok(
+    !fullOutput.includes("преимущественно..."),
+    "Written slot must have enough lines and not be cut off at 'преимущественно...'"
+  );
+  assert.ok(
+    !fullOutput.includes("]]]"),
+    "No stray ']]]' bracket artifacts anywhere in card output"
+  );
+});
+
+test("session synchronization: cross-agent mode switches reliably persist without reverting to companion", async () => {
+  const registeredCommands: Record<string, any> = {};
+  const listeners: Record<string, ((event: any, ctx: any) => Promise<any>)[]> = {};
+
+  const mockPi: any = {
+    on(event: string, handler: any) {
+      listeners[event] = listeners[event] || [];
+      listeners[event].push(handler);
+    },
+    registerCommand(name: string, def: any) {
+      registeredCommands[name] = def;
+    },
+    registerShortcut() {},
+  };
+
+  const extensionModule = await import("../dist/extension.js");
+  const extensionFactory = extensionModule.default || extensionModule;
+  extensionFactory(mockPi);
+
+  const mockCtxB: any = {
+    hasUI: true,
+    ui: {
+      notify() {},
+      setStatus() {},
+      setWidget() {},
+      custom() { return Promise.resolve(null); },
+    },
+    sessionManager: { getEntries() { return []; } },
+    modelRegistry: {},
+  };
+
+  const mockCtxA: any = {
+    hasUI: true,
+    ui: {
+      notify() {},
+      setStatus() {},
+      setWidget() {},
+      custom() { return Promise.resolve(null); },
+    },
+    sessionManager: { getEntries() { return []; } },
+    modelRegistry: {},
+  };
+
+  // 1. Agent B switches mode to Mode 2 (direct / Logical Spec)
+  await registeredCommands["lingual"].handler("2", mockCtxB);
+
+  // 2. Switch to Agent A (session_start or resume)
+  for (const h of listeners["session_start"] || []) {
+    await h({ reason: "switch" }, mockCtxA);
+  }
+
+  // Agent A runs an input turn
+  for (const h of listeners["input"] || []) {
+    await h({ text: "Hello from Agent A", source: "user" }, mockCtxA);
+  }
+
+  // 3. Switch back to Agent B (session_start with resume)
+  for (const h of listeners["session_start"] || []) {
+    await h({ reason: "resume" }, mockCtxB);
+  }
+
+  // Mode in Agent B MUST remain 'direct' / Mode 2, and NEVER revert back to 'companion'
+  const lingualConfig = JSON.parse(
+    fs.readFileSync(path.join(os.homedir(), ".pi", "agent", "lingual.json"), "utf8")
+  );
+  assert.ok(
+    lingualConfig.activeModeId === "direct" || lingualConfig.mode === "direct" || lingualConfig.mode === "english",
+    `Mode must remain 'direct' after switching sessions back and forth: got ${lingualConfig.activeModeId || lingualConfig.mode}`
+  );
 });
 

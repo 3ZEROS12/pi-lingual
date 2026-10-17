@@ -282,9 +282,21 @@ export function saveUserLingualConfig(patch: Record<string, any>): void {
 
     let existing: Record<string, any> = {};
     if (fs.existsSync(configFile)) {
-      try {
-        existing = JSON.parse(fs.readFileSync(configFile, "utf8"));
-      } catch {}
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const raw = fs.readFileSync(configFile, "utf8");
+          if (raw && raw.trim()) {
+            existing = JSON.parse(raw);
+            break;
+          }
+        } catch {
+          // Brief synchronous pause on Windows NTFS file locking collision
+          try {
+            const start = Date.now();
+            while (Date.now() - start < 15) {}
+          } catch {}
+        }
+      }
     }
 
     for (const [k, v] of Object.entries(patch)) {
@@ -300,7 +312,16 @@ export function saveUserLingualConfig(patch: Record<string, any>): void {
       ) {
         delete existing[k];
       } else if (k === "mode") {
-        existing[k] = v === "english" ? "direct" : v === "select" ? "candidates" : v;
+        const canonical = v === "english" ? "direct" : v === "select" ? "candidates" : v;
+        existing.mode = canonical;
+        if (!patch.activeModeId) {
+          existing.activeModeId = canonical;
+        }
+      } else if (k === "activeModeId") {
+        existing.activeModeId = v;
+        if (!patch.mode) {
+          existing.mode = v === "english" ? "direct" : v === "select" ? "candidates" : v;
+        }
       } else {
         existing[k] = v;
       }

@@ -3426,6 +3426,7 @@ function getVisualWidth(str) {
   return width;
 }
 function closingDelimitersFor(text) {
+  const clean = text.replace(ANSI_ESCAPE_REGEX, "");
   const pairs = [
     [/\(/g, /\)/g, ")"],
     [/\[/g, /\]/g, "]"],
@@ -3437,8 +3438,8 @@ function closingDelimitersFor(text) {
   ];
   let closers = "";
   for (const [openRe, closeRe, closer] of pairs) {
-    const o = (text.match(openRe) || []).length;
-    const c = (text.match(closeRe) || []).length;
+    const o = (clean.match(openRe) || []).length;
+    const c = (clean.match(closeRe) || []).length;
     if (o > c) {
       closers += closer.repeat(o - c);
     }
@@ -3473,6 +3474,13 @@ function truncateVisual(str, maxVisualCols) {
       result2 += ch;
       curWidth += w;
       i += charLen;
+    }
+    const cleanTail = result2.replace(ANSI_ESCAPE_REGEX, "");
+    if (/[a-zA-Z\u0400-\u04FF]$/.test(cleanTail)) {
+      const lastSpace = result2.lastIndexOf(" ");
+      if (lastSpace > limit * 0.45) {
+        result2 = result2.slice(0, lastSpace);
+      }
     }
     return result2.replace(/\s*[\(\[\{（【]$/, "");
   };
@@ -3924,7 +3932,11 @@ function renderCardLayout(card, labels, options = {}) {
     }
   }
   if (lines.length > maxLines) {
-    const maxSourceRows = numBranches >= maxLines - 1 ? 1 : 2;
+    const totalBranchLines = contentBranches.reduce((acc, b) => {
+      const len = wrapVisualText(b.content, Math.max(25, maxCols - 14)).length;
+      return acc + Math.max(1, len);
+    }, 0);
+    const maxSourceRows = totalBranchLines >= maxLines - 2 || numBranches >= maxLines - 2 ? 1 : 2;
     let clampedSourceLines = sourceLines;
     if (sourceLines.length > maxSourceRows) {
       if (maxSourceRows === 1) {
@@ -4024,8 +4036,7 @@ function renderCardLayout(card, labels, options = {}) {
           } else {
             const branchesLeftAfterThis = numBranches - 1 - i;
             const maxPossible = Math.max(1, remainingBudget - branchesLeftAfterThis);
-            const evenShare = Math.max(1, Math.floor(remainingBudget / Math.max(1, numBranches - i)));
-            branchBudget = Math.min(maxPossible, Math.min(branchRendered.length, Math.max(evenShare, 2)));
+            branchBudget = Math.min(maxPossible, Math.min(branchRendered.length, 3));
             transHandled++;
           }
           if (branchRendered.length <= branchBudget) {
@@ -4334,9 +4345,21 @@ function saveUserLingualConfig(patch) {
     }
     let existing = {};
     if (fs.existsSync(configFile)) {
-      try {
-        existing = JSON.parse(fs.readFileSync(configFile, "utf8"));
-      } catch {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const raw = fs.readFileSync(configFile, "utf8");
+          if (raw && raw.trim()) {
+            existing = JSON.parse(raw);
+            break;
+          }
+        } catch {
+          try {
+            const start = Date.now();
+            while (Date.now() - start < 15) {
+            }
+          } catch {
+          }
+        }
       }
     }
     for (const [k, v] of Object.entries(patch)) {
@@ -4344,7 +4367,16 @@ function saveUserLingualConfig(patch) {
       if (v === void 0 || v === "" || isEmptyArray || v === "auto" || k === "compact" && v === false || k === "modeLocked" && v === false) {
         delete existing[k];
       } else if (k === "mode") {
-        existing[k] = v === "english" ? "direct" : v === "select" ? "candidates" : v;
+        const canonical = v === "english" ? "direct" : v === "select" ? "candidates" : v;
+        existing.mode = canonical;
+        if (!patch.activeModeId) {
+          existing.activeModeId = canonical;
+        }
+      } else if (k === "activeModeId") {
+        existing.activeModeId = v;
+        if (!patch.mode) {
+          existing.mode = v === "english" ? "direct" : v === "select" ? "candidates" : v;
+        }
       } else {
         existing[k] = v;
       }
