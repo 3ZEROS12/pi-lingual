@@ -33,7 +33,8 @@ import {
   buildPromptCandidatesSystemPrompt,
   buildModifySystemPrompt,
 } from "../src/prompts.js";
-import { isTargetLanguageOnly } from "../src/shield.js";
+import { isTargetLanguageOnly, shouldShieldBypass } from "../src/shield.js";
+import { sanitizePromptForTranslation } from "../src/sanitizer.js";
 import { extractRecentContextAnchor } from "../src/extension.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -895,5 +896,88 @@ test("Tripartite Subagent Audit Regression: Invariants 5, 12, 18 & anchor routin
     compiledModePrompt.includes("forbidden_buzzword_xyz"),
     "compileModeSystemPrompt must forward mode-specific killList into prompt candidate builder"
   );
+
+  // 8. Round 5 Hardening: ANSI Escape Stripping & Compiler Diagnostic Detection
+  const ansiCompilerOutput = "\x1b[1m\x1b[31msrc/index.ts:10:5:\x1b[0m \x1b[31merror:\x1b[0m Cannot find name 'foo'\n  const x = foo;\n            ^^^\n";
+  const sanitizedAnsi = sanitizePromptForTranslation(ansiCompilerOutput);
+  assert.ok(
+    sanitizedAnsi.hasCollapsedContent,
+    "sanitizePromptForTranslation must collapse ANSI-colorized compiler diagnostics"
+  );
+  assert.ok(
+    sanitizedAnsi.distilledText.includes("[... diagnostics ...]"),
+    "sanitizePromptForTranslation must include diagnostic collapse marker for ANSI output"
+  );
+
+  // 9. Round 5 Hardening: Python SyntaxError & IndentationError Traceback Detection
+  const pythonSyntaxTraceback = '  File "main.py", line 42\n    def foo(\n           ^\nSyntaxError: invalid syntax';
+  const sanitizedPy = sanitizePromptForTranslation(pythonSyntaxTraceback);
+  assert.ok(
+    sanitizedPy.hasCollapsedContent,
+    "sanitizePromptForTranslation must collapse Python SyntaxError tracebacks without ', in <module>'"
+  );
+  assert.ok(
+    sanitizedPy.distilledText.includes("[... stack trace ...]"),
+    "sanitizePromptForTranslation must include stack trace collapse marker for Python syntax errors"
+  );
+
+  // 10. Round 5 Hardening: Unified Git Diff Multi-Line Preservation
+  const unifiedDiff = `diff --git a/src/app.ts b/src/app.ts
+index abc1234..def5678 100644
+--- a/src/app.ts
++++ b/src/app.ts
+@@ -1,6 +1,6 @@
+- const a = 1;
+- const b = 2;
+- const c = 3;
+- const d = 4;
+- const e = 5;
++ const updated = true;`;
+  const sanitizedDiff = sanitizePromptForTranslation(unifiedDiff);
+  assert.ok(
+    !sanitizedDiff.distilledText.includes("items ...]"),
+    "sanitizePromptForTranslation must NOT collapse git diff deleted lines as bulleted list items"
+  );
+  assert.ok(
+    sanitizedDiff.distilledText.includes("const a = 1;"),
+    "sanitizePromptForTranslation must preserve unified diff delta lines intact"
+  );
+
+  // 11. Round 5 Hardening: 'diff' Shell Command Fast-Bypass & Polyglot Single-Line Code Symmetry
+  assert.equal(
+    shouldShieldBypass("diff -u src/a.ts src/b.ts"),
+    true,
+    "shouldShieldBypass must fast-bypass 'diff' shell commands"
+  );
+  assert.equal(
+    shouldShieldBypass('const label = "テスト";'),
+    true,
+    "shouldShieldBypass must fast-bypass Japanese single-line code statements"
+  );
+  assert.equal(
+    shouldShieldBypass('const label = "测试";'),
+    true,
+    "shouldShieldBypass must fast-bypass Chinese single-line code statements symmetrically"
+  );
+
+  // 12. Round 5 Hardening: Preset Completeness across es, fr, de
+  for (const l of ["es", "fr", "de"] as const) {
+    const preset = LANGUAGE_PRESETS[l];
+    for (const code of ["zh", "tw", "ja", "ko", "en", "es", "fr", "de", "ru"]) {
+      assert.ok(
+        preset.notifyLangInvalid?.includes(code),
+        `[${l}] notifyLangInvalid must advertise code '${code}'`
+      );
+      assert.ok(
+        preset.langUsageHint?.includes(code),
+        `[${l}] langUsageHint must advertise code '${code}'`
+      );
+    }
+    assert.equal(
+      (preset.langList || []).length,
+      9,
+      `[${l}] langList must contain exactly 9 supported language items`
+    );
+  }
 });
 

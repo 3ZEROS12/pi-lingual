@@ -2042,7 +2042,7 @@ var LANGUAGE_PRESETS = {
     notifyAgentHelp: '\u{1F4A1} Habilidad lingual-tuner integrada: Simplemente p\xEDdale a su Agente "Personaliza el asistente: solo tuit y an\xE1lisis, sin texto original" para configurar las ranuras al instante. Cambie de idioma con /lang <code>.',
     notifyModelSwitched: "Modelo cambiado a: {model}",
     notifyLangSwitched: "Idioma nativo cambiado a: {lang} (Nota: Las descripciones del men\xFA de comandos se actualizar\xE1n tras reiniciar la terminal)",
-    notifyLangInvalid: "C\xF3digo de idioma no v\xE1lido. Admitidos: zh, ja, en, es, fr, de",
+    notifyLangInvalid: "C\xF3digo de idioma no v\xE1lido. Admitidos: zh, tw, ja, ko, en, es, fr, de, ru",
     notifyCompactOn: "[es \u21C4 en] Modo c\xE1psula de una l\xEDnea activado",
     notifyCompactOff: "[es \u21C4 en] Modo \xE1rbol completo restaurado",
     notifySlotSwitched: "[es \u21C4 en] Arquitectura de ranuras cambiada a [{preset}]: {desc}",
@@ -2096,14 +2096,17 @@ var LANGUAGE_PRESETS = {
     modelAvailableListHeader: "Modelos disponibles (ejecute /lingual model <id>):",
     modelAutoFollowDesc: "auto (Sigue autom\xE1ticamente el modelo de la sesi\xF3n)",
     modelSelectHint: "Use /lingual model <id> o auto para asignar un modelo.",
-    langUsageHint: "Uso: /lang <zh|ja|en|es|fr|de> [target] (ej. /lang ja o /lang zh ja)",
+    langUsageHint: "Uso: /lang <zh|tw|ja|ko|en|es|fr|de|ru> [target] (ej. /lang ja o /lang zh ja)",
     langList: [
       "\u2022 zh (Chino \u2794 Ingl\xE9s)",
+      "\u2022 tw (Chino tradicional \u2794 Ingl\xE9s)",
       "\u2022 ja (Japon\xE9s \u2794 Ingl\xE9s)",
+      "\u2022 ko (Coreano \u2794 Ingl\xE9s)",
       "\u2022 en (Ingl\xE9s \u2794 Japon\xE9s)",
       "\u2022 es (Espa\xF1ol \u2794 Ingl\xE9s)",
       "\u2022 fr (Franc\xE9s \u2794 Ingl\xE9s)",
-      "\u2022 de (Alem\xE1n \u2794 Ingl\xE9s)"
+      "\u2022 de (Alem\xE1n \u2794 Ingl\xE9s)",
+      "\u2022 ru (Ruso \u2794 Ingl\xE9s)"
     ],
     // Ranuras dinámicas (Español)
     slotsHeader: "Arquitectura de ranuras din\xE1micas",
@@ -2157,7 +2160,7 @@ var LANGUAGE_PRESETS = {
     notifyAgentHelp: '\u{1F4A1} Comp\xE9tence lingual-tuner int\xE9gr\xE9e : Dites simplement \xE0 votre Agent "Personnalise le compagnon : uniquement tweet et analyse, sans texte original" pour ajuster les emplacements. Changez de langue avec /lang <code>.',
     notifyModelSwitched: "Mod\xE8le chang\xE9 pour : {model}",
     notifyLangSwitched: "Langue maternelle chang\xE9e en : {lang} (Note : L'autocompl\xE9tion des commandes sera actualis\xE9e apr\xE8s red\xE9marrage du terminal)",
-    notifyLangInvalid: "Code de langue invalide. Pris en charge : zh, ja, en, es, fr, de",
+    notifyLangInvalid: "Code de langue invalide. Pris en charge : zh, tw, ja, ko, en, es, fr, de, ru",
     notifyCompactOn: "[fr \u21C4 en] Mode capsule sur une seule ligne activ\xE9",
     notifyCompactOff: "[fr \u21C4 en] Mode arborescence compl\xE8te restaur\xE9",
     notifyTimeout: "[fr \u21C4 en] La traduction en anglais a expir\xE9 ; le prompt original a \xE9t\xE9 transmis",
@@ -2209,14 +2212,17 @@ var LANGUAGE_PRESETS = {
     modelAvailableListHeader: "Mod\xE8les disponibles (tapez /lingual model <id>):",
     modelAutoFollowDesc: "auto (Suit automatiquement le mod\xE8le principal)",
     modelSelectHint: "Entrez /lingual model <id> ou auto pour d\xE9finir le mod\xE8le.",
-    langUsageHint: "Utilisation : /lang <zh|ja|en|es|fr|de> [target] (ex : /lang ja ou /lang zh ja)",
+    langUsageHint: "Utilisation : /lang <zh|tw|ja|ko|en|es|fr|de|ru> [target] (ex : /lang ja ou /lang zh ja)",
     langList: [
       "\u2022 zh (Chinois \u2794 Anglais)",
+      "\u2022 tw (Chinois traditionnel \u2794 Anglais)",
       "\u2022 ja (Japonais \u2794 Anglais)",
+      "\u2022 ko (Cor\xE9en \u2794 Anglais)",
       "\u2022 en (Anglais \u2794 Japonais)",
       "\u2022 es (Espagnol \u2794 Anglais)",
       "\u2022 fr (Fran\xE7ais \u2794 Anglais)",
-      "\u2022 de (Allemand \u2794 Anglais)"
+      "\u2022 de (Allemand \u2794 Anglais)",
+      "\u2022 ru (Russe \u2794 Anglais)"
     ],
     // Emplacements dynamiques (Français)
     slotsHeader: "Architecture d'emplacements dynamiques",
@@ -2270,7 +2276,7 @@ var LANGUAGE_PRESETS = {
     notifyAgentHelp: '\u{1F4A1} Integrierter lingual-tuner Skill: Sagen Sie Ihrem Agenten einfach "Passen Sie die Begleitung an: nur Tweet und tiefe Einsicht, kein Originaltext", um Slots anzupassen. Sprache wechseln mit /lang <code>.',
     notifyModelSwitched: "Modell gewechselt zu: {model}",
     notifyLangSwitched: "Muttersprache ge\xE4ndert zu: {lang} (Hinweis: Befehlsbeschreibungen werden nach dem Terminal-Neustart vollst\xE4ndig aktualisiert)",
-    notifyLangInvalid: "Ung\xFCltiger Sprachcode. Unterst\xFCtzt: zh, ja, en, es, fr, de",
+    notifyLangInvalid: "Ung\xFCltiger Sprachcode. Unterst\xFCtzt: zh, tw, ja, ko, en, es, fr, de, ru",
     notifyCompactOn: "[de \u21C4 en] Einzeiliger Kapselmodus aktiviert",
     notifyCompactOff: "[de \u21C4 en] Vollst\xE4ndige Baumansicht wiederhergestellt",
     notifySlotSwitched: "[de \u21C4 en] Slot-Architektur auf [{preset}] umgestellt: {desc}",
@@ -2324,14 +2330,17 @@ var LANGUAGE_PRESETS = {
     modelAvailableListHeader: "Verf\xFCgbare Modelle (/lingual model <id> ausf\xFChren):",
     modelAutoFollowDesc: "auto (Folgt automatisch dem aktiven Sitzungsmodell)",
     modelSelectHint: "Geben Sie /lingual model <id> oder auto ein.",
-    langUsageHint: "Verwendung: /lang <zh|ja|en|es|fr|de> [target] (z.B. /lang ja oder /lang zh ja)",
+    langUsageHint: "Verwendung: /lang <zh|tw|ja|ko|en|es|fr|de|ru> [target] (z.B. /lang ja oder /lang zh ja)",
     langList: [
       "\u2022 zh (Chinesisch \u2794 Englisch)",
+      "\u2022 tw (Traditionelles Chinesisch \u2794 Englisch)",
       "\u2022 ja (Japanisch \u2794 Englisch)",
+      "\u2022 ko (Koreanisch \u2794 Englisch)",
       "\u2022 en (Englisch \u2794 Japanisch)",
       "\u2022 es (Spanisch \u2794 Englisch)",
       "\u2022 fr (Franz\xF6sisch \u2794 Englisch)",
-      "\u2022 de (Deutsch \u2794 Englisch)"
+      "\u2022 de (Deutsch \u2794 Englisch)",
+      "\u2022 ru (Russisch \u2794 Englisch)"
     ],
     // Dynamische Slot-Architektur (Deutsch)
     slotsHeader: "Dynamische Slot-Architektur",
@@ -2737,7 +2746,8 @@ var SHELL_COMMAND_PREFIXES = [
   "npx ",
   "tar ",
   "zip ",
-  "unzip "
+  "unzip ",
+  "diff "
 ];
 var CODE_STATEMENT_REGEX = /^(?:const|let|var|function|def|class|import|export|package|namespace|using|public|private|protected|fn|pub fn|impl|struct|enum|interface|type)\s+/;
 var SQL_STATEMENT_REGEX = /^(?:SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM|CREATE\s+TABLE|ALTER\s+TABLE|DROP\s+TABLE)\s+/i;
@@ -2775,7 +2785,8 @@ function shouldShieldBypass(text) {
     }
   }
   if (CODE_STATEMENT_REGEX.test(trimmed) && !trimmed.includes("\uFF1F") && !trimmed.includes("?")) {
-    if (!/[\u4e00-\u9fa5]/.test(trimmed) || /^[a-zA-Z0-9_\s<>{}\[\]();:=,"'.]+$/.test(trimmed)) {
+    const hasConversationalIntent = /(?:为什么|怎么|如何|帮我|排查|优化|修改|修复|为何|报错|审查|看下|explain|why|how|please|help|could you|fix)/i.test(trimmed);
+    if (!hasConversationalIntent) {
       return true;
     }
   }
@@ -3223,11 +3234,14 @@ var TARGETED_CLIPBOARD_PATH_REGEX = /(?:[a-zA-Z]:[\\\/](?:[^:\r\n\t]+[\\\/])?pi-
 var LEADING_TARGETED_CLIPBOARD_REGEX = /^(?:[a-zA-Z]:[\\\/](?:[^:\r\n\t]+[\\\/])?pi-clipboard-[a-zA-Z0-9\-]+\.png|\/(?:[^\r\n\t]+[\\\/])?pi-clipboard-[a-zA-Z0-9\-]+\.png)\s*/i;
 var ABSOLUTE_LONG_PATH_REGEX = /(?:[a-zA-Z]:[\\\/](?:[^:\r\n\t\s<>"]+[\\\/])+[a-zA-Z0-9_\-\.]+\.[a-zA-Z0-9_]+|\/(?:[a-zA-Z0-9_\-\.]+[\\\/]){3,}[a-zA-Z0-9_\-\.]+\.[a-zA-Z0-9_]+)/gi;
 var UUID_OR_SESSION_REGEX = /(?:(?:session|id|uuid)[\s:=]*)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4,16}(?:\.jsonl)?/gi;
-var STACK_LINE_REGEX = /^\s*(?:at\s+(?:[\w$.<>]+|[^\s]+)\s*\(.*:\d+:\d+\)|at\s+.*:\d+:\d+|File\s+".*", line \d+, in\s+.*|goroutine \d+ \[.*\]:|Caused by:.*|^\s*\d+:\s+0x[0-9a-f]+)/;
+var STACK_LINE_REGEX = /^\s*(?:at\s+(?:[\w$.<>]+|[^\s]+)\s*\(.*:\d+:\d+\)|at\s+.*:\d+:\d+|File\s+".*", line \d+(?:, in\s+.*)?|goroutine \d+ \[.*\]:|Caused by:.*|^\s*\d+:\s+0x[0-9a-f]+|^\s*\^+|\b(?:SyntaxError|IndentationError|TabError):)/;
 var COMPILER_DIAGNOSTIC_REGEX = /^(?:[a-zA-Z]:[\\\/]|\.{0,2}[\\\/]|[a-zA-Z0-9_\-\.]+)[^:\r\n]+:\d+:\d+:\s*(?:error|warning|fatal error|note):/i;
+var UNIFIED_DIFF_HEADER_REGEX = /^(?:diff --git|index\s+[0-9a-f]{7}\.\.[0-9a-f]{7}|--- [ab]\/|\+\+\+ [ab]\/|@@\s+-\d+,\d+\s+\+\d+,\d+\s+@@)/i;
 var LIST_ITEM_REGEX = /^\s*(?:[-*•]|\d+[\.、)])\s+/;
+var ANSI_REGEX = /\x1b\[[0-9;?]*[a-zA-Z]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g;
 function sanitizePromptForTranslation(raw) {
-  const trimmed = raw.trim();
+  const cleanRaw = typeof raw === "string" ? raw.replace(ANSI_REGEX, "") : "";
+  const trimmed = cleanRaw.trim();
   if (!trimmed) {
     return {
       distilledText: "",
@@ -3280,6 +3294,7 @@ function sanitizePromptForTranslation(raw) {
   const resultLines = [];
   let inStackBlock = false;
   let inDiagnosticBlock = false;
+  let inDiffBlock = false;
   const currentListItems = [];
   const collapsedListBlocks = [];
   const flushListItems = () => {
@@ -3301,6 +3316,7 @@ function sanitizePromptForTranslation(raw) {
       flushListItems();
       inStackBlock = false;
       inDiagnosticBlock = false;
+      inDiffBlock = false;
       continue;
     }
     if (STACK_LINE_REGEX.test(lineTrim) || lineTrim.startsWith("Traceback (most recent call last):")) {
@@ -3334,6 +3350,17 @@ function sanitizePromptForTranslation(raw) {
       }
       continue;
     }
+    if (UNIFIED_DIFF_HEADER_REGEX.test(lineTrim)) {
+      flushListItems();
+      inDiffBlock = true;
+      resultLines.push(line);
+      continue;
+    }
+    if (inDiffBlock && (lineTrim.startsWith("-") || lineTrim.startsWith("+") || lineTrim.startsWith(" "))) {
+      resultLines.push(line);
+      continue;
+    }
+    inDiffBlock = false;
     if (LIST_ITEM_REGEX.test(lineTrim)) {
       currentListItems.push(line);
       continue;

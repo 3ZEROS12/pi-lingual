@@ -22,14 +22,19 @@ const LEADING_TARGETED_CLIPBOARD_REGEX = /^(?:[a-zA-Z]:[\\\/](?:[^:\r\n\t]+[\\\/
 const ABSOLUTE_LONG_PATH_REGEX = /(?:[a-zA-Z]:[\\\/](?:[^:\r\n\t\s<>"]+[\\\/])+[a-zA-Z0-9_\-\.]+\.[a-zA-Z0-9_]+|\/(?:[a-zA-Z0-9_\-\.]+[\\\/]){3,}[a-zA-Z0-9_\-\.]+\.[a-zA-Z0-9_]+)/gi;
 const UUID_OR_SESSION_REGEX = /(?:(?:session|id|uuid)[\s:=]*)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4,16}(?:\.jsonl)?/gi;
 
-// Stack trace pattern
-const STACK_LINE_REGEX = /^\s*(?:at\s+(?:[\w$.<>]+|[^\s]+)\s*\(.*:\d+:\d+\)|at\s+.*:\d+:\d+|File\s+".*", line \d+, in\s+.*|goroutine \d+ \[.*\]:|Caused by:.*|^\s*\d+:\s+0x[0-9a-f]+)/;
+// Stack trace pattern (Node.js, Python runtime/syntax, Java, Go, Rust)
+const STACK_LINE_REGEX = /^\s*(?:at\s+(?:[\w$.<>]+|[^\s]+)\s*\(.*:\d+:\d+\)|at\s+.*:\d+:\d+|File\s+".*", line \d+(?:, in\s+.*)?|goroutine \d+ \[.*\]:|Caused by:.*|^\s*\d+:\s+0x[0-9a-f]+|^\s*\^+|\b(?:SyntaxError|IndentationError|TabError):)/;
 
 // Compiler multiline diagnostic pattern (TS / Rustc / GCC / Python)
 const COMPILER_DIAGNOSTIC_REGEX = /^(?:[a-zA-Z]:[\\\/]|\.{0,2}[\\\/]|[a-zA-Z0-9_\-\.]+)[^:\r\n]+:\d+:\d+:\s*(?:error|warning|fatal error|note):/i;
 
+// Unified git diff header patterns
+const UNIFIED_DIFF_HEADER_REGEX = /^(?:diff --git|index\s+[0-9a-f]{7}\.\.[0-9a-f]{7}|--- [ab]\/|\+\+\+ [ab]\/|@@\s+-\d+,\d+\s+\+\d+,\d+\s+@@)/i;
+
 // Multiline list item pattern (-, *, •, 1., 2.)
 const LIST_ITEM_REGEX = /^\s*(?:[-*•]|\d+[\.、)])\s+/;
+
+const ANSI_REGEX = /\x1b\[[0-9;?]*[a-zA-Z]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g;
 
 export interface SanitizedPromptResult {
   /** Distilled compact text after sanitization and folding */
@@ -48,7 +53,8 @@ export interface SanitizedPromptResult {
  * Sanitizes user input and distills natural language intent.
  */
 export function sanitizePromptForTranslation(raw: string): SanitizedPromptResult {
-  const trimmed = raw.trim();
+  const cleanRaw = typeof raw === "string" ? raw.replace(ANSI_REGEX, "") : "";
+  const trimmed = cleanRaw.trim();
   if (!trimmed) {
     return {
       distilledText: "",
@@ -116,6 +122,7 @@ export function sanitizePromptForTranslation(raw: string): SanitizedPromptResult
   const resultLines: string[] = [];
   let inStackBlock = false;
   let inDiagnosticBlock = false;
+  let inDiffBlock = false;
   const currentListItems: string[] = [];
   const collapsedListBlocks: string[] = [];
 
@@ -144,6 +151,7 @@ export function sanitizePromptForTranslation(raw: string): SanitizedPromptResult
       flushListItems();
       inStackBlock = false;
       inDiagnosticBlock = false;
+      inDiffBlock = false;
       continue;
     }
 
@@ -185,7 +193,20 @@ export function sanitizePromptForTranslation(raw: string): SanitizedPromptResult
       continue;
     }
 
-    // D. Collapse multiline list items (>= 2 items)
+    // D. Check for unified git diff headers and delta lines
+    if (UNIFIED_DIFF_HEADER_REGEX.test(lineTrim)) {
+      flushListItems();
+      inDiffBlock = true;
+      resultLines.push(line);
+      continue;
+    }
+    if (inDiffBlock && (lineTrim.startsWith("-") || lineTrim.startsWith("+") || lineTrim.startsWith(" "))) {
+      resultLines.push(line);
+      continue;
+    }
+    inDiffBlock = false;
+
+    // E. Collapse multiline list items (>= 2 items)
     if (LIST_ITEM_REGEX.test(lineTrim)) {
       currentListItems.push(line);
       continue;

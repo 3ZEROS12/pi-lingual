@@ -1045,7 +1045,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     notifyAgentHelp: "💡 Habilidad lingual-tuner integrada: Simplemente pídale a su Agente \"Personaliza el asistente: solo tuit y análisis, sin texto original\" para configurar las ranuras al instante. Cambie de idioma con /lang <code>.",
     notifyModelSwitched: "Modelo cambiado a: {model}",
     notifyLangSwitched: "Idioma nativo cambiado a: {lang} (Nota: Las descripciones del menú de comandos se actualizarán tras reiniciar la terminal)",
-    notifyLangInvalid: "Código de idioma no válido. Admitidos: zh, ja, en, es, fr, de",
+    notifyLangInvalid: "Código de idioma no válido. Admitidos: zh, tw, ja, ko, en, es, fr, de, ru",
     notifyCompactOn: "[es ⇄ en] Modo cápsula de una línea activado",
     notifyCompactOff: "[es ⇄ en] Modo árbol completo restaurado",
     notifySlotSwitched: "[es ⇄ en] Arquitectura de ranuras cambiada a [{preset}]: {desc}",
@@ -1104,14 +1104,17 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     modelAutoFollowDesc: "auto (Sigue automáticamente el modelo de la sesión)",
     modelSelectHint: "Use /lingual model <id> o auto para asignar un modelo.",
 
-    langUsageHint: "Uso: /lang <zh|ja|en|es|fr|de> [target] (ej. /lang ja o /lang zh ja)",
+    langUsageHint: "Uso: /lang <zh|tw|ja|ko|en|es|fr|de|ru> [target] (ej. /lang ja o /lang zh ja)",
     langList: [
       "• zh (Chino ➔ Inglés)",
+      "• tw (Chino tradicional ➔ Inglés)",
       "• ja (Japonés ➔ Inglés)",
+      "• ko (Coreano ➔ Inglés)",
       "• en (Inglés ➔ Japonés)",
       "• es (Español ➔ Inglés)",
       "• fr (Francés ➔ Inglés)",
       "• de (Alemán ➔ Inglés)",
+      "• ru (Ruso ➔ Inglés)",
     ],
 
     // Ranuras dinámicas (Español)
@@ -1168,7 +1171,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     notifyAgentHelp: "💡 Compétence lingual-tuner intégrée : Dites simplement à votre Agent \"Personnalise le compagnon : uniquement tweet et analyse, sans texte original\" pour ajuster les emplacements. Changez de langue avec /lang <code>.",
     notifyModelSwitched: "Modèle changé pour : {model}",
     notifyLangSwitched: "Langue maternelle changée en : {lang} (Note : L'autocomplétion des commandes sera actualisée après redémarrage du terminal)",
-    notifyLangInvalid: "Code de langue invalide. Pris en charge : zh, ja, en, es, fr, de",
+    notifyLangInvalid: "Code de langue invalide. Pris en charge : zh, tw, ja, ko, en, es, fr, de, ru",
     notifyCompactOn: "[fr ⇄ en] Mode capsule sur une seule ligne activé",
     notifyCompactOff: "[fr ⇄ en] Mode arborescence complète restauré",
     notifyTimeout: "[fr ⇄ en] La traduction en anglais a expiré ; le prompt original a été transmis",
@@ -1225,14 +1228,17 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     modelAutoFollowDesc: "auto (Suit automatiquement le modèle principal)",
     modelSelectHint: "Entrez /lingual model <id> ou auto pour définir le modèle.",
 
-    langUsageHint: "Utilisation : /lang <zh|ja|en|es|fr|de> [target] (ex : /lang ja ou /lang zh ja)",
+    langUsageHint: "Utilisation : /lang <zh|tw|ja|ko|en|es|fr|de|ru> [target] (ex : /lang ja ou /lang zh ja)",
     langList: [
       "• zh (Chinois ➔ Anglais)",
+      "• tw (Chinois traditionnel ➔ Anglais)",
       "• ja (Japonais ➔ Anglais)",
+      "• ko (Coréen ➔ Anglais)",
       "• en (Anglais ➔ Japonais)",
       "• es (Espagnol ➔ Anglais)",
       "• fr (Français ➔ Anglais)",
       "• de (Allemand ➔ Anglais)",
+      "• ru (Russe ➔ Anglais)",
     ],
 
     // Emplacements dynamiques (Français)
@@ -1289,7 +1295,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     notifyAgentHelp: "💡 Integrierter lingual-tuner Skill: Sagen Sie Ihrem Agenten einfach \"Passen Sie die Begleitung an: nur Tweet und tiefe Einsicht, kein Originaltext\", um Slots anzupassen. Sprache wechseln mit /lang <code>.",
     notifyModelSwitched: "Modell gewechselt zu: {model}",
     notifyLangSwitched: "Muttersprache geändert zu: {lang} (Hinweis: Befehlsbeschreibungen werden nach dem Terminal-Neustart vollständig aktualisiert)",
-    notifyLangInvalid: "Ungültiger Sprachcode. Unterstützt: zh, ja, en, es, fr, de",
+    notifyLangInvalid: "Ungültiger Sprachcode. Unterstützt: zh, tw, ja, ko, en, es, fr, de, ru",
     notifyCompactOn: "[de ⇄ en] Einzeiliger Kapselmodus aktiviert",
     notifyCompactOff: "[de ⇄ en] Vollständige Baumansicht wiederhergestellt",
     notifySlotSwitched: "[de ⇄ en] Slot-Architektur auf [{preset}] umgestellt: {desc}",
@@ -1348,14 +1354,17 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     modelAutoFollowDesc: "auto (Folgt automatisch dem aktiven Sitzungsmodell)",
     modelSelectHint: "Geben Sie /lingual model <id> oder auto ein.",
 
-    langUsageHint: "Verwendung: /lang <zh|ja|en|es|fr|de> [target] (z.B. /lang ja oder /lang zh ja)",
+    langUsageHint: "Verwendung: /lang <zh|tw|ja|ko|en|es|fr|de|ru> [target] (z.B. /lang ja oder /lang zh ja)",
     langList: [
       "• zh (Chinesisch ➔ Englisch)",
+      "• tw (Traditionelles Chinesisch ➔ Englisch)",
       "• ja (Japanisch ➔ Englisch)",
+      "• ko (Koreanisch ➔ Englisch)",
       "• en (Englisch ➔ Japanisch)",
       "• es (Spanisch ➔ Englisch)",
       "• fr (Französisch ➔ Englisch)",
       "• de (Deutsch ➔ Englisch)",
+      "• ru (Russisch ➔ Englisch)",
     ],
 
     // Dynamische Slot-Architektur (Deutsch)

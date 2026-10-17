@@ -14,7 +14,7 @@ const SHELL_COMMAND_PREFIXES = [
   "cd ", "ls ", "dir ", "cat ", "type ", "rm ", "cp ", "mv ",
   "mkdir ", "chmod ", "chown ", "curl ", "wget ", "ssh ", "scp ",
   "grep ", "find ", "ps ", "kill ", "echo ", "export ", "set ",
-  "typst ", "ffmpeg ", "yt-dlp ", "npx ", "tar ", "zip ", "unzip "
+  "typst ", "ffmpeg ", "yt-dlp ", "npx ", "tar ", "zip ", "unzip ", "diff "
 ];
 
 // Top-level statements across major programming languages
@@ -83,8 +83,8 @@ export function shouldShieldBypass(text: string): boolean {
 
   // 4. Pure single-line code statements without natural language commentary
   if (CODE_STATEMENT_REGEX.test(trimmed) && !trimmed.includes("？") && !trimmed.includes("?")) {
-    // Pure code definition without conversational markers
-    if (!/[\u4e00-\u9fa5]/.test(trimmed) || /^[a-zA-Z0-9_\s<>{}\[\]();:=,"'.]+$/.test(trimmed)) {
+    const hasConversationalIntent = /(?:为什么|怎么|如何|帮我|排查|优化|修改|修复|为何|报错|审查|看下|explain|why|how|please|help|could you|fix)/i.test(trimmed);
+    if (!hasConversationalIntent) {
       return true;
     }
   }
