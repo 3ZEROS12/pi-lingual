@@ -317,6 +317,9 @@ export function saveUserLingualConfig(patch: Record<string, any>): void {
         if (!patch.activeModeId) {
           existing.activeModeId = canonical;
         }
+      } else if (k === "defaultMode") {
+        const canonical = v === "1" ? "companion" : v === "2" ? "direct" : v === "3" ? "live-flow" : v === "0" ? "off" : v === "english" ? "direct" : v === "select" ? "candidates" : v;
+        existing.defaultMode = canonical;
       } else if (k === "activeModeId") {
         existing.activeModeId = v;
         if (!patch.mode) {

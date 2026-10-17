@@ -191,6 +191,7 @@ interface LingualConfig {
     model: string;
     selectedModel?: string;
     mode?: LingualMode;
+    defaultMode?: string;
     modeLocked?: boolean;
     compact?: boolean;
     slotPreset?: string;

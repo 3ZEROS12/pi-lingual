@@ -4036,17 +4036,24 @@ function renderCardLayout(card, labels, options = {}) {
           } else {
             const branchesLeftAfterThis = numBranches - 1 - i;
             const maxPossible = Math.max(1, remainingBudget - branchesLeftAfterThis);
-            branchBudget = Math.min(maxPossible, Math.min(branchRendered.length, 3));
+            branchBudget = Math.min(maxPossible, Math.min(branchRendered.length, 4));
             transHandled++;
           }
           if (branchRendered.length <= branchBudget) {
             clampedBranchLines.push(...branchRendered);
             remainingBudget -= branchRendered.length;
           } else {
-            const sliced = branchRendered.slice(0, branchBudget);
-            sliced[sliced.length - 1] = truncateVisual(sliced[sliced.length - 1] + "...", maxCols);
-            clampedBranchLines.push(...sliced);
-            remainingBudget -= sliced.length;
+            if (isVocab) {
+              const prefix = decMuted(`  ${branchChar} `) + decMuted(`[`) + decMuted(branch.label) + decMuted(`] `);
+              const atomicLine = formatVocabItemsAtomic(branch.content, prefix, maxCols);
+              clampedBranchLines.push(atomicLine);
+              remainingBudget -= 1;
+            } else {
+              const sliced = branchRendered.slice(0, branchBudget);
+              sliced[sliced.length - 1] = truncateVisual(sliced[sliced.length - 1] + "...", maxCols);
+              clampedBranchLines.push(...sliced);
+              remainingBudget -= sliced.length;
+            }
           }
         }
         lines = clampedBranchLines.slice(0, maxLines);
@@ -4372,6 +4379,9 @@ function saveUserLingualConfig(patch) {
         if (!patch.activeModeId) {
           existing.activeModeId = canonical;
         }
+      } else if (k === "defaultMode") {
+        const canonical = v === "1" ? "companion" : v === "2" ? "direct" : v === "3" ? "live-flow" : v === "0" ? "off" : v === "english" ? "direct" : v === "select" ? "candidates" : v;
+        existing.defaultMode = canonical;
       } else if (k === "activeModeId") {
         existing.activeModeId = v;
         if (!patch.mode) {

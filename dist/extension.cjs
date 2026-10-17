@@ -374,6 +374,34 @@ function spotlightPhrases(text, phrases) {
   }
   return result;
 }
+function formatVocabItemsAtomic(vocab, prefix, maxCols) {
+  if (!vocab || !vocab.trim()) return prefix.trimEnd();
+  const items = vocab.split(/\s*(?:·|•)\s*/);
+  const prefixW = getVisualWidth(prefix);
+  const availW = Math.max(20, maxCols - prefixW);
+  const keptItems = [];
+  let curW = 0;
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i].trim();
+    if (!item) continue;
+    const itemW = getVisualWidth(item);
+    const sepW = keptItems.length > 0 ? 3 : 0;
+    if (curW + sepW + itemW <= availW) {
+      keptItems.push(item);
+      curW += sepW + itemW;
+    } else {
+      if (keptItems.length === 0) {
+        return prefix + truncateVisual(item, availW);
+      } else {
+        if (curW + 5 <= availW) {
+          return prefix + keptItems.join(" \xB7 ") + " \xB7 ...";
+        }
+        return prefix + keptItems.join(" \xB7 ");
+      }
+    }
+  }
+  return prefix + keptItems.join(" \xB7 ");
+}
 function formatTerminalAnnotation(sourceText, spoken, written, vocab, options = {}) {
   const slot1 = options.slot1Label || "Spoken";
   const slot2 = options.slot2Label || "Written";
@@ -653,17 +681,24 @@ function renderCardLayout(card, labels, options = {}) {
           } else {
             const branchesLeftAfterThis = numBranches - 1 - i;
             const maxPossible = Math.max(1, remainingBudget - branchesLeftAfterThis);
-            branchBudget = Math.min(maxPossible, Math.min(branchRendered.length, 3));
+            branchBudget = Math.min(maxPossible, Math.min(branchRendered.length, 4));
             transHandled++;
           }
           if (branchRendered.length <= branchBudget) {
             clampedBranchLines.push(...branchRendered);
             remainingBudget -= branchRendered.length;
           } else {
-            const sliced = branchRendered.slice(0, branchBudget);
-            sliced[sliced.length - 1] = truncateVisual(sliced[sliced.length - 1] + "...", maxCols);
-            clampedBranchLines.push(...sliced);
-            remainingBudget -= sliced.length;
+            if (isVocab) {
+              const prefix = decMuted(`  ${branchChar} `) + decMuted(`[`) + decMuted(branch.label) + decMuted(`] `);
+              const atomicLine = formatVocabItemsAtomic(branch.content, prefix, maxCols);
+              clampedBranchLines.push(atomicLine);
+              remainingBudget -= 1;
+            } else {
+              const sliced = branchRendered.slice(0, branchBudget);
+              sliced[sliced.length - 1] = truncateVisual(sliced[sliced.length - 1] + "...", maxCols);
+              clampedBranchLines.push(...sliced);
+              remainingBudget -= sliced.length;
+            }
           }
         }
         lines = clampedBranchLines.slice(0, maxLines);
@@ -3773,6 +3808,9 @@ function saveUserLingualConfig(patch) {
         if (!patch.activeModeId) {
           existing.activeModeId = canonical;
         }
+      } else if (k === "defaultMode") {
+        const canonical = v === "1" ? "companion" : v === "2" ? "direct" : v === "3" ? "live-flow" : v === "0" ? "off" : v === "english" ? "direct" : v === "select" ? "candidates" : v;
+        existing.defaultMode = canonical;
       } else if (k === "activeModeId") {
         existing.activeModeId = v;
         if (!patch.mode) {
@@ -4990,6 +5028,7 @@ var initialNormalizedMode = normalizeActiveModeId(
 var state = {
   mode: initialNormalizedMode,
   activeModeId: initialNormalizedMode,
+  defaultMode: initialDiskConfig.defaultMode || "companion",
   modeLocked: Boolean(initialDiskConfig.modeLocked),
   compact: Boolean(initialDiskConfig.compact),
   sourceLang: initialSourceLang,
@@ -5316,7 +5355,10 @@ function extension_default(pi) {
     } else {
       state.modes = resolveModesFromConfig(diskCfg, state.sourceLang);
     }
-    const rawDiskMode = diskCfg.activeModeId || diskCfg.mode || "companion";
+    const isBrandNewSession = event?.reason === "new";
+    const targetDefault = diskCfg.defaultMode || "companion";
+    state.defaultMode = targetDefault;
+    const rawDiskMode = isBrandNewSession ? targetDefault : diskCfg.activeModeId || diskCfg.mode || targetDefault || state.mode;
     state.mode = normalizeActiveModeId(
       { mode: rawDiskMode, activeModeId: rawDiskMode },
       state.modes
@@ -6034,6 +6076,63 @@ Usage: /lingual loadout [list | apply <id>] (e.g. /lingual loadout apply spec)`;
     );
     updateFooter(ctx);
   };
+  const setDefaultModeHandler = async (args, ctx) => {
+    const trimmed = args?.trim();
+    const disk = loadUserLingualConfig();
+    const currentModes = Array.isArray(state.modes) && state.modes.length > 0 ? state.modes : resolveModesFromConfig(disk, state.sourceLang);
+    const currentDefault = disk.defaultMode || state.defaultMode || "companion";
+    const defaultModeObj = currentModes.find((m) => m.id === currentDefault) || currentModes[0];
+    const defaultIdx = currentModes.indexOf(defaultModeObj);
+    const defaultNum = defaultIdx >= 0 ? defaultIdx + 1 : 1;
+    const defaultName = defaultModeObj ? localizeModeName(defaultModeObj.id, defaultModeObj.name, state.sourceLang) : currentDefault;
+    if (!trimmed) {
+      ctx.ui.notify(
+        `[lingual] Default mode for new sessions: ${defaultNum}. ${defaultName} (${currentDefault}). Set with: /lingual default <1|2|3|0|id>`,
+        "info"
+      );
+      return;
+    }
+    let targetId;
+    const num = parseInt(trimmed, 10);
+    if (!isNaN(num) && num === 0) {
+      targetId = "off";
+    } else if (!isNaN(num) && num >= 1 && num <= currentModes.length) {
+      targetId = currentModes[num - 1].id;
+    } else {
+      const lower = trimmed.toLowerCase();
+      const matched = currentModes.find(
+        (m) => m.id.toLowerCase() === lower || m.name.toLowerCase() === lower || Array.isArray(m.aliases) && m.aliases.some((a) => a.toLowerCase() === lower) || resolveModeDisplayName(m.id, state.sourceLang).toLowerCase() === lower
+      );
+      if (matched) {
+        targetId = matched.id;
+      } else if (lower === "off") {
+        targetId = "off";
+      } else if (lower === "companion" || lower === "original") {
+        targetId = "companion";
+      } else if (lower === "direct" || lower === "spec" || lower === "lazy") {
+        targetId = "direct";
+      } else if (lower === "live-flow" || lower === "flow" || lower === "raw" || lower === "modify") {
+        targetId = "live-flow";
+      }
+    }
+    if (!targetId) {
+      ctx.ui.notify(
+        `[lingual] Unknown mode "${trimmed}". Valid options: 1, 2, 3, 0, companion, direct, live-flow, off.`,
+        "warning"
+      );
+      return;
+    }
+    state.defaultMode = targetId;
+    saveUserLingualConfig({ defaultMode: targetId });
+    const targetObj = currentModes.find((m) => m.id === targetId);
+    const targetIdx = targetObj ? currentModes.indexOf(targetObj) : -1;
+    const targetNum = targetId === "off" ? 0 : targetIdx >= 0 ? targetIdx + 1 : 1;
+    const targetName = targetId === "off" ? resolveModeDisplayName("off", state.sourceLang) : targetObj ? localizeModeName(targetObj.id, targetObj.name, state.sourceLang) : targetId;
+    ctx.ui.notify(
+      `[lingual] Default mode for new sessions set to: ${targetNum}. ${targetName} (${targetId})`,
+      "info"
+    );
+  };
   const openModePicker = async (ctx) => {
     const diskForMode = loadUserLingualConfig();
     const diskMode = diskForMode.activeModeId || diskForMode.mode;
@@ -6200,6 +6299,10 @@ Usage: /lingual loadout [list | apply <id>] (e.g. /lingual loadout apply spec)`;
       await setReasoningHandler(subArgs, ctx);
       return;
     }
+    if (sub === "default" || sub === "def") {
+      await setDefaultModeHandler(subArgs, ctx);
+      return;
+    }
     if (sub === "mode" || sub === "modes") {
       await manageModesHandler(subArgs, ctx);
       return;
@@ -6310,7 +6413,7 @@ Usage: /lingual loadout [list | apply <id>] (e.g. /lingual loadout apply spec)`;
     }
   };
   pi.registerCommand("lingual", {
-    description: state.labels.cmdDescMode || "Interactive mode picker or manage: /lingual [1|2|3|0|on|off|lang|last|lock|status]",
+    description: state.labels.cmdDescMode || "Interactive mode picker or manage: /lingual [1|2|3|0|on|off|default|lang|last|lock|status]",
     handler: masterCommandHandler
   });
   pi.registerCommand("l", {

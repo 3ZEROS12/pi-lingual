@@ -219,6 +219,7 @@ export interface LingualConfig {
   model: string;
   selectedModel?: string;
   mode?: LingualMode;
+  defaultMode?: string;             // Fixed default mode initialized on new sessions (e.g. "companion" / "1")
   modeLocked?: boolean;            // When true, locks active mode to prevent cross-process or unrequested drift
   compact?: boolean;
   slotPreset?: string;

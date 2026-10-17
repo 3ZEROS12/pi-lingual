@@ -120,6 +120,7 @@ interface ExtensionState {
   modifySlots: PromptSlotConfig[];
   modes: CustomModeConfig[];
   activeModeId?: string;
+  defaultMode?: string;
   labels: LingualI18nLabels;
 }
 
@@ -151,6 +152,7 @@ const initialNormalizedMode = normalizeActiveModeId(
 const state: ExtensionState = {
   mode: initialNormalizedMode,
   activeModeId: initialNormalizedMode,
+  defaultMode: initialDiskConfig.defaultMode || "companion",
   modeLocked: Boolean(initialDiskConfig.modeLocked),
   compact: Boolean(initialDiskConfig.compact),
   sourceLang: initialSourceLang,
@@ -571,8 +573,16 @@ export default function (pi: ExtensionAPI) {
     } else {
       state.modes = resolveModesFromConfig(diskCfg, state.sourceLang);
     }
-    // Single source of truth: synchronize active mode cleanly from disk (activeModeId || mode)
-    const rawDiskMode = diskCfg.activeModeId || diskCfg.mode || "companion";
+    // Single source of truth:
+    // If brand-new session (event?.reason === "new"), initialize strictly to defaultMode (Mode 1 "companion").
+    // If resuming or switching session (event?.reason === "resume" || "switch" || "fork" || "reload"), preserve active mode.
+    const isBrandNewSession = event?.reason === "new";
+    const targetDefault = diskCfg.defaultMode || "companion";
+    state.defaultMode = targetDefault;
+
+    const rawDiskMode = isBrandNewSession
+      ? targetDefault
+      : (diskCfg.activeModeId || diskCfg.mode || targetDefault || state.mode);
     state.mode = normalizeActiveModeId(
       { mode: rawDiskMode, activeModeId: rawDiskMode },
       state.modes
@@ -1451,6 +1461,80 @@ export default function (pi: ExtensionAPI) {
     updateFooter(ctx);
   };
 
+  const setDefaultModeHandler = async (args: string, ctx: ExtensionContext) => {
+    const trimmed = args?.trim();
+    const disk = loadUserLingualConfig();
+    const currentModes = Array.isArray(state.modes) && state.modes.length > 0
+      ? state.modes
+      : resolveModesFromConfig(disk, state.sourceLang);
+    const currentDefault = disk.defaultMode || state.defaultMode || "companion";
+    const defaultModeObj = currentModes.find((m) => m.id === currentDefault) || currentModes[0];
+    const defaultIdx = currentModes.indexOf(defaultModeObj);
+    const defaultNum = defaultIdx >= 0 ? defaultIdx + 1 : 1;
+    const defaultName = defaultModeObj ? localizeModeName(defaultModeObj.id, defaultModeObj.name, state.sourceLang) : currentDefault;
+
+    if (!trimmed) {
+      ctx.ui.notify(
+        `[lingual] Default mode for new sessions: ${defaultNum}. ${defaultName} (${currentDefault}). Set with: /lingual default <1|2|3|0|id>`,
+        "info"
+      );
+      return;
+    }
+
+    let targetId: string | undefined;
+    const num = parseInt(trimmed, 10);
+    if (!isNaN(num) && num === 0) {
+      targetId = "off";
+    } else if (!isNaN(num) && num >= 1 && num <= currentModes.length) {
+      targetId = currentModes[num - 1].id;
+    } else {
+      const lower = trimmed.toLowerCase();
+      const matched = currentModes.find(
+        (m) =>
+          m.id.toLowerCase() === lower ||
+          m.name.toLowerCase() === lower ||
+          (Array.isArray(m.aliases) && m.aliases.some((a) => a.toLowerCase() === lower)) ||
+          resolveModeDisplayName(m.id, state.sourceLang).toLowerCase() === lower
+      );
+      if (matched) {
+        targetId = matched.id;
+      } else if (lower === "off") {
+        targetId = "off";
+      } else if (lower === "companion" || lower === "original") {
+        targetId = "companion";
+      } else if (lower === "direct" || lower === "spec" || lower === "lazy") {
+        targetId = "direct";
+      } else if (lower === "live-flow" || lower === "flow" || lower === "raw" || lower === "modify") {
+        targetId = "live-flow";
+      }
+    }
+
+    if (!targetId) {
+      ctx.ui.notify(
+        `[lingual] Unknown mode "${trimmed}". Valid options: 1, 2, 3, 0, companion, direct, live-flow, off.`,
+        "warning"
+      );
+      return;
+    }
+
+    state.defaultMode = targetId;
+    saveUserLingualConfig({ defaultMode: targetId });
+
+    const targetObj = currentModes.find((m) => m.id === targetId);
+    const targetIdx = targetObj ? currentModes.indexOf(targetObj) : -1;
+    const targetNum = targetId === "off" ? 0 : targetIdx >= 0 ? targetIdx + 1 : 1;
+    const targetName = targetId === "off"
+      ? resolveModeDisplayName("off", state.sourceLang)
+      : targetObj
+      ? localizeModeName(targetObj.id, targetObj.name, state.sourceLang)
+      : targetId;
+
+    ctx.ui.notify(
+      `[lingual] Default mode for new sessions set to: ${targetNum}. ${targetName} (${targetId})`,
+      "info"
+    );
+  };
+
   // Interactive capsule mode picker (Invoked on parameterless /lingual or /l)
   const openModePicker = async (ctx: ExtensionContext): Promise<string | null> => {
     const diskForMode = loadUserLingualConfig();
@@ -1680,6 +1764,12 @@ export default function (pi: ExtensionAPI) {
       return;
     }
 
+    // 0.1 Subcommand: default mode for new sessions (/lingual default [1|2|3|0|id])
+    if (sub === "default" || sub === "def") {
+      await setDefaultModeHandler(subArgs, ctx);
+      return;
+    }
+
     // 1.0 Subcommand: mode registry management (/lingual mode [args...])
     if (sub === "mode" || sub === "modes") {
       await manageModesHandler(subArgs, ctx);
@@ -1832,7 +1922,7 @@ export default function (pi: ExtensionAPI) {
   pi.registerCommand("lingual", {
     description:
       state.labels.cmdDescMode ||
-      "Interactive mode picker or manage: /lingual [1|2|3|0|on|off|lang|last|lock|status]",
+      "Interactive mode picker or manage: /lingual [1|2|3|0|on|off|default|lang|last|lock|status]",
     handler: masterCommandHandler,
   });
 
