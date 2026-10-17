@@ -104,24 +104,59 @@ function getVisualWidth(str) {
 }
 function closingDelimitersFor(text) {
   const clean = text.replace(ANSI_ESCAPE_REGEX, "");
-  const pairs = [
-    [/\(/g, /\)/g, ")"],
-    [/\[/g, /\]/g, "]"],
-    [/\{/g, /\}/g, "}"],
-    [/（/g, /）/g, "\uFF09"],
-    [/【/g, /】/g, "\u3011"],
-    [/「/g, /」/g, "\u300D"],
-    [/『/g, /』/g, "\u300F"]
-  ];
-  let closers = "";
-  for (const [openRe, closeRe, closer] of pairs) {
-    const o = (clean.match(openRe) || []).length;
-    const c = (clean.match(closeRe) || []).length;
-    if (o > c) {
-      closers += closer.repeat(o - c);
+  const pairs = {
+    "(": ")",
+    "[": "]",
+    "{": "}",
+    "\uFF08": "\uFF09",
+    "\u3010": "\u3011",
+    "\u300C": "\u300D",
+    "\u300E": "\u300F"
+  };
+  const closersMap = {
+    ")": "(",
+    "]": "[",
+    "}": "{",
+    "\uFF09": "\uFF08",
+    "\u3011": "\u3010",
+    "\u300D": "\u300C",
+    "\u300F": "\u300E"
+  };
+  const stack = [];
+  let inDouble = false;
+  let inSingle = false;
+  let inBacktick = false;
+  for (let i = 0; i < clean.length; i++) {
+    const ch = clean[i];
+    const prev = i > 0 ? clean[i - 1] : "";
+    if (prev === "\\") continue;
+    if (ch === '"' && !inSingle && !inBacktick) {
+      inDouble = !inDouble;
+      continue;
+    }
+    if (ch === "'" && !inDouble && !inBacktick) {
+      inSingle = !inSingle;
+      continue;
+    }
+    if (ch === "`" && !inDouble && !inSingle) {
+      inBacktick = !inBacktick;
+      continue;
+    }
+    if (inDouble || inSingle || inBacktick) continue;
+    if (pairs[ch]) {
+      stack.push(pairs[ch]);
+    } else if (closersMap[ch]) {
+      const topIdx = stack.lastIndexOf(ch);
+      if (topIdx !== -1) {
+        stack.splice(topIdx, 1);
+      }
     }
   }
-  return closers;
+  let quoteCloser = "";
+  if (inDouble) quoteCloser = '"';
+  else if (inSingle) quoteCloser = "'";
+  else if (inBacktick) quoteCloser = "`";
+  return quoteCloser + stack.reverse().join("");
 }
 function truncateVisual(str, maxVisualCols) {
   if (maxVisualCols <= 0) return "";

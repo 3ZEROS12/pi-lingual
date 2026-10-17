@@ -7,6 +7,7 @@ import {
   wrapVisualText,
   formatCapsuleLine,
   renderCardLayout,
+  truncateVisual,
 } from "../src/layout.js";
 import {
   repairAndParseJsonObject,
@@ -141,3 +142,27 @@ test("chaos: prompt compiler orders context, killList, and rules strictly before
   assert.ok(compiled.indexOf("src/auth.ts") < termIdx);
   assert.ok(compiled.indexOf("Always define explicit negative constraints") < termIdx);
 });
+
+test("chaos: stack-based delimiter balancer enforces mathematical LIFO order and ignores in-string brackets", () => {
+  // Nested brackets must close in LIFO order (arr[idx] then func()), never [) or (]
+  const nested = truncateVisual("func(arr[idx + offset_value", 18);
+  assert.ok(
+    nested.includes("])..."),
+    `Must close nested brackets in LIFO order '])': got "${nested}"`
+  );
+
+  // Brackets inside quotes must not cause stray brackets outside quotes
+  const inQuotes = truncateVisual('Call func("[") and inspect result', 22);
+  assert.ok(
+    !inQuotes.includes("]..."),
+    `Must not append stray brackets for in-quote delimiters: got "${inQuotes}"`
+  );
+
+  // Unclosed quotes must be balanced before ellipsis
+  const unclosedQuote = truncateVisual('const message = "hello world from author', 28);
+  assert.ok(
+    unclosedQuote.includes('"'),
+    `Must balance unclosed quote: got "${unclosedQuote}"`
+  );
+});
+

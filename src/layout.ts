@@ -119,28 +119,75 @@ export function getVisualWidth(str: string): number {
 
 /** Returns the closing delimiters needed to rebalance a hard-clipped fragment ("" when balanced). */
 function closingDelimitersFor(text: string): string {
-  // Strip ANSI color escape sequences BEFORE balancing delimiters.
-  // ANSI escapes start with '\x1b[' and end with 'm', which was causing '\x1b['
-  // to be miscounted as unclosed square brackets '[' and appending stray ']]]...'.
+  // 1. Strip ANSI escape sequences before inspecting characters
   const clean = text.replace(ANSI_ESCAPE_REGEX, "");
-  const pairs: [RegExp, RegExp, string][] = [
-    [/\(/g, /\)/g, ")"],
-    [/\[/g, /\]/g, "]"],
-    [/\{/g, /\}/g, "}"],
-    [/（/g, /）/g, "）"],
-    [/【/g, /】/g, "】"],
-    [/「/g, /」/g, "」"],
-    [/『/g, /』/g, "』"],
-  ];
-  let closers = "";
-  for (const [openRe, closeRe, closer] of pairs) {
-    const o = (clean.match(openRe) || []).length;
-    const c = (clean.match(closeRe) || []).length;
-    if (o > c) {
-      closers += closer.repeat(o - c);
+
+  const pairs: Record<string, string> = {
+    "(": ")",
+    "[": "]",
+    "{": "}",
+    "（": "）",
+    "【": "】",
+    "「": "」",
+    "『": "』",
+  };
+  const closersMap: Record<string, string> = {
+    ")": "(",
+    "]": "[",
+    "}": "{",
+    "）": "（",
+    "】": "【",
+    "」": "「",
+    "』": "『",
+  };
+
+  const stack: string[] = [];
+  let inDouble = false;
+  let inSingle = false;
+  let inBacktick = false;
+
+  for (let i = 0; i < clean.length; i++) {
+    const ch = clean[i];
+    const prev = i > 0 ? clean[i - 1] : "";
+
+    // Skip escaped quote/character
+    if (prev === "\\") continue;
+
+    // Track string literal quote boundaries
+    if (ch === '"' && !inSingle && !inBacktick) {
+      inDouble = !inDouble;
+      continue;
+    }
+    if (ch === "'" && !inDouble && !inBacktick) {
+      inSingle = !inSingle;
+      continue;
+    }
+    if (ch === "`" && !inDouble && !inSingle) {
+      inBacktick = !inBacktick;
+      continue;
+    }
+
+    // Brackets inside string literals are content, not structural framing
+    if (inDouble || inSingle || inBacktick) continue;
+
+    if (pairs[ch]) {
+      stack.push(pairs[ch]);
+    } else if (closersMap[ch]) {
+      const topIdx = stack.lastIndexOf(ch);
+      if (topIdx !== -1) {
+        stack.splice(topIdx, 1);
+      }
     }
   }
-  return closers;
+
+  // Close unclosed quote if truncated mid-string
+  let quoteCloser = "";
+  if (inDouble) quoteCloser = '"';
+  else if (inSingle) quoteCloser = "'";
+  else if (inBacktick) quoteCloser = "`";
+
+  // Reverse LIFO order guarantees mathematically correct nesting (e.g. `func(arr[i` -> `])`)
+  return quoteCloser + stack.reverse().join("");
 }
 
 /**
