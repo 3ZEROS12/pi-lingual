@@ -574,9 +574,9 @@ export default function (pi: ExtensionAPI) {
       state.modes = resolveModesFromConfig(diskCfg, state.sourceLang);
     }
     // Single source of truth:
-    // If brand-new session (event?.reason === "new"), initialize strictly to defaultMode (Mode 1 "companion").
+    // If brand-new session (event?.reason === "new" || "startup" || !event?.reason), initialize strictly to defaultMode (Mode 1 "companion").
     // If resuming or switching session (event?.reason === "resume" || "switch" || "fork" || "reload"), preserve active mode.
-    const isBrandNewSession = event?.reason === "new";
+    const isBrandNewSession = event?.reason === "new" || event?.reason === "startup" || !event?.reason;
     const targetDefault = diskCfg.defaultMode || "companion";
     state.defaultMode = targetDefault;
 
@@ -588,6 +588,12 @@ export default function (pi: ExtensionAPI) {
       state.modes
     );
     state.activeModeId = state.mode;
+
+    // Single source of truth for multi-session: brand-new session initializes strictly to defaultMode,
+    // persisting to disk when an activeModeId already exists so subsequent input turns stay locked to defaultMode.
+    if (isBrandNewSession && diskCfg.activeModeId && diskCfg.activeModeId !== state.mode) {
+      saveUserLingualConfig({ activeModeId: state.mode, mode: state.mode });
+    }
     if (diskCfg.slots && Array.isArray(diskCfg.slots) && diskCfg.slots.length > 0) {
       state.slots = (state.sourceLang === "zh" || state.sourceLang === "tw")
         ? diskCfg.slots
@@ -2085,13 +2091,6 @@ export default function (pi: ExtensionAPI) {
       state.modes = resolveModesFromConfig(latestDisk);
     }
 
-    const rawDiskMode = latestDisk.activeModeId || latestDisk.mode;
-    if (rawDiskMode && rawDiskMode !== state.mode) {
-      state.mode = normalizeActiveModeId({ mode: rawDiskMode, activeModeId: rawDiskMode }, state.modes);
-      state.activeModeId = state.mode;
-      syncResizeListener();
-      footerNeedsRefresh = true;
-    }
     if (footerNeedsRefresh && hasActiveUI(ctx)) {
       updateFooter(ctx);
     }

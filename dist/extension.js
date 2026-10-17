@@ -98,6 +98,8 @@ function truncateVisual(str, maxVisualCols) {
     let curWidth = 0;
     let result2 = "";
     let i = 0;
+    let lastSpaceRawIdx = -1;
+    let lastSpaceVisWidth = 0;
     while (i < singleLine.length) {
       ANSI_ESCAPE_REGEX.lastIndex = i;
       const ansiMatch = ANSI_ESCAPE_REGEX.exec(singleLine);
@@ -113,15 +115,18 @@ function truncateVisual(str, maxVisualCols) {
       if (curWidth + w > limit) {
         break;
       }
+      if (ch === " ") {
+        lastSpaceRawIdx = result2.length;
+        lastSpaceVisWidth = curWidth;
+      }
       result2 += ch;
       curWidth += w;
       i += charLen;
     }
     const cleanTail = result2.replace(ANSI_ESCAPE_REGEX, "");
-    if (/[a-zA-Z\u0400-\u04FF]$/.test(cleanTail)) {
-      const lastSpace = result2.lastIndexOf(" ");
-      if (lastSpace > limit * 0.45) {
-        result2 = result2.slice(0, lastSpace);
+    if (/[a-zA-Z\u0400-\u04FF]$/.test(cleanTail) && lastSpaceRawIdx > 0) {
+      if (lastSpaceVisWidth > limit * 0.45) {
+        result2 = result2.slice(0, lastSpaceRawIdx);
       }
     }
     return result2.replace(/\s*[\(\[\{（【]$/, "");
@@ -614,11 +619,7 @@ function renderCardLayout(card, labels, options = {}) {
         lines = pureLines;
       } else {
         const availForBranches = Math.max(1, maxLines - clampedSourceLines.length);
-        const vocabCount = contentBranches.filter((b) => b.role === "vocab").length;
-        const transCount = Math.max(1, numBranches - vocabCount);
-        const availForTrans = Math.max(1, availForBranches - vocabCount);
         let remainingBudget = availForBranches;
-        let transHandled = 0;
         const clampedBranchLines = [...clampedSourceLines];
         for (let i = 0; i < numBranches; i++) {
           const branch = contentBranches[i];
@@ -647,7 +648,6 @@ function renderCardLayout(card, labels, options = {}) {
             const branchesLeftAfterThis = numBranches - 1 - i;
             const maxPossible = Math.max(1, remainingBudget - branchesLeftAfterThis);
             branchBudget = Math.min(maxPossible, Math.min(branchRendered.length, 4));
-            transHandled++;
           }
           if (branchRendered.length <= branchBudget) {
             clampedBranchLines.push(...branchRendered);
@@ -2352,6 +2352,7 @@ var LANGUAGE_PRESETS = {
     statusReportTuner: "Slot Tuner: Built-in lingual-tuner skill",
     modeDescOriginal: "Companion \xB7 0ms pass-through",
     modeDescEnglish: "Direct \xB7 Deep code reasoning",
+    modeDescLiveFlow: "Live Flow \xB7 i18n takeaway diffs",
     modeDescOff: "Disabled",
     modelCurrentLabel: "Current companion model",
     modelFollowSession: "follow session",
@@ -2444,6 +2445,7 @@ var LANGUAGE_PRESETS = {
     statusReportTuner: "\u69FD\u4F4D\u8C03\u4F18: \u5185\u7F6E lingual-tuner \u69FD\u4F4D\u8C03\u4F18\u6280\u80FD\uFF08\u76F4\u63A5\u5411 Agent \u63CF\u8FF0\u5373\u53EF\u514D\u547D\u4EE4\u5B9A\u5236\uFF09",
     modeDescOriginal: "\u539F\u6587\u76F4\u901A \xB7 0ms\u975E\u963B\u585E",
     modeDescEnglish: "\u82F1\u6587\u6A21\u5F0F \xB7 \u6DF1\u5EA6\u4EE3\u7801\u63A8\u7406",
+    modeDescLiveFlow: "\u5B9E\u65F6\u6539\u5199 \xB7 0ms\u76F4\u53D1\u4FDD\u7559\u60C5\u7EEA",
     modeDescOff: "\u5DF2\u5173\u95ED",
     modelCurrentLabel: "\u5F53\u524D\u4F34\u5B66\u6A21\u578B",
     modelFollowSession: "\u8DDF\u968F\u4F1A\u8BDD",
@@ -2536,6 +2538,7 @@ var LANGUAGE_PRESETS = {
     statusReportTuner: "\u69FD\u4F4D\u8ABF\u512A: \u5167\u5EFA lingual-tuner \u69FD\u4F4D\u8ABF\u512A\u6280\u80FD",
     modeDescOriginal: "\u539F\u6587\u76F4\u901A \xB7 0ms \u975E\u963B\u585E",
     modeDescEnglish: "\u82F1\u6587\u6A21\u5F0F \xB7 \u6DF1\u5EA6\u4EE3\u78BC\u63A8\u7406",
+    modeDescLiveFlow: "\u5373\u6642\u6539\u5BEB \xB7 0ms\u76F4\u767C\u4FDD\u7559\u60C5\u7DD2",
     modeDescOff: "\u5DF2\u95DC\u9589",
     modelCurrentLabel: "\u7576\u524D\u4F34\u5B78\u6A21\u578B",
     modelFollowSession: "\u8DDF\u96A8\u6703\u8A71",
@@ -2628,6 +2631,7 @@ var LANGUAGE_PRESETS = {
     statusReportTuner: "\u30C1\u30E5\u30FC\u30CA\u30FC: lingual-tuner \u30B9\u30AD\u30EB",
     modeDescOriginal: "\u539F\u6587\u30D1\u30B9\u30B9\u30EB\u30FC \xB7 0ms\u975E\u540C\u671F",
     modeDescEnglish: "\u76F4\u884C \xB7 \u30B3\u30FC\u30C9\u63A8\u8AD6",
+    modeDescLiveFlow: "\u30EA\u30A2\u30EB\u30BF\u30A4\u30E0 \xB7 0ms\u76F4\u63A5\u9001\u4FE1\uFF06\u5DEE\u5206",
     modeDescOff: "\u30AA\u30D5",
     modelCurrentLabel: "\u73FE\u5728\u306E\u5B66\u7FD2\u30E2\u30C7\u30EB",
     modelFollowSession: "\u30BB\u30C3\u30B7\u30E7\u30F3\u9023\u52D5",
@@ -2724,6 +2728,7 @@ var LANGUAGE_PRESETS = {
     statusReportTuner: "Ajuste de ranuras: Habilidad lingual-tuner integrada (configure hablando con su Agente)",
     modeDescOriginal: "Directo \xB7 0ms no bloqueante",
     modeDescEnglish: "Modo ingl\xE9s \xB7 Razonamiento profundo",
+    modeDescLiveFlow: "Flujo en vivo \xB7 0ms directo y diferencias",
     modeDescOff: "Apagado",
     modelCurrentLabel: "Modelo actual",
     modelFollowSession: "Siguiendo sesi\xF3n",
@@ -2840,6 +2845,7 @@ var LANGUAGE_PRESETS = {
     statusReportTuner: "Ajustement d'emplacements : Comp\xE9tence lingual-tuner int\xE9gr\xE9e (d\xE9crivez vos pr\xE9f\xE9rences \xE0 l'Agent)",
     modeDescOriginal: "Passerelle directe \xB7 0ms non bloquant",
     modeDescEnglish: "Mode anglais \xB7 Raisonnement approfondi",
+    modeDescLiveFlow: "Flux en direct \xB7 0ms direct et diff\xE9rences",
     modeDescOff: "D\xE9sactiv\xE9",
     modelCurrentLabel: "Mod\xE8le actuel",
     modelFollowSession: "Suit la session",
@@ -2958,6 +2964,7 @@ var LANGUAGE_PRESETS = {
     statusReportTuner: "Slot-Anpassung: Integrierter lingual-tuner Skill (Pr\xE4ferenzen einfach dem Agenten beschreiben)",
     modeDescOriginal: "Direkt \xB7 0ms nicht blockierend",
     modeDescEnglish: "Englisch-Modus \xB7 Tiefgreifende Logik",
+    modeDescLiveFlow: "Live-Ablauf \xB7 0ms direkt & Differenzen",
     modeDescOff: "Aus",
     modelCurrentLabel: "Aktuelles Modell",
     modelFollowSession: "Sitzungsmodell",
@@ -3075,6 +3082,7 @@ var LANGUAGE_PRESETS = {
     statusReportTuner: "\uC2AC\uB86F \uD29C\uB108: lingual-tuner \uB0B4\uC7A5",
     modeDescOriginal: "\uC6D0\uBB38 \uC9C1\uD1B5 \xB7 0ms \uBE44\uCC28\uB2E8",
     modeDescEnglish: "\uC601\uC5B4 \uBAA8\uB4DC \xB7 \uC2EC\uCE35 \uCF54\uB4DC \uCD94\uB860",
+    modeDescLiveFlow: "\uC2E4\uC2DC\uAC04 \uAD50\uC815 \xB7 0ms \uC9C1\uD1B5 \uBC0F \uCC28\uC774\uC810",
     modeDescOff: "\uAEBC\uC9D0",
     modelCurrentLabel: "\uD604\uC7AC \uBAA8\uB378",
     modelFollowSession: "\uC138\uC158 \uB530\uB984",
@@ -3190,6 +3198,7 @@ var LANGUAGE_PRESETS = {
     statusReportTuner: "\u041D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0430 \u0441\u043B\u043E\u0442\u043E\u0432: \u0432\u0441\u0442\u0440\u043E\u0435\u043D\u043D\u044B\u0439 \u043D\u0430\u0432\u044B\u043A lingual-tuner",
     modeDescOriginal: "\u041E\u0440\u0438\u0433\u0438\u043D\u0430\u043B \xB7 0\u043C\u0441 \u0431\u0435\u0437 \u0431\u043B\u043E\u043A\u0438\u0440\u043E\u0432\u043A\u0438",
     modeDescEnglish: "\u0410\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u0438\u0439 \u0440\u0435\u0436\u0438\u043C \xB7 \u0433\u043B\u0443\u0431\u043E\u043A\u043E\u0435 \u0440\u0430\u0441\u0441\u0443\u0436\u0434\u0435\u043D\u0438\u0435",
+    modeDescLiveFlow: "\u0416\u0438\u0432\u043E\u0439 \u043F\u043E\u0442\u043E\u043A \xB7 0\u043C\u0441 \u0431\u0435\u0437 \u0437\u0430\u0434\u0435\u0440\u0436\u043A\u0438 \u0438 \u0440\u0430\u0437\u0431\u043E\u0440",
     modeDescOff: "\u0412\u044B\u043A\u043B\u044E\u0447\u0435\u043D\u043E",
     modelCurrentLabel: "\u0422\u0435\u043A\u0443\u0449\u0430\u044F \u043C\u043E\u0434\u0435\u043B\u044C",
     modelFollowSession: "\u0421\u043B\u0435\u0434\u043E\u0432\u0430\u0442\u044C \u0437\u0430 \u0441\u0435\u0441\u0441\u0438\u0435\u0439",
@@ -3282,7 +3291,7 @@ function resolveLabelsForLang(lang = "en", overrides, targetLang) {
   return merged;
 }
 function formatStatusReport(labels, info) {
-  const modeDesc = info.mode === "original" ? labels.modeDescOriginal || "Original pass-through" : info.mode === "english" ? labels.modeDescEnglish || "English deep reasoning" : labels.modeDescOff || "Off";
+  const modeDesc = info.mode === "companion" || info.mode === "original" ? labels.modeDescOriginal || "Companion \xB7 0ms pass-through" : info.mode === "direct" || info.mode === "english" ? labels.modeDescEnglish || "Logical Spec \xB7 Deep reasoning" : info.mode === "live-flow" || info.mode === "modify" || info.mode === "raw" ? labels.modeDescLiveFlow || "Live Flow \xB7 i18n takeaway diffs" : info.mode === "off" ? labels.modeDescOff || "Off" : resolveModeDisplayName(info.mode, info.sourceLang);
   const layoutDesc = info.layout === "capsule" ? labels.layoutCapsule || "Single-Line Capsule (1-Line)" : labels.layoutTree || "Trifecta Minimalist Left-Rail Tree (\xB7 \u250C \u251C \u2514)";
   const lines = [
     `\u21C4 [${labels.hudTitle}] ${labels.statusReportTitle || "Status Report"}`,
@@ -5320,7 +5329,7 @@ function extension_default(pi) {
     } else {
       state.modes = resolveModesFromConfig(diskCfg, state.sourceLang);
     }
-    const isBrandNewSession = event?.reason === "new";
+    const isBrandNewSession = event?.reason === "new" || event?.reason === "startup" || !event?.reason;
     const targetDefault = diskCfg.defaultMode || "companion";
     state.defaultMode = targetDefault;
     const rawDiskMode = isBrandNewSession ? targetDefault : diskCfg.activeModeId || diskCfg.mode || targetDefault || state.mode;
@@ -5329,6 +5338,9 @@ function extension_default(pi) {
       state.modes
     );
     state.activeModeId = state.mode;
+    if (isBrandNewSession && diskCfg.activeModeId && diskCfg.activeModeId !== state.mode) {
+      saveUserLingualConfig({ activeModeId: state.mode, mode: state.mode });
+    }
     if (diskCfg.slots && Array.isArray(diskCfg.slots) && diskCfg.slots.length > 0) {
       state.slots = state.sourceLang === "zh" || state.sourceLang === "tw" ? diskCfg.slots : diskCfg.slots.map((s) => ({ ...s, label: localizeSlotLabel(s.id, s.label, state.sourceLang) }));
     }
@@ -6502,13 +6514,6 @@ Usage: /lingual loadout [list | apply <id>] (e.g. /lingual loadout apply spec)`;
       state.modes = latestDisk.modes;
     } else if (!state.modes || state.modes.length === 0) {
       state.modes = resolveModesFromConfig(latestDisk);
-    }
-    const rawDiskMode = latestDisk.activeModeId || latestDisk.mode;
-    if (rawDiskMode && rawDiskMode !== state.mode) {
-      state.mode = normalizeActiveModeId({ mode: rawDiskMode, activeModeId: rawDiskMode }, state.modes);
-      state.activeModeId = state.mode;
-      syncResizeListener();
-      footerNeedsRefresh = true;
     }
     if (footerNeedsRefresh && hasActiveUI(ctx)) {
       updateFooter(ctx);

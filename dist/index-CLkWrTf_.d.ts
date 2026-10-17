@@ -153,6 +153,7 @@ interface LingualI18nLabels {
     statusReportTuner?: string;
     modeDescOriginal?: string;
     modeDescEnglish?: string;
+    modeDescLiveFlow?: string;
     modeDescOff?: string;
     modelCurrentLabel?: string;
     modelFollowSession?: string;

@@ -172,6 +172,7 @@ export interface LingualI18nLabels {
   statusReportTuner?: string;
   modeDescOriginal?: string;
   modeDescEnglish?: string;
+  modeDescLiveFlow?: string;
   modeDescOff?: string;
 
   // Localized model selector chrome

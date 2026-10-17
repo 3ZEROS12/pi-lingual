@@ -739,6 +739,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     statusReportTuner: "Slot Tuner: Built-in lingual-tuner skill",
     modeDescOriginal: "Companion · 0ms pass-through",
     modeDescEnglish: "Direct · Deep code reasoning",
+    modeDescLiveFlow: "Live Flow · i18n takeaway diffs",
     modeDescOff: "Disabled",
 
     modelCurrentLabel: "Current companion model",
@@ -839,6 +840,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     statusReportTuner: "槽位调优: 内置 lingual-tuner 槽位调优技能（直接向 Agent 描述即可免命令定制）",
     modeDescOriginal: "原文直通 · 0ms非阻塞",
     modeDescEnglish: "英文模式 · 深度代码推理",
+    modeDescLiveFlow: "实时改写 · 0ms直发保留情绪",
     modeDescOff: "已关闭",
 
     modelCurrentLabel: "当前伴学模型",
@@ -939,6 +941,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     statusReportTuner: "槽位調優: 內建 lingual-tuner 槽位調優技能",
     modeDescOriginal: "原文直通 · 0ms 非阻塞",
     modeDescEnglish: "英文模式 · 深度代碼推理",
+    modeDescLiveFlow: "即時改寫 · 0ms直發保留情緒",
     modeDescOff: "已關閉",
 
     modelCurrentLabel: "當前伴學模型",
@@ -1039,6 +1042,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     statusReportTuner: "チューナー: lingual-tuner スキル",
     modeDescOriginal: "原文パススルー · 0ms非同期",
     modeDescEnglish: "直行 · コード推論",
+    modeDescLiveFlow: "リアルタイム · 0ms直接送信＆差分",
     modeDescOff: "オフ",
 
     modelCurrentLabel: "現在の学習モデル",
@@ -1143,6 +1147,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     statusReportTuner: "Ajuste de ranuras: Habilidad lingual-tuner integrada (configure hablando con su Agente)",
     modeDescOriginal: "Directo · 0ms no bloqueante",
     modeDescEnglish: "Modo inglés · Razonamiento profundo",
+    modeDescLiveFlow: "Flujo en vivo · 0ms directo y diferencias",
     modeDescOff: "Apagado",
 
     modelCurrentLabel: "Modelo actual",
@@ -1267,6 +1272,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     statusReportTuner: "Ajustement d'emplacements : Compétence lingual-tuner intégrée (décrivez vos préférences à l'Agent)",
     modeDescOriginal: "Passerelle directe · 0ms non bloquant",
     modeDescEnglish: "Mode anglais · Raisonnement approfondi",
+    modeDescLiveFlow: "Flux en direct · 0ms direct et différences",
     modeDescOff: "Désactivé",
 
     modelCurrentLabel: "Modèle actuel",
@@ -1393,6 +1399,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     statusReportTuner: "Slot-Anpassung: Integrierter lingual-tuner Skill (Präferenzen einfach dem Agenten beschreiben)",
     modeDescOriginal: "Direkt · 0ms nicht blockierend",
     modeDescEnglish: "Englisch-Modus · Tiefgreifende Logik",
+    modeDescLiveFlow: "Live-Ablauf · 0ms direkt & Differenzen",
     modeDescOff: "Aus",
 
     modelCurrentLabel: "Aktuelles Modell",
@@ -1518,6 +1525,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     statusReportTuner: "슬롯 튜너: lingual-tuner 내장",
     modeDescOriginal: "원문 직통 · 0ms 비차단",
     modeDescEnglish: "영어 모드 · 심층 코드 추론",
+    modeDescLiveFlow: "실시간 교정 · 0ms 직통 및 차이점",
     modeDescOff: "꺼짐",
 
     modelCurrentLabel: "현재 모델",
@@ -1641,6 +1649,7 @@ export const LANGUAGE_PRESETS: Record<string, LingualI18nLabels> = {
     statusReportTuner: "Настройка слотов: встроенный навык lingual-tuner",
     modeDescOriginal: "Оригинал · 0мс без блокировки",
     modeDescEnglish: "Английский режим · глубокое рассуждение",
+    modeDescLiveFlow: "Живой поток · 0мс без задержки и разбор",
     modeDescOff: "Выключено",
 
     modelCurrentLabel: "Текущая модель",
@@ -1796,11 +1805,15 @@ export function formatStatusReport(
   }
 ): string {
   const modeDesc =
-    info.mode === "original"
-      ? (labels.modeDescOriginal || "Original pass-through")
-      : info.mode === "english"
-      ? (labels.modeDescEnglish || "English deep reasoning")
-      : (labels.modeDescOff || "Off");
+    info.mode === "companion" || info.mode === "original"
+      ? (labels.modeDescOriginal || "Companion · 0ms pass-through")
+      : info.mode === "direct" || info.mode === "english"
+      ? (labels.modeDescEnglish || "Logical Spec · Deep reasoning")
+      : info.mode === "live-flow" || info.mode === "modify" || info.mode === "raw"
+      ? (labels.modeDescLiveFlow || "Live Flow · i18n takeaway diffs")
+      : info.mode === "off"
+      ? (labels.modeDescOff || "Off")
+      : resolveModeDisplayName(info.mode, info.sourceLang);
 
   const layoutDesc =
     info.layout === "capsule"

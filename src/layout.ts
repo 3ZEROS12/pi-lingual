@@ -158,6 +158,8 @@ export function truncateVisual(str: string, maxVisualCols: number): string {
     let curWidth = 0;
     let result = "";
     let i = 0;
+    let lastSpaceRawIdx = -1;
+    let lastSpaceVisWidth = 0;
 
     while (i < singleLine.length) {
       ANSI_ESCAPE_REGEX.lastIndex = i;
@@ -176,6 +178,10 @@ export function truncateVisual(str: string, maxVisualCols: number): string {
       if (curWidth + w > limit) {
         break;
       }
+      if (ch === " ") {
+        lastSpaceRawIdx = result.length;
+        lastSpaceVisWidth = curWidth;
+      }
       result += ch;
       curWidth += w;
       i += charLen;
@@ -183,10 +189,9 @@ export function truncateVisual(str: string, maxVisualCols: number): string {
 
     // Invariant 11: clamp to clean word boundaries for natural language prose (Latin / Cyrillic)
     const cleanTail = result.replace(ANSI_ESCAPE_REGEX, "");
-    if (/[a-zA-Z\u0400-\u04FF]$/.test(cleanTail)) {
-      const lastSpace = result.lastIndexOf(" ");
-      if (lastSpace > limit * 0.45) {
-        result = result.slice(0, lastSpace);
+    if (/[a-zA-Z\u0400-\u04FF]$/.test(cleanTail) && lastSpaceRawIdx > 0) {
+      if (lastSpaceVisWidth > limit * 0.45) {
+        result = result.slice(0, lastSpaceRawIdx);
       }
     }
 
@@ -624,15 +629,16 @@ export function formatCapsuleLine(
   hudTitle: string,
   spoken: string,
   written?: string,
-  options: {
+  options: number | {
     slot1Short?: string;
     slot2Short?: string;
     maxCols?: number;
   } = {}
 ): string {
-  const maxCols = options.maxCols || (process.stdout?.columns ? Math.max(30, process.stdout.columns) : 80);
-  const slot1 = options.slot1Short || "Spk";
-  const slot2 = options.slot2Short || "Wrt";
+  const opts = typeof options === "number" ? { maxCols: options } : options;
+  const maxCols = opts.maxCols || (process.stdout?.columns ? Math.max(30, process.stdout.columns) : 80);
+  const slot1 = opts.slot1Short || "Spk";
+  const slot2 = opts.slot2Short || "Wrt";
 
   const cleanSpoken = spoken.replace(/\r?\n+/g, " ").trim();
   const cleanWritten = (written || "").replace(/\r?\n+/g, " ").trim();
@@ -953,12 +959,7 @@ export function renderCardLayout(
       } else {
         // Tier 4 constraint: asymmetric slot budget clamping with clean visual ellipsis
         const availForBranches = Math.max(1, maxLines - clampedSourceLines.length);
-        const vocabCount = contentBranches.filter((b) => b.role === "vocab").length;
-        const transCount = Math.max(1, numBranches - vocabCount);
-        const availForTrans = Math.max(1, availForBranches - vocabCount);
-
         let remainingBudget = availForBranches;
-        let transHandled = 0;
 
         const clampedBranchLines: string[] = [...clampedSourceLines];
         for (let i = 0; i < numBranches; i++) {
@@ -991,7 +992,6 @@ export function renderCardLayout(
             const maxPossible = Math.max(1, remainingBudget - branchesLeftAfterThis);
             // Allow translation slots (Spoken, Written) up to 4 lines if budget permits to avoid cutting off natural prose
             branchBudget = Math.min(maxPossible, Math.min(branchRendered.length, 4));
-            transHandled++;
           }
 
           if (branchRendered.length <= branchBudget) {
