@@ -229,6 +229,7 @@ To prevent autocomplete pollution in Pi's `/` menu, `pi-lingual` registers stric
 | ↳ Quick Toggle | `/lingual on` \| `off` | Quickly enable companion mode or turn off (0 pixels, 0 listeners, 0 tokens) |
 | ↳ Language Pair | `/lingual lang [pair]` or `/lang` | Switch language direction (e.g. `/lang ja`, `/lingual lang ja en`) |
 | ↳ Replay Card | `/lingual last` \| `replay` | Replay the most recent companion or rewrite card |
+| ↳ Default Mode | `/lingual default [1\|2\|3\|0\|id]` | View or pin default mode for all new sessions (`defaultMode` in `lingual.json`) |
 | ↳ Layout Mode | `/lingual compact` | Toggle dense single-line capsule mode vs open Left-Rail Tree HUD |
 | ↳ Mode Lock | `/lingual lock` \| `unlock` | Lock active mode to prevent external process drift (human commands always 100% priority) |
 | ↳ Reasoning Effort | `/lingual reasoning [low\|medium\|high]` | Switch model reasoning depth (`low` for responsive execution, `medium` for complex `spec`) |
@@ -308,7 +309,7 @@ I hope everyone takes the time to tune a prompt that works best for them, catche
 
 ```bash
 npm run typecheck   # Strict tsc --noEmit check (0 errors)
-npm test            # 178/178 test assertions passing (100% green)
+npm test            # 197/197 test assertions passing (100% green)
 npm run build       # Multi-entry compilation via tsup (extension + core engine)
 ```
 

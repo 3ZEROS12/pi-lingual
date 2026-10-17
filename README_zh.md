@@ -228,6 +228,7 @@ pi install npm:pi-lingual
 | ↳ 快捷开关 | `/lingual on` \| `off` | 快捷开启伴学或完全关闭（关闭态 0 像素、0 监听、0 Token 消耗） |
 | ↳ 语言对切换 | `/lingual lang [pair]` 或 `/lang` | 切换伴学语言流向（如 `/lang ja`、`/lingual lang ja en`、`/lingual lang 日语`） |
 | ↳ 认知卡回放 | `/lingual last` \| `replay` | 重新浮现上一条伴学或改写认知卡片 |
+| ↳ 默认模式定锚 | `/lingual default [1\|2\|3\|0\|id]` | 查看或固定所有新会话的默认模式（`defaultMode`），彻底避免多会话相互漂移 |
 | ↳ 布局切换 | `/lingual compact` | 切换单行胶囊模式与开放式左导轨树状架构 |
 | ↳ 思考深度 | `/lingual reasoning [low\|medium\|high]` | 调节模型推理思考深度（日常 `low` 快速响应（取决于模型提供商），结构化 `spec` 自适应 `medium`） |
 | ↳ 模式防漂移 | `/lingual lock` \| `unlock` | 锁定会话模式防外部脚本漂移（人类敲数字或面板点选永远 100% 优先响应） |
@@ -309,6 +310,16 @@ pi install npm:pi-lingual
 npm run typecheck   # TypeScript 严格类型检查 (0 错误)
 npm test            # 全套自动化单元测试 (178/178 全绿通过)
 npm run build       # 多入口生产构建 (插件 + 核心语言引擎)
+```
+
+---
+
+## 本地物理验证与测试
+
+```bash
+npm run typecheck   # TypeScript Strict 严格类型检查 (0 错误)
+npm test            # 197/197 项自动化物理测试全绿通过 (100% 通过)
+npm run build       # tsup 多入口双架构编译 (extension + core engine)
 ```
 
 ---
