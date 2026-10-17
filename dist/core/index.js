@@ -1063,6 +1063,13 @@ function buildModifySystemPrompt(options) {
     "native": "this fucking bug happened again on X, it honestly sucks so bad",
     "fixes": "happan \u2794 happen \xB7 in X \u2794 on X (platforms take on) \xB7 suck \u2794 sucks"
   }` : "";
+  const contextBlock = options.context && options.context.trim() ? `
+
+[CONVERSATION & PROJECT CONTEXT - USE FOR PRONOUN RESOLUTION]:
+"""
+${options.context.trim().slice(0, 500)}
+"""
+CRITICAL: Use context strictly to resolve anaphoric pronouns ("here", "this function", "as discussed") and domain terminology. NEVER invent unmentioned requirements or copy unrelated code.` : "";
   return `You are an elite Developer Language Editor and Real-Time Proofreader.
 The user is writing directly in ${outLangName}, but their draft may contain fast typing slips, grammatical errors, wrong prepositions, or non-native phrasing.
 Perform proofreading according to the following tasks:
@@ -1072,7 +1079,7 @@ ${taskLines.join("\n")}
 - **Zero Level Leap (i+1 Rule)**: Match user's natural vocabulary tier; do NOT artificially inflate everyday dev text into academic prose.
 - **Zero Tone Sanitization**: NEVER censor swear words or raw emotions (e.g. 'fuck', 'suck', 'shit')\u2014passion and emotional heat are natural and MUST be preserved 100%!
 - **Zero Punctuation/Casing Nitpicking**: Do NOT obsess over casual casing or missing periods.
-- 100% preserve user's original words, rhythm, and cadence!${linguisticProfile}
+- 100% preserve user's original words, rhythm, and cadence!${linguisticProfile}${contextBlock}
 ${anchorBlock ? `
 ${anchorBlock}
 ` : ""}${compileKillListInstruction(void 0, DEFAULT_KILL_LIST)}
@@ -2776,7 +2783,7 @@ function shouldShieldBypass(text) {
   return false;
 }
 function hasSourceScript(text, sourceLang) {
-  const norm = (sourceLang || "zh").toLowerCase().split("-")[0];
+  const norm = (sourceLang || "en").toLowerCase().split("-")[0];
   switch (norm) {
     case "zh":
     case "tw":
@@ -2846,7 +2853,7 @@ var IMPERATIVE_ENGINEERING_VERBS = /* @__PURE__ */ new Set([
   "dispatch"
 ]);
 function isTargetLanguageOnly(text, sourceLang, targetLang = "en") {
-  const normSource = (sourceLang || "zh").toLowerCase().split("-")[0];
+  const normSource = (sourceLang || "en").toLowerCase().split("-")[0];
   const normTarget = (targetLang || "en").toLowerCase().split("-")[0];
   if (normTarget === "en") {
     const NON_LATIN_SOURCES = /* @__PURE__ */ new Set(["zh", "tw", "ja", "ko", "ru", "ar"]);

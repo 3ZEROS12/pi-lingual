@@ -347,6 +347,7 @@ declare function buildModifySystemPrompt(options: {
     explainLang?: string;
     customSlots?: PromptSlotConfig[];
     promptSlots?: PromptSlotConfig[];
+    context?: string;
 }): string;
 
 interface SlotPresetDefinition {

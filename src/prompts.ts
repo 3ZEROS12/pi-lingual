@@ -1214,6 +1214,7 @@ export function buildModifySystemPrompt(options: {
   explainLang?: string;
   customSlots?: PromptSlotConfig[];
   promptSlots?: PromptSlotConfig[];
+  context?: string;
 }): string {
   const normSource = (options.sourceLang || "en").toLowerCase().split("-")[0];
   const expNorm = (options.explainLang || normSource).toLowerCase().split("-")[0];
@@ -1279,6 +1280,14 @@ export function buildModifySystemPrompt(options: {
   }`
     : "";
 
+  const contextBlock = options.context && options.context.trim()
+    ? `\n\n[CONVERSATION & PROJECT CONTEXT - USE FOR PRONOUN RESOLUTION]:
+"""
+${options.context.trim().slice(0, 500)}
+"""
+CRITICAL: Use context strictly to resolve anaphoric pronouns ("here", "this function", "as discussed") and domain terminology. NEVER invent unmentioned requirements or copy unrelated code.`
+    : "";
+
   return `You are an elite Developer Language Editor and Real-Time Proofreader.
 The user is writing directly in ${outLangName}, but their draft may contain fast typing slips, grammatical errors, wrong prepositions, or non-native phrasing.
 Perform proofreading according to the following tasks:
@@ -1288,7 +1297,7 @@ ${taskLines.join("\n")}
 - **Zero Level Leap (i+1 Rule)**: Match user's natural vocabulary tier; do NOT artificially inflate everyday dev text into academic prose.
 - **Zero Tone Sanitization**: NEVER censor swear words or raw emotions (e.g. 'fuck', 'suck', 'shit')—passion and emotional heat are natural and MUST be preserved 100%!
 - **Zero Punctuation/Casing Nitpicking**: Do NOT obsess over casual casing or missing periods.
-- 100% preserve user's original words, rhythm, and cadence!${linguisticProfile}
+- 100% preserve user's original words, rhythm, and cadence!${linguisticProfile}${contextBlock}
 ${anchorBlock ? `\n${anchorBlock}\n` : ""}${compileKillListInstruction(undefined, DEFAULT_KILL_LIST)}
 Strict JSON format:
 {

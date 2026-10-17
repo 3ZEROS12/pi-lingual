@@ -28,6 +28,9 @@ export function getEffectiveMaxCols(requested?: number): number {
     process.stdout?.columns ||
     (process.env.COLUMNS ? parseInt(process.env.COLUMNS, 10) : undefined);
   if (typeof requested === "number") {
+    if (typeof terminalCols === "number" && terminalCols > 0) {
+      return Math.min(terminalCols, Math.max(10, requested));
+    }
     return Math.max(25, requested);
   }
   const raw =

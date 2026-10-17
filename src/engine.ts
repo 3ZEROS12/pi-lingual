@@ -1016,21 +1016,22 @@ CRITICAL: Use context strictly to resolve anaphoric pronouns ("here", "this func
   }
 
   if (mode.flow === "proofread") {
-    const base = buildModifySystemPrompt({
+    return buildModifySystemPrompt({
       sourceLang,
       targetLang,
       explainLang,
       customSlots: interpolatedSlots,
+      context: options.context,
     });
-    return `${base}${codeSwitchingBlock}${systemHintBlock}${contextBlock}${killListBlock}`;
   }
 
-  const base = buildPromptCandidatesSystemPrompt({
+  return buildPromptCandidatesSystemPrompt({
     sourceLang,
     targetLang,
     promptSlots: interpolatedSlots,
+    context: options.context,
+    promptRule: mode.systemHint,
   });
-  return `${base}${codeSwitchingBlock}${systemHintBlock}${contextBlock}${killListBlock}`;
 }
 
 export async function executeModeRunner(

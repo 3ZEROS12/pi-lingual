@@ -122,7 +122,7 @@ export function shouldShieldBypass(text: string): boolean {
  * Checks if the text contains script characters native to the configured source language.
  */
 export function hasSourceScript(text: string, sourceLang: string): boolean {
-  const norm = (sourceLang || "zh").toLowerCase().split("-")[0];
+  const norm = (sourceLang || "en").toLowerCase().split("-")[0];
   switch (norm) {
     case "zh":
     case "tw":
@@ -165,7 +165,7 @@ export function isTargetLanguageOnly(
   sourceLang: string,
   targetLang = "en"
 ): boolean {
-  const normSource = (sourceLang || "zh").toLowerCase().split("-")[0];
+  const normSource = (sourceLang || "en").toLowerCase().split("-")[0];
   const normTarget = (targetLang || "en").toLowerCase().split("-")[0];
 
   if (normTarget === "en") {

@@ -1841,15 +1841,23 @@ export default function (pi: ExtensionAPI) {
         const timeoutPromise = new Promise<null>((_, reject) => {
           timeoutHandle = setTimeout(() => reject(new Error("Lingual translation timed out")), timeoutMs);
         });
+        let abortListener: (() => void) | undefined;
         const abortPromise = new Promise<null>((_, reject) => {
-          if (signal?.aborted) reject(new Error("Lingual translation aborted"));
-          signal?.addEventListener("abort", () => reject(new Error("Lingual translation aborted")), { once: true });
+          if (signal?.aborted) {
+            reject(new Error("Lingual translation aborted"));
+            return;
+          }
+          abortListener = () => reject(new Error("Lingual translation aborted"));
+          signal?.addEventListener("abort", abortListener, { once: true });
         });
         let res: any;
         try {
           res = await Promise.race([stream.result(), timeoutPromise, abortPromise]);
         } finally {
           if (timeoutHandle) clearTimeout(timeoutHandle);
+          if (signal && abortListener) {
+            signal.removeEventListener("abort", abortListener);
+          }
         }
         if (!res) return null;
         const content = res.content
