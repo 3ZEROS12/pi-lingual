@@ -1,5 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import os from "node:os";
 import { resolveModeRuntime, parsePartialJsonFields, primarySlot, runtimeLanguagePair, buildStreamingResult } from "../src/runtime.js";
 import { renderCardLayout } from "../src/layout.js";
 import { buildSystemPrompt } from "../src/prompts.js";
@@ -9,8 +12,6 @@ import { globalLingualCache } from "../src/cache.js";
 import {
   createModelCompleter,
   resolveTargetModel,
-  isLightweightTextModel,
-  isNonTextOrImageModel,
 } from "../src/completer.js";
 import { ensureCodeTokensPreserved } from "../src/sanitizer.js";
 import { LingualSessionController } from "../src/fsm.js";
@@ -589,20 +590,34 @@ test("ensureCodeTokensPreserved keeps output untouched when present, and appends
 // ---------------------------------------------------------------------------
 
 test("resolveTargetModel: auto adopts user's global defaultModel from Pi settings even when conversation switches to heavy brain", () => {
-  const defaultFlashModel = { provider: "magpie", id: "antigravity/gemini-3.8-flash" };
-  const heavyArgonModel = { provider: "magpie", id: "ai-studio/gemini-4-argon" };
-  const opusModel = { provider: "anthropic", id: "claude-3-opus" };
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-settings-test-"));
+  const prevConfigDir = process.env.PI_CONFIG_DIR;
+  try {
+    process.env.PI_CONFIG_DIR = tmpDir;
+    fs.writeFileSync(
+      path.join(tmpDir, "settings.json"),
+      JSON.stringify({ defaultModel: "antigravity/gemini-3.8-flash", defaultProvider: "magpie" }),
+      "utf8"
+    );
 
-  const ctx: any = {
-    model: heavyArgonModel, // Conversation currently switched to heavy brain
-    modelRegistry: {
-      getAvailable: () => [opusModel, defaultFlashModel, heavyArgonModel],
-    },
-  };
+    const defaultFlashModel = { provider: "magpie", id: "antigravity/gemini-3.8-flash" };
+    const heavyArgonModel = { provider: "magpie", id: "ai-studio/gemini-4-argon" };
+    const opusModel = { provider: "anthropic", id: "claude-3-opus" };
 
-  const resolved = resolveTargetModel(ctx, "auto");
-  // User's Pi settings.json has defaultModel: "antigravity/gemini-3.8-flash"
-  assert.equal(resolved?.id, defaultFlashModel.id, "Must keep user's configured defaultModel instead of heavy conversation brain");
+    const ctx: any = {
+      model: heavyArgonModel, // Conversation currently switched to heavy brain
+      modelRegistry: {
+        getAvailable: () => [opusModel, defaultFlashModel, heavyArgonModel],
+      },
+    };
+
+    const resolved = resolveTargetModel(ctx, "auto");
+    assert.equal(resolved?.id, defaultFlashModel.id, "Must keep user's configured defaultModel instead of heavy conversation brain");
+  } finally {
+    if (prevConfigDir === undefined) delete process.env.PI_CONFIG_DIR;
+    else process.env.PI_CONFIG_DIR = prevConfigDir;
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
 });
 
 test("resolveTargetModel: explicit session selection follows conversation model", () => {
@@ -636,76 +651,91 @@ test("resolveTargetModel: user-pinned model matches available model", () => {
 });
 
 test("setModelHandler and showStatusHandler format defaultModel display", async () => {
-  const session = new LingualSessionController();
-  const notifications: { msg: string; type: string }[] = [];
-  const argonModel = { provider: "magpie", id: "ai-studio/gemini-4-argon" };
-  const flashModel = { provider: "magpie", id: "antigravity/gemini-3.8-flash" };
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "pi-settings-test-"));
+  const prevConfigDir = process.env.PI_CONFIG_DIR;
+  try {
+    process.env.PI_CONFIG_DIR = tmpDir;
+    fs.writeFileSync(
+      path.join(tmpDir, "settings.json"),
+      JSON.stringify({ defaultModel: "antigravity/gemini-3.8-flash", defaultProvider: "magpie" }),
+      "utf8"
+    );
 
-  const mockCtx: any = {
-    hasUI: true,
-    model: argonModel,
-    modelRegistry: {
-      getAvailable: () => [flashModel, argonModel],
-    },
-    ui: {
-      notify(msg: string, type = "info") {
-        notifications.push({ msg, type });
+    const session = new LingualSessionController();
+    const notifications: { msg: string; type: string }[] = [];
+    const argonModel = { provider: "magpie", id: "ai-studio/gemini-4-argon" };
+    const flashModel = { provider: "magpie", id: "antigravity/gemini-3.8-flash" };
+
+    const mockCtx: any = {
+      hasUI: true,
+      model: argonModel,
+      modelRegistry: {
+        getAvailable: () => [flashModel, argonModel],
       },
-      setStatus() {},
-      setWidget() {},
-      theme: { fg: (_c: string, t: string) => t },
-    },
-  };
+      ui: {
+        notify(msg: string, type = "info") {
+          notifications.push({ msg, type });
+        },
+        setStatus() {},
+        setWidget() {},
+        theme: { fg: (_c: string, t: string) => t },
+      },
+    };
 
-  const mode = makeMode({ id: "companion" });
-  const state: any = {
-    mode: "companion",
-    activeModeId: "companion",
-    modes: [mode],
-    sourceLang: "zh",
-    targetLang: "en",
-    labels: { hudTitle: "zh ⇄ en", modelFollowSession: "follow session" },
-    selectedModel: "auto",
-  };
+    const mode = makeMode({ id: "companion" });
+    const state: any = {
+      mode: "companion",
+      activeModeId: "companion",
+      modes: [mode],
+      sourceLang: "zh",
+      targetLang: "en",
+      labels: { hudTitle: "zh ⇄ en", modelFollowSession: "follow session" },
+      selectedModel: "auto",
+    };
 
-  const handlers = createCommandHandlers({
-    state,
-    session,
-    updateFooter: () => {},
-    refreshActiveView: () => {},
-    renderActiveCard: () => {},
-    renderHudWidget: () => {},
-    activeRuntime: () => resolveModeRuntime(mode, { sourceLang: "zh", targetLang: "en" }),
-    renderReleaseBanner: () => false,
-    syncResizeListener: () => {},
-    clearPendingTimers: () => {},
-    armTuner: () => {},
-    pi: { on: () => {}, registerCommand: () => {}, registerShortcut: () => {} } as any,
-  });
+    const handlers = createCommandHandlers({
+      state,
+      session,
+      updateFooter: () => {},
+      refreshActiveView: () => {},
+      renderActiveCard: () => {},
+      renderHudWidget: () => {},
+      activeRuntime: () => resolveModeRuntime(mode, { sourceLang: "zh", targetLang: "en" }),
+      renderReleaseBanner: () => false,
+      syncResizeListener: () => {},
+      clearPendingTimers: () => {},
+      armTuner: () => {},
+      pi: { on: () => {}, registerCommand: () => {}, registerShortcut: () => {} } as any,
+    });
 
-  // 1. In auto mode with argon session and flash default
-  notifications.length = 0;
-  await handlers.setModelHandler("", mockCtx);
-  assert.ok(notifications[0].msg.includes("defaultModel: magpie/antigravity/gemini-3.8-flash"));
+    // 1. In auto mode with argon session and flash default
+    notifications.length = 0;
+    await handlers.setModelHandler("", mockCtx);
+    assert.ok(notifications[0].msg.includes("defaultModel: magpie/antigravity/gemini-3.8-flash"));
 
-  // 2. In session mode
-  state.selectedModel = "session";
-  notifications.length = 0;
-  await handlers.setModelHandler("", mockCtx);
-  assert.ok(notifications[0].msg.includes("session (follow session: magpie/ai-studio/gemini-4-argon)"));
+    // 2. In session mode
+    state.selectedModel = "session";
+    notifications.length = 0;
+    await handlers.setModelHandler("", mockCtx);
+    assert.ok(notifications[0].msg.includes("session (follow session: magpie/ai-studio/gemini-4-argon)"));
 
-  // 3. User select picker interaction
-  let selectOffered = false;
-  mockCtx.ui.select = async (_title: string, options: string[]) => {
-    selectOffered = true;
-    assert.ok(options.includes("auto - Default Pi Model (Recommended)"));
-    assert.ok(options.includes("magpie/antigravity/gemini-3.8-flash"));
-    return "session - Follow active conversation model";
-  };
-  notifications.length = 0;
-  await handlers.setModelHandler("", mockCtx);
-  assert.ok(selectOffered);
-  assert.equal(state.selectedModel, "session");
+    // 3. User select picker interaction
+    let selectOffered = false;
+    mockCtx.ui.select = async (_title: string, options: string[]) => {
+      selectOffered = true;
+      assert.ok(options.includes("auto - Default Pi Model (Recommended)"));
+      assert.ok(options.includes("magpie/antigravity/gemini-3.8-flash"));
+      return "session - Follow active conversation model";
+    };
+    notifications.length = 0;
+    await handlers.setModelHandler("", mockCtx);
+    assert.ok(selectOffered);
+    assert.equal(state.selectedModel, "session");
+  } finally {
+    if (prevConfigDir === undefined) delete process.env.PI_CONFIG_DIR;
+    else process.env.PI_CONFIG_DIR = prevConfigDir;
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
 });
 
 test("regression: long input 1:1 condensation directive, summary streaming, and sentence-boundary clamping", () => {
