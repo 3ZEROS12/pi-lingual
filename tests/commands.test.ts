@@ -12,6 +12,7 @@ import {
   stripLingualContextWhenOff,
 } from "../src/engine.js";
 import { LingualLruCache } from "../src/cache.js";
+import { createCommandHandlers } from "../src/commands.js";
 
 test("extension command matrix - registers strictly /lingual, /l alias, and /lang bridge without menu clutter", () => {
   const registeredCommands: Record<string, any> = {};
@@ -1030,6 +1031,119 @@ test("extension Mode 4 Modify - long input adaptively suppresses full sentence i
     "Takeaways must be 100% absolutely preserved in HUD"
   );
 });
+
+test("createCommandHandlers factory exposes all slash-command handlers", () => {
+  const mockState: any = {
+    labels: {},
+    modes: [],
+    slots: [],
+    sourceLang: "en",
+    targetLang: "ja",
+  };
+  const mockSession: any = { abortActive() {}, reset() {} };
+
+  const handlers = createCommandHandlers({
+    state: mockState,
+    session: mockSession,
+    updateFooter: () => {},
+    refreshActiveView: () => {},
+    renderActiveCard: () => {},
+    renderHudWidget: () => {},
+    activeRuntime: () => ({} as any),
+    renderReleaseBanner: () => true,
+    syncResizeListener: () => {},
+    clearPendingTimers: () => {},
+    armTuner: () => {},
+    pi: { registerCommand() {}, on() {} } as any,
+  });
+
+  const expectedHandlers = [
+    "setModeHandler",
+    "setModelHandler",
+    "switchLangHandler",
+    "toggleCompactHandler",
+    "switchSlotsHandler",
+    "showStatusHandler",
+    "showLastHandler",
+    "manageModesHandler",
+    "manageLoadoutsHandler",
+    "showAgentGuideHandler",
+    "setReasoningHandler",
+    "setDefaultModeHandler",
+    "masterCommandHandler",
+  ];
+
+  for (const name of expectedHandlers) {
+    assert.equal(typeof (handlers as any)[name], "function", `Handler ${name} must be a function`);
+  }
+});
+
+test("extension transform mode wires progressive HUD streaming via onPartial", async () => {
+  let inputHandler: any = null;
+  const registeredCommands: Record<string, any> = {};
+  const mockPi: any = {
+    on(event: string, handler: any) {
+      if (event === "input") inputHandler = handler;
+    },
+    registerCommand(name: string, def: any) {
+      registeredCommands[name] = def;
+    },
+    registerShortcut() {},
+  };
+
+  extensionFactory(mockPi);
+
+  const widgetCaptures: string[][] = [];
+  const mockStream = {
+    async *[Symbol.asyncIterator]() {
+      yield { type: "text_delta", delta: '{"direct_spec": "Refactor token' };
+      yield { type: "text_delta", delta: ' refresh handler"}' };
+    },
+    result: async () => ({
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({
+            direct_spec: "Refactor token refresh handler",
+          }),
+        },
+      ],
+    }),
+  };
+
+  const mockCtx: any = {
+    hasUI: true,
+    model: { provider: "mock", id: "mock-model" },
+    modelRegistry: {
+      streamSimple: () => mockStream,
+    },
+    ui: {
+      notify() {},
+      setStatus() {},
+      setWidget(_k: string, lines: string[]) {
+        if (Array.isArray(lines)) widgetCaptures.push([...lines]);
+      },
+      theme: {
+        fg: (_c: string, t: string) => t,
+        bold: (t: string) => t,
+      },
+    },
+  };
+
+  // Switch to Mode 2 (direct transform)
+  await registeredCommands["lingual"].handler("2", mockCtx);
+
+  const res = await inputHandler(
+    { type: "input", text: "重构一下 token 刷新处理器", source: "interactive" },
+    mockCtx
+  );
+
+  assert.equal(res.action, "transform");
+  assert.ok(res.text.includes("Refactor token refresh handler"));
+  // Progressive streaming captured widget updates while processing
+  assert.ok(widgetCaptures.length >= 1, "Must render HUD widget during streaming/completion");
+});
+
 
 
 

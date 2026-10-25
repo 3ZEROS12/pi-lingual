@@ -281,3 +281,36 @@ export function sanitizePromptForTranslation(raw: string): SanitizedPromptResult
     rawPayload,
   };
 }
+
+/**
+ * Ensures inline code tokens (CLI flags, technical identifiers, backticked names)
+ * in sourceText are preserved in rewrittenText.
+ * If any backticked tokens (2-64 characters) are missing from rewrittenText,
+ * deduplicated missing tokens are appended: ` (${missing.map(t => `\`${t}\``).join(", ")})`.
+ */
+export function ensureCodeTokensPreserved(sourceText: string, rewrittenText: string): string {
+  if (!sourceText || !rewrittenText) return rewrittenText;
+
+  const regex = /`([^`\r\n]+)`/g;
+  const seen = new Set<string>();
+  const tokens: string[] = [];
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(sourceText)) !== null) {
+    const rawTok = match[1];
+    const tok = rawTok.trim();
+    if (tok.length >= 2 && tok.length <= 64 && !seen.has(tok)) {
+      seen.add(tok);
+      tokens.push(tok);
+    }
+  }
+
+  if (tokens.length === 0) return rewrittenText;
+
+  const missing = tokens.filter((tok) => !rewrittenText.includes(tok));
+  if (missing.length === 0) return rewrittenText;
+
+  const appendix = ` (${missing.map((t) => `\`${t}\``).join(", ")})`;
+  return `${rewrittenText.trimEnd()}${appendix}`;
+}
+

@@ -1,5 +1,6 @@
-import { L as LingualResult, a as LingualI18nLabels, S as SlotConfig } from './index-CLkWrTf_.cjs';
-export { C as CURRENT_FEATURE_BANNER_VERSION, b as CacheStats, c as CustomModeConfig, d as CustomSlotsConfig, D as DEFAULT_CONFIG, e as DEFAULT_KILL_LIST, f as LANGUAGE_PAIR_ANCHORS, g as LANGUAGE_PRESETS, h as LANGUAGE_SPECS, i as LEGACY_SLOT_PRESETS, j as LINGUAL_SYSTEM_PROMPT, k as LINGUA_SYSTEM_PROMPT, l as LanguageAnchor, m as LanguageSpec, n as LinguaConfig, o as LinguaI18nLabels, p as LinguaLruCache, q as LinguaMode, r as LinguaResult, s as LingualConfig, t as LingualCoreOptions, u as LingualLruCache, v as LingualMode, w as LingualRequest, x as LingualResponse, y as LoadoutDefinition, M as MAX_TRANSLATION_CHARS, z as MAX_TRANSLATION_LINES, A as ModeAction, B as ModeDisplaySpec, E as ModeFlow, F as ModeHud, G as ModeTarget, P as PRESET_LOADOUTS, H as PROMPT_RULE_PRESETS, I as PromptCandidate, J as PromptSlotConfig, R as ReasoningEffort, K as SEED_NAMES, N as SLOT_PRESETS, O as SUPPORTED_LANG_CODES, Q as SanitizedPromptResult, T as SeedNames, U as SelectPromptSpec, V as SlotDefinition, W as SlotPresetDefinition, X as SlotResult, Y as SlotRole, Z as TranslationPayload, _ as UserLingualConfig, $ as addCustomMode, a0 as addSlotToList, a1 as addSlotToMode, a2 as buildDirectRewriteSystemPrompt, a3 as buildModifySystemPrompt, a4 as buildPromptCandidatesSystemPrompt, a5 as buildSystemPrompt, a6 as compileKillListInstruction, a7 as compileModeSystemPrompt, a8 as createCustomSlot, a9 as defaultSlotsForMode, aa as detectScriptLanguage, ab as executeModeRunner, ac as formatModelSelectionMessage, ad as formatNativeReplyGuardHint, ae as formatReleaseBannerLines, af as formatStatusReport, ag as generatePromptCandidates, ah as getDefaultDirectSlots, ai as getDefaultFactoryModes, aj as getDefaultModifySlots, ak as getDefaultPromptSlots, al as getDefaultSlots, am as getPresetLoadout, an as globalLinguaCache, ao as globalLingualCache, ap as hasSourceScript, aq as interpolatePromptVariables, ar as invalidateUserConfigCache, as as isDynamicLongInput, at as isImperativeEngineeringPrompt, au as isNonEnglish, av as isSupportedLangCode, aw as isTargetLanguageOnly, ax as isTestEnvironment, ay as isUserLingualConfigured, az as listPresetLoadouts, aA as loadUserConfig, aB as loadUserLingualConfig, aC as localizeModeName, aD as localizeModes, aE as localizeSlotLabel, aF as moveSlotInList, aG as normalizeActiveModeId, aH as normalizeLangCode, aI as normalizeLingualModeInput, aJ as normalizePromptRules, aK as parseLlmResponse, aL as removeCustomMode, aM as removeSlotFromList, aN as removeSlotFromMode, aO as repairAndParseJsonObject, aP as resolveCandidateSlotsFromConfig, aQ as resolveDirectSlotsFromConfig, aR as resolveLabelsForLang, aS as resolveLangPair, aT as resolveLanguageName, aU as resolveLanguagePairAnchors, aV as resolveModeDisplayName, aW as resolveModeDisplaySpec, aX as resolveModesFromConfig, aY as resolveModifySlotsFromConfig, aZ as resolvePromptRulePreset, a_ as resolvePromptTargetLangName, a$ as resolveReleaseBannerLang, b0 as resolveSeedNames, b1 as resolveSelectPrompts, b2 as resolveSlotLabels, b3 as resolveSlotsForPreset, b4 as rewritePromptDirect, b5 as sanitizePromptForTranslation, b6 as saveUserLingualConfig, b7 as shouldInjectNativeReplyGuard, b8 as shouldShieldBypass, b9 as shouldTriggerTranslation, ba as stripLinguaAnnotation, bb as stripLingualAnnotation, bc as stripLingualContextWhenOff, bd as toggleCustomMode, be as toggleSlotInList, bf as translateCore, bg as translatePrompt, bh as updateCustomMode, bi as updateSlotInList } from './index-CLkWrTf_.cjs';
+import { L as LingualResult, a as LingualI18nLabels, S as SlotConfig, E as ExtensionState, M as ModeRuntime } from './index-CUTAjDOa.cjs';
+export { C as CURRENT_FEATURE_BANNER_VERSION, b as CacheStats, c as CustomModeConfig, d as CustomSlotsConfig, D as DEFAULT_CONFIG, e as DEFAULT_KILL_LIST, H as HudVariant, f as LANGUAGE_PAIR_ANCHORS, g as LANGUAGE_PRESETS, h as LANGUAGE_SPECS, i as LEGACY_SLOT_PRESETS, j as LINGUAL_SYSTEM_PROMPT, k as LINGUA_SYSTEM_PROMPT, l as LanguageAnchor, m as LanguageSpec, n as LinguaConfig, o as LinguaI18nLabels, p as LinguaLruCache, q as LinguaMode, r as LinguaResult, s as LingualConfig, t as LingualCoreOptions, u as LingualLruCache, v as LingualMode, w as LingualRequest, x as LingualResponse, y as LoadoutDefinition, z as MAX_TRANSLATION_CHARS, A as MAX_TRANSLATION_LINES, B as ModeAction, F as ModeDisplaySpec, G as ModeFlow, I as ModeHud, J as ModeTarget, P as PRESET_LOADOUTS, K as PROMPT_RULE_PRESETS, N as PromptCandidate, O as PromptSlotConfig, R as ReasoningEffort, Q as ResolveModeOptions, T as SEED_NAMES, U as SLOT_PRESETS, V as SUPPORTED_LANG_CODES, W as SanitizedPromptResult, X as SeedNames, Y as SelectPromptSpec, Z as SlotDefinition, _ as SlotPresetDefinition, $ as SlotResult, a0 as SlotRole, a1 as TranslationPayload, a2 as UserLingualConfig, a3 as addCustomMode, a4 as addSlotToList, a5 as addSlotToMode, a6 as buildDirectRewriteSystemPrompt, a7 as buildModifySystemPrompt, a8 as buildPromptCandidatesSystemPrompt, a9 as buildStreamingResult, aa as buildSystemPrompt, ab as compileKillListInstruction, ac as compileModeSystemPrompt, ad as createCustomSlot, ae as defaultSlotsForMode, af as detectScriptLanguage, ag as ensureCodeTokensPreserved, ah as executeModeRunner, ai as formatModelSelectionMessage, aj as formatNativeReplyGuardHint, ak as formatReleaseBannerLines, al as formatStatusReport, am as generatePromptCandidates, an as getDefaultDirectSlots, ao as getDefaultFactoryModes, ap as getDefaultModifySlots, aq as getDefaultPromptSlots, ar as getDefaultSlots, as as getPresetLoadout, at as globalLinguaCache, au as globalLingualCache, av as hasSourceScript, aw as interpolatePromptVariables, ax as invalidateUserConfigCache, ay as isDynamicLongInput, az as isImperativeEngineeringPrompt, aA as isNonEnglish, aB as isSupportedLangCode, aC as isTargetLanguageOnly, aD as isTestEnvironment, aE as isUserLingualConfigured, aF as listPresetLoadouts, aG as loadUserConfig, aH as loadUserLingualConfig, aI as localizeModeName, aJ as localizeModes, aK as localizeSlotLabel, aL as moveSlotInList, aM as normalizeActiveModeId, aN as normalizeHudVariant, aO as normalizeLangCode, aP as normalizeLingualModeInput, aQ as normalizePromptRules, aR as parseLlmResponse, aS as parsePartialJsonFields, aT as pickPrimaryContent, aU as primarySlot, aV as removeCustomMode, aW as removeSlotFromList, aX as removeSlotFromMode, aY as repairAndParseJsonObject, aZ as resolveCandidateSlotsFromConfig, a_ as resolveDirectSlotsFromConfig, a$ as resolveLabelsForLang, b0 as resolveLangPair, b1 as resolveLanguageName, b2 as resolveLanguagePairAnchors, b3 as resolveModeDisplayName, b4 as resolveModeDisplaySpec, b5 as resolveModeRuntime, b6 as resolveModesFromConfig, b7 as resolveModifySlotsFromConfig, b8 as resolvePromptRulePreset, b9 as resolvePromptTargetLangName, ba as resolveReleaseBannerLang, bb as resolveSeedNames, bc as resolveSelectPrompts, bd as resolveSlotLabels, be as resolveSlotsForPreset, bf as rewritePromptDirect, bg as runtimeLanguagePair, bh as sanitizePromptForTranslation, bi as saveUserLingualConfig, bj as shouldInjectNativeReplyGuard, bk as shouldShieldBypass, bl as shouldTriggerTranslation, bm as stripLinguaAnnotation, bn as stripLingualAnnotation, bo as stripLingualContextWhenOff, bp as toggleCustomMode, bq as toggleSlotInList, br as translateCore, bs as translatePrompt, bt as updateCustomMode, bu as updateSlotInList } from './index-CUTAjDOa.cjs';
+import { ExtensionContext, ExtensionAPI } from '@earendil-works/pi-coding-agent';
 
 /**
  * Terminal Box Model & Layout Engine.
@@ -113,6 +114,12 @@ declare function renderCardLayout(card: LingualResult, labels: LingualI18nLabels
     maxCols?: number;
     maxLines?: number;
     isCompact?: boolean;
+    /** True while tokens are still streaming: keeps the rail open so it never flickers closed. */
+    isStreaming?: boolean;
+    /** Renderer selected by the mode's `hud` field. */
+    variant?: "tree" | "preview" | "takeaway" | "none";
+    /** True when the source input is long enough to suppress full sentences. */
+    isLong?: boolean;
     slots?: SlotConfig[];
     pageTag?: string;
     themeDecorators?: {
@@ -226,4 +233,67 @@ declare class LingualSessionController {
     reset(): void;
 }
 
-export { CANNOT_START_LINE_CHARS, LingualI18nLabels, LingualResult, LingualSessionController, type ModePickerOption, type PaginationSnapshot, type SessionRequestToken, SlotConfig, extractVocabPhrases, formatCapsuleLine, formatLoadingMessage, formatModePickerLines, formatSubRail, formatTerminalAnnotation, formatTreeBranch, formatVocabItemsAtomic, getBannerMaxCols, getEffectiveMaxCols, getVisualWidth, renderCardLayout, splitSemanticChunks, spotlightPhrases, truncateVisual, wrapVisualText };
+interface CommandHandlerDeps {
+    state: ExtensionState;
+    session: LingualSessionController;
+    updateFooter: (ctx: ExtensionContext | null | undefined) => void;
+    refreshActiveView: (ctx: ExtensionContext) => void;
+    renderActiveCard: (ctx: ExtensionContext) => void;
+    renderHudWidget: (ctx: ExtensionContext, result: LingualResult, rt: ModeRuntime, extras?: {
+        pageTag?: string;
+        isLong?: boolean;
+        isStreaming?: boolean;
+    }) => void;
+    activeRuntime: () => ModeRuntime;
+    renderReleaseBanner: (ctx: ExtensionContext, explicitLang?: string) => boolean;
+    syncResizeListener: () => void;
+    clearPendingTimers: () => void;
+    armTuner: () => void;
+    pi: ExtensionAPI;
+}
+interface CommandHandlers {
+    setModeHandler: (args: string, ctx: ExtensionContext) => Promise<void>;
+    setModelHandler: (args: string, ctx: ExtensionContext) => Promise<void>;
+    switchLangHandler: (args: string, ctx: ExtensionContext) => Promise<void>;
+    toggleCompactHandler: (args: string, ctx: ExtensionContext) => Promise<void>;
+    switchSlotsHandler: (args: string, ctx: ExtensionContext) => Promise<void>;
+    showStatusHandler: (args: string, ctx: ExtensionContext) => Promise<void>;
+    showLastHandler: (args: string, ctx: ExtensionContext) => Promise<void>;
+    copyLastHandler: (args: string, ctx: ExtensionContext) => Promise<void>;
+    manageModesHandler: (args: string, ctx: ExtensionContext) => Promise<void>;
+    manageLoadoutsHandler: (args: string, ctx: ExtensionContext) => Promise<void>;
+    showAgentGuideHandler: (args: string, ctx: ExtensionContext) => Promise<void>;
+    setReasoningHandler: (args: string, ctx: ExtensionContext) => Promise<void>;
+    setDefaultModeHandler: (args: string, ctx: ExtensionContext) => Promise<void>;
+    masterCommandHandler: (args: string, ctx: ExtensionContext) => Promise<void>;
+}
+declare function createCommandHandlers(deps: CommandHandlerDeps): CommandHandlers;
+
+/**
+ * Reads the user's global default model from Pi's settings.json (~/.pi/agent/settings.json).
+ * This directly respects the user's configured global Pi default model without heuristics.
+ */
+declare function getPiGlobalDefaultModel(): {
+    modelId?: string;
+    provider?: string;
+} | null;
+/**
+ * Resolves the target model for Lingual translation.
+ * Priority:
+ * 1. User pinned model in lingual.json or explicit /lingual model <id>
+ * 2. Explicit session follow (/lingual model session)
+ * 3. Default (auto): Pi's global defaultModel from ~/.pi/agent/settings.json
+ * 4. Fallback: Current active conversation model (ctx.model)
+ */
+declare function resolveTargetModel(ctx: ExtensionContext, selectedModel?: string): any;
+/**
+ * Host-native model completer: zero-config in-process model execution.
+ */
+declare function createModelCompleter(ctx: ExtensionContext, getSelectedModel: () => string, defaultOpts?: {
+    reasoning?: string;
+}): (text: string, systemPrompt: string, signal?: AbortSignal, callOpts?: {
+    reasoning?: string;
+    onDelta?: (fullText: string) => void;
+}) => Promise<string | null>;
+
+export { CANNOT_START_LINE_CHARS, type CommandHandlerDeps, type CommandHandlers, ExtensionState, LingualI18nLabels, LingualResult, LingualSessionController, type ModePickerOption, ModeRuntime, type PaginationSnapshot, type SessionRequestToken, SlotConfig, createCommandHandlers, createModelCompleter, extractVocabPhrases, formatCapsuleLine, formatLoadingMessage, formatModePickerLines, formatSubRail, formatTerminalAnnotation, formatTreeBranch, formatVocabItemsAtomic, getBannerMaxCols, getEffectiveMaxCols, getPiGlobalDefaultModel, getVisualWidth, renderCardLayout, resolveTargetModel, splitSemanticChunks, spotlightPhrases, truncateVisual, wrapVisualText };

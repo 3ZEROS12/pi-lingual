@@ -149,6 +149,7 @@ export interface LingualI18nLabels {
   cmdDescAgent?: string;
   shortcutNextPage?: string;
   shortcutPrevPage?: string;
+  shortcutCopyLast?: string;
 
   // Localized interactive mode picker chrome
   modePickerTitle?: string;
@@ -240,7 +241,10 @@ export interface LingualConfig {
   temperature?: number;
   reasoning?: ReasoningEffort | string;
   timeoutMs?: number;
-  complete?: (text: string, systemPrompt: string, signal?: AbortSignal, options?: { reasoning?: string }) => Promise<string | null>;
+  killList?: string[];             // Mode-level forbidden AI clichés (pass-through modes)
+  onDelta?: (fullText: string) => void;              // Streaming transport hook (internal)
+  onPartial?: (fields: Record<string, string>) => void; // Parsed partial JSON fields (internal)
+  complete?: (text: string, systemPrompt: string, signal?: AbortSignal, options?: { reasoning?: string; onDelta?: (fullText: string) => void }) => Promise<string | null>;
   signal?: AbortSignal;
   [key: string]: any;
 }
@@ -270,4 +274,23 @@ export interface TranslationPayload {
   summary?: string;
   slots?: SlotResult[];
   slotOutputs?: Record<string, { content: string; meaning?: string }>;
+}
+
+export interface ExtensionState {
+  mode: LingualMode;
+  modeLocked: boolean;
+  compact: boolean;
+  sourceLang: string;
+  targetLang: string;
+  explainLang?: string;
+  selectedModel: string;
+  slotPreset: string;
+  slots: SlotConfig[];
+  directSlots: PromptSlotConfig[];
+  promptSlots: PromptSlotConfig[];
+  modifySlots: PromptSlotConfig[];
+  modes: CustomModeConfig[];
+  activeModeId?: string;
+  defaultMode?: string;
+  labels: LingualI18nLabels;
 }

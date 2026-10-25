@@ -159,6 +159,10 @@ function closingDelimitersFor(text: string): string {
       continue;
     }
     if (ch === "'" && !inDouble && !inBacktick) {
+      const next = i + 1 < clean.length ? clean[i + 1] : "";
+      if (/[a-zA-Z]/.test(prev) && /[a-zA-Z]/.test(next)) {
+        continue;
+      }
       inSingle = !inSingle;
       continue;
     }
@@ -242,7 +246,9 @@ export function truncateVisual(str: string, maxVisualCols: number): string {
       }
     }
 
-    return result.replace(/\s*[\(\[\{（【]$/, "");
+    return result
+      .replace(/[,'"—\-:;]+\s*$/, "")
+      .replace(/\s*[\(\[\{（【]$/, "");
   };
 
   const targetCols = Math.max(1, maxVisualCols - 3);
@@ -732,6 +738,12 @@ export function renderCardLayout(
     maxCols?: number;
     maxLines?: number;
     isCompact?: boolean;
+    /** True while tokens are still streaming: keeps the rail open so it never flickers closed. */
+    isStreaming?: boolean;
+    /** Renderer selected by the mode's `hud` field. */
+    variant?: "tree" | "preview" | "takeaway" | "none";
+    /** True when the source input is long enough to suppress full sentences. */
+    isLong?: boolean;
     slots?: SlotConfig[];
     pageTag?: string;
     themeDecorators?: {
@@ -744,6 +756,7 @@ export function renderCardLayout(
   const maxCols = getEffectiveMaxCols(options.maxCols);
   const maxLines = options.maxLines || 9;
   const isCompact = Boolean(options.isCompact);
+  const railOpen = options.isStreaming === true;
   const pageTag = options.pageTag || "";
 
   const decMuted = options.themeDecorators?.muted || ((s) => s);
@@ -818,6 +831,54 @@ export function renderCardLayout(
     }
   }
 
+  const variant = options.variant || "tree";
+
+  // 0. Silent HUD: the mode asked for zero pixels.
+  if (variant === "none") {
+    return [];
+  }
+
+  // 0b. Preview HUD: a dense 1-2 line glanceable summary of the transformed output.
+  // Used by prompt-rewrite modes where the full tree would bury the payload.
+  if (variant === "preview") {
+    const primary = contentBranches.find((b) => b.role !== "vocab");
+    const takeaway = contentBranches.find((b) => b.role === "vocab");
+    if (!primary && !takeaway) return [];
+
+    const previewLines: string[] = [];
+    if (primary) {
+      const prefixRaw = `⚡ [${primary.label}] `;
+      const prefixW = getVisualWidth(prefixRaw);
+      const body = truncateVisual(primary.content, Math.max(8, maxCols - prefixW));
+      previewLines.push(
+        decAccent(`⚡ [${primary.label}] `) + body + pageTag
+      );
+    }
+    if (takeaway) {
+      const prefixRaw = "   ↳ ";
+      const prefixW = getVisualWidth(prefixRaw);
+      previewLines.push(
+        decMuted("   ↳ ") +
+          decDim(truncateVisual(takeaway.content, Math.max(8, maxCols - prefixW)))
+      );
+    }
+    return previewLines.slice(0, 2);
+  }
+
+  // 0c. Takeaway HUD on long input: drop full sentences, keep only the diff rail.
+  // This is what stops a 12-line paragraph from blowing out the widget.
+  // While the diff rail is still empty (mid-stream), the source stays visible as an anchor.
+  const longTakeaway =
+    variant === "takeaway" &&
+    options.isLong === true &&
+    contentBranches.some((b) => b.role === "vocab");
+  const suppressSource = longTakeaway;
+  if (longTakeaway) {
+    const diffs = contentBranches.filter((b) => b.role === "vocab");
+    contentBranches.length = 0;
+    contentBranches.push(...diffs);
+  }
+
   // 1. Compact capsule fallback when requested or when viewport is < 35 columns
   if (isCompact || maxCols < 35) {
     const tagWidth = getVisualWidth(pageTag);
@@ -844,7 +905,7 @@ export function renderCardLayout(
   const sourceSlot = effectiveSlots.find((s) => s.role === "source");
   let sourceLines: string[] = [];
 
-  if (sourceSlot && card.sourceText && card.sourceText.trim()) {
+  if (!suppressSource && sourceSlot && card.sourceText && card.sourceText.trim()) {
     const sourceLabel = sourceSlot.label || labels.sourceLabel || "Source";
     const prefixRaw = `  · [${sourceLabel}] `;
     const prefixW = getVisualWidth(prefixRaw);
@@ -890,14 +951,14 @@ export function renderCardLayout(
     let contChar = "│";
 
     if (numBranches === 1) {
-      branchChar = "└";
-      contChar = " ";
+      branchChar = railOpen ? "├" : "└";
+      contChar = railOpen ? "│" : " ";
     } else if (isFirst) {
       branchChar = "┌";
       contChar = "│";
     } else if (isLast) {
-      branchChar = "└";
-      contChar = " ";
+      branchChar = railOpen ? "├" : "└";
+      contChar = railOpen ? "│" : " ";
     }
 
     const isVocab = branch.role === "vocab";
@@ -949,8 +1010,8 @@ export function renderCardLayout(
       const branch = contentBranches[i];
       const isFirst = i === 0;
       const isLast = i === numBranches - 1;
-      const branchChar = numBranches === 1 ? "└" : isFirst ? "┌" : isLast ? "└" : "├";
-      const contChar = numBranches === 1 || isLast ? " " : "│";
+      const branchChar = numBranches === 1 ? (railOpen ? "├" : "└") : isFirst ? "┌" : isLast ? (railOpen ? "├" : "└") : "├";
+      const contChar = numBranches === 1 || isLast ? (railOpen ? "│" : " ") : "│";
       const isVocab = branch.role === "vocab";
       const headingColor = isVocab ? decMuted : decAccent;
       const contentColor = isVocab ? decDim : (s: string) => s;
@@ -980,8 +1041,8 @@ export function renderCardLayout(
         const branch = contentBranches[i];
         const isFirst = i === 0;
         const isLast = i === numBranches - 1;
-        const branchChar = numBranches === 1 ? "└" : isFirst ? "┌" : isLast ? "└" : "├";
-        const contChar = numBranches === 1 || isLast ? " " : "│";
+        const branchChar = numBranches === 1 ? (railOpen ? "├" : "└") : isFirst ? "┌" : isLast ? (railOpen ? "├" : "└") : "├";
+        const contChar = numBranches === 1 || isLast ? (railOpen ? "│" : " ") : "│";
         const isVocab = branch.role === "vocab";
         const headingColor = isVocab ? decMuted : decAccent;
         const contentColor = isVocab ? decDim : (s: string) => s;
@@ -1013,8 +1074,8 @@ export function renderCardLayout(
           const branch = contentBranches[i];
           const isFirst = i === 0;
           const isLast = i === numBranches - 1;
-          const branchChar = numBranches === 1 ? "└" : isFirst ? "┌" : isLast ? "└" : "├";
-          const contChar = numBranches === 1 || isLast ? " " : "│";
+          const branchChar = numBranches === 1 ? (railOpen ? "├" : "└") : isFirst ? "┌" : isLast ? (railOpen ? "├" : "└") : "├";
+          const contChar = numBranches === 1 || isLast ? (railOpen ? "│" : " ") : "│";
           const isVocab = branch.role === "vocab";
           const headingColor = isVocab ? decMuted : decAccent;
           const contentColor = isVocab ? decDim : (s: string) => s;
@@ -1051,10 +1112,48 @@ export function renderCardLayout(
               clampedBranchLines.push(atomicLine);
               remainingBudget -= 1;
             } else {
-              const sliced = branchRendered.slice(0, branchBudget);
-              sliced[sliced.length - 1] = truncateVisual(sliced[sliced.length - 1] + "...", maxCols);
-              clampedBranchLines.push(...sliced);
-              remainingBudget -= sliced.length;
+              let preservedCompleteSentences: string[] | null = null;
+              if (/[.!?。！？]\s+/.test(branch.content)) {
+                const sentenceList = branch.content.trim().split(/(?<=[.!?。！？])\s+/);
+                const candidates: string[] = [];
+                if (sentenceList.length >= 3) {
+                  candidates.push(sentenceList.slice(0, 2).join(" "));
+                }
+                if (sentenceList.length >= 1) {
+                  candidates.push(sentenceList[0]);
+                }
+                for (const candidateText of candidates) {
+                  if (candidateText.length >= 35) {
+                    const renderedCand = formatTreeBranch(
+                      branchChar,
+                      contChar,
+                      branch.label,
+                      candidateText,
+                      decMuted,
+                      headingColor,
+                      decMuted,
+                      contentColor,
+                      maxCols
+                    );
+                    if (renderedCand.length <= branchBudget) {
+                      preservedCompleteSentences = renderedCand;
+                      break;
+                    }
+                  }
+                }
+              }
+
+              if (preservedCompleteSentences) {
+                clampedBranchLines.push(...preservedCompleteSentences);
+                remainingBudget -= preservedCompleteSentences.length;
+              } else {
+                const sliced = branchRendered.slice(0, branchBudget);
+                const lastIdx = sliced.length - 1;
+                const cleanLastLine = sliced[lastIdx].replace(/[,'"—\-:;]+\s*$/, "");
+                sliced[lastIdx] = truncateVisual(cleanLastLine + "...", maxCols);
+                clampedBranchLines.push(...sliced);
+                remainingBudget -= sliced.length;
+              }
             }
           }
         }

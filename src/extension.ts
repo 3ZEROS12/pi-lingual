@@ -1,7 +1,3 @@
-import fs from "node:fs";
-import path from "node:path";
-import os from "node:os";
-import { spawn, execFileSync } from "node:child_process";
 import type {
   ExtensionAPI,
   ExtensionContext,
@@ -10,43 +6,32 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 import type {
   CustomModeConfig,
+  ExtensionState,
   LingualMode,
-  LingualI18nLabels,
   LingualResult,
-  PromptCandidate,
   PromptSlotConfig,
-  ReasoningEffort,
   SlotConfig,
   SlotResult,
 } from "./types.js";
 import {
+  resolveModeRuntime,
+  primarySlot,
+  runtimeLanguagePair,
+  buildStreamingResult,
+  pickPrimaryContent,
+  type ModeRuntime,
+} from "./runtime.js";
+import {
   getEffectiveMaxCols,
   getBannerMaxCols,
-  formatTreeBranch,
-  formatSubRail,
-  truncateVisual,
-  formatCapsuleLine,
-  extractVocabPhrases,
-  spotlightPhrases,
-  getVisualWidth,
-  wrapVisualText,
-  formatVocabItemsAtomic,
   renderCardLayout,
   formatLoadingMessage,
-  formatModePickerLines,
-  ModePickerOption,
 } from "./layout.js";
 import {
   translatePrompt,
-  rewritePromptDirect,
-  generatePromptCandidates,
   stripLingualContextWhenOff,
   formatReleaseBannerLines,
   resolveReleaseBannerLang,
-  resolveModeDisplaySpec,
-  resolveModeDisplayName,
-  resolveSelectPrompts,
-  normalizeLingualModeInput,
   CURRENT_FEATURE_BANNER_VERSION,
   getDefaultDirectSlots,
   getDefaultPromptSlots,
@@ -55,99 +40,59 @@ import {
   resolveCandidateSlotsFromConfig,
   resolveModifySlotsFromConfig,
   shouldTriggerTranslation,
+  isDynamicLongInput,
   isTestEnvironment,
   loadUserLingualConfig,
   saveUserLingualConfig,
-  isUserLingualConfigured,
   resolveModesFromConfig,
   normalizeActiveModeId,
   executeModeRunner,
-  defaultSlotsForMode,
   shouldInjectNativeReplyGuard,
   formatNativeReplyGuardHint,
   localizeModes,
-  localizeModeName,
   localizeSlotLabel,
-  resolveSlotLabels,
 } from "./engine.js";
 import {
   resolveLabelsForLang,
-  formatStatusReport,
-  formatModelSelectionMessage,
   resolveSlotsForPreset,
   getDefaultSlots,
-  createCustomSlot,
-  addSlotToList,
-  removeSlotFromList,
-  toggleSlotInList,
-  addCustomMode,
-  removeCustomMode,
-  updateCustomMode,
-  toggleCustomMode,
-  addSlotToMode,
-  removeSlotFromMode,
   getDefaultFactoryModes,
-  getPresetLoadout,
-  listPresetLoadouts,
-  SLOT_PRESETS,
-  LANGUAGE_PRESETS,
   isSupportedLangCode,
-  normalizeLangCode,
-  resolveLangPair,
 } from "./presets.js";
-import { splitSemanticChunks } from "./chunker.js";
 import { LingualSessionController } from "./fsm.js";
 import { sanitizePromptForTranslation } from "./sanitizer.js";
-import { globalLingualCache } from "./cache.js";
 import {
   isTargetLanguageOnly,
   isImperativeEngineeringPrompt,
   detectScriptLanguage,
 } from "./shield.js";
+import {
+  hasActiveUI,
+  safeClearWidget,
+  copyToClipboard,
+  captureGitContextSnapshot,
+  extractRecentContextAnchor,
+} from "./context.js";
+import { createModelCompleter } from "./completer.js";
+import { pickCandidateInteractive } from "./pickers.js";
+import { createCommandHandlers } from "./commands.js";
 
-interface ExtensionState {
-  mode: LingualMode;
-  modeLocked: boolean;
-  compact: boolean;
-  sourceLang: string;
-  targetLang: string;
-  explainLang?: string;
-  selectedModel: string;
-  slotPreset: string;
-  slots: SlotConfig[];
-  directSlots: PromptSlotConfig[];
-  promptSlots: PromptSlotConfig[];
-  modifySlots: PromptSlotConfig[];
-  modes: CustomModeConfig[];
-  activeModeId?: string;
-  defaultMode?: string;
-  labels: LingualI18nLabels;
-}
+export { extractRecentContextAnchor } from "./context.js";
 
 const initialDiskConfig = isTestEnvironment() ? {} : loadUserLingualConfig();
 const initialSourceLang = initialDiskConfig.sourceLang || (isTestEnvironment() ? "en" : resolveReleaseBannerLang());
 const initialTargetLang = initialDiskConfig.targetLang || (initialSourceLang === "en" ? "ja" : "en");
 const initialSlotPreset = initialDiskConfig.slotPreset;
-const initialSlots = Array.isArray(initialDiskConfig.slots) && initialDiskConfig.slots.length > 0
+const initialSlots = initialDiskConfig.slots?.length
   ? initialDiskConfig.slots
   : (initialSlotPreset ? resolveSlotsForPreset(initialSlotPreset, initialSourceLang) : getDefaultSlots(initialSourceLang));
-const initialDirectSlots = Array.isArray(initialDiskConfig.directSlots) && initialDiskConfig.directSlots.length > 0
-  ? initialDiskConfig.directSlots
-  : getDefaultDirectSlots(initialSourceLang);
-const initialPromptSlots = Array.isArray(initialDiskConfig.promptSlots) && initialDiskConfig.promptSlots.length > 0
-  ? initialDiskConfig.promptSlots
-  : getDefaultPromptSlots(initialSourceLang);
-const initialModifySlots = Array.isArray(initialDiskConfig.modifySlots) && initialDiskConfig.modifySlots.length > 0
-  ? initialDiskConfig.modifySlots
-  : getDefaultModifySlots(initialSourceLang);
+const initialDirectSlots = initialDiskConfig.directSlots?.length ? initialDiskConfig.directSlots : getDefaultDirectSlots(initialSourceLang);
+const initialPromptSlots = initialDiskConfig.promptSlots?.length ? initialDiskConfig.promptSlots : getDefaultPromptSlots(initialSourceLang);
+const initialModifySlots = initialDiskConfig.modifySlots?.length ? initialDiskConfig.modifySlots : getDefaultModifySlots(initialSourceLang);
 const initialModes = resolveModesFromConfig(initialDiskConfig, initialSourceLang);
 const initialLabels = resolveLabelsForLang(initialSourceLang, initialDiskConfig.labels, initialTargetLang);
-
 const initialRawMode = initialDiskConfig.activeModeId || initialDiskConfig.mode || "companion";
-const initialNormalizedMode = normalizeActiveModeId(
-  { mode: initialRawMode, activeModeId: initialRawMode },
-  initialModes
-) as LingualMode;
+const initialNormalizedMode = normalizeActiveModeId({ mode: initialRawMode, activeModeId: initialRawMode }, initialModes) as LingualMode;
 
 const state: ExtensionState = {
   mode: initialNormalizedMode,
@@ -172,158 +117,6 @@ const state: ExtensionState = {
 const session = new LingualSessionController();
 let lastContext: ExtensionContext | null = null;
 
-function hasActiveUI(ctx: ExtensionContext | null | undefined): ctx is ExtensionContext {
-  if (!ctx) return false;
-  try {
-    return Boolean(ctx.hasUI && ctx.ui);
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Lightweight Context Siphon: extracts recent assistant turn's anchor line (up to 160 chars)
- * strictly for pronoun/anaphora resolution ("here", "this function", "as discussed") and domain terminology.
- * Skips conversational boilerplate and targets lines with concrete technical density (paths, code, identifiers).
- */
-export function extractRecentContextAnchor(ctx: ExtensionContext | null | undefined): string {
-  if (!ctx) return "";
-  try {
-    const entries = (ctx as any)?.sessionManager?.getEntries?.() || [];
-    const conversationalClosers = [
-      /let me know/i,
-      /hope this helps/i,
-      /feel free to/i,
-      /anything else/i,
-      /happy to help/i,
-      /还有什么/i,
-      /随时告诉我/i,
-      /请随时/i,
-      /如有疑问/i,
-      /需要我继续/i,
-      /お気軽に/i,
-      /他にご質問/i,
-    ];
-
-    for (let i = entries.length - 1; i >= 0; i--) {
-      const entry = entries[i];
-      if (entry?.type === "message" && entry?.message?.role === "assistant") {
-        const content = entry.message.content;
-        let text = "";
-        if (typeof content === "string") {
-          text = content;
-        } else if (Array.isArray(content)) {
-          text = content
-            .filter((c: any) => c?.type === "text" && typeof c.text === "string")
-            .map((c: any) => c.text)
-            .join(" ");
-        }
-        if (!text || !text.trim()) continue;
-
-        const rawLines = text
-          .trim()
-          .split("\n")
-          .map((l: string) => l.trim())
-          .filter(
-            (l: string) =>
-              l.length > 0 &&
-              !/^```/.test(l) &&
-              !/^\|[-:\s|]+\|$/.test(l) &&
-              !/^\s*\|.*\|/.test(l)
-          );
-
-        if (rawLines.length === 0) continue;
-
-        // 1. High priority: backwards scan for lines with technical density (paths, code blocks, functions, flags)
-        for (let j = rawLines.length - 1; j >= 0; j--) {
-          const line = rawLines[j];
-          if (conversationalClosers.some((re) => re.test(line))) continue;
-
-          const isTechnical =
-            /`[^`]+`/.test(line) ||
-            /[\/\\]/.test(line) ||
-            /\.[a-z0-9_-]{2,4}\b/i.test(line) ||
-            /[a-z0-9_]\.[a-z0-9_]/i.test(line) ||
-            /[_#]/.test(line) ||
-            /\b(function|class|const|def|return|import|error|bug|test|file|path|route|api)\b/i.test(line);
-
-          if (isTechnical && line.length >= 10) {
-            return line.replace(/^(\s*[-*•]\s+|\s*\d+\.\s+)/, "").slice(0, 160);
-          }
-        }
-
-        // 2. Medium priority: first non-boilerplate line from the bottom
-        for (let j = rawLines.length - 1; j >= 0; j--) {
-          const line = rawLines[j];
-          if (!conversationalClosers.some((re) => re.test(line)) && line.length >= 8) {
-            return line.replace(/^(\s*[-*•]\s+|\s*\d+\.\s+)/, "").slice(0, 160);
-          }
-        }
-
-        // 3. Fallback: last non-empty line
-        return rawLines[rawLines.length - 1].slice(0, 160);
-      }
-    }
-  } catch {}
-  return "";
-}
-
-function copyToClipboard(text: string): boolean {
-  if (!text) return false;
-  // Emit ANSI OSC 52 sequence for SSH / tmux / modern terminal clipboard sync
-  try {
-    const base64 = Buffer.from(text, "utf8").toString("base64");
-    process.stdout.write(`\x1b]52;c;${base64}\x07`);
-  } catch {}
-
-  try {
-    if (process.platform === "win32") {
-      const proc = spawn("clip.exe", { stdio: ["pipe", "ignore", "ignore"] });
-      proc.on("error", () => {});
-      proc.stdin.on("error", () => {});
-      proc.stdin.write(text, "utf8");
-      proc.stdin.end();
-      return true;
-    } else if (process.platform === "darwin") {
-      const proc = spawn("pbcopy", { stdio: ["pipe", "ignore", "ignore"] });
-      proc.on("error", () => {});
-      proc.stdin.on("error", () => {});
-      proc.stdin.write(text, "utf8");
-      proc.stdin.end();
-      return true;
-    } else {
-      // Linux: try wl-copy then fallback to xclip
-      const proc = spawn("wl-copy", { stdio: ["pipe", "ignore", "ignore"] });
-      proc.on("error", () => {
-        try {
-          const procX = spawn("xclip", ["-selection", "clipboard"], { stdio: ["pipe", "ignore", "ignore"] });
-          procX.on("error", () => {});
-          procX.stdin.on("error", () => {});
-          procX.stdin.write(text, "utf8");
-          procX.stdin.end();
-        } catch {}
-      });
-      proc.stdin.on("error", () => {});
-      proc.stdin.write(text, "utf8");
-      proc.stdin.end();
-      return true;
-    }
-  } catch {
-    return false;
-  }
-}
-
-function safeClearWidget(ctx: ExtensionContext | null | undefined) {
-  if (!ctx) return;
-  try {
-    if (ctx.ui && typeof ctx.ui.setWidget === "function") {
-      ctx.ui.setWidget("lingual_hud", undefined);
-    }
-  } catch {
-    // Gracefully ignore stale context during session replacement or teardown
-  }
-}
-
 function updateFooter(ctx: ExtensionContext | null | undefined) {
   if (!hasActiveUI(ctx)) return;
   try {
@@ -333,29 +126,19 @@ function updateFooter(ctx: ExtensionContext | null | undefined) {
       return;
     }
 
-    // Normalize status bar badge to clean minimal A ⇄ B (e.g. en ⇄ ja)
-    let pair = `${state.sourceLang} ⇄ ${state.targetLang}`;
-    const canonicalId =
-      state.mode === "english" ? "direct" :
-      state.mode === "original" ? "companion" :
-      state.mode === "select" ? "candidates" :
-      state.mode === "modify" ? "live-flow" :
-      state.mode;
+    const rt = activeRuntime();
 
-    const canonicalKey =
-      canonicalId === "live-flow" ? "modify" : canonicalId;
+    // Normalize status bar badge to clean minimal A ⇄ B (e.g. en ⇄ ja).
+    // A `custom` flow advertises its own declared pair instead of the session pair.
+    let pair = runtimeLanguagePair(rt, `${state.sourceLang} ⇄ ${state.targetLang}`);
 
     // The badge summarises the ACTIVE MODE's slot anatomy (mode is the single source of truth),
     // falling back to the global slot set only when the mode carries none.
-    const inMemory = Array.isArray(state.modes) ? state.modes : [];
-    const activeMode =
-      inMemory.find((m) => m.id === state.mode || m.id === canonicalId) ||
-      resolveModesFromConfig(loadUserLingualConfig(), state.sourceLang).find((m) => m.id === state.mode || m.id === canonicalId);
-    const modeSlots = activeMode && Array.isArray(activeMode.slots) ? activeMode.slots : [];
-    const enabledSlots = (modeSlots.length > 0 ? modeSlots : state.slots || []).filter((s) => s.enabled !== false);
+    const enabledSlots = (rt.slots.length > 0 ? rt.slots : state.slots || []).filter(
+      (s) => s.enabled !== false
+    );
     const nonSourceCount = enabledSlots.filter((s) => s.role !== "source").length;
 
-    // Remove `no-src` noise: mode declares its own topology.
     // Retain slot count indicator only when slot anatomy differs from the 2-slot baseline.
     if (nonSourceCount !== 2 && enabledSlots.length > 0) {
       pair += ` · ${enabledSlots.length}s`;
@@ -363,64 +146,91 @@ function updateFooter(ctx: ExtensionContext | null | undefined) {
       pair += ` · ${state.slotPreset}`;
     }
 
-    const modeName = activeMode ? activeMode.name : resolveModeDisplayName(canonicalId, state.sourceLang);
-    ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", `${pair} · ${modeName}`));
+    ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", `${pair} · ${rt.name}`));
   } catch {
     // Gracefully ignore stale context during session replacement or teardown
   }
 }
 
 /**
- * Renders minimal open left-rail tree branch (UAX #11 cell widths, 0 clipping, immune to CJK ghosting).
- * Displays source anchor, dynamic translation slots, native nuance sublines, and vocabulary spotlight.
+ * Resolves the slot set a mode falls back to when it declares none of its own.
+ * Keeps legacy `slots` / `directSlots` / `promptSlots` / `modifySlots` configs alive
+ * without letting them override a mode's own declaration.
+ */
+function fallbackSlotsFor(mode: CustomModeConfig): (SlotConfig | PromptSlotConfig)[] {
+  if (mode.action === "select") {
+    return resolveCandidateSlotsFromConfig({ sourceLang: state.sourceLang, promptSlots: state.promptSlots });
+  }
+  if (mode.flow === "proofread") {
+    return resolveModifySlotsFromConfig({ sourceLang: state.sourceLang, explainLang: state.explainLang, modifySlots: state.modifySlots });
+  }
+  if (mode.action === "transform") {
+    return resolveDirectSlotsFromConfig({ sourceLang: state.sourceLang, directSlots: state.directSlots });
+  }
+  return state.slots;
+}
+
+/** Runtime contract for a mode, derived only from its declaration. */
+function runtimeForMode(mode: CustomModeConfig): ModeRuntime {
+  return resolveModeRuntime(mode, {
+    sourceLang: state.sourceLang,
+    targetLang: state.targetLang,
+    explainLang: state.explainLang,
+    fallbackSlots: fallbackSlotsFor(mode),
+    globalKillList: loadUserLingualConfig().globalKillList,
+  });
+}
+
+function activeRuntime(): ModeRuntime {
+  const id = normalizeActiveModeId({ mode: state.mode, activeModeId: state.activeModeId }, state.modes);
+  const mode = state.modes.find((m) => m.id === id) || state.modes[0];
+  if (mode) return runtimeForMode(mode);
+  return resolveModeRuntime(
+    { id: "companion", name: "Companion", flow: "translate", action: "pass-through", hud: "tree", slots: state.slots },
+    { sourceLang: state.sourceLang, targetLang: state.targetLang, fallbackSlots: state.slots }
+  );
+}
+
+/**
+ * Renders the active mode's HUD using the mode's own slots and hud variant.
+ * The renderer never reads the global slot set unless the mode declares none.
  */
 function renderHudWidget(
   ctx: ExtensionContext,
-  sourceText: string,
-  spoken: string,
-  written?: string,
-  vocab?: string,
-  spokenMeaning?: string,
-  writtenMeaning?: string,
-  pagination?: { pageIndex: number; totalPages: number },
-  slotOutputs?: Record<string, { content: string; meaning?: string }>,
-  slots?: SlotResult[]
+  result: LingualResult,
+  rt: ModeRuntime,
+  extras?: { pageTag?: string; isLong?: boolean; isStreaming?: boolean }
 ) {
   if (!hasActiveUI(ctx)) return;
+  if (rt.hud === "none") {
+    safeClearWidget(ctx);
+    return;
+  }
   try {
     const isCompact = state.compact || (process.stdout?.rows ? process.stdout.rows < 22 : false);
     const maxCols = getEffectiveMaxCols();
-    const pageTag = pagination && pagination.totalPages > 1
-      ? ctx.ui.theme.fg("muted", ` [${pagination.pageIndex + 1}/${pagination.totalPages} ⌥.]`)
-      : "";
+    const hudSlots = rt.slots.length > 0 ? rt.slots : state.slots;
 
-    const lines = renderCardLayout(
-      {
-        spoken,
-        written: written || "",
-        vocab,
-        spokenMeaning,
-        writtenMeaning,
-        sourceText,
-        annotated: "",
-        slotOutputs,
-        slots,
+    const lines = renderCardLayout(result, state.labels, {
+      maxCols,
+      maxLines: rt.hud === "preview" ? 2 : (extras?.isLong ? 10 : 9),
+      isCompact,
+      variant: rt.hud,
+      isLong: extras?.isLong,
+      isStreaming: extras?.isStreaming,
+      slots: hudSlots as SlotConfig[],
+      pageTag: extras?.pageTag || "",
+      themeDecorators: {
+        muted: (s: string) => ctx.ui.theme.fg("muted", s),
+        accent: (s: string) => ctx.ui.theme.fg("accent", s),
+        dim: (s: string) => ctx.ui.theme.fg("dim", s),
       },
-      state.labels,
-      {
-        maxCols,
-        maxLines: 9,
-        isCompact,
-        slots: state.slots,
-        pageTag,
-        themeDecorators: {
-          muted: (s: string) => ctx.ui.theme.fg("muted", s),
-          accent: (s: string) => ctx.ui.theme.fg("accent", s),
-          dim: (s: string) => ctx.ui.theme.fg("dim", s),
-        },
-      }
-    );
+    });
 
+    if (lines.length === 0) {
+      safeClearWidget(ctx);
+      return;
+    }
     ctx.ui.setWidget("lingual_hud", lines, { placement: "aboveEditor" });
   } catch {
     // Gracefully ignore stale context during session replacement or teardown
@@ -436,23 +246,24 @@ function renderActiveCard(ctx: ExtensionContext) {
     const snapshot = session.getPaginationSnapshot();
     const res = session.getActiveResult();
     if (!res) return;
-    renderHudWidget(
-      ctx,
-      res.sourceText,
-      res.spoken,
-      res.written,
-      res.vocab,
-      res.spokenMeaning,
-      res.writtenMeaning,
-      {
-        pageIndex: snapshot.pageIndex,
-        totalPages: snapshot.readyCount,
-      },
-      res.slotOutputs,
-      res.slots
-    );
+
+    const rt = activeRuntime();
+    const pageTag = snapshot.readyCount > 1
+      ? ctx.ui.theme.fg("muted", ` [${snapshot.pageIndex + 1}/${snapshot.readyCount} ⌥.]`)
+      : "";
+    renderHudWidget(ctx, res, rt, { pageTag });
   } catch {
     // Gracefully ignore stale context during session replacement or teardown
+  }
+}
+
+function refreshActiveView(ctx: ExtensionContext) {
+  if (!hasActiveUI(ctx)) return;
+  if (session.getReadyPages().length > 0) {
+    renderActiveCard(ctx);
+  } else if (session.getLastResult()) {
+    const last = session.getLastResult()!;
+    renderHudWidget(ctx, last, activeRuntime());
   }
 }
 
@@ -521,14 +332,8 @@ export default function (pi: ExtensionAPI) {
   syncResizeListener();
 
   const clearPendingTimers = () => {
-    if (polishTimer) {
-      clearTimeout(polishTimer);
-      polishTimer = undefined;
-    }
-    if (resizeTimer) {
-      clearTimeout(resizeTimer);
-      resizeTimer = undefined;
-    }
+    if (polishTimer) { clearTimeout(polishTimer); polishTimer = undefined; }
+    if (resizeTimer) { clearTimeout(resizeTimer); resizeTimer = undefined; }
   };
 
   pi.on("session_start", async (event: any, ctx) => {
@@ -559,20 +364,14 @@ export default function (pi: ExtensionAPI) {
       state.activeModeId = state.mode;
     }
 
-    if (diskCfg.sourceLang) {
-      state.sourceLang = diskCfg.sourceLang;
-    }
-    if (diskCfg.targetLang) {
-      state.targetLang = diskCfg.targetLang;
-    }
+    if (diskCfg.sourceLang) state.sourceLang = diskCfg.sourceLang;
+    if (diskCfg.targetLang) state.targetLang = diskCfg.targetLang;
     state.explainLang = diskCfg.explainLang || (state.sourceLang === "zh" || state.sourceLang === "tw" ? "zh" : state.sourceLang);
     state.labels = resolveLabelsForLang(state.sourceLang, diskCfg.labels, state.targetLang);
 
-    if (Array.isArray(diskCfg.modes) && diskCfg.modes.length > 0) {
-      state.modes = localizeModes(diskCfg.modes, state.sourceLang, state.explainLang || state.sourceLang);
-    } else {
-      state.modes = resolveModesFromConfig(diskCfg, state.sourceLang);
-    }
+    state.modes = Array.isArray(diskCfg.modes) && diskCfg.modes.length > 0
+      ? localizeModes(diskCfg.modes, state.sourceLang, state.explainLang || state.sourceLang)
+      : resolveModesFromConfig(diskCfg, state.sourceLang);
     // Single source of truth:
     // If brand-new session (event?.reason === "new" || "startup" || !event?.reason), initialize strictly to defaultMode (Mode 1 "companion").
     // If resuming or switching session (event?.reason === "resume" || "switch" || "fork" || "reload"), preserve active mode.
@@ -583,10 +382,7 @@ export default function (pi: ExtensionAPI) {
     const rawDiskMode = isBrandNewSession
       ? targetDefault
       : (diskCfg.activeModeId || diskCfg.mode || targetDefault || state.mode);
-    state.mode = normalizeActiveModeId(
-      { mode: rawDiskMode, activeModeId: rawDiskMode },
-      state.modes
-    );
+    state.mode = normalizeActiveModeId({ mode: rawDiskMode, activeModeId: rawDiskMode }, state.modes);
     state.activeModeId = state.mode;
 
     // Single source of truth for multi-session: brand-new session initializes strictly to defaultMode,
@@ -599,12 +395,8 @@ export default function (pi: ExtensionAPI) {
         ? diskCfg.slots
         : diskCfg.slots.map((s) => ({ ...s, label: localizeSlotLabel(s.id, s.label, state.sourceLang) }));
     }
-    if (diskCfg.directSlots && Array.isArray(diskCfg.directSlots) && diskCfg.directSlots.length > 0) {
-      state.directSlots = diskCfg.directSlots;
-    }
-    if (diskCfg.promptSlots && Array.isArray(diskCfg.promptSlots) && diskCfg.promptSlots.length > 0) {
-      state.promptSlots = diskCfg.promptSlots;
-    }
+    if (diskCfg.directSlots?.length) state.directSlots = diskCfg.directSlots;
+    if (diskCfg.promptSlots?.length) state.promptSlots = diskCfg.promptSlots;
 
     // Auto-heal Chinese residue on disk if sourceLang is not Chinese (RFC 2119 Invariant 18)
     if (state.sourceLang !== "zh" && state.sourceLang !== "tw") {
@@ -637,9 +429,7 @@ export default function (pi: ExtensionAPI) {
   pi.on("agent_start" as any, async (_event: any, ctx: ExtensionContext) => {
     if (showingReleaseBanner) {
       showingReleaseBanner = false;
-      if (hasActiveUI(ctx)) {
-        safeClearWidget(ctx);
-      }
+      if (hasActiveUI(ctx)) safeClearWidget(ctx);
     }
   });
 
@@ -668,1278 +458,39 @@ export default function (pi: ExtensionAPI) {
     }
   });
 
-  const setModeHandler = async (args: string, ctx: ExtensionContext) => {
-    session.abortActive();
-    const trimmed = args?.trim() || "";
-    const pair = state.labels.hudTitle || `${state.sourceLang} ⇄ ${state.targetLang}`;
-    const modeSpec = resolveModeDisplaySpec(state.sourceLang);
-    const diskForMode = loadUserLingualConfig();
-    const modes = Array.isArray(state.modes) && state.modes.length > 0
-      ? state.modes
-      : resolveModesFromConfig(diskForMode);
-    const activeModes = modes.filter((m) => m.enabled !== false);
-    const hasCustomModesOnDisk = Array.isArray(diskForMode.modes) && diskForMode.modes.length > 0;
-
-    let nextMode: string;
-    const explicitLegacy = normalizeLingualModeInput(trimmed);
-
-    if (trimmed) {
-      const lower = trimmed.toLowerCase();
-      const matched = activeModes.find(
-        (m) =>
-          m.id.toLowerCase() === lower ||
-          m.name.toLowerCase() === lower ||
-          (Array.isArray(m.aliases) && m.aliases.some((a) => a.toLowerCase() === lower)) ||
-          resolveModeDisplayName(m.id, state.sourceLang).toLowerCase() === lower ||
-          (m.id === "direct" && (lower === "spec" || lower === "logical spec" || lower === "specification" || lower === "direct spec")) ||
-          (m.id === "companion" && (lower === "companion" || lower === "companion mode" || lower === "original")) ||
-          (m.id === "live-flow" && (lower === "live flow" || lower === "flow" || lower === "live" || lower === "modify" || lower === "raw"))
-      );
-      const numIdx = parseInt(trimmed, 10);
-      const isNum = !isNaN(numIdx) && String(numIdx) === trimmed;
-      if (isNum && numIdx >= 1 && numIdx <= activeModes.length) {
-        // Numerals always resolve positionally from the live registry (one rule, always matches the badge/toast).
-        nextMode = activeModes[numIdx - 1].id;
-      } else if (matched) {
-        nextMode = matched.id;
-      } else if (explicitLegacy) {
-        nextMode = explicitLegacy;
-      } else if (lower === "spec" || lower === "logical spec" || lower === "specification") {
-        nextMode = "direct";
-      } else if (lower === "companion" || lower === "companion mode") {
-        nextMode = "companion";
-      } else if (lower === "live flow" || lower === "flow" || lower === "live") {
-        nextMode = "live-flow";
-      } else {
-        nextMode = trimmed;
-      }
-    } else {
-      // Parameterless blind cycle: only block if state.modeLocked is true
-      if (state.modeLocked) {
-        const currentModeObj = activeModes.find((m) => m.id === state.mode);
-        const currentName = currentModeObj
-          ? currentModeObj.name
-          : state.mode === "off"
-            ? modeSpec.off
-            : state.mode;
-        try {
-          ctx.ui.notify(`[lingual] mode locked to [${currentName}]. Run /lingual unlock to release.`, "warning");
-        } catch {}
-        return;
-      }
-
-      if (hasCustomModesOnDisk) {
-        const cycleList = [...activeModes.map((m) => m.id), "off"];
-        const currentIdx = cycleList.indexOf(state.mode);
-        nextMode =
-          currentIdx === -1
-            ? activeModes[0]?.id || "companion"
-            : cycleList[(currentIdx + 1) % cycleList.length] || activeModes[0]?.id || "companion";
-      } else {
-        // Default mode cycle: companion -> direct -> live-flow -> off -> companion
-        nextMode =
-          state.mode === "original" || state.mode === "companion"
-            ? "direct"
-            : state.mode === "english" || state.mode === "direct"
-              ? "live-flow"
-              : state.mode === "select" || state.mode === "candidates"
-                ? "live-flow"
-                : state.mode === "modify" || state.mode === "live-flow"
-                  ? "off"
-                  : "companion";
-      }
-    }
-
-    const canonical =
-      nextMode === "original" ? "companion" :
-      nextMode === "english"  ? "direct"    :
-      nextMode === "select"   ? "candidates":
-      nextMode === "modify"   ? "live-flow" : nextMode;
-
-    if (nextMode === "off") {
-      state.mode = "off";
-      state.activeModeId = "off";
-      saveUserLingualConfig({ mode: "off", activeModeId: "off" });
-      syncResizeListener();
-      clearPendingTimers();
-      session.reset();
-      globalLingualCache.clear();
-      safeClearWidget(ctx);
-      updateFooter(ctx);
-      try {
-        ctx.ui.notify("[lingual: off]", "info");
-      } catch {}
-      return;
-    }
-
-    const targetMode = activeModes.find(
-      (m) =>
-        m.id === canonical ||
-        m.id === nextMode ||
-        m.name.toLowerCase() === (trimmed || nextMode).toLowerCase() ||
-        resolveModeDisplayName(m.id, state.sourceLang).toLowerCase() === (trimmed || nextMode).toLowerCase()
-    );
-    if (!targetMode) {
-      try {
-        ctx.ui.notify(`[lingual] mode [${trimmed || nextMode}] not in your active registry. Run /lingual mode list to view available modes.`, "warning");
-      } catch {}
-      return;
-    }
-
-    const finalId = targetMode.id;
-    state.mode = finalId as any;
-    state.activeModeId = finalId;
-    saveUserLingualConfig({ mode: finalId as any, activeModeId: finalId });
-    syncResizeListener();
-    updateFooter(ctx);
-
-    const modeIdx = activeModes.indexOf(targetMode);
-    const modeNum = modeIdx >= 0 ? modeIdx + 1 : 1;
-    const modeName = localizeModeName(targetMode.id, targetMode.name, state.sourceLang);
-    try {
-      ctx.ui.notify(`[${pair}] ${modeNum}. ${modeName} (${finalId})`, "info");
-    } catch {}
-  };
-
-  const setModelHandler = async (args: string, ctx: ExtensionContext) => {
-    const trimmed = args.trim();
-    const followSessionDesc = state.labels.modelFollowSession || "follow session";
-    const currentActive = state.selectedModel === "auto"
-      ? (ctx.model ? `auto (${followSessionDesc}: ${ctx.model.provider}/${ctx.model.id})` : "auto")
-      : state.selectedModel;
-
-    if (!trimmed) {
-      const available = ctx.modelRegistry?.getAvailable?.() || [];
-      const availableList = available.length > 0
-        ? available.map((m) => `• ${m.provider}/${m.id}`).slice(0, 8).join("\n")
-        : undefined;
-
-      const msg = formatModelSelectionMessage(state.labels, currentActive || "auto", availableList);
-      ctx.ui.notify(msg, "info");
-      return;
-    }
-
-    state.selectedModel = trimmed;
-    saveUserLingualConfig({ selectedModel: trimmed });
-    ctx.ui.notify(`[lingual] model: ${trimmed}`, "info");
-  };
-
-  const switchLangHandler = async (args: string, ctx: ExtensionContext) => {
-    const pair = state.labels.hudTitle || `${state.sourceLang} ⇄ ${state.targetLang}`;
-    const previousSource = state.sourceLang;
-    const previousTarget = state.targetLang;
-    const trimmed = args.trim().toLowerCase();
-    if (!trimmed || trimmed === "list" || trimmed === "help" || trimmed === "?") {
-      const flowText = `${state.sourceLang} ➔ ${state.targetLang}`;
-      const template =
-        state.labels.langHelpText ||
-        "[Companion Language: {flow}]\n• Quick switch: /lang ja (target Japanese) · /lang en (target English)\n• Pair switch: /lang en ja · /lang ja en · /lang es en\n• Supported codes: zh, tw, ja, ko, en, es, fr, de, ru";
-      const helpMsg = template
-        .replace("{flow}", flowText)
-        .replace("{pair}", pair);
-      ctx.ui.notify(helpMsg, "info");
-      return;
-    }
-
-    const parts = trimmed.split(/\s*->\s*|\s*➔\s*|\s+to\s+|\s+/).filter(Boolean);
-    let newSource = state.sourceLang;
-    let newTarget = state.targetLang;
-
-    if (parts.length === 1) {
-      const code = normalizeLangCode(parts[0]);
-      if (!isSupportedLangCode(code)) {
-        ctx.ui.notify(
-          "[lingual] invalid language code. supported: zh, tw, ja, ko, en, es, fr, de, ru",
-          "warning"
-        );
-        return;
-      }
-      if (code === state.sourceLang) {
-        newTarget = code === "en" ? "ja" : "en";
-      } else {
-        // Direct target language switch without changing source language (e.g. /lang ja)
-        newTarget = code;
-      }
-    } else {
-      newSource = normalizeLangCode(parts[0]);
-      newTarget = normalizeLangCode(parts[1]);
-      if (!isSupportedLangCode(newSource) || !isSupportedLangCode(newTarget)) {
-        ctx.ui.notify(
-          "[lingual] invalid language code. supported: zh, tw, ja, ko, en, es, fr, de, ru",
-          "warning"
-        );
-        return;
-      }
-    }
-
-    const diskBeforeSwitch = loadUserLingualConfig();
-    state.sourceLang = newSource;
-    state.targetLang = newTarget;
-    if (!diskBeforeSwitch.explainLang || diskBeforeSwitch.explainLang === previousSource || diskBeforeSwitch.explainLang === "zh") {
-      state.explainLang = (newSource === "zh" || newSource === "tw") ? "zh" : newSource;
-    } else {
-      state.explainLang = diskBeforeSwitch.explainLang;
-    }
-    state.labels = resolveLabelsForLang(newSource, undefined, newTarget);
-    if (state.slotPreset) {
-      state.slots = resolveSlotsForPreset(state.slotPreset, newSource);
-    } else {
-      state.slots = getDefaultSlots(newSource);
-    }
-    state.directSlots = getDefaultDirectSlots(newSource);
-    state.promptSlots = getDefaultPromptSlots(newSource);
-    state.modifySlots = getDefaultModifySlots(newSource, state.explainLang);
-
-    // Refresh modes: either full default factory modes or localized modes
-    const currentModes = Array.isArray(state.modes) && state.modes.length > 0
-      ? state.modes
-      : resolveModesFromConfig(diskBeforeSwitch, newSource);
-
-    const isFactory =
-      !diskBeforeSwitch.modes ||
-      diskBeforeSwitch.modes.length === 0 ||
-      (currentModes.length === 3 && currentModes.every((m) => ["companion", "direct", "live-flow"].includes(m.id)));
-
-    if (isFactory) {
-      state.modes = getDefaultFactoryModes(newSource, state.explainLang);
-    } else {
-      state.modes = localizeModes(currentModes, newSource, state.explainLang);
-    }
-    state.mode = normalizeActiveModeId({ mode: state.mode, activeModeId: state.activeModeId }, state.modes) as any;
-    state.activeModeId = state.mode;
-
-    saveUserLingualConfig({
-      sourceLang: newSource,
-      targetLang: newTarget,
-      explainLang: state.explainLang,
-      modes: state.modes,
-      slots: state.slots,
-      directSlots: state.directSlots,
-      promptSlots: state.promptSlots,
-    });
-    session.reset();
-    globalLingualCache.clear();
-    updateFooter(ctx);
-
-    const isTargetOnly = newSource === previousSource && newTarget !== previousTarget;
-    const flowText = `${newSource} ⇄ ${newTarget}`;
-    const msg = isTargetOnly
-      ? `[${flowText}] Target language switched to: ${newTarget} (${newSource} unchanged)`
-      : `[${flowText}]`;
-    ctx.ui.notify(msg, "info");
-  };
-
-  const toggleCompactHandler = async (_args: string, ctx: ExtensionContext) => {
-    state.compact = !state.compact;
-    saveUserLingualConfig({ compact: state.compact });
-    const msg = state.compact ? "[lingual: Capsule mode enabled]" : "[lingual: tree HUD mode restored]";
-    ctx.ui.notify(msg, "info");
-
-    // Re-render active card if present
-    if (session.getReadyPages().length > 0) {
-      renderActiveCard(ctx);
-    } else if (session.getLastResult()) {
-      const last = session.getLastResult()!;
-      renderHudWidget(
-        ctx,
-        last.sourceText,
-        last.spoken,
-        last.written,
-        last.vocab,
-        last.spokenMeaning,
-        last.writtenMeaning,
-        undefined,
-        last.slotOutputs,
-        last.slots
-      );
-    }
-  };
-
-  const refreshActiveView = (ctx: ExtensionContext) => {
-    if (session.getReadyPages().length > 0) {
-      renderActiveCard(ctx);
-    } else if (session.getLastResult()) {
-      const last = session.getLastResult()!;
-      renderHudWidget(
-        ctx,
-        last.sourceText,
-        last.spoken,
-        last.written,
-        last.vocab,
-        last.spokenMeaning,
-        last.writtenMeaning,
-        undefined,
-        last.slotOutputs,
-        last.slots
-      );
-    }
-  };
-
-  const switchSlotsHandler = async (args: string, ctx: ExtensionContext) => {
-    const rawArgs = args.trim();
-    const parts = rawArgs.split(/\s+/).filter(Boolean);
-    const subCmd = (parts[0] || "").toLowerCase();
-    const lbl = state.labels;
-    const disk = loadUserLingualConfig();
-    const currentModes = Array.isArray(state.modes) && state.modes.length > 0
-      ? state.modes
-      : resolveModesFromConfig(disk);
-    const activeModeId = normalizeActiveModeId(
-      { mode: state.mode, activeModeId: (state as any).activeModeId || disk.activeModeId },
-      currentModes
-    );
-    const activeMode = currentModes.find((m) => m.id === activeModeId) || currentModes[0];
-    const pair = lbl.hudTitle || `${state.sourceLang} ⇄ ${state.targetLang}`;
-
-    // 1. No args or "list": inspect active slots of current mode
-    if (!subCmd || subCmd === "list" || subCmd === "ls") {
-      const modeSlots = activeMode.slots || [];
-      const lines = modeSlots.map((s, idx) => {
-        const status = s.enabled !== false
-          ? (lbl.slotsStatusEnabled || "enabled")
-          : (lbl.slotsStatusDisabled || "disabled");
-        const inst = s.instruction ? ` // ${s.instruction.slice(0, 50)}...` : "";
-        return `  ${idx + 1}. [${s.id}] "${s.label}" (${s.role || "rewrite"}, ${status})${inst}`;
-      });
-
-      const header = `✦ [${activeMode.name}] Dynamic Slots (${modeSlots.filter((s) => s.enabled !== false).length}/${modeSlots.length} active):\n`;
-      const body = lines.length > 0 ? lines.join("\n") : `  (${lbl.slotsNone || "No slots configured"})`;
-      const cliHelp =
-        `\n\nUsage:\n` +
-        `  /slots add <id> <label> [instruction...]  Add or update slot in active mode\n` +
-        `  /slots rm <id>                            Remove slot by ID\n` +
-        `  /slots toggle <id>                        Toggle enabled state\n` +
-        `  /slots reset                              Reset active mode slots to defaults`;
-      ctx.ui.notify(`${header}${body}${cliHelp}`, "info");
-      return;
-    }
-
-    // 2. "/slots reset": restore factory default initial slots for active mode
-    if (subCmd === "reset") {
-      const factoryDefaults = getDefaultFactoryModes(state.sourceLang, disk.explainLang);
-      const matchDefault = factoryDefaults.find((m) => m.id === activeMode.id);
-      if (matchDefault) {
-        activeMode.slots = [...matchDefault.slots];
-      } else {
-        activeMode.slots = defaultSlotsForMode(activeMode, state.sourceLang, disk.explainLang);
-      }
-      state.modes = currentModes;
-      saveUserLingualConfig({ modes: currentModes });
-      globalLingualCache.clear();
-      ctx.ui.notify(`[${pair}] Reset slots for mode [${activeMode.name}] to clean defaults.`, "info");
-      updateFooter(ctx);
-      refreshActiveView(ctx);
-      return;
-    }
-
-    // 2.1 Fast shortcuts to toggle source row
-    if (subCmd === "hide-source" || subCmd === "no-source") {
-      activeMode.slots = activeMode.slots.filter((s) => s.id !== "source");
-      state.modes = currentModes;
-      saveUserLingualConfig({ modes: currentModes });
-      globalLingualCache.clear();
-      ctx.ui.notify(`[${pair}] Hidden [source] row in mode [${activeMode.name}].`, "info");
-      updateFooter(ctx);
-      refreshActiveView(ctx);
-      return;
-    }
-    if (subCmd === "show-source" || subCmd === "with-source") {
-      const hasSource = (activeMode.slots || []).some((s) => s.id === "source");
-      if (!hasSource) {
-        activeMode.slots = [
-          { id: "source", label: lbl.sourceLabel || "Original", role: "rewrite", instruction: "Source text", enabled: true },
-          ...(activeMode.slots || []),
-        ];
-      } else {
-        activeMode.slots = (activeMode.slots || []).map((s) => (s.id === "source" ? { ...s, enabled: true } : s));
-      }
-      state.modes = currentModes;
-      saveUserLingualConfig({ modes: currentModes });
-      globalLingualCache.clear();
-      ctx.ui.notify(`[${pair}] Restored [source] row in mode [${activeMode.name}].`, "info");
-      updateFooter(ctx);
-      refreshActiveView(ctx);
-      return;
-    }
-
-    // 3. "/slots rm <id>": remove slot from active mode
-    if (subCmd === "rm" || subCmd === "remove" || subCmd === "del") {
-      const targetId = (parts[1] || "").toLowerCase();
-      if (!targetId) {
-        ctx.ui.notify(lbl.slotsUsageRm || "Usage: /slots rm <slot-id>", "warning");
-        return;
-      }
-      const existing = (activeMode.slots || []).find((s) => s.id.toLowerCase() === targetId);
-      if (!existing) {
-        const notFoundMsg = (lbl.slotsNotFound || "Slot [{id}] not found").replace("{pair}", pair).replace("{id}", targetId);
-        ctx.ui.notify(notFoundMsg, "warning");
-        return;
-      }
-      activeMode.slots = activeMode.slots.filter((s) => s.id.toLowerCase() !== targetId);
-      state.modes = currentModes;
-      saveUserLingualConfig({ modes: currentModes });
-      globalLingualCache.clear();
-      ctx.ui.notify(`[${pair}] Removed slot [${targetId}] ("${existing.label}") from mode [${activeMode.name}].`, "info");
-      updateFooter(ctx);
-      refreshActiveView(ctx);
-      return;
-    }
-
-    // 4. "/slots toggle <id>": toggle slot enabled state in active mode
-    if (subCmd === "toggle") {
-      const targetId = (parts[1] || "").toLowerCase();
-      if (!targetId) {
-        ctx.ui.notify(lbl.slotsUsageToggle || "Usage: /slots toggle <slot-id>", "warning");
-        return;
-      }
-      const existing = (activeMode.slots || []).find((s) => s.id.toLowerCase() === targetId);
-      if (!existing) {
-        const notFoundMsg = (lbl.slotsNotFound || "Slot [{id}] not found").replace("{pair}", pair).replace("{id}", targetId);
-        ctx.ui.notify(notFoundMsg, "warning");
-        return;
-      }
-      activeMode.slots = activeMode.slots.map((s) =>
-        s.id.toLowerCase() === targetId ? { ...s, enabled: s.enabled === false } : s
-      );
-      state.modes = currentModes;
-      saveUserLingualConfig({ modes: currentModes });
-      globalLingualCache.clear();
-      const updated = activeMode.slots.find((s) => s.id.toLowerCase() === targetId);
-      const statusText = updated?.enabled !== false
-        ? (lbl.slotsStatusEnabled || "enabled")
-        : (lbl.slotsStatusDisabled || "disabled");
-      ctx.ui.notify(`[${pair}] Slot [${targetId}] is now ${statusText} in mode [${activeMode.name}].`, "info");
-      updateFooter(ctx);
-      refreshActiveView(ctx);
-      return;
-    }
-
-    // 5. "/slots add <id> <label> [instruction...]": add or update slot in active mode
-    if (subCmd === "add") {
-      const id = (parts[1] || "").toLowerCase();
-      const label = parts[2];
-      const instruction = parts.slice(3).join(" ");
-      if (!id || !label) {
-        ctx.ui.notify(lbl.slotsUsageAdd || "Usage: /slots add <id> <label> [instruction...]", "warning");
-        return;
-      }
-      const newPromptSlot: PromptSlotConfig = {
-        id,
-        label,
-        role: id === "vocab" || id === "fixes" ? "vocab" : "rewrite",
-        instruction:
-          instruction ||
-          `Target Language: \${targetLang}. Output in \${targetLang} ONLY: Generate output matching "${label}" style without summarizing.`,
-        enabled: true,
-      };
-      const existingIdx = activeMode.slots.findIndex((s) => s.id.toLowerCase() === id);
-      if (existingIdx >= 0) {
-        activeMode.slots[existingIdx] = newPromptSlot;
-      } else {
-        activeMode.slots.push(newPromptSlot);
-      }
-
-      // Automatically upgrade HUD to "tree" if mode.hud was "preview" and enabled translation slots > 1
-      let hudUpgraded = false;
-      const enabledTranslationCount = activeMode.slots.filter(
-        (s) => s.enabled !== false && s.role !== "vocab" && s.id !== "source"
-      ).length;
-      if (activeMode.hud === "preview" && enabledTranslationCount > 1) {
-        activeMode.hud = "tree";
-        hudUpgraded = true;
-      }
-
-      state.modes = currentModes;
-      saveUserLingualConfig({ modes: currentModes });
-      globalLingualCache.clear();
-
-      const upgradeHint = hudUpgraded ? ` (HUD layout auto-upgraded to "tree" for multi-slot visibility)` : "";
-      ctx.ui.notify(`[${pair}] Added/updated slot [${id}] "${label}" in mode [${activeMode.name}]${upgradeHint}.`, "info");
-      updateFooter(ctx);
-      refreshActiveView(ctx);
-      return;
-    }
-
-    // 6. Legacy preset keywords support (e.g. /slots compact2, /slots social, /slots developer)
-    const matchedPreset = SLOT_PRESETS[subCmd];
-    if (matchedPreset) {
-      state.slotPreset = subCmd;
-      state.slots = resolveSlotsForPreset(subCmd, state.sourceLang);
-      saveUserLingualConfig({ slotPreset: subCmd === "developer" ? undefined : subCmd, slots: state.slots });
-      globalLingualCache.clear();
-      ctx.ui.notify(`[lingual] applied preset [${subCmd}]: ${matchedPreset.description}`, "info");
-      updateFooter(ctx);
-      refreshActiveView(ctx);
-      return;
-    }
-
-    // 7. Unknown slot command fallback
-    const unknownTpl = lbl.slotsUnknown || "Unknown slot command or preset \"{cmd}\".";
-    ctx.ui.notify(unknownTpl.replace("{pair}", lbl.hudTitle).replace("{cmd}", subCmd), "warning");
-  };
-
-  const showStatusHandler = async (_args: string, ctx: ExtensionContext) => {
-    const followDesc = state.labels.modelFollowSession || "follow session";
-    const activeModel = state.selectedModel === "auto"
-      ? (ctx.model ? `auto (${followDesc}: ${ctx.model.provider}/${ctx.model.id})` : "auto")
-      : (state.selectedModel || "auto");
-
-    const currentModes = Array.isArray(state.modes) && state.modes.length > 0
-      ? state.modes
-      : resolveModesFromConfig(loadUserLingualConfig());
-    const activeModeId = normalizeActiveModeId(
-      { mode: state.mode, activeModeId: (state as any).activeModeId },
-      currentModes
-    );
-    const activeMode = currentModes.find((m) => m.id === activeModeId) || currentModes[0];
-    const diskCfg = loadUserLingualConfig();
-    const activeEffort = activeMode.reasoning || diskCfg.reasoning || "low";
-
-    const statusMsg = formatStatusReport(state.labels, {
-      mode: state.mode,
-      sourceLang: state.sourceLang,
-      targetLang: state.targetLang,
-      activeModel,
-      layout: state.compact ? "capsule" : "tree",
-      cacheStats: globalLingualCache.getStats(),
-    }) +
-      `\n• Active Mode: [${activeMode.name}] (${activeMode.id}) · flow: ${activeMode.flow} · action: ${activeMode.action}` +
-      `\n• Dynamic Slots: [${(activeMode.slots || []).filter(s => s.enabled !== false).map(s => s.label).join(", ")}]` +
-      `\n• Reasoning Effort: ${activeEffort} (mode: ${activeMode.reasoning || "default"}, global: ${diskCfg.reasoning || "low"})`;
-
-    ctx.ui.notify(statusMsg, "info");
-  };
-
-  const showLastHandler = async (_args: string, ctx: ExtensionContext) => {
-    if (session.getReadyPages().length > 0) {
-      renderActiveCard(ctx);
-      return;
-    }
-    const last = session.getLastResult();
-    if (!last) {
-      try {
-        ctx.ui.notify("[lingual] no previous card", "info");
-      } catch {}
-      return;
-    }
-    renderHudWidget(
-      ctx,
-      last.sourceText,
-      last.spoken,
-      last.written,
-      last.vocab,
-      last.spokenMeaning,
-      last.writtenMeaning,
-      undefined,
-      last.slotOutputs,
-      last.slots
-    );
-  };
-
-  // Manage mode registry CRUD subcommands (/lingual mode [list|add|rm|toggle|reset])
-  const manageModesHandler = async (args: string, ctx: ExtensionContext) => {
-    const trimmed = args.trim();
-    const disk = loadUserLingualConfig();
-    const currentModes = Array.isArray(state.modes) && state.modes.length > 0
-      ? state.modes
-      : resolveModesFromConfig(disk);
-    const pair = state.labels.hudTitle || `${state.sourceLang} ⇄ ${state.targetLang}`;
-
-    if (!trimmed || trimmed === "list") {
-      const modeLines = currentModes.map((m, idx) => {
-        const status = m.enabled !== false ? "[✓]" : "[x]";
-        const isCurrent = (m.id === state.mode || m.id === (state as any).activeModeId) ? " ▸" : "  ";
-        const reasoningTag = `[${m.reasoning || "low"}]`;
-        return `${isCurrent} [${idx + 1}] ${m.id} (${m.name}) ${reasoningTag} · flow: ${m.flow} · action: ${m.action} · hud: ${m.hud} · ${m.slots?.length || 0} slots ${status}`;
-      });
-      const report =
-        `✦ [pi-lingual Modes Registry] (Current: ${state.mode})\n` +
-        modeLines.join("\n") +
-        `\n\nUsage: /lingual mode [list | add <id> <name> [flow] [action] [hud] | rm <id> | toggle <id> | reset]`;
-      ctx.ui.notify(report, "info");
-      return;
-    }
-
-    const parts = trimmed.split(/\s+/);
-    const subCmd = parts[0].toLowerCase();
-    const id = parts[1]?.toLowerCase();
-
-    if (subCmd === "reset") {
-      const defaults = getDefaultFactoryModes(state.sourceLang, disk.explainLang);
-      state.modes = defaults;
-      saveUserLingualConfig({ modes: defaults });
-      ctx.ui.notify(`[${pair}] Reset modes registry to factory golden defaults (${defaults.map((m) => m.name).join(" & ")})`, "info");
-      updateFooter(ctx);
-      return;
-    }
-
-    if (subCmd === "rm" || subCmd === "remove" || subCmd === "del" || subCmd === "delete") {
-      if (!id) {
-        ctx.ui.notify(`[${pair}] Missing mode ID. Usage: /lingual mode rm <id>`, "warning");
-        return;
-      }
-      const updated = removeCustomMode(currentModes, id);
-      if (updated.length === currentModes.length) {
-        ctx.ui.notify(`[${pair}] Mode [${id}] not found in modes registry.`, "warning");
-        return;
-      }
-      state.modes = updated;
-      saveUserLingualConfig({ modes: updated });
-      ctx.ui.notify(`[${pair}] Removed custom mode [${id}] from registry.`, "info");
-      updateFooter(ctx);
-      return;
-    }
-
-    if (subCmd === "toggle") {
-      if (!id) {
-        ctx.ui.notify(`[${pair}] Missing mode ID. Usage: /lingual mode toggle <id>`, "warning");
-        return;
-      }
-      const updated = toggleCustomMode(currentModes, id);
-      const target = updated.find((m) => m.id === id);
-      if (!target) {
-        ctx.ui.notify(`[${pair}] Mode [${id}] not found in modes registry.`, "warning");
-        return;
-      }
-      state.modes = updated;
-      saveUserLingualConfig({ modes: updated });
-      ctx.ui.notify(`[${pair}] Mode [${id}] is now ${target.enabled ? "enabled [✓]" : "disabled [x]"}.`, "info");
-      updateFooter(ctx);
-      return;
-    }
-
-    if (subCmd === "add") {
-      if (!id || !parts[2]) {
-        ctx.ui.notify(`[${pair}] Missing arguments. Usage: /lingual mode add <id> <name> [flow] [action] [hud]`, "warning");
-        return;
-      }
-      const name = parts[2];
-      const flow = (parts[3] as any) || "translate";
-      const action = (parts[4] as any) || "transform";
-      const hud = (parts[5] as any) || "preview";
-      const customInstruction = parts.slice(6).join(" ").trim();
-      const newMode: CustomModeConfig = {
-        id,
-        name,
-        flow: flow === "proofread" || flow === "custom" ? flow : "translate",
-        action: action === "pass-through" || action === "select" ? action : "transform",
-        hud: hud === "tree" || hud === "adaptive-takeaway" || hud === "none" ? hud : "preview",
-        slots: action === "select"
-          ? getDefaultPromptSlots(state.sourceLang)
-          : [
-              {
-                id: `${id}_slot`,
-                label: name,
-                role: "rewrite",
-                instruction: customInstruction || `Translate and polish from \${sourceLang} into \${targetLang} matching ${name} style.`,
-                enabled: true,
-              },
-            ],
-        enabled: true,
-      };
-      const updated = addCustomMode(currentModes, newMode);
-      state.modes = updated;
-      saveUserLingualConfig({ modes: updated });
-      ctx.ui.notify(`[${pair}] Added custom mode [${id}] "${name}" to registry.`, "info");
-      updateFooter(ctx);
-      return;
-    }
-
-    ctx.ui.notify(`[${pair}] Unknown mode subcommand "${subCmd}". Usage: /lingual mode [list|add|rm|toggle|reset]`, "warning");
-  };
-
-  // Manage tactical loadouts (/lingual loadout [list | apply <id>])
-  const manageLoadoutsHandler = async (args: string, ctx: ExtensionContext) => {
-    const trimmed = args.trim();
-    const disk = loadUserLingualConfig();
-    const currentModes = Array.isArray(state.modes) && state.modes.length > 0
-      ? state.modes
-      : resolveModesFromConfig(disk);
-    const pair = state.labels.hudTitle || `${state.sourceLang} ⇄ ${state.targetLang}`;
-    const loadouts = listPresetLoadouts();
-
-    if (!trimmed || trimmed === "list" || trimmed === "ls") {
-      const lines = loadouts.map((l, idx) => {
-        const isInstalled = currentModes.some((m) => m.id === l.id);
-        const status = isInstalled ? "[installed ✓]" : "[available]";
-        return `  ${idx + 1}. [${l.id}] ${l.name} - ${l.description} ${status}`;
-      });
-      const report =
-        `✦ [pi-lingual Tactical Loadouts]\n` +
-        lines.join("\n") +
-        `\n\nUsage: /lingual loadout [list | apply <id>] (e.g. /lingual loadout apply spec)`;
-      ctx.ui.notify(report, "info");
-      return;
-    }
-
-    const parts = trimmed.split(/\s+/);
-    const subCmd = parts[0].toLowerCase();
-    const targetId = (subCmd === "apply" || subCmd === "add" ? parts[1] : subCmd)?.toLowerCase();
-
-    if (!targetId) {
-      ctx.ui.notify(`[${pair}] Missing loadout ID. Usage: /lingual loadout apply <spec|commit|oss|yap>`, "warning");
-      return;
-    }
-
-    const loadoutConfig = getPresetLoadout(targetId, state.sourceLang, disk.explainLang);
-    if (!loadoutConfig) {
-      ctx.ui.notify(
-        `[${pair}] Loadout [${targetId}] not found. Available: ${loadouts.map((l) => l.id).join(", ")}`,
-        "warning"
-      );
-      return;
-    }
-
-    const updated = addCustomMode(currentModes, loadoutConfig);
-    state.modes = updated;
-    saveUserLingualConfig({ modes: updated });
-    ctx.ui.notify(
-      `[${pair}] Applied tactical loadout [${loadoutConfig.id}] "${loadoutConfig.name}" to active modes! Run /lingual ${loadoutConfig.id} to activate.`,
-      "info"
-    );
-    updateFooter(ctx);
-  };
-
-  // Universal English baseline guide (when sendUserMessage is unavailable in headless/test mocks)
-  const showAgentGuideHandler = async (_args: string, ctx: ExtensionContext) => {
-    const guide =
-      `  pi-lingual Customization Map          Legend: ( ) Edit  (+) Add/Remove  [✓] Toggle\n` +
-      `  ──────────────────────────────────────────────────────────────────────────────────\n` +
-      `  [Mode 1 · Companion]  Send raw text in 0ms, show learning card above editor\n` +
-      `    · Source Row                                                        [✓] Show/Hide\n` +
-      `    ├ (Label) : (Language) · (Style: Spoken / Written / Paper / Script) (+) N Rows\n` +
-      `    │   ↳ Native Nuance Sub-line                                        [✓] On/Off\n` +
-      `    └ Vocab Row : (Focus: Idioms / Exam Collocations)                   [✓] On/Off\n\n` +
-      `  [Mode 2 · Direct]     Convert 1-to-1 on Enter using a single dedicated rule\n` +
-      `    ├ (Label) : (Language) · (Style: Faithful Direct / Keigo / Spec)    1-to-1 Rule\n` +
-      `    └ Vocab Row : Extract 1-line key expressions                        [✓] On/Off\n\n` +
-      `  [Mode 3 · Candidates] Generate N options, press keys 1..N to send (0 for raw)\n` +
-      `    · Source Row                                                        [✓] Show/Hide\n` +
-      `    ├ 1..N (Label) : (Language) · (Style: Business / Keigo / PR)        (+) N Options\n` +
-      `    └ Vocab Row : Extract 1-line key expressions                        [✓] On/Off\n` +
-      `  ──────────────────────────────────────────────────────────────────────────────────\n` +
-      `  Run /lingual tuner [request] to launch the adaptive wizard in your native language (${state.sourceLang}).`;
-    ctx.ui.notify(guide, "info");
-  };
-
-  // Manage model reasoning effort level (/lingual reasoning [low|medium|high])
-  const setReasoningHandler = async (args: string, ctx: ExtensionContext) => {
-    const trimmed = args.trim().toLowerCase();
-    const disk = loadUserLingualConfig();
-    const currentModes = Array.isArray(state.modes) && state.modes.length > 0
-      ? state.modes
-      : resolveModesFromConfig(disk);
-    const activeModeId = normalizeActiveModeId(
-      { mode: state.mode, activeModeId: (state as any).activeModeId || disk.activeModeId },
-      currentModes
-    );
-    const activeMode = currentModes.find((m) => m.id === activeModeId) || currentModes[0];
-    const pair = state.labels.hudTitle || `${state.sourceLang} ⇄ ${state.targetLang}`;
-
-    if (!trimmed) {
-      const activeEffort = activeMode.reasoning || disk.reasoning || "low";
-      const globalEffort = disk.reasoning || "low";
-      ctx.ui.notify(
-        `[${pair}] Reasoning effort: mode [${activeMode.name}] = "${activeEffort}" · global = "${globalEffort}". Usage: /lingual reasoning <low|medium|high>`,
-        "info"
-      );
-      return;
-    }
-
-    if (trimmed !== "low" && trimmed !== "medium" && trimmed !== "high") {
-      ctx.ui.notify(
-        `[${pair}] Invalid reasoning effort "${trimmed}". Available options: low, medium, high.`,
-        "warning"
-      );
-      return;
-    }
-
-    const newEffort = trimmed as ReasoningEffort;
-    const updatedModes = currentModes.map((m) =>
-      m.id === activeMode.id ? { ...m, reasoning: newEffort } : m
-    );
-    state.modes = updatedModes;
-    saveUserLingualConfig({ modes: updatedModes, reasoning: newEffort });
-    ctx.ui.notify(
-      `[${pair}] Reasoning effort for mode [${activeMode.name}] set to "${newEffort}".`,
-      "info"
-    );
-    updateFooter(ctx);
-  };
-
-  const setDefaultModeHandler = async (args: string, ctx: ExtensionContext) => {
-    const trimmed = args?.trim();
-    const disk = loadUserLingualConfig();
-    const currentModes = Array.isArray(state.modes) && state.modes.length > 0
-      ? state.modes
-      : resolveModesFromConfig(disk, state.sourceLang);
-    const currentDefault = disk.defaultMode || state.defaultMode || "companion";
-    const defaultModeObj = currentModes.find((m) => m.id === currentDefault) || currentModes[0];
-    const defaultIdx = currentModes.indexOf(defaultModeObj);
-    const defaultNum = defaultIdx >= 0 ? defaultIdx + 1 : 1;
-    const defaultName = defaultModeObj ? localizeModeName(defaultModeObj.id, defaultModeObj.name, state.sourceLang) : currentDefault;
-
-    if (!trimmed) {
-      ctx.ui.notify(
-        `[lingual] Default mode for new sessions: ${defaultNum}. ${defaultName} (${currentDefault}). Set with: /lingual default <1|2|3|0|id>`,
-        "info"
-      );
-      return;
-    }
-
-    let targetId: string | undefined;
-    const num = parseInt(trimmed, 10);
-    if (!isNaN(num) && num === 0) {
-      targetId = "off";
-    } else if (!isNaN(num) && num >= 1 && num <= currentModes.length) {
-      targetId = currentModes[num - 1].id;
-    } else {
-      const lower = trimmed.toLowerCase();
-      const matched = currentModes.find(
-        (m) =>
-          m.id.toLowerCase() === lower ||
-          m.name.toLowerCase() === lower ||
-          (Array.isArray(m.aliases) && m.aliases.some((a) => a.toLowerCase() === lower)) ||
-          resolveModeDisplayName(m.id, state.sourceLang).toLowerCase() === lower
-      );
-      if (matched) {
-        targetId = matched.id;
-      } else if (lower === "off") {
-        targetId = "off";
-      } else if (lower === "companion" || lower === "original") {
-        targetId = "companion";
-      } else if (lower === "direct" || lower === "spec" || lower === "lazy") {
-        targetId = "direct";
-      } else if (lower === "live-flow" || lower === "flow" || lower === "raw" || lower === "modify") {
-        targetId = "live-flow";
-      }
-    }
-
-    if (!targetId) {
-      ctx.ui.notify(
-        `[lingual] Unknown mode "${trimmed}". Valid options: 1, 2, 3, 0, companion, direct, live-flow, off.`,
-        "warning"
-      );
-      return;
-    }
-
-    state.defaultMode = targetId;
-    saveUserLingualConfig({ defaultMode: targetId });
-
-    const targetObj = currentModes.find((m) => m.id === targetId);
-    const targetIdx = targetObj ? currentModes.indexOf(targetObj) : -1;
-    const targetNum = targetId === "off" ? 0 : targetIdx >= 0 ? targetIdx + 1 : 1;
-    const targetName = targetId === "off"
-      ? resolveModeDisplayName("off", state.sourceLang)
-      : targetObj
-      ? localizeModeName(targetObj.id, targetObj.name, state.sourceLang)
-      : targetId;
-
-    ctx.ui.notify(
-      `[lingual] Default mode for new sessions set to: ${targetNum}. ${targetName} (${targetId})`,
-      "info"
-    );
-  };
-
-  // Interactive capsule mode picker (Invoked on parameterless /lingual or /l)
-  const openModePicker = async (ctx: ExtensionContext): Promise<string | null> => {
-    const diskForMode = loadUserLingualConfig();
-    const diskMode = diskForMode.activeModeId || diskForMode.mode;
-    if (diskMode && diskMode !== state.mode) {
-      state.mode = normalizeActiveModeId({ mode: diskMode, activeModeId: diskMode }, state.modes);
-      state.activeModeId = state.mode;
-    }
-    const modes = Array.isArray(state.modes) && state.modes.length > 0
-      ? state.modes
-      : resolveModesFromConfig(diskForMode, state.sourceLang);
-    const activeModes = modes.filter((m) => m.enabled !== false);
-    const offName = resolveModeDisplayName("off", state.sourceLang);
-    const lockIndicator = state.modeLocked
-      ? state.sourceLang === "zh"
-        ? " · 锁定"
-        : state.sourceLang === "tw"
-        ? " · 鎖定"
-        : state.sourceLang === "ja"
-        ? " · ロック"
-        : state.sourceLang === "ko"
-        ? " · 잠김"
-        : state.sourceLang === "es"
-        ? " · Bloqueado"
-        : state.sourceLang === "fr"
-        ? " · Verrouillé"
-        : state.sourceLang === "de"
-        ? " · Gesperrt"
-        : state.sourceLang === "ru"
-        ? " · Блокировано"
-        : " · Locked"
-      : "";
-    const pair = `${state.labels.hudTitle || `${state.sourceLang} ⇄ ${state.targetLang}`}${lockIndicator}`;
-    const title = state.labels.modePickerTitle || "Mode Switch";
-    const hint = state.labels.modePickerHint || "Press 1/2/3/0 to switch, Esc to cancel";
-
-    const options: ModePickerOption[] = activeModes.map((m, idx) => ({
-      num: idx + 1,
-      id: m.id,
-      name: localizeModeName(m.id, m.name, state.sourceLang),
-      englishTag:
-        state.sourceLang === "en"
-          ? undefined
-          : m.id === "companion"
-          ? "Companion"
-          : m.id === "direct"
-          ? "Logical Spec"
-          : m.id === "live-flow"
-          ? "Live Flow"
-          : undefined,
-    }));
-
-    options.push({
-      num: 0,
-      id: "off",
-      name: offName,
-      englishTag: "Off",
-    });
-
-    const currentModeId =
-      state.mode === "off"
-        ? "off"
-        : state.activeModeId || state.mode || options[0].id;
-    let initialIndex = options.findIndex((o) => o.id === currentModeId);
-    if (initialIndex === -1) initialIndex = 0;
-
-    // 1. Interactive custom component via ctx.ui.custom
-    if (hasActiveUI(ctx) && typeof (ctx.ui as any).custom === "function") {
-      try {
-        const chosen = await (ctx.ui as any).custom(
-          (tui: any, theme: any, _kb: any, done: (val: string | null) => void) => {
-            let selectedIndex = initialIndex;
-            let finished = false;
-            const finish = (val: string | null) => {
-              if (finished) return;
-              finished = true;
-              done(val);
-            };
-
-            return {
-              render(width: number): string[] {
-                try {
-                  return formatModePickerLines(
-                    title,
-                    hint,
-                    pair,
-                    options,
-                    selectedIndex,
-                    width,
-                    theme
-                  );
-                } catch {
-                  return formatModePickerLines(
-                    title,
-                    hint,
-                    pair,
-                    options,
-                    selectedIndex,
-                    width
-                  );
-                }
-              },
-              invalidate() {},
-              handleInput(data: string) {
-                // Ignore mouse tracking escapes and bracketed paste sequences
-                if (data.startsWith("\x1b[<") || data.startsWith("\x1b[M") || data.startsWith("\x1b[200~")) {
-                  return;
-                }
-
-                // Direct numeric hotkeys 1..N and 0 (instant execution without Enter)
-                if (data === "0") {
-                  finish("off");
-                  return;
-                }
-                const num = parseInt(data, 10);
-                if (!isNaN(num) && num >= 1 && num <= activeModes.length) {
-                  finish(activeModes[num - 1].id);
-                  return;
-                }
-
-                // Esc, q, Ctrl+C (cancel without changing mode)
-                if (data === "\x1b" || data === "q" || data === "\x03") {
-                  finish(null);
-                  return;
-                }
-
-                // Arrow navigation and vim keys (Down/Right/j/l/Tab advances; Up/Left/k/h retreats)
-                if (data === "\x1b[C" || data === "\x1b[B" || data === "l" || data === "j" || data === "\t") {
-                  selectedIndex = (selectedIndex + 1) % options.length;
-                  tui?.requestRender?.();
-                  return;
-                }
-                if (data === "\x1b[D" || data === "\x1b[A" || data === "h" || data === "k") {
-                  selectedIndex = (selectedIndex - 1 + options.length) % options.length;
-                  tui?.requestRender?.();
-                  return;
-                }
-
-                // Enter, CRLF or Space confirms selection
-                if (data === "\r" || data === "\n" || data === "\r\n" || data === " ") {
-                  finish(options[selectedIndex]?.id || null);
-                  return;
-                }
-              },
-            };
-          }
-        );
-
-        if (chosen !== null && chosen !== undefined) {
-          await setModeHandler(chosen, ctx);
-          return chosen;
-        }
-        return null;
-      } catch {
-        // Fall back gracefully to select or headless
-      }
-    }
-
-    // 2. Select dialog fallback when ctx.ui.custom is not supported
-    if (hasActiveUI(ctx) && typeof (ctx.ui as any).select === "function") {
-      try {
-        const selectItems = options.map((opt) => ({
-          label: `[${opt.num}] ${opt.name}${opt.englishTag ? ` (${opt.englishTag})` : ""}`,
-          value: opt.id,
-        }));
-        const chosen = await (ctx.ui as any).select(
-          `[lingual · ${pair}] ${title} (${hint})`,
-          selectItems
-        );
-        if (chosen) {
-          await setModeHandler(chosen, ctx);
-          return chosen;
-        }
-        return null;
-      } catch {
-        // Fall back to headless
-      }
-    }
-
-    // 3. Headless / CLI non-interactive fallback
-    await setModeHandler("", ctx);
-    return null;
-  };
-
-  // Master command bus: handles subcommands and mode cycling
-  const masterCommandHandler = async (args: string, ctx: ExtensionContext) => {
-    const diskForMode = loadUserLingualConfig();
-    const diskMode = diskForMode.activeModeId || diskForMode.mode;
-    if (diskMode && diskMode !== state.mode) {
-      state.mode = normalizeActiveModeId({ mode: diskMode, activeModeId: diskMode }, state.modes);
-      state.activeModeId = state.mode;
-      syncResizeListener();
-      updateFooter(ctx);
-    }
-
-    const trimmed = args?.trim();
-    if (!trimmed) {
-      // Parameterless /lingual or /l: open interactive capsule mode picker
-      try {
-        await openModePicker(ctx);
-      } catch {
-        try {
-          await setModeHandler("", ctx);
-        } catch {}
-      }
-      return;
-    }
-
-    const lower = trimmed.toLowerCase();
-    const spaceIndex = lower.indexOf(" ");
-    const sub = spaceIndex === -1 ? lower : lower.slice(0, spaceIndex);
-    const subArgs = spaceIndex === -1 ? "" : trimmed.slice(spaceIndex + 1).trim();
-
-    // Quick toggle subcommands: on and off
-    if (sub === "on") {
-      await setModeHandler("1", ctx);
-      return;
-    }
-    if (sub === "off") {
-      await setModeHandler("0", ctx);
-      return;
-    }
-
-    // 0. Subcommand: reasoning effort level (/lingual reasoning [low|medium|high])
-    if (sub === "reasoning" || sub === "effort") {
-      await setReasoningHandler(subArgs, ctx);
-      return;
-    }
-
-    // 0.1 Subcommand: default mode for new sessions (/lingual default [1|2|3|0|id])
-    if (sub === "default" || sub === "def") {
-      await setDefaultModeHandler(subArgs, ctx);
-      return;
-    }
-
-    // 1.0 Subcommand: mode registry management (/lingual mode [args...])
-    if (sub === "mode" || sub === "modes") {
-      await manageModesHandler(subArgs, ctx);
-      return;
-    }
-
-    // 1.01 Subcommand: tactical loadouts (/lingual loadout [list | apply <id>])
-    if (sub === "loadout" || sub === "loadouts" || sub === "preset" || sub === "presets") {
-      await manageLoadoutsHandler(subArgs, ctx);
-      return;
-    }
-
-    // 1. Subcommand: language switching (/lingual lang [code])
-    if (sub === "lang" || sub === "language") {
-      await switchLangHandler(subArgs, ctx);
-      return;
-    }
-
-    // 1.1 Subcommand: slot management (/lingual slots [args...])
-    if (sub === "slots" || sub === "slot" || sub === "preset") {
-      await switchSlotsHandler(subArgs, ctx);
-      return;
-    }
-
-    // 1.2 Subcommand: fast toggle for source row
-    if (sub === "hide-source" || sub === "no-source" || sub === "show-source" || sub === "with-source") {
-      await switchSlotsHandler(sub, ctx);
-      return;
-    }
-
-    // 2. Subcommand: model inspection and switching (/lingual model [id])
-    if (sub === "model") {
-      await setModelHandler(subArgs, ctx);
-      return;
-    }
-
-    // 3. Subcommand: compact capsule / tree toggle (/lingual compact)
-    if (sub === "compact" || sub === "capsule" || sub === "layout") {
-      await toggleCompactHandler(subArgs, ctx);
-      return;
-    }
-
-    // 4. Subcommand: status report (/lingual status)
-    if (sub === "status" || sub === "info" || sub === "report") {
-      await showStatusHandler(subArgs, ctx);
-      return;
-    }
-
-    // 5. Subcommand: replay last card (/lingual last | /lingual replay)
-    if (sub === "last" || sub === "prev" || sub === "history" || sub === "replay") {
-      await showLastHandler(subArgs, ctx);
-      return;
-    }
-
-    // 6. Subcommand: on-demand tuner activation (/lingual tuner [request])
-    if (sub === "tuner" || sub === "tune" || sub === "agent" || sub === "help" || sub === "?") {
+  const handlers = createCommandHandlers({
+    state,
+    session,
+    updateFooter,
+    refreshActiveView,
+    renderActiveCard,
+    renderHudWidget,
+    activeRuntime,
+    renderReleaseBanner,
+    syncResizeListener,
+    clearPendingTimers,
+    armTuner: () => {
       tunerArmed = true;
-      const promptBody = subArgs
-        ? `[lingual-tuner] Load the lingual-tuner skill and update ~/.pi/agent/lingual.json (user native language sourceLang="${state.sourceLang}"). Communicate strictly in the user's native language (${state.sourceLang}) and apply: ${subArgs}`
-        : `[lingual-tuner] Load the lingual-tuner skill and launch the interactive customization wizard (user native language sourceLang="${state.sourceLang}"). Render the Customization Map and all questions/options strictly in the user's native language (${state.sourceLang}).`;
-      if ((sub === "tuner" || sub === "tune" || subArgs) && typeof (pi as any).sendMessage === "function") {
-        // Send invisible activation prompt with display: false to prevent chat clutter
-        (pi as any).sendMessage(
-          { customType: "lingual-tuner", content: promptBody, display: false },
-          { triggerTurn: true }
-        );
-        return;
-      }
-      if ((sub === "tuner" || sub === "tune" || subArgs) && typeof (pi as any).sendUserMessage === "function") {
-        (pi as any).sendUserMessage(promptBody);
-        return;
-      }
-      await showAgentGuideHandler(subArgs, ctx);
-      return;
-    }
-
-    // 6.1 Subcommand: show release notes banner (/lingual news)
-    if (sub === "news" || sub === "whatsnew" || sub === "changelog") {
-      const diskCfg = loadUserLingualConfig();
-      renderReleaseBanner(ctx, diskCfg.sourceLang || state.sourceLang);
-      return;
-    }
-
-    // 6.2 Subcommand: mode locking & anti-drift protection (/lingual lock | /lingual unlock)
-    if (sub === "lock") {
-      state.modeLocked = true;
-      saveUserLingualConfig({ modeLocked: true });
-      const activeObj = state.modes.find((m) => m.id === state.mode);
-      const currentName = activeObj ? activeObj.name : state.mode;
-      try {
-        ctx.ui.notify(`[lingual] mode locked to [${currentName}]`, "info");
-      } catch {}
-      updateFooter(ctx);
-      return;
-    }
-
-    if (sub === "unlock") {
-      state.modeLocked = false;
-      saveUserLingualConfig({ modeLocked: false });
-      try {
-        ctx.ui.notify("[lingual] mode unlocked", "info");
-      } catch {}
-      updateFooter(ctx);
-      return;
-    }
-
-    // 7. Mode jump by number, keyword, or registered custom mode ID (/lingual 1|2|3|0|commit|spec|...)
-    const currentModes = Array.isArray(state.modes) && state.modes.length > 0
-      ? state.modes
-      : resolveModesFromConfig(loadUserLingualConfig(), state.sourceLang);
-    const isMatchedMode = currentModes.some((m) => {
-      const idMatch = m.id.toLowerCase() === sub || m.id.toLowerCase() === lower;
-      const nameMatch = m.name.toLowerCase() === sub || m.name.toLowerCase() === lower;
-      const aliasMatch = Array.isArray(m.aliases) && m.aliases.some((a) => a.toLowerCase() === sub || a.toLowerCase() === lower);
-      const locName = resolveModeDisplayName(m.id, state.sourceLang).toLowerCase();
-      const locMatch = locName === sub || locName === lower;
-      const specMatch = m.id === "direct" && (sub === "spec" || lower === "spec" || lower === "logical spec" || lower === "specification" || lower === "direct spec");
-      const compMatch = m.id === "companion" && (sub === "companion" || lower === "companion" || lower === "companion mode" || lower === "original");
-      const flowMatch = m.id === "live-flow" && (sub === "flow" || lower === "flow" || lower === "live flow" || lower === "live" || lower === "modify" || lower === "raw");
-      return idMatch || nameMatch || aliasMatch || locMatch || specMatch || compMatch || flowMatch;
-    });
-    const numIdx = parseInt(sub, 10);
-    const isNum = !isNaN(numIdx) && String(numIdx) === sub;
-    const isKnownMode =
-      sub === "mode" ||
-      isMatchedMode ||
-      (isNum && numIdx >= 0 && numIdx <= currentModes.length) ||
-      normalizeLingualModeInput(sub) !== null ||
-      normalizeLingualModeInput(lower) !== null;
-
-    if (isKnownMode) {
-      await setModeHandler(sub === "mode" ? subArgs : trimmed, ctx);
-      return;
-    }
-
-    // 8. Direct language code input (/lingual ja | /lingual zh ja)
-    const possibleLang = normalizeLangCode(sub);
-    if (LANGUAGE_PRESETS[possibleLang]) {
-      await switchLangHandler(trimmed, ctx);
-      return;
-    }
-
-    // 9. Unrecognized subcommand safety guardrail: do NOT cycle mode on mistyped words
-    try {
-      ctx.ui.notify(`[lingual] unknown: "${trimmed}". run /lingual for help`, "warning");
-    } catch {}
-  };
+    },
+    pi,
+  });
 
   // Core command matrix: register first-class commands (/lingual, /l, /lang)
   pi.registerCommand("lingual", {
     description:
       state.labels.cmdDescMode ||
       "Interactive mode picker or manage: /lingual [1|2|3|0|on|off|default|lang|last|lock|status]",
-    handler: masterCommandHandler,
+    handler: handlers.masterCommandHandler,
   });
 
   pi.registerCommand("l", {
     description: "Alias for /lingual",
-    handler: masterCommandHandler,
+    handler: handlers.masterCommandHandler,
   });
 
   pi.registerCommand("lang", {
     description: "Switch companion language (alias for /lingual lang): /lang <pair>",
-    handler: switchLangHandler,
+    handler: handlers.switchLangHandler,
   });
 
   if (typeof pi.registerShortcut === "function") {
@@ -1947,115 +498,26 @@ export default function (pi: ExtensionAPI) {
     pi.registerShortcut("alt+.", {
       description: state.labels.shortcutNextPage || "Switch to next companion segment",
       handler: async (ctx) => {
-        if (state.mode === "off") return;
-        if (session.nextPage()) {
-          renderActiveCard(ctx);
-        }
+        if (state.mode !== "off" && session.nextPage()) renderActiveCard(ctx);
       },
     });
 
     pi.registerShortcut("alt+,", {
       description: state.labels.shortcutPrevPage || "Switch to previous companion segment",
       handler: async (ctx) => {
-        if (state.mode === "off") return;
-        if (session.prevPage()) {
-          renderActiveCard(ctx);
+        if (state.mode !== "off" && session.prevPage()) renderActiveCard(ctx);
+      },
+    });
+
+    pi.registerShortcut("alt+c", {
+      description: state.labels.shortcutCopyLast || "Copy current or last lingual card to clipboard",
+      handler: async (ctx) => {
+        if (state.mode !== "off") {
+          await handlers.copyLastHandler("", ctx);
         }
       },
     });
   }
-
-  // Host-native model completer: zero-config in-process model execution
-  const createModelCompleter = (ctx: ExtensionContext, defaultOpts?: { reasoning?: string }) => {
-    return async (
-      text: string,
-      systemPrompt: string,
-      signal?: AbortSignal,
-      callOpts?: { reasoning?: string }
-    ): Promise<string | null> => {
-      try {
-        if (!ctx.modelRegistry) return null;
-
-        // 1. Resolve target model: follow active session or user-configured model
-        let targetModel = ctx.model;
-        if (state.selectedModel && state.selectedModel !== "auto") {
-          const available = ctx.modelRegistry.getAvailable?.() || [];
-          const match = available.find(
-            (m) =>
-              m.id === state.selectedModel ||
-              `${m.provider}/${m.id}` === state.selectedModel ||
-              m.id.toLowerCase().includes(state.selectedModel.toLowerCase())
-          );
-          if (match) targetModel = match;
-        }
-
-        if (!targetModel) return null;
-
-        // 2. Invoke Pi native streamSimple with credentials managed by host
-        // Max tokens expanded to 1500 to prevent multi-slot JSON truncation
-        const diskConfig = loadUserLingualConfig();
-        const effectiveReasoning =
-          callOpts?.reasoning ||
-          defaultOpts?.reasoning ||
-          diskConfig.reasoning ||
-          "low";
-
-        const requestOptions: Record<string, any> = {
-          maxTokens: 1500,
-          reasoning: effectiveReasoning,
-        };
-
-        const stream = ctx.modelRegistry.streamSimple(
-          targetModel,
-          {
-            systemPrompt,
-            messages: [
-              {
-                role: "user",
-                content: [{ type: "text", text }],
-                timestamp: Date.now(),
-              },
-            ],
-          },
-          requestOptions as any
-        );
-
-        // Timeout fuse: default 15s timeout with abort signal cooperation
-        const timeoutMs = diskConfig.timeoutMs || 15000;
-        let timeoutHandle: NodeJS.Timeout | undefined;
-        const timeoutPromise = new Promise<null>((_, reject) => {
-          timeoutHandle = setTimeout(() => reject(new Error("Lingual translation timed out")), timeoutMs);
-        });
-        let abortListener: (() => void) | undefined;
-        const abortPromise = new Promise<null>((_, reject) => {
-          if (signal?.aborted) {
-            reject(new Error("Lingual translation aborted"));
-            return;
-          }
-          abortListener = () => reject(new Error("Lingual translation aborted"));
-          signal?.addEventListener("abort", abortListener, { once: true });
-        });
-        let res: any;
-        try {
-          res = await Promise.race([stream.result(), timeoutPromise, abortPromise]);
-        } finally {
-          if (timeoutHandle) clearTimeout(timeoutHandle);
-          if (signal && abortListener) {
-            signal.removeEventListener("abort", abortListener);
-          }
-        }
-        if (!res) return null;
-        const content = res.content
-          ?.filter((c: any) => c.type === "text")
-          ?.map((c: any) => c.text)
-          ?.join("");
-
-        return content && content.trim() ? content.trim() : null;
-      } catch {
-        return null;
-      }
-    };
-  };
 
   // Core input interceptor: transform prompt or pass through
   pi.on("input", async (event: InputEvent, ctx: ExtensionContext): Promise<InputEventResult> => {
@@ -2082,12 +544,10 @@ export default function (pi: ExtensionAPI) {
     if (footerNeedsRefresh) {
       state.labels = resolveLabelsForLang(state.sourceLang, latestDisk.labels, state.targetLang);
     }
-    if (latestDisk.modeLocked !== undefined && latestDisk.modeLocked !== state.modeLocked) {
-      state.modeLocked = latestDisk.modeLocked;
-    }
-    if (Array.isArray(latestDisk.modes) && latestDisk.modes.length > 0) {
+    if (latestDisk.modeLocked !== undefined) state.modeLocked = latestDisk.modeLocked;
+    if (latestDisk.modes?.length) {
       state.modes = latestDisk.modes;
-    } else if (!state.modes || state.modes.length === 0) {
+    } else if (!state.modes?.length) {
       state.modes = resolveModesFromConfig(latestDisk);
     }
 
@@ -2140,12 +600,14 @@ export default function (pi: ExtensionAPI) {
       latestModes
     );
     const currentMode = latestModes.find((m) => m.id === activeModeId) || latestModes[0];
-    const isPromptOptMode = currentMode ? currentMode.action !== "pass-through" : (state.mode !== "original" && state.mode !== "off");
+    // Single derived contract: dispatcher, flow, hud, target, langs and slots all come from here.
+    const rt = runtimeForMode(currentMode);
+    const isPromptOptMode = rt.dispatcher !== "pass-through";
 
     // G3 Target-language direct input bypass (zero token waste when user writes directly in target language)
     const isTargetInput = isTargetLanguageOnly(promptToTranslate, state.sourceLang, state.targetLang);
     if (isTargetInput) {
-      if (!isPromptOptMode || currentMode.action === "pass-through") {
+      if (rt.dispatcher === "pass-through") {
         // Companion mode: 0ms pass-through, user already authored directly in target language
         clearPendingTimers();
         session.abortActive();
@@ -2157,28 +619,22 @@ export default function (pi: ExtensionAPI) {
         return { action: "continue" };
       }
 
-      if (currentMode.id === "direct" || (currentMode.action === "transform" && currentMode.flow === "translate")) {
-        if (isImperativeEngineeringPrompt(promptToTranslate)) {
-          // Direct spec mode: prompt already begins with an imperative engineering verb (e.g. Fix, Add, Refactor)
-          clearPendingTimers();
-          session.abortActive();
-          session.clearPagination();
-          if (hasActiveUI(ctx)) {
-            safeClearWidget(ctx);
-            ctx.ui.setStatus("lingual", ctx.ui.theme.fg("muted", `[${state.targetLang} · spec ok]`));
-          }
-          return { action: "continue" };
+      if (rt.dispatcher === "transform" && rt.flow === "translate" && isImperativeEngineeringPrompt(promptToTranslate)) {
+        // Direct spec mode: prompt already begins with an imperative engineering verb (e.g. Fix, Add, Refactor)
+        clearPendingTimers();
+        session.abortActive();
+        session.clearPagination();
+        if (hasActiveUI(ctx)) {
+          safeClearWidget(ctx);
+          ctx.ui.setStatus("lingual", ctx.ui.theme.fg("muted", `[${state.targetLang} · spec ok]`));
         }
+        return { action: "continue" };
       }
     }
 
     // Condition 1: Pure code/stack traces with no natural language intent
     // Condition 2: CLI shield bypass or below character threshold
-    if (
-      !sanitized.hasNaturalLanguage ||
-      !shouldTriggerTranslation(promptToTranslate, state.sourceLang, isPromptOptMode)
-    ) {
-      // Abort in-flight requests and clear pagination pool if prompt should not translate
+    if (!sanitized.hasNaturalLanguage || !shouldTriggerTranslation(promptToTranslate, state.sourceLang, isPromptOptMode)) {
       clearPendingTimers();
       session.abortActive();
       session.clearPagination();
@@ -2191,89 +647,96 @@ export default function (pi: ExtensionAPI) {
 
     lastContext = ctx;
     const { generation, signal } = session.beginRequest();
-    const resolvedReasoning = currentMode.reasoning ?? latestDisk.reasoning ?? "low";
-    const completer = createModelCompleter(ctx, { reasoning: resolvedReasoning });
+    const resolvedReasoning = rt.reasoning ?? latestDisk.reasoning ?? "low";
+    const completer = createModelCompleter(ctx, () => state.selectedModel, { reasoning: resolvedReasoning });
 
     // Single-card high-density intent condensation flow
     session.initPagination(1);
 
     // =========================================================================
-    // Mode 1: Companion (original/companion) - 0ms non-blocking raw send + async HUD card
+    // Dispatcher: pass-through (0ms raw send + async streaming HUD card)
     // =========================================================================
-    const isOriginalMode = state.mode === "original" || state.mode === "companion" || currentMode?.action === "pass-through";
+    if (rt.dispatcher === "pass-through") {
+      const hudSlots = (rt.slots.length > 0 ? rt.slots : state.slots) as SlotConfig[];
+      const isLong = isDynamicLongInput(promptToTranslate, state.sourceLang);
 
-    if (isOriginalMode) {
+      // 0ms anchor: paint the source line before the model answers, so the
+      // 5-second generation gap is never an empty screen.
       if (hasActiveUI(ctx)) {
         try {
-          ctx.ui.setWidget("lingual_hud", undefined);
           ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", "⇄ [lingual] polishing..."));
         } catch {}
+        renderHudWidget(
+          ctx,
+          { spoken: "", written: "", sourceText: promptToTranslate, annotated: "" },
+          rt,
+          { isLong }
+        );
       }
+
+      // Progressive paint: partial JSON fields land as tokens stream in.
+      let lastPaint = 0;
+      const paintPartial = (fields: Record<string, string>) => {
+        const now = Date.now();
+        if (now - lastPaint < 90) return;
+        lastPaint = now;
+        if (!session.isLatest(generation) || signal.aborted) return;
+        const activeCtx = hasActiveUI(ctx) ? ctx : hasActiveUI(lastContext) ? lastContext : null;
+        if (!activeCtx) return;
+        renderHudWidget(activeCtx, buildStreamingResult(fields, promptToTranslate), rt, {
+          isLong,
+          isStreaming: true,
+        });
+      };
 
       clearTimeout(polishTimer);
       polishTimer = setTimeout(() => {
         polishTimer = undefined;
-        if (!session.isLatest(generation) || (!isOriginalMode && signal.aborted)) {
+        if (!session.isLatest(generation) || signal.aborted) {
           return;
         }
-
-        const passThroughSlots: SlotConfig[] =
-          currentMode && Array.isArray(currentMode.slots) && currentMode.slots.length > 0 && currentMode.id !== "companion"
-            ? currentMode.slots.map((s) => ({
-                id: s.id,
-                label: s.label,
-                role: s.role === "vocab" ? "vocab" : s.id === "source" ? "source" : "translation",
-                instruction: s.instruction,
-                showMeaning: true,
-                enabled: s.enabled !== false,
-              }))
-            : state.slots;
 
         translatePrompt(promptToTranslate, {
           sourceLang: state.sourceLang,
           targetLang: state.targetLang,
           labels: state.labels,
-          slots: passThroughSlots,
+          slots: hudSlots,
           slotPreset: state.slotPreset,
+          killList: rt.killList,
+          globalKillList: rt.globalKillList,
           complete: completer,
           signal,
+          onPartial: paintPartial,
           context: extractRecentContextAnchor(ctx),
         })
           .then((result) => {
             if (!session.isLatest(generation) || signal.aborted) {
               return;
             }
-            if (currentMode.hud === "none") {
-              const activeCtx = hasActiveUI(ctx) ? ctx : hasActiveUI(lastContext) ? lastContext : null;
+            if (!result) return;
+
+            session.setPageResult(0, result, generation);
+            const activeCtx = hasActiveUI(ctx) ? ctx : hasActiveUI(lastContext) ? lastContext : null;
+            if (!activeCtx) return;
+
+            // `target: "clipboard"` is honoured for pass-through modes too.
+            if (rt.target === "clipboard") {
+              const chosen = pickPrimaryContent(result, rt);
+              if (chosen) {
+                copyToClipboard(chosen);
+                activeCtx.ui.notify("[lingual] Copied to clipboard", "info");
+              }
               safeClearWidget(activeCtx);
               return;
             }
-            if (result) {
-              session.setPageResult(0, result, generation);
-              const activeCtx = hasActiveUI(ctx) ? ctx : hasActiveUI(lastContext) ? lastContext : null;
-              if (activeCtx) {
-                renderHudWidget(
-                  activeCtx,
-                  result.sourceText,
-                  result.spoken,
-                  result.written,
-                  result.vocab,
-                  result.spokenMeaning,
-                  result.writtenMeaning,
-                  undefined,
-                  result.slotOutputs,
-                  result.slots
-                );
-              }
-            }
+
+            renderHudWidget(activeCtx, result, rt, { isLong });
           })
           .catch(() => {})
           .finally(() => {
             if (session.isLatest(generation)) {
               const activeCtx = hasActiveUI(ctx) ? ctx : hasActiveUI(lastContext) ? lastContext : null;
-              if (activeCtx) {
-                updateFooter(activeCtx);
-              }
+              if (activeCtx) updateFooter(activeCtx);
             }
           });
       }, 80);
@@ -2282,54 +745,36 @@ export default function (pi: ExtensionAPI) {
     }
 
     // =========================================================================
-    // Modes 2, 3, 4 declarative execution with strict slot isolation
+    // Dispatcher: transform / select (declarative execution, mode-owned slots)
     // =========================================================================
-    const isSelectMode = state.mode === "select" || state.mode === "candidates" || currentMode.action === "select";
-    const isModifyMode = !isSelectMode && (state.mode === "modify" || state.mode === "live-flow" || currentMode.flow === "proofread");
-    const isDirectMode = !isSelectMode && !isModifyMode && (state.mode === "english" || state.mode === "direct" || currentMode.action === "transform");
+    const isSelectMode = rt.dispatcher === "select";
+    const isModifyMode = rt.isProofread;
+    const isDirectMode = rt.dispatcher === "transform";
+    const isLongInput = isDynamicLongInput(promptToTranslate, state.sourceLang);
 
-    const isolatedModeSlots = isModifyMode
-      ? resolveModifySlotsFromConfig({
-          sourceLang: state.sourceLang,
-          explainLang: latestDisk.explainLang,
-          modifySlots: latestDisk.modifySlots ?? state.modifySlots,
-        })
-      : isDirectMode
-        ? resolveDirectSlotsFromConfig({
-            sourceLang: state.sourceLang,
-            directSlots: latestDisk.directSlots ?? state.directSlots,
-          })
-        : resolveCandidateSlotsFromConfig({
-            sourceLang: state.sourceLang,
-            promptSlots: latestDisk.promptSlots ?? state.promptSlots,
-          });
+    // The mode owns its slot anatomy. `runtimeForMode` already resolved the
+    // legacy fallback set for modes that declare no slots of moral code or own slots.
+    const slotsToRun: PromptSlotConfig[] = rt.slots.length > 0 ? rt.slots : [];
 
-    const rewriteSlots = isolatedModeSlots.filter((s) => s.role !== "vocab");
-    const vocabSlots = isolatedModeSlots.filter((s) => s.role === "vocab");
-    const fallbackFirst = isModifyMode
-      ? getDefaultModifySlots(state.sourceLang, latestDisk.explainLang)[0]
-      : getDefaultDirectSlots(state.sourceLang)[0];
-    const hasExplicitLegacySlots = isModifyMode
-      ? Array.isArray(latestDisk.modifySlots) && latestDisk.modifySlots.length > 0
-      : isDirectMode
-        ? Array.isArray(latestDisk.directSlots) && latestDisk.directSlots.length > 0
-        : Array.isArray(latestDisk.promptSlots) && latestDisk.promptSlots.length > 0;
+    let lastPaint = 0;
+    const onPartial =
+      hasActiveUI(ctx) && rt.hud !== "none"
+        ? (fields: Record<string, string>) => {
+            if (Object.keys(fields).length === 0) return;
+            const now = Date.now();
+            if (now - lastPaint < 90) return;
+            lastPaint = now;
+            if (!session.isLatest(generation) || signal.aborted) return;
+            const activeCtx = hasActiveUI(ctx) ? ctx : hasActiveUI(lastContext) ? lastContext : null;
+            if (!activeCtx) return;
+            renderHudWidget(activeCtx, buildStreamingResult(fields, promptToTranslate), rt, {
+              isLong: isLongInput,
+              isStreaming: true,
+            });
+          }
+        : undefined;
 
-    const slotsToRun = isSelectMode
-      ? (currentMode.action === "select" && currentMode.slots && currentMode.slots.length > 0
-          ? currentMode.slots
-          : [...(rewriteSlots.length > 0 ? rewriteSlots : getDefaultPromptSlots(state.sourceLang)), ...vocabSlots])
-      : isModifyMode
-        ? (currentMode.flow === "proofread" && currentMode.slots && currentMode.slots.length > 0
-            ? currentMode.slots
-            : (isolatedModeSlots.length > 0 ? isolatedModeSlots : getDefaultModifySlots(state.sourceLang, latestDisk.explainLang)))
-        : isDirectMode
-          ? (currentMode.action === "transform" && currentMode.flow === "translate" && currentMode.slots && currentMode.slots.length > 0
-              ? currentMode.slots
-              : [rewriteSlots[0] || fallbackFirst, ...vocabSlots])
-          : (currentMode.slots && currentMode.slots.length > 0 ? currentMode.slots : getDefaultPromptSlots(state.sourceLang));
-
-    if (hasActiveUI(ctx) && currentMode.hud !== "none") {
+    if (hasActiveUI(ctx) && rt.hud !== "none") {
       try {
         const rawLoadingMsg = isModifyMode
           ? (state.labels.loadingFixSyntax || "  ⋯ [lingual] fixing syntax & typos...")
@@ -2350,36 +795,18 @@ export default function (pi: ExtensionAPI) {
           )
         );
       } catch {}
-    } else if (hasActiveUI(ctx) && currentMode.hud === "none") {
+    } else if (hasActiveUI(ctx) && rt.hud === "none") {
       safeClearWidget(ctx);
     }
 
     try {
       let recentContext = "";
-      if (currentMode.id === "commit" || (currentMode as any).contextAware === true) {
-        try {
-          const diffOutput = execFileSync("git", ["diff", "--stat", "HEAD"], {
-            encoding: "utf8",
-            timeout: 250,
-            stdio: ["ignore", "pipe", "ignore"],
-          });
-          if (diffOutput && diffOutput.trim()) {
-            recentContext = `[GIT DIFF]:\n${diffOutput.trim().slice(0, 300)}`;
-          } else {
-            const statusOutput = execFileSync("git", ["status", "--short"], {
-              encoding: "utf8",
-              timeout: 250,
-              stdio: ["ignore", "pipe", "ignore"],
-            });
-            if (statusOutput && statusOutput.trim()) {
-              recentContext = `[GIT STATUS]:\n${statusOutput.trim().slice(0, 300)}`;
-            }
-          }
-        } catch {}
+      if (currentMode.id === "commit" || (currentMode as any).contextAware === true || rt.contextAware) {
+        recentContext = captureGitContextSnapshot();
       }
 
       // Mode 2 (Intent Compiler) & context-aware modes: siphon recent assistant anchor for pronoun resolution
-      if (isDirectMode || (currentMode as any).contextAware === true) {
+      if (isDirectMode || (currentMode as any).contextAware === true || rt.contextAware) {
         const assistantAnchor = extractRecentContextAnchor(ctx);
         if (assistantAnchor) {
           recentContext = recentContext
@@ -2395,12 +822,14 @@ export default function (pi: ExtensionAPI) {
         slots: slotsToRun,
       };
       const candidates = await executeModeRunner(promptToTranslate, modeToRun, {
-        sourceLang: state.sourceLang,
-        targetLang: state.targetLang,
-        explainLang: latestDisk.explainLang,
+        sourceLang: rt.inputLang,
+        targetLang: rt.outputLang,
+        explainLang: rt.explainLang,
+        globalKillList: rt.globalKillList,
         context: recentContext,
         complete: completer,
         signal,
+        onPartial,
       });
 
       if (!session.isLatest(generation)) {
@@ -2410,7 +839,7 @@ export default function (pi: ExtensionAPI) {
       if (!candidates || candidates.length === 0) {
         if (hasActiveUI(ctx)) {
           safeClearWidget(ctx);
-          if (currentMode.action === "transform") {
+          if (rt.dispatcher === "transform") {
             try {
               ctx.ui.notify("[lingual] prompt rewrite timed out; original prompt passed", "warning");
             } catch {}
@@ -2419,289 +848,97 @@ export default function (pi: ExtensionAPI) {
         return { action: "continue" };
       }
 
-      const maxCols = getEffectiveMaxCols();
       const singleLineSource = promptToTranslate.replace(/\s*\r?\n\s*/g, " ↵ ");
       const candidateVocab = candidates[0]?.vocab;
-      const isProofreadFlow = currentMode.flow === "proofread";
-      const isAdaptiveTakeaway = currentMode.hud === "adaptive-takeaway" || isProofreadFlow;
-      const isLongModifyInput = isAdaptiveTakeaway && (promptToTranslate.length > 120 || (promptToTranslate.match(/[.!?。！？\n]/g) || []).length >= 3);
-      const keepSourceRow = !isProofreadFlow && (currentMode.slots || []).some((s) => s.id === "source" && s.enabled !== false);
-      const takeawayLabel = isProofreadFlow
-        ? (slotsToRun.find((s) => s.role === "vocab")?.label || "Takeaway")
-        : (state.labels.vocabLabel || "Vocab");
+      const keepSourceRow = rt.slots.some((s) => s.role === "source");
+      const takeawayLabel = rt.takeawaySlot?.label || state.labels.vocabLabel || "Vocab";
 
       const candidateSlotResults: SlotResult[] = [
         ...(keepSourceRow
           ? [{ id: "source", label: state.labels.sourceLabel || "Original", role: "source" as const, content: singleLineSource }]
           : []),
-        ...(!isLongModifyInput
-          ? candidates.map((c, idx) => ({
-              id: c.id,
-              label: isProofreadFlow ? c.label : currentMode.action === "transform" ? `⚡${c.label}` : `${idx + 1}:${c.label}`,
-              role: "translation" as const,
-              content: c.content.replace(/\s*\r?\n\s*/g, " ↵ "),
-            }))
-          : []),
+        ...candidates.map((c, idx) => ({
+          id: c.id,
+          label: isModifyMode ? c.label : isSelectMode ? `${idx + 1}:${c.label}` : `⚡${c.label}`,
+          role: "translation" as const,
+          content: c.content.replace(/\s*\r?\n\s*/g, " ↵ "),
+          meaning: c.meaning,
+          hideWhenLong: c.hideWhenLong,
+        })),
         ...(candidateVocab
           ? [{ id: "vocab", label: takeawayLabel, role: "vocab" as const, content: candidateVocab }]
           : []),
       ];
 
-      session.setPageResult(
-        0,
-        {
-          sourceText: singleLineSource,
-          spoken: candidates[0].content.replace(/\s*\r?\n\s*/g, " ↵ "),
-          written: candidates[1]?.content.replace(/\s*\r?\n\s*/g, " ↵ ") || "",
-          vocab: candidateVocab,
-          annotated: "",
-          slots: candidateSlotResults,
-        },
-        generation
-      );
+      const result: LingualResult = {
+        sourceText: singleLineSource,
+        spoken: candidates[0].content.replace(/\s*\r?\n\s*/g, " ↵ "),
+        spokenMeaning: candidates[0].meaning,
+        written: candidates[1]?.content.replace(/\s*\r?\n\s*/g, " ↵ ") || "",
+        writtenMeaning: candidates[1]?.meaning,
+        vocab: candidateVocab,
+        annotated: "",
+        slots: candidateSlotResults,
+        slotOutputs: Object.fromEntries(
+          candidates.map((c) => [
+            c.id,
+            { content: c.content.replace(/\s*\r?\n\s*/g, " ↵ "), meaning: c.meaning },
+          ])
+        ),
+      };
 
-      if (hasActiveUI(ctx)) {
-        if (currentMode.hud === "none") {
-          safeClearWidget(ctx);
-        } else {
-          const hasMultipleTranslationSlots = candidateSlotResults.filter(
-            (s) => s.role !== "vocab" && s.id !== "source"
-          ).length > 1;
-          const isPreviewHud = currentMode.hud === "preview" && !hasMultipleTranslationSlots;
-          const effectiveMaxLines = isPreviewHud ? 4 : 9;
-          const displaySlotResults = isPreviewHud
-            ? candidateSlotResults.filter((s, idx) => s.role === "vocab" || idx === 0)
-            : candidateSlotResults;
+      session.setPageResult(0, result, generation);
 
-          // Render card layout with 9-line UAX #11 box model and hanging indent wrapping
-          const layoutSlots: SlotConfig[] = displaySlotResults.map((sr) => ({
-            id: sr.id,
-            label: sr.label,
-            role: sr.role,
-            showMeaning: false,
-            enabled: true,
-          }));
-          const cardLines = renderCardLayout(
-            {
-              sourceText: singleLineSource,
-              spoken: candidates[0].content.replace(/\s*\r?\n\s*/g, " ↵ "),
-              written: candidates[1]?.content.replace(/\s*\r?\n\s*/g, " ↵ ") || "",
-              vocab: candidateVocab,
-              annotated: "",
-              slots: displaySlotResults,
-            },
-            state.labels,
-            {
-              maxCols,
-              maxLines: effectiveMaxLines,
-              isCompact: state.compact,
-              slots: layoutSlots,
-              themeDecorators: {
-                muted: (s: string) => ctx.ui.theme.fg("muted", s),
-                accent: (s: string) => ctx.ui.theme.fg("accent", s),
-                dim: (s: string) => ctx.ui.theme.fg("dim", s),
-              },
-            }
-          );
-          try {
-            ctx.ui.setWidget("lingual_hud", cardLines, { placement: "aboveEditor" });
-          } catch {}
-        }
-      }
+      // The renderer owns hud variant selection (tree / preview / takeaway / none).
+      renderHudWidget(ctx, result, rt, { isLong: isLongInput });
 
-      // Resolve chosen text for transform action using primarySlotId or first rewrite slot
+      // Resolve the dispatched payload from the mode's primary slot (no id special-casing).
       let chosenText = candidates[0].content;
-      if (currentMode.primarySlotId) {
-        const match = candidates.find((c) => c.id.toLowerCase() === currentMode.primarySlotId?.toLowerCase());
+      const dispatchSlot = primarySlot(rt);
+      if (dispatchSlot) {
+        const match = candidates.find((c) => c.id.toLowerCase() === dispatchSlot.id.toLowerCase());
         if (match) chosenText = match.content;
-      } else if (isProofreadFlow) {
-        const fixedCandidate = candidates.find((c) => c.id === "fixed");
-        if (fixedCandidate) chosenText = fixedCandidate.content;
       } else {
         const firstRewrite = candidates.find((c) => c.id !== "source" && c.id !== "vocab");
         if (firstRewrite) chosenText = firstRewrite.content;
       }
 
       if (isSelectMode && hasActiveUI(ctx)) {
-        const langCode = (state.sourceLang || "en").toLowerCase().split("-")[0];
-        const sp = resolveSelectPrompts(langCode, candidates.length);
-
-        if (typeof (ctx.ui as any).custom === "function") {
-          // Compact capsule hotkey bar: press number keys 1..N to send candidate in 0ms without Enter
-          const items = [
-            ...candidates.map((c, idx) => ({ key: String(idx + 1), label: `[${idx + 1}] ${c.label}`, value: c.content })),
-            { key: "0", label: `[0] ${sp.keepOrig}`, value: "__ORIGINAL__" },
-          ];
-          const pickedVal = await (ctx.ui as any).custom((tui: any, theme: any, keybindings: any, done: (res: string | undefined) => void) => {
-            let selectedIdx = 0;
-            return {
-              render(width: number): string[] {
-                const border = theme.fg("dim", "─".repeat(Math.max(10, width)));
-                const headerLine =
-                  " " +
-                  theme.fg("accent", theme.bold(sp.title)) +
-                  "  " +
-                  theme.fg("dim", `(${sp.hint})`);
-                // Wrap pills to ensure [1]..[N] and [0] remain fully visible on narrow viewports
-                const maxLineCols = Math.max(20, width - 2);
-                const pillLines: string[] = [];
-                let currentLine = " ";
-                let currentWidth = 1;
-                for (let idx = 0; idx < items.length; idx++) {
-                  const it = items[idx];
-                  const renderedPill =
-                    idx === selectedIdx
-                      ? theme.fg("accent", theme.bold(`▸ ${it.label}`))
-                      : `  ${theme.fg("text", it.label)}`;
-                  const pillWidth = getVisualWidth(renderedPill);
-                  const sep = currentWidth > 1 ? "   " : "";
-                  const sepWidth = sep.length;
-                  if (currentWidth > 1 && currentWidth + sepWidth + pillWidth > maxLineCols) {
-                    pillLines.push(currentLine);
-                    currentLine = " " + renderedPill;
-                    currentWidth = 1 + pillWidth;
-                  } else {
-                    currentLine += sep + renderedPill;
-                    currentWidth += sepWidth + pillWidth;
-                  }
-                }
-                if (currentLine.trim()) {
-                  pillLines.push(currentLine);
-                }
-                return [
-                  border,
-                  truncateVisual(headerLine, width),
-                  ...pillLines,
-                  border,
-                ];
-              },
-              handleInput(keyData: string) {
-                // 1. Number keys 1..9 send immediately without pressing Enter
-                if (/^[1-9]$/.test(keyData)) {
-                  const num = parseInt(keyData, 10);
-                  if (num >= 1 && num <= candidates.length) {
-                    done(candidates[num - 1].content);
-                    return;
-                  }
-                }
-                // 2. Key '0' or Esc / Ctrl+C passes through original raw text
-                if (
-                  keyData === "0" ||
-                  keyData === "\x1b" ||
-                  keyData === "\x03" ||
-                  keybindings?.matches?.(keyData, "tui.select.cancel")
-                ) {
-                  done("__ORIGINAL__");
-                  return;
-                }
-                // 3. Arrow keys / hjkl cycle capsule selection
-                if (
-                  keyData === "h" ||
-                  keyData === "k" ||
-                  keyData === "\x1b[A" ||
-                  keyData === "\x1b[D" ||
-                  keybindings?.matches?.(keyData, "tui.select.up")
-                ) {
-                  selectedIdx = (selectedIdx - 1 + items.length) % items.length;
-                  tui?.requestRender?.();
-                  return;
-                }
-                if (
-                  keyData === "l" ||
-                  keyData === "j" ||
-                  keyData === "\x1b[B" ||
-                  keyData === "\x1b[C" ||
-                  keyData === "\t" ||
-                  keybindings?.matches?.(keyData, "tui.select.down")
-                ) {
-                  selectedIdx = (selectedIdx + 1) % items.length;
-                  tui?.requestRender?.();
-                  return;
-                }
-                // 4. Enter / Space confirms currently highlighted candidate
-                if (
-                  keyData === "\r" ||
-                  keyData === "\n" ||
-                  keyData === "\x1bOM" ||
-                  keybindings?.matches?.(keyData, "tui.select.confirm")
-                ) {
-                  done(items[selectedIdx]?.value);
-                  return;
-                }
-              },
-              invalidate() {},
-            };
-          });
-          if (!pickedVal || pickedVal === "__ORIGINAL__") {
-            safeClearWidget(ctx);
-            updateFooter(ctx);
-            return { action: "continue" };
-          }
-          chosenText = pickedVal;
-        } else if (typeof (ctx.ui as any).select === "function") {
-          // Fallback select picker when ctx.ui.custom is unavailable
-          const optionLabels = [
-            ...candidates.map((c, idx) => `[${idx + 1}] ${c.label}`),
-            `[0] ${sp.keepOrig}`,
-          ];
-          const picked = await (ctx.ui as any).select(`${sp.title} (${sp.hint})`, optionLabels);
-          if (!picked || picked.startsWith("[0]")) {
-            safeClearWidget(ctx);
-            updateFooter(ctx);
-            return { action: "continue" };
-          }
-          const idxMatch = picked.match(/^\[(\d+)\]/);
-          if (idxMatch) {
-            const idx = parseInt(idxMatch[1], 10) - 1;
-            if (candidates[idx]) {
-              chosenText = candidates[idx].content;
-            }
-          }
+        const picked = await pickCandidateInteractive(ctx, candidates, state.sourceLang);
+        if (!picked) {
+          safeClearWidget(ctx);
+          updateFooter(ctx);
+          return { action: "continue" };
         }
+        chosenText = picked;
       }
 
       // 100% untruncated payload preserved for Coding Agent or clipboard
-      let finalText = sanitized.rawPayload
-        ? `${chosenText}\n\n${sanitized.rawPayload}`
-        : chosenText;
-
+      let finalText = sanitized.rawPayload ? `${chosenText}\n\n${sanitized.rawPayload}` : chosenText;
       const diskConfig = loadUserLingualConfig();
-      if (
-        currentMode.target !== "clipboard" &&
-        shouldInjectNativeReplyGuard(event.text, state.sourceLang, diskConfig.replyInSourceLang)
-      ) {
+      if (rt.target !== "clipboard" && shouldInjectNativeReplyGuard(event.text, state.sourceLang, diskConfig.replyInSourceLang)) {
         finalText += formatNativeReplyGuardHint(state.sourceLang);
       }
 
-      if (currentMode.target === "clipboard") {
+      if (rt.target === "clipboard") {
         copyToClipboard(finalText);
-        if (hasActiveUI(ctx)) {
-          ctx.ui.notify("[lingual] Copied to clipboard", "info");
-        }
+        if (hasActiveUI(ctx)) ctx.ui.notify("[lingual] Copied to clipboard", "info");
         return { action: "handled" };
       }
 
-      return {
-        action: "transform",
-        text: finalText,
-        images: event.images,
-      };
+      return { action: "transform", text: finalText, images: event.images };
     } catch {
       if (hasActiveUI(ctx)) {
         safeClearWidget(ctx);
-        if (currentMode.action === "transform") {
-          try {
-            ctx.ui.notify("[lingual] prompt rewrite error; original prompt passed", "warning");
-          } catch {}
+        if (rt.dispatcher === "transform") {
+          try { ctx.ui.notify("[lingual] prompt rewrite error; original prompt passed", "warning"); } catch {}
         }
       }
       return { action: "continue" };
     } finally {
       if (session.isLatest(generation)) {
         const activeCtx = hasActiveUI(ctx) ? ctx : hasActiveUI(lastContext) ? lastContext : null;
-        if (activeCtx) {
-          updateFooter(activeCtx);
-        }
+        if (activeCtx) updateFooter(activeCtx);
       }
     }
   });

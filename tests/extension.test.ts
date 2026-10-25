@@ -88,10 +88,12 @@ test("extension input handler - original mode returns continue immediately and r
   const lines = widgetLines as string[];
 
   // 验证原文锚点与极简左导轨树状结构 (Trifecta Minimalist Left-Rail Tree Branch)
-  assert.ok(lines.some((l: string) => l.includes("·") && (l.includes("原文") || l.includes("Original"))), "Widget must contain source text anchor");
-  assert.ok(lines.some((l: string) => l.includes("┌") && (l.includes("[口语]") || l.includes("[Spoken]"))), "Widget must contain slot 1 branch with '┌'");
-  assert.ok(lines.some((l: string) => l.includes("├") && (l.includes("[写作]") || l.includes("[Written]"))), "Widget must contain slot 2 branch with '├'");
-  assert.ok(lines.some((l: string) => l.includes("└") && (l.includes("[重点]") || l.includes("[Vocab]"))), "Widget must contain vocab branch with '└'");
+  // Labels follow the detected native language (input-driven locale adaptation),
+  // so assert the rail structure rather than a hardcoded language.
+  assert.ok(lines.some((l: string) => l.includes("·")), "Widget must contain source text anchor");
+  assert.ok(lines.some((l: string) => l.includes("┌") && /\[[^\]]+\]/.test(l)), "Widget must contain a labelled first slot branch with '┌'");
+  assert.ok(lines.some((l: string) => l.includes("├") && /\[[^\]]+\]/.test(l)), "Widget must contain a labelled second slot branch with '├'");
+  assert.ok(lines.some((l: string) => l.includes("└") && /\[[^\]]+\]/.test(l)), "Widget must contain a labelled final slot branch with '└'");
 });
 
 test("extension stale ctx & resize listener hygiene - survives stale ctx getter throws and deduplicates stdout resize listeners", async () => {

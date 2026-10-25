@@ -938,7 +938,9 @@ export function buildSystemPrompt(
   isLongInput = false,
   context?: string,
   tone: "general" | "social" | "tech" = "general",
-  customSlots?: SlotConfig[] | CustomSlotsConfig
+  customSlots?: SlotConfig[] | CustomSlotsConfig,
+  killList?: string[],
+  globalKillList?: string[]
 ): string {
   const normSource = (sourceLang || "en").toLowerCase().split("-")[0];
   const normTarget = (targetLang || "ja").toLowerCase().split("-")[0];
@@ -963,10 +965,12 @@ export function buildSystemPrompt(
   const anchorBlock = anchorText ? `\n\n[GOLDEN FEW-SHOT ANCHORS (Pair: ${normSource} ➔ ${normTarget})]:\n${anchorText}` : "";
 
   const condensationDirective = isLongInput
-    ? `\n\n[LONG INPUT CONDENSATION DIRECTIVE]:
-The user's input text has multiple clauses or sentences.
-CRITICAL: You MUST preserve and translate EVERY clause and question from start to finish — NEVER omit any details!
-Express all points concisely so the complete meaning fits cleanly within the HUD without truncation.`
+    ? `\n\n[LONG INPUT CONDENSATION DIRECTIVE - 1:1 INTENT ALIGNMENT & ZERO TRUNCATION]:
+The user's input is a long or multi-sentence paragraph.
+CRITICAL RULES FOR LONG INPUTS:
+1. Distill the user's core thesis, question, and key contrast into "summary" in native ${spec.name} (1 concise sentence, under 25 words/chars).
+2. Synchronously condense "spoken", "written", and any translation slots so they express that exact distilled core intent in 1-2 tight, natural ${targetName} sentences (STRICTLY <= 28 words / <= 160 characters per slot).
+3. Drop repetitive background setup or tangential filler so "summary", "spoken", and "written" align 1:1 in scope and fit completely within 2 lines per slot with ZERO mid-sentence truncation.`
     : "";
 
   const contextDirective = context && context.trim()
@@ -1028,7 +1032,7 @@ Prioritize RFC, Pull Request, and architectural documentation precision:
     const jsonFormatHint = isLongInput
       ? `Strict JSON format:
 {
-  "summary": "Concise core intent/question in native ${spec.name} (under 20 words)",
+  "summary": "1-sentence distilled core intent in native ${spec.name} (<= 25 words/chars); spoken & written must translate this condensed intent in <= 28 words each",
   "spoken": "...",
   "spoken_meaning": "...",
   "written": "...",
@@ -1055,7 +1059,7 @@ Translate the user's message from native ${spec.name} (language A) into TWO dist
 
 [CODE & SYMBOL SHIELD - STRICT RULE]:
 All inline code (\`foo()\`), file paths (@file, path/to/file), CLI flags, UUIDs, and (...) placeholders MUST be preserved 100% verbatim in both spoken and written outputs. Never translate, rephrase, or drop code tokens. CRITICAL: NEVER expand, hallucinate, or fabricate file paths, UUIDs, or timestamps not explicitly in the user's input.
-${condensationDirective}${contextDirective}${toneDirective}${anchorBlock}${compileKillListInstruction(undefined, DEFAULT_KILL_LIST)}
+${condensationDirective}${contextDirective}${toneDirective}${anchorBlock}${compileKillListInstruction(killList, globalKillList)}
 
 ${jsonFormatHint}
 Output valid JSON ONLY. Never output markdown code fences, backticks, quotes, or explanations.`;
@@ -1067,7 +1071,7 @@ Output valid JSON ONLY. Never output markdown code fences, backticks, quotes, or
   const jsonProps: string[] = [];
 
   if (isLongInput) {
-    jsonProps.push(`  "summary": "Concise core intent/question in native ${spec.name} (under 20 words)"`);
+    jsonProps.push(`  "summary": "1-sentence distilled core intent in native ${spec.name} (<= 25 words/chars); spoken & written must translate this condensed intent in <= 28 words each"`);
   }
 
   enabledSlots.forEach((slot, idx) => {
@@ -1093,7 +1097,7 @@ ${dynamicTasks}
 
 [CODE & SYMBOL SHIELD - STRICT RULE]:
 All inline code (\`foo()\`), file paths (@file, path/to/file), CLI flags, UUIDs, and (...) placeholders MUST be preserved 100% verbatim in all outputs. Never translate, rephrase, or drop code tokens.
-${condensationDirective}${contextDirective}${toneDirective}${anchorBlock}${compileKillListInstruction(undefined, DEFAULT_KILL_LIST)}
+${condensationDirective}${contextDirective}${toneDirective}${anchorBlock}${compileKillListInstruction(killList, globalKillList)}
 
 ${dynamicJsonHint}
 Output valid JSON ONLY. Never output markdown code fences, backticks, quotes, or explanations.`;

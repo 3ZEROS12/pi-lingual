@@ -7,6 +7,11 @@ export * from "./cache.js";
 export * from "./sanitizer.js";
 export * from "./layout.js";
 export * from "./fsm.js";
+export * from "./config.js";
+export * from "./banner.js";
 export * from "./engine.js";
+export * from "./runtime.js";
+export * from "./commands.js";
+export * from "./completer.js";
 export * from "./core/index.js";
 

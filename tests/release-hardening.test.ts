@@ -31,6 +31,7 @@ import {
   resolveSelectPrompts,
   shouldTriggerTranslation,
   isDynamicLongInput,
+  CURRENT_FEATURE_BANNER_VERSION,
 } from "../src/engine.js";
 import { getBannerMaxCols, getVisualWidth, getEffectiveMaxCols, renderCardLayout, truncateVisual } from "../src/layout.js";
 import {
@@ -258,7 +259,7 @@ test("release banner - 9 sandboxed cold boots render natively with zero 80-col c
       out.effectiveStatus?.includes(seed[0].name),
       `[${lang}] badge must embed native mode name "${seed[0].name}": ${out.effectiveStatus}`
     );
-    assert.equal(out.configAfter.lastSeenVersion, "0.6.0", `[${lang}] banner delivery must be recorded`);
+    assert.equal(out.configAfter.lastSeenVersion, CURRENT_FEATURE_BANNER_VERSION, `[${lang}] banner delivery must be recorded`);
     assert.equal(out.configAfter.sourceLang, undefined, `[${lang}] sourceLang must not be written to disk on cold boot`);
     assert.equal(out.configAfter.mode, undefined, `[${lang}] mode must not be written to disk on cold boot`);
     assert.equal(out.configAfter.configured, undefined, `[${lang}] configured key must not be written`);
@@ -274,7 +275,7 @@ test("release banner - 0.5.x config upgrades keep their language and burn the ba
     assert.equal(out.inputPrompted, false, `[${lang}] configured users must never see the handshake again`);
     assert.equal(out.configAfter.sourceLang, lang === "tw" ? "tw" : lang, `[${lang}] language must be preserved`);
     assert.equal(out.configAfter.mode, "english", `[${lang}] existing mode choice must be preserved`);
-    assert.equal(out.configAfter.lastSeenVersion, "0.6.0");
+    assert.equal(out.configAfter.lastSeenVersion, CURRENT_FEATURE_BANNER_VERSION);
     assert.equal(out.secondStartBanner, false);
     assert.equal(out.clearedAfterInput, true);
   }

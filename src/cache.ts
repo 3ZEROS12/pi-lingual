@@ -15,6 +15,7 @@ export interface CacheStats {
 
 export class LingualLruCache<T> {
   private cache = new Map<string, T>();
+  private candidatesCache = new Map<string, any[]>();
   private hits = 0;
   private misses = 0;
 
@@ -63,12 +64,41 @@ export class LingualLruCache<T> {
     this.cache.set(key, val);
   }
 
+  getCandidates<C = any>(key: string): C[] | undefined {
+    if (!this.candidatesCache.has(key)) {
+      this.misses++;
+      return undefined;
+    }
+    this.hits++;
+    const val = this.candidatesCache.get(key)!;
+    // Refresh LRU recency
+    this.candidatesCache.delete(key);
+    this.candidatesCache.set(key, val);
+    return val as C[];
+  }
+
+  setCandidates<C = any>(key: string, candidates: C[]): void {
+    if (!key || key.length > 256) {
+      return;
+    }
+    if (this.candidatesCache.has(key)) {
+      this.candidatesCache.delete(key);
+    } else if (this.candidatesCache.size >= this.capacity) {
+      const oldestKey = this.candidatesCache.keys().next().value;
+      if (oldestKey !== undefined) {
+        this.candidatesCache.delete(oldestKey);
+      }
+    }
+    this.candidatesCache.set(key, candidates);
+  }
+
   has(key: string): boolean {
-    return this.cache.has(key);
+    return this.cache.has(key) || this.candidatesCache.has(key);
   }
 
   clear(): void {
     this.cache.clear();
+    this.candidatesCache.clear();
     this.hits = 0;
     this.misses = 0;
   }

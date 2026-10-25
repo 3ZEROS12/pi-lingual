@@ -51,6 +51,14 @@ An on-demand tailoring skill for `pi-lingual`. In everyday coding turns, `pi-lin
    - **IMMEDIATELY CANCEL any further questioning!**
    - Fall back instantly: apply the three-core golden defaults (`companion` + `direct` + `live-flow`), confirm cleanly in 1 sentence, and return immediately.
 
+8. **Translation Model Sovereignty & Cost Decoupling**:
+   - `pi-lingual` isolates sidecar translation from heavy reasoning brains by defaulting to Pi's global `defaultModel` (`selectedModel: "auto"`).
+   - When developers express cost concerns, model switches, or latency friction, always consult and explain their preferred translation model:
+     - `auto` (Default): Uses Pi's global `defaultModel` from `settings.json` (cheap, fast, decoupled from conversational Opus/O1/Argon).
+     - Pinned ID (e.g. `selectedModel: "<model-id>"`): Fixes translation strictly to a low-cost sidecar model (e.g. `gemini-3.8-flash`, `gpt-4o-mini`, `claude-3-5-haiku`, or local `qwen2.5:7b`).
+     - `session`: Strictly inherits the active conversation model.
+     - External `endpoint` + `apiKey`: Fully decoupled local (Ollama) or external translation gateway.
+
 ---
 
 ## 2. The 4 Engineering Consultation Archetypes
@@ -91,6 +99,16 @@ When the developer addresses the stylist, identify the cognitive friction and re
   - **Tier 2 (Customization)**: You never need to touch JSON. Just tell me what you want to adjust in plain words.
   - **Safety Gate**: **0 disk writes, 0 deletions, 0 questionnaires!**
 
+### Archetype 5: Model & Cost Decoupling ("模型太贵了", "想用便宜小模型翻译", "换翻译模型", "Model routing & cost")
+- **Diagnosis**: The developer is using an expensive or heavy reasoning model as the conversational brain, and wants fast, low-cost translation without paying flagship rates on everyday typing turns.
+- **Remedy**:
+  1. Inspect `selectedModel` in `~/.pi/agent/lingual.json` and check `defaultModel` in `~/.pi/agent/settings.json`.
+  2. Explain the options:
+     - **Default Auto (`"auto"`)**: Uses Pi's global `defaultModel` directly (keeping translations on their everyday fast model regardless of conversation model switches).
+     - **Pinned Model**: Pin a specific model (`selectedModel: "<model-id>"` or `/lingual model <id>`).
+     - **Follow Session (`"session"`)**: Explicitly match the active conversation model.
+  3. Apply the developer's choice cleanly in `~/.pi/agent/lingual.json` (`selectedModel`).
+
 ---
 
 ## 3. Dynamic Semantic Variable Interpolation (`${sourceLang}`, `${targetLang}`, `${explainLang}`)
@@ -113,6 +131,8 @@ To inspect or update user modes, write valid JSON directly to `~/.pi/agent/lingu
   "sourceLang": "en",
   "targetLang": "ja",
   "explainLang": "en",
+  "selectedModel": "auto", // "auto" (default: uses Pi's global defaultModel), "session" (follows active chat), or pinned model ID
+  "reasoning": "low", // reasoning effort for reasoning models: "low" | "medium" | "high"
   "activeModeId": "direct",
   "modes": [
     {

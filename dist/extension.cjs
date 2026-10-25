@@ -34,7 +34,130 @@ __export(extension_exports, {
   extractRecentContextAnchor: () => extractRecentContextAnchor
 });
 module.exports = __toCommonJS(extension_exports);
-var import_node_child_process = require("child_process");
+
+// src/runtime.ts
+var VALID_ACTIONS = /* @__PURE__ */ new Set(["pass-through", "transform", "select"]);
+var VALID_FLOWS = /* @__PURE__ */ new Set(["translate", "proofread", "custom"]);
+function normalizeHudVariant(hud) {
+  switch (hud) {
+    case "none":
+      return "none";
+    case "preview":
+      return "preview";
+    case "adaptive-takeaway":
+      return "takeaway";
+    case "tree":
+    default:
+      return "tree";
+  }
+}
+function normalizeSlots(declared, fallback) {
+  const source = Array.isArray(declared) && declared.length > 0 ? declared : Array.isArray(fallback) ? fallback : [];
+  return source.filter((s) => Boolean(s && typeof s.id === "string")).filter((s) => s.enabled !== false).map((s) => ({
+    ...s,
+    role: s.role || "translation",
+    enabled: s.enabled !== false
+  }));
+}
+function resolveModeRuntime(mode, options) {
+  const flow = VALID_FLOWS.has(mode.flow) ? mode.flow : "translate";
+  const dispatcher = VALID_ACTIONS.has(mode.action) ? mode.action : "transform";
+  const hud = normalizeHudVariant(mode.hud);
+  const target = mode.target === "clipboard" ? "clipboard" : "agent";
+  const sourceLang = options.sourceLang || "en";
+  const targetLang = options.targetLang || "en";
+  const explainLang = options.explainLang || sourceLang;
+  const inputLang = flow === "proofread" ? targetLang : flow === "custom" ? mode.customInputLang || sourceLang : sourceLang;
+  const outputLang = flow === "custom" ? mode.customOutputLang || targetLang : targetLang;
+  const slots = normalizeSlots(mode.slots, options.fallbackSlots);
+  const translationSlots = slots.filter((s) => s.role !== "vocab" && s.role !== "source");
+  const takeawaySlot = slots.find((s) => s.role === "vocab");
+  return {
+    mode,
+    id: mode.id,
+    name: mode.name,
+    dispatcher,
+    flow,
+    hud,
+    target,
+    inputLang,
+    outputLang,
+    explainLang,
+    reasoning: mode.reasoning,
+    slots,
+    translationSlots,
+    takeawaySlot,
+    primarySlotId: mode.primarySlotId,
+    killList: Array.isArray(mode.killList) ? mode.killList : [],
+    globalKillList: options.globalKillList,
+    preserveCodeSwitching: Boolean(mode.preserveCodeSwitching),
+    contextAware: Boolean(mode.contextAware),
+    isProofread: flow === "proofread",
+    isPreview: hud === "preview"
+  };
+}
+function runtimeLanguagePair(rt, sessionPair) {
+  if (rt.flow === "custom") {
+    return `${rt.inputLang} \u21C4 ${rt.outputLang}`;
+  }
+  return sessionPair;
+}
+function primarySlot(rt) {
+  if (rt.primarySlotId) {
+    const match = rt.slots.find(
+      (s) => s.id.toLowerCase() === rt.primarySlotId?.toLowerCase()
+    );
+    if (match) return match;
+  }
+  return rt.translationSlots[0] || rt.slots[0];
+}
+function parsePartialJsonFields(buffer) {
+  const out = {};
+  if (!buffer) return out;
+  const cleaned = buffer.replace(/^\s*```(?:json)?/i, "").replace(/```\s*$/, "");
+  const re = /"([A-Za-z0-9_-]+)"\s*:\s*"((?:[^"\\]|\\.)*)("?)/g;
+  let match;
+  while ((match = re.exec(cleaned)) !== null) {
+    const key = match[1];
+    const raw = match[2];
+    if (!raw) continue;
+    out[key] = unescapeJsonString(raw);
+  }
+  return out;
+}
+function unescapeJsonString(value) {
+  return value.replace(
+    /\\u([0-9a-fA-F]{4})/g,
+    (_m, hex) => String.fromCharCode(parseInt(hex, 16))
+  ).replace(/\\n/g, "\n").replace(/\\r/g, "\r").replace(/\\t/g, "	").replace(/\\"/g, '"').replace(/\\\\/g, "\\");
+}
+function buildStreamingResult(fields, sourceText) {
+  const slotOutputs = {};
+  for (const [key, value] of Object.entries(fields)) {
+    if (key.endsWith("_meaning") || !value) continue;
+    slotOutputs[key] = { content: value, meaning: fields[`${key}_meaning`] };
+  }
+  const summary = fields.summary && fields.summary.trim() ? fields.summary.trim() : void 0;
+  return {
+    sourceText: summary || sourceText,
+    summary,
+    spoken: slotOutputs.spoken?.content || "",
+    spokenMeaning: slotOutputs.spoken?.meaning,
+    written: slotOutputs.written?.content || "",
+    writtenMeaning: slotOutputs.written?.meaning,
+    vocab: slotOutputs.vocab?.content,
+    annotated: "",
+    slotOutputs
+  };
+}
+function pickPrimaryContent(result, rt) {
+  const slot = primarySlot(rt);
+  if (slot && result.slotOutputs?.[slot.id]?.content) {
+    return result.slotOutputs[slot.id].content;
+  }
+  const fromSlots = result.slots?.find((s) => s.role !== "source" && s.role !== "vocab");
+  return fromSlots?.content || result.spoken || void 0;
+}
 
 // src/layout.ts
 var CANNOT_START_LINE_CHARS = /* @__PURE__ */ new Set([
@@ -135,6 +258,10 @@ function closingDelimitersFor(text) {
       continue;
     }
     if (ch === "'" && !inDouble && !inBacktick) {
+      const next = i + 1 < clean.length ? clean[i + 1] : "";
+      if (/[a-zA-Z]/.test(prev) && /[a-zA-Z]/.test(next)) {
+        continue;
+      }
       inSingle = !inSingle;
       continue;
     }
@@ -199,7 +326,7 @@ function truncateVisual(str, maxVisualCols) {
         result2 = result2.slice(0, lastSpaceRawIdx);
       }
     }
-    return result2.replace(/\s*[\(\[\{（【]$/, "");
+    return result2.replace(/[,'"—\-:;]+\s*$/, "").replace(/\s*[\(\[\{（【]$/, "");
   };
   const targetCols = Math.max(1, maxVisualCols - 3);
   let result = clipAt(targetCols);
@@ -478,6 +605,7 @@ function renderCardLayout(card, labels, options = {}) {
   const maxCols = getEffectiveMaxCols(options.maxCols);
   const maxLines = options.maxLines || 9;
   const isCompact = Boolean(options.isCompact);
+  const railOpen = options.isStreaming === true;
   const pageTag = options.pageTag || "";
   const decMuted = options.themeDecorators?.muted || ((s) => s);
   const decAccent = options.themeDecorators?.accent || ((s) => s);
@@ -535,6 +663,39 @@ function renderCardLayout(card, labels, options = {}) {
       });
     }
   }
+  const variant = options.variant || "tree";
+  if (variant === "none") {
+    return [];
+  }
+  if (variant === "preview") {
+    const primary = contentBranches.find((b) => b.role !== "vocab");
+    const takeaway = contentBranches.find((b) => b.role === "vocab");
+    if (!primary && !takeaway) return [];
+    const previewLines = [];
+    if (primary) {
+      const prefixRaw = `\u26A1 [${primary.label}] `;
+      const prefixW = getVisualWidth(prefixRaw);
+      const body = truncateVisual(primary.content, Math.max(8, maxCols - prefixW));
+      previewLines.push(
+        decAccent(`\u26A1 [${primary.label}] `) + body + pageTag
+      );
+    }
+    if (takeaway) {
+      const prefixRaw = "   \u21B3 ";
+      const prefixW = getVisualWidth(prefixRaw);
+      previewLines.push(
+        decMuted("   \u21B3 ") + decDim(truncateVisual(takeaway.content, Math.max(8, maxCols - prefixW)))
+      );
+    }
+    return previewLines.slice(0, 2);
+  }
+  const longTakeaway = variant === "takeaway" && options.isLong === true && contentBranches.some((b) => b.role === "vocab");
+  const suppressSource = longTakeaway;
+  if (longTakeaway) {
+    const diffs = contentBranches.filter((b) => b.role === "vocab");
+    contentBranches.length = 0;
+    contentBranches.push(...diffs);
+  }
   if (isCompact || maxCols < 35) {
     const tagWidth = getVisualWidth(pageTag);
     const targetCols = typeof options.maxCols === "number" && options.maxCols > 0 ? Math.min(options.maxCols, maxCols) : maxCols;
@@ -555,7 +716,7 @@ function renderCardLayout(card, labels, options = {}) {
   }
   const sourceSlot = effectiveSlots.find((s) => s.role === "source");
   let sourceLines = [];
-  if (sourceSlot && card.sourceText && card.sourceText.trim()) {
+  if (!suppressSource && sourceSlot && card.sourceText && card.sourceText.trim()) {
     const sourceLabel = sourceSlot.label || labels.sourceLabel || "Source";
     const prefixRaw = `  \xB7 [${sourceLabel}] `;
     const prefixW = getVisualWidth(prefixRaw);
@@ -587,14 +748,14 @@ function renderCardLayout(card, labels, options = {}) {
     let branchChar = "\u251C";
     let contChar = "\u2502";
     if (numBranches === 1) {
-      branchChar = "\u2514";
-      contChar = " ";
+      branchChar = railOpen ? "\u251C" : "\u2514";
+      contChar = railOpen ? "\u2502" : " ";
     } else if (isFirst) {
       branchChar = "\u250C";
       contChar = "\u2502";
     } else if (isLast) {
-      branchChar = "\u2514";
-      contChar = " ";
+      branchChar = railOpen ? "\u251C" : "\u2514";
+      contChar = railOpen ? "\u2502" : " ";
     }
     const isVocab = branch.role === "vocab";
     const contentColor = isVocab ? decDim : (s) => s;
@@ -638,8 +799,8 @@ function renderCardLayout(card, labels, options = {}) {
       const branch = contentBranches[i];
       const isFirst = i === 0;
       const isLast = i === numBranches - 1;
-      const branchChar = numBranches === 1 ? "\u2514" : isFirst ? "\u250C" : isLast ? "\u2514" : "\u251C";
-      const contChar = numBranches === 1 || isLast ? " " : "\u2502";
+      const branchChar = numBranches === 1 ? railOpen ? "\u251C" : "\u2514" : isFirst ? "\u250C" : isLast ? railOpen ? "\u251C" : "\u2514" : "\u251C";
+      const contChar = numBranches === 1 || isLast ? railOpen ? "\u2502" : " " : "\u2502";
       const isVocab = branch.role === "vocab";
       const headingColor = isVocab ? decMuted : decAccent;
       const contentColor = isVocab ? decDim : (s) => s;
@@ -666,8 +827,8 @@ function renderCardLayout(card, labels, options = {}) {
         const branch = contentBranches[i];
         const isFirst = i === 0;
         const isLast = i === numBranches - 1;
-        const branchChar = numBranches === 1 ? "\u2514" : isFirst ? "\u250C" : isLast ? "\u2514" : "\u251C";
-        const contChar = numBranches === 1 || isLast ? " " : "\u2502";
+        const branchChar = numBranches === 1 ? railOpen ? "\u251C" : "\u2514" : isFirst ? "\u250C" : isLast ? railOpen ? "\u251C" : "\u2514" : "\u251C";
+        const contChar = numBranches === 1 || isLast ? railOpen ? "\u2502" : " " : "\u2502";
         const isVocab = branch.role === "vocab";
         const headingColor = isVocab ? decMuted : decAccent;
         const contentColor = isVocab ? decDim : (s) => s;
@@ -695,8 +856,8 @@ function renderCardLayout(card, labels, options = {}) {
           const branch = contentBranches[i];
           const isFirst = i === 0;
           const isLast = i === numBranches - 1;
-          const branchChar = numBranches === 1 ? "\u2514" : isFirst ? "\u250C" : isLast ? "\u2514" : "\u251C";
-          const contChar = numBranches === 1 || isLast ? " " : "\u2502";
+          const branchChar = numBranches === 1 ? railOpen ? "\u251C" : "\u2514" : isFirst ? "\u250C" : isLast ? railOpen ? "\u251C" : "\u2514" : "\u251C";
+          const contChar = numBranches === 1 || isLast ? railOpen ? "\u2502" : " " : "\u2502";
           const isVocab = branch.role === "vocab";
           const headingColor = isVocab ? decMuted : decAccent;
           const contentColor = isVocab ? decDim : (s) => s;
@@ -729,10 +890,47 @@ function renderCardLayout(card, labels, options = {}) {
               clampedBranchLines.push(atomicLine);
               remainingBudget -= 1;
             } else {
-              const sliced = branchRendered.slice(0, branchBudget);
-              sliced[sliced.length - 1] = truncateVisual(sliced[sliced.length - 1] + "...", maxCols);
-              clampedBranchLines.push(...sliced);
-              remainingBudget -= sliced.length;
+              let preservedCompleteSentences = null;
+              if (/[.!?。！？]\s+/.test(branch.content)) {
+                const sentenceList = branch.content.trim().split(/(?<=[.!?。！？])\s+/);
+                const candidates = [];
+                if (sentenceList.length >= 3) {
+                  candidates.push(sentenceList.slice(0, 2).join(" "));
+                }
+                if (sentenceList.length >= 1) {
+                  candidates.push(sentenceList[0]);
+                }
+                for (const candidateText of candidates) {
+                  if (candidateText.length >= 35) {
+                    const renderedCand = formatTreeBranch(
+                      branchChar,
+                      contChar,
+                      branch.label,
+                      candidateText,
+                      decMuted,
+                      headingColor,
+                      decMuted,
+                      contentColor,
+                      maxCols
+                    );
+                    if (renderedCand.length <= branchBudget) {
+                      preservedCompleteSentences = renderedCand;
+                      break;
+                    }
+                  }
+                }
+              }
+              if (preservedCompleteSentences) {
+                clampedBranchLines.push(...preservedCompleteSentences);
+                remainingBudget -= preservedCompleteSentences.length;
+              } else {
+                const sliced = branchRendered.slice(0, branchBudget);
+                const lastIdx = sliced.length - 1;
+                const cleanLastLine = sliced[lastIdx].replace(/[,'"—\-:;]+\s*$/, "");
+                sliced[lastIdx] = truncateVisual(cleanLastLine + "...", maxCols);
+                clampedBranchLines.push(...sliced);
+                remainingBudget -= sliced.length;
+              }
             }
           }
         }
@@ -745,11 +943,6 @@ function renderCardLayout(card, labels, options = {}) {
   }
   return lines.map((line) => getVisualWidth(line) > maxCols ? truncateVisual(line, maxCols) : line);
 }
-
-// src/engine.ts
-var import_node_fs = __toESM(require("fs"), 1);
-var import_node_path = __toESM(require("path"), 1);
-var import_node_os = __toESM(require("os"), 1);
 
 // src/prompts.ts
 var SLOT_LABELS_BY_LANG = {
@@ -1563,7 +1756,7 @@ function normalizePromptRules(rule) {
   const s = resolvePromptRulePreset(String(rule));
   return s ? [s] : [];
 }
-function buildSystemPrompt(sourceLang = "en", targetLang = "ja", isLongInput = false, context, tone = "general", customSlots) {
+function buildSystemPrompt(sourceLang = "en", targetLang = "ja", isLongInput = false, context, tone = "general", customSlots, killList, globalKillList) {
   const normSource = (sourceLang || "en").toLowerCase().split("-")[0];
   const normTarget = (targetLang || "ja").toLowerCase().split("-")[0];
   const spec = LANGUAGE_SPECS[normSource] || LANGUAGE_SPECS.en;
@@ -1585,10 +1778,12 @@ Output: ${JSON.stringify({
 ${anchorText}` : "";
   const condensationDirective = isLongInput ? `
 
-[LONG INPUT CONDENSATION DIRECTIVE]:
-The user's input text has multiple clauses or sentences.
-CRITICAL: You MUST preserve and translate EVERY clause and question from start to finish \u2014 NEVER omit any details!
-Express all points concisely so the complete meaning fits cleanly within the HUD without truncation.` : "";
+[LONG INPUT CONDENSATION DIRECTIVE - 1:1 INTENT ALIGNMENT & ZERO TRUNCATION]:
+The user's input is a long or multi-sentence paragraph.
+CRITICAL RULES FOR LONG INPUTS:
+1. Distill the user's core thesis, question, and key contrast into "summary" in native ${spec.name} (1 concise sentence, under 25 words/chars).
+2. Synchronously condense "spoken", "written", and any translation slots so they express that exact distilled core intent in 1-2 tight, natural ${targetName} sentences (STRICTLY <= 28 words / <= 160 characters per slot).
+3. Drop repetitive background setup or tangential filler so "summary", "spoken", and "written" align 1:1 in scope and fit completely within 2 lines per slot with ZERO mid-sentence truncation.` : "";
   const contextDirective = context && context.trim() ? `
 
 [CONVERSATION & THREAD CONTEXT]:
@@ -1635,7 +1830,7 @@ Prioritize RFC, Pull Request, and architectural documentation precision:
     const slot2Instruction = interpolatePromptVariables(rawSlot2Instruction, { sourceLang, targetLang, explainLang: sourceLang });
     const jsonFormatHint = isLongInput ? `Strict JSON format:
 {
-  "summary": "Concise core intent/question in native ${spec.name} (under 20 words)",
+  "summary": "1-sentence distilled core intent in native ${spec.name} (<= 25 words/chars); spoken & written must translate this condensed intent in <= 28 words each",
   "spoken": "...",
   "spoken_meaning": "...",
   "written": "...",
@@ -1660,7 +1855,7 @@ Translate the user's message from native ${spec.name} (language A) into TWO dist
 
 [CODE & SYMBOL SHIELD - STRICT RULE]:
 All inline code (\`foo()\`), file paths (@file, path/to/file), CLI flags, UUIDs, and (...) placeholders MUST be preserved 100% verbatim in both spoken and written outputs. Never translate, rephrase, or drop code tokens. CRITICAL: NEVER expand, hallucinate, or fabricate file paths, UUIDs, or timestamps not explicitly in the user's input.
-${condensationDirective}${contextDirective}${toneDirective}${anchorBlock}${compileKillListInstruction(void 0, DEFAULT_KILL_LIST)}
+${condensationDirective}${contextDirective}${toneDirective}${anchorBlock}${compileKillListInstruction(killList, globalKillList)}
 
 ${jsonFormatHint}
 Output valid JSON ONLY. Never output markdown code fences, backticks, quotes, or explanations.`;
@@ -1669,7 +1864,7 @@ Output valid JSON ONLY. Never output markdown code fences, backticks, quotes, or
   const taskLines = [];
   const jsonProps = [];
   if (isLongInput) {
-    jsonProps.push(`  "summary": "Concise core intent/question in native ${spec.name} (under 20 words)"`);
+    jsonProps.push(`  "summary": "1-sentence distilled core intent in native ${spec.name} (<= 25 words/chars); spoken & written must translate this condensed intent in <= 28 words each"`);
   }
   enabledSlots.forEach((slot, idx) => {
     const num = idx + 1;
@@ -1694,7 +1889,7 @@ ${dynamicTasks}
 
 [CODE & SYMBOL SHIELD - STRICT RULE]:
 All inline code (\`foo()\`), file paths (@file, path/to/file), CLI flags, UUIDs, and (...) placeholders MUST be preserved 100% verbatim in all outputs. Never translate, rephrase, or drop code tokens.
-${condensationDirective}${contextDirective}${toneDirective}${anchorBlock}${compileKillListInstruction(void 0, DEFAULT_KILL_LIST)}
+${condensationDirective}${contextDirective}${toneDirective}${anchorBlock}${compileKillListInstruction(killList, globalKillList)}
 
 ${dynamicJsonHint}
 Output valid JSON ONLY. Never output markdown code fences, backticks, quotes, or explanations.`;
@@ -3643,6 +3838,7 @@ var LingualLruCache = class {
   }
   capacity;
   cache = /* @__PURE__ */ new Map();
+  candidatesCache = /* @__PURE__ */ new Map();
   hits = 0;
   misses = 0;
   /**
@@ -3680,11 +3876,37 @@ var LingualLruCache = class {
     }
     this.cache.set(key, val);
   }
+  getCandidates(key) {
+    if (!this.candidatesCache.has(key)) {
+      this.misses++;
+      return void 0;
+    }
+    this.hits++;
+    const val = this.candidatesCache.get(key);
+    this.candidatesCache.delete(key);
+    this.candidatesCache.set(key, val);
+    return val;
+  }
+  setCandidates(key, candidates) {
+    if (!key || key.length > 256) {
+      return;
+    }
+    if (this.candidatesCache.has(key)) {
+      this.candidatesCache.delete(key);
+    } else if (this.candidatesCache.size >= this.capacity) {
+      const oldestKey = this.candidatesCache.keys().next().value;
+      if (oldestKey !== void 0) {
+        this.candidatesCache.delete(oldestKey);
+      }
+    }
+    this.candidatesCache.set(key, candidates);
+  }
   has(key) {
-    return this.cache.has(key);
+    return this.cache.has(key) || this.candidatesCache.has(key);
   }
   clear() {
     this.cache.clear();
+    this.candidatesCache.clear();
     this.hits = 0;
     this.misses = 0;
   }
@@ -3702,7 +3924,10 @@ var LingualLruCache = class {
 };
 var globalLingualCache = new LingualLruCache(50);
 
-// src/engine.ts
+// src/config.ts
+var import_node_fs = __toESM(require("fs"), 1);
+var import_node_path = __toESM(require("path"), 1);
+var import_node_os = __toESM(require("os"), 1);
 var cachedUserConfig = null;
 var lastConfigCheckTime = 0;
 var CONFIG_CACHE_TTL_MS = 2e3;
@@ -3712,6 +3937,67 @@ function invalidateUserConfigCache() {
 }
 function isTestEnvironment() {
   return process.env.NODE_ENV === "test" || process.env.NODE_TEST_CONTEXT !== void 0 || process.execArgv.some((a) => a.startsWith("--test") || a === "--test") || process.argv.some((a) => a === "--test" || a.startsWith("--test=") || /\.(?:test|spec)\.[cm]?[jt]s$/i.test(a)) || process.env.npm_lifecycle_event === "test";
+}
+var MODE_ALIAS_MAP = {
+  "1": "original",
+  companion: "original",
+  learn: "original",
+  study: "original",
+  original: "original",
+  orig: "original",
+  "\u7EAF\u4F34\u5B66": "original",
+  "\u7D14\u4F34\u5B78": "original",
+  "\u4F34\u5B66": "original",
+  "\u4F34\u8D70": "original",
+  "2": "english",
+  direct: "english",
+  rewrite: "english",
+  refine: "english",
+  english: "english",
+  en: "english",
+  eng: "english",
+  lazy: "english",
+  "\u89C4\u8303\u76F4\u53D1": "english",
+  "\u76F4\u63A5\u6539": "english",
+  "\u76F4\u6539": "english",
+  "\u76F4\u51FA": "english",
+  "\u4ED5\u69D8\u76F4\u884C": "english",
+  "3": "select",
+  candidates: "select",
+  candidate: "select",
+  select: "select",
+  choices: "select",
+  choice: "select",
+  pick: "select",
+  "\u6311\u5019\u9009": "select",
+  "\u6311\u5019\u9078": "select",
+  "\u5019\u9009": "select",
+  "\u5019\u88DC\u9078": "select",
+  "4": "modify",
+  modify: "modify",
+  polish: "modify",
+  fix: "modify",
+  proofread: "modify",
+  raw: "modify",
+  "live-flow": "modify",
+  "\u5B9E\u6218\u72C2\u98D9": "modify",
+  "\u539F\u53E5\u4FEE\u8865": "modify",
+  "\u539F\u53E5\u4FEE\u88DC": "modify",
+  "\u4FEE\u8865": "modify",
+  "\u5B9F\u6226\u75BE\u8D70": "modify",
+  "\u539F\u6587\u4FEE\u6B63": "modify",
+  "0": "off",
+  off: "off",
+  disable: "off",
+  stop: "off",
+  "\u5DF2\u5173\u95ED": "off",
+  "\u5DF2\u95DC\u9589": "off",
+  "\u5173\u95ED": "off",
+  "\u30AA\u30D5": "off"
+};
+function normalizeLingualModeInput(raw) {
+  if (!raw) return null;
+  return MODE_ALIAS_MAP[raw.trim().toLowerCase()] || null;
 }
 function loadUserLingualConfig() {
   if (isTestEnvironment()) {
@@ -3891,256 +4177,6 @@ function saveUserLingualConfig(patch) {
   } catch {
   }
 }
-var DEFAULT_CONFIG = {
-  endpoint: process.env.LINGUAL_ENDPOINT || "",
-  apiKey: process.env.LINGUAL_API_KEY || "",
-  model: process.env.LINGUAL_MODEL || "",
-  selectedModel: "auto",
-  mode: "direct",
-  sourceLang: "en",
-  targetLang: "ja",
-  temperature: 0.2,
-  timeoutMs: 3e4
-};
-var LINGUAL_SYSTEM_PROMPT = buildSystemPrompt("en", "ja");
-var MAX_TRANSLATION_CHARS = 2500;
-var MAX_TRANSLATION_LINES = 30;
-function shouldTriggerTranslation(text, sourceLang = "en", allowSameLangPromptOpt = false) {
-  const trimmed = text.trim();
-  if (!trimmed) return false;
-  if (trimmed.length > MAX_TRANSLATION_CHARS) return false;
-  if (trimmed.split(/\r?\n/).length > MAX_TRANSLATION_LINES) return false;
-  if (/^#{1,6}\s/.test(trimmed) || trimmed.startsWith("---")) return false;
-  if (shouldShieldBypass(trimmed)) return false;
-  if (allowSameLangPromptOpt) {
-    if (isNonEnglish(trimmed)) return true;
-    const words2 = trimmed.split(/\s+/);
-    return words2.length >= 2 && /[a-zA-Z]{2,}/.test(trimmed);
-  }
-  const normSource = (sourceLang || "en").toLowerCase().split("-")[0];
-  const nonLatinLangs = /* @__PURE__ */ new Set(["zh", "tw", "ja", "ko", "ru", "ar"]);
-  if (nonLatinLangs.has(normSource)) {
-    return isNonEnglish(trimmed);
-  }
-  if (isNonEnglish(trimmed)) return true;
-  const words = trimmed.split(/\s+/);
-  return words.length >= 2 && /[a-zA-Z]{2,}/.test(trimmed);
-}
-var BLOCKED_JSON_KEYS = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
-function toCleanString(val) {
-  if (typeof val === "string") return val.trim();
-  if (typeof val === "number" || typeof val === "boolean") return String(val);
-  if (Array.isArray(val)) return val.map(toCleanString).filter(Boolean).join(" \xB7 ");
-  return "";
-}
-function repairAndParseJsonObject(raw) {
-  try {
-    if (!raw || typeof raw !== "string" || raw.length > 32768) return null;
-    let cleaned = raw.replace(/<(?:think|thought)>[\s\S]*?<\/(?:think|thought)>/gi, "").trim();
-    const fence = cleaned.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-    if (fence) cleaned = fence[1].trim();
-    const first = cleaned.indexOf("{");
-    const last = cleaned.lastIndexOf("}");
-    if (first === -1 || last <= first) return null;
-    const jsonSubstr = cleaned.slice(first, last + 1);
-    let parsed;
-    try {
-      parsed = JSON.parse(jsonSubstr);
-    } catch {
-      const repaired = jsonSubstr.replace(/,\s*([}\]])/g, "$1").replace(
-        /("[a-zA-Z0-9_-]+"\s*:\s*")([\s\S]*?)("(?=\s*,\s*"|\s*\}))/g,
-        (_m, prefix, content, suffix) => prefix + content.replace(/(?<!\\)"/g, '\\"') + suffix
-      );
-      parsed = JSON.parse(repaired);
-    }
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
-}
-function parseLlmResponse(raw) {
-  const parsed = repairAndParseJsonObject(raw);
-  if (!parsed) return null;
-  const spoken = toCleanString(parsed.spoken ?? parsed.casual ?? parsed.slot1);
-  const spokenMeaning = toCleanString(parsed.spoken_meaning ?? parsed.spokenMeaning);
-  const written = toCleanString(parsed.written ?? parsed.academic ?? parsed.slot2);
-  const writtenMeaning = toCleanString(parsed.written_meaning ?? parsed.writtenMeaning);
-  const vocab = toCleanString(parsed.vocab);
-  const summary = toCleanString(parsed.summary ?? parsed.core_intent ?? parsed.coreIntent);
-  const slotOutputs = /* @__PURE__ */ Object.create(null);
-  for (const [k, v] of Object.entries(parsed)) {
-    if (BLOCKED_JSON_KEYS.has(k) || k.endsWith("_meaning") || k === "summary") continue;
-    const textVal = toCleanString(v);
-    if (textVal) {
-      const meaningVal = toCleanString(parsed[k + "_meaning"]);
-      slotOutputs[k] = {
-        content: textVal,
-        meaning: meaningVal || void 0
-      };
-    }
-  }
-  const nonVocabOutputs = Object.entries(slotOutputs).filter(([k]) => k !== "vocab").map(([, val]) => val);
-  const effectiveSpoken = spoken || nonVocabOutputs[0]?.content || vocab || "";
-  const effectiveSpokenMeaning = spokenMeaning || nonVocabOutputs[0]?.meaning || "";
-  if (!effectiveSpoken) return null;
-  return {
-    spoken: effectiveSpoken,
-    spokenMeaning: effectiveSpokenMeaning || void 0,
-    written: written || void 0,
-    writtenMeaning: writtenMeaning || void 0,
-    vocab: vocab || void 0,
-    summary: summary || void 0,
-    slotOutputs: Object.keys(slotOutputs).length > 0 ? slotOutputs : void 0
-  };
-}
-async function executeLlmCompletion(text, sysPrompt, cfg) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), cfg.timeoutMs);
-  let onAbort;
-  if (cfg.signal) {
-    if (cfg.signal.aborted) {
-      clearTimeout(timer);
-      return null;
-    }
-    onAbort = () => controller.abort();
-    cfg.signal.addEventListener("abort", onAbort, { once: true });
-  }
-  try {
-    if (typeof cfg.complete === "function") {
-      return await cfg.complete(text, sysPrompt, controller.signal, { reasoning: cfg.reasoning });
-    }
-    if (cfg.endpoint) {
-      const headers = { "Content-Type": "application/json" };
-      if (cfg.apiKey) headers["Authorization"] = `Bearer ${cfg.apiKey}`;
-      const requestBody = {
-        model: cfg.model || "gemini-3.8-flash",
-        messages: [
-          { role: "system", content: sysPrompt },
-          { role: "user", content: text }
-        ]
-      };
-      if (cfg.reasoning) {
-        requestBody.reasoning = cfg.reasoning;
-      } else if (cfg.temperature !== void 0) {
-        requestBody.temperature = cfg.temperature;
-      }
-      const response = await fetch(cfg.endpoint, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(requestBody),
-        signal: controller.signal
-      });
-      if (!response.ok) return null;
-      const json = await response.json();
-      return json?.choices?.[0]?.message?.content ?? null;
-    }
-    return null;
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timer);
-    if (cfg.signal && onAbort) {
-      cfg.signal.removeEventListener("abort", onAbort);
-    }
-  }
-}
-function isDynamicLongInput(text, sourceLang = "en") {
-  const trimmed = text.trim();
-  if (!trimmed) return false;
-  const normSource = (sourceLang || "en").toLowerCase().split("-")[0];
-  const hasCjk = /[\u4e00-\u9fa5\u3040-\u30ff\uac00-\ud7af]/.test(trimmed);
-  const isCjk = normSource === "zh" || normSource === "tw" || normSource === "ja" || normSource === "ko" || hasCjk;
-  if (isCjk) {
-    if (trimmed.length >= 45) return true;
-    const sentenceCount = (trimmed.match(/[。！？；\n]/g) || []).length;
-    if (sentenceCount >= 2 && trimmed.length >= 30) return true;
-  } else {
-    if (trimmed.length >= 85) return true;
-    const sentenceCount = (trimmed.match(/[.!?](\s+|$)|[\n;]/g) || []).length;
-    if (sentenceCount >= 2 && trimmed.length >= 50) return true;
-  }
-  return trimmed.length >= 85;
-}
-async function translatePrompt(text, userConfig = {}) {
-  const trimmed = text.trim();
-  if (!trimmed) return null;
-  const diskConfig = loadUserLingualConfig();
-  const cfg = { ...DEFAULT_CONFIG, ...diskConfig, ...userConfig };
-  if (!shouldTriggerTranslation(trimmed, cfg.sourceLang)) return null;
-  if (shouldShieldBypass(trimmed)) return null;
-  const effectiveSlots = cfg.slots || (cfg.slotPreset ? resolveSlotsForPreset(cfg.slotPreset, cfg.sourceLang) : void 0);
-  const slotSig = Array.isArray(effectiveSlots) ? effectiveSlots.filter((s) => s.enabled !== false).map((s) => s.id).join(",") : void 0;
-  const cacheKey = LingualLruCache.buildKey(trimmed, cfg.sourceLang, cfg.targetLang, slotSig);
-  const cached = globalLingualCache.get(cacheKey);
-  if (cached) return cached;
-  const isLongInput = isDynamicLongInput(trimmed, cfg.sourceLang);
-  const sysPrompt = buildSystemPrompt(cfg.sourceLang, cfg.targetLang, isLongInput, cfg.context, "general", effectiveSlots);
-  const content = await executeLlmCompletion(trimmed, sysPrompt, cfg);
-  if (typeof content !== "string" || !content.trim()) return null;
-  const payload = parseLlmResponse(content);
-  if (!payload || !payload.spoken) return null;
-  const labels = resolveLabelsForLang(cfg.sourceLang || "en", cfg.labels, cfg.targetLang || "ja");
-  const slot1Label = labels.slot1Label || labels.spokenLabel || "Spoken";
-  const slot2Label = labels.slot2Label || labels.writtenLabel || "Written";
-  const vocabLabel = labels.vocabLabel || "Vocab";
-  const sourceLabel = labels.sourceLabel || "Source";
-  const effectiveSourceText = isLongInput && payload.summary && payload.summary.trim() ? payload.summary.trim() : trimmed;
-  const result = {
-    spoken: payload.spoken,
-    spokenMeaning: payload.spokenMeaning,
-    written: payload.written || "",
-    writtenMeaning: payload.writtenMeaning,
-    vocab: payload.vocab,
-    summary: payload.summary,
-    sourceText: effectiveSourceText,
-    slotOutputs: payload.slotOutputs,
-    annotated: formatTerminalAnnotation(
-      effectiveSourceText,
-      payload.spoken,
-      payload.written,
-      payload.vocab,
-      {
-        spokenMeaning: payload.spokenMeaning,
-        writtenMeaning: payload.writtenMeaning,
-        slot1Label,
-        slot2Label,
-        vocabLabel,
-        sourceLabel
-      }
-    )
-  };
-  globalLingualCache.set(cacheKey, result);
-  return result;
-}
-function shouldInjectNativeReplyGuard(originalText, _sourceLang = "en", enabled = false) {
-  if (!enabled) return false;
-  const trimmed = originalText.trim();
-  if (!trimmed || !isNonEnglish(trimmed)) return false;
-  const isEnglishWritingIntent = /(?:英文|英语|english|in english|pr\b|pull request|commit message|git commit|tweet|twitter|email|邮件|readme)/i.test(trimmed);
-  return !isEnglishWritingIntent;
-}
-function formatNativeReplyGuardHint(sourceLang = "en") {
-  const name = resolveLanguageName(sourceLang);
-  return `
-
-(Please reply and explain in ${name}.)`;
-}
-function extractCleanJsonField(raw, fieldName) {
-  const obj = repairAndParseJsonObject(raw);
-  if (obj && !BLOCKED_JSON_KEYS.has(fieldName)) {
-    const val = obj[fieldName] ?? obj.prompt ?? obj.written ?? obj.spoken;
-    if (typeof val === "string" && val.trim()) return val.trim();
-  }
-  const cleaned = raw.replace(/<(?:think|thought)>[\s\S]*?<\/(?:think|thought)>/gi, "").replace(/```(?:json)?|```/gi, "").trim();
-  const regexFallback = cleaned.match(/"(?:prompt|written|spoken)"\s*:\s*"([\s\S]*?)"\s*\}/);
-  if (regexFallback && regexFallback[1].trim()) {
-    return regexFallback[1].replace(/\\"/g, '"').replace(/\\n/g, "\n").trim();
-  }
-  if (cleaned.startsWith("{") && cleaned.endsWith("}")) {
-    return "";
-  }
-  return cleaned.replace(/^["']|["']$/g, "").trim();
-}
 function resolveDirectSlotsFromConfig(cfg) {
   if (Array.isArray(cfg.directSlots) && cfg.directSlots.length > 0) {
     const enabled = cfg.directSlots.filter((s) => s.enabled !== false);
@@ -4260,615 +4296,6 @@ function normalizeActiveModeId(cfg, modes) {
   }
   return activeModes[0]?.id || "companion";
 }
-function compileModeSystemPrompt(mode, options) {
-  const sourceLang = mode.customInputLang || options.sourceLang || "en";
-  const targetLang = mode.customOutputLang || options.targetLang || "en";
-  const explainLang = options.explainLang || sourceLang;
-  const rawSlots = Array.isArray(mode.slots) && mode.slots.length > 0 ? mode.slots : defaultSlotsForMode(mode, sourceLang, explainLang);
-  const interpolatedSlots = rawSlots.map((s) => ({
-    ...s,
-    instruction: s.instruction ? interpolatePromptVariables(s.instruction, {
-      sourceLang,
-      targetLang,
-      explainLang
-    }) : ""
-  }));
-  const slotKillLists = rawSlots.flatMap((s) => s.killList || []);
-  const combinedKillList = [...mode.killList || [], ...slotKillLists];
-  if (mode.flow === "proofread") {
-    return buildModifySystemPrompt({
-      sourceLang,
-      targetLang,
-      explainLang,
-      customSlots: interpolatedSlots,
-      context: options.context,
-      killList: combinedKillList,
-      globalKillList: options.globalKillList,
-      preserveCodeSwitching: mode.preserveCodeSwitching,
-      systemHint: mode.systemHint
-    });
-  }
-  return buildPromptCandidatesSystemPrompt({
-    sourceLang,
-    targetLang,
-    promptSlots: interpolatedSlots,
-    context: options.context,
-    promptRule: mode.systemHint,
-    killList: combinedKillList,
-    globalKillList: options.globalKillList
-  });
-}
-async function executeModeRunner(text, mode, userConfig = {}) {
-  const trimmed = text.trim();
-  if (!trimmed) return null;
-  const diskConfig = loadUserLingualConfig();
-  const cfg = { ...DEFAULT_CONFIG, ...diskConfig, ...userConfig };
-  if (!shouldTriggerTranslation(trimmed, cfg.sourceLang, true)) {
-    return null;
-  }
-  const resolvedReasoning = mode.reasoning ?? cfg.reasoning ?? "low";
-  const effectiveCfg = {
-    ...cfg,
-    reasoning: resolvedReasoning
-  };
-  const sysPrompt = compileModeSystemPrompt(mode, {
-    sourceLang: effectiveCfg.sourceLang,
-    targetLang: effectiveCfg.targetLang,
-    explainLang: effectiveCfg.explainLang,
-    globalKillList: effectiveCfg.globalKillList,
-    context: effectiveCfg.context || userConfig.context
-  });
-  const raw = await executeLlmCompletion(trimmed, sysPrompt, effectiveCfg);
-  if (typeof raw !== "string" || !raw.trim()) return null;
-  const obj = repairAndParseJsonObject(raw);
-  if (!obj) {
-    const fallbackSingle = extractCleanJsonField(raw, mode.slots[0]?.id || "prompt");
-    if (fallbackSingle) {
-      return [{ id: mode.slots[0]?.id || "concise", label: mode.slots[0]?.label || "Direct", content: fallbackSingle }];
-    }
-    return null;
-  }
-  const enabledSlots = mode.slots.filter((s) => s.enabled !== false);
-  const vocabSlot = enabledSlots.find((s) => s.role === "vocab" || s.id === "vocab" || s.id === "fixes");
-  const extractedVocab = vocabSlot && !BLOCKED_JSON_KEYS.has(vocabSlot.id) && typeof obj[vocabSlot.id] === "string" && obj[vocabSlot.id].trim() ? obj[vocabSlot.id].trim() : typeof obj.fixes === "string" && obj.fixes.trim() ? obj.fixes.trim() : typeof obj.vocab === "string" && obj.vocab.trim() ? obj.vocab.trim() : void 0;
-  const rewriteSlots = enabledSlots.filter((s) => s.role !== "vocab" && s.id !== "source");
-  const candidates = [];
-  for (const slot of rewriteSlots) {
-    if (BLOCKED_JSON_KEYS.has(slot.id)) continue;
-    let val = obj[slot.id];
-    if (!val) {
-      if (slot.id === "fixed" && typeof obj.fixed === "string") val = obj.fixed;
-      else if (slot.id === "native" && typeof obj.native === "string") val = obj.native;
-      else if (rewriteSlots.length === 1) val = obj.prompt ?? obj.direct_spec ?? obj.fixed ?? obj.spoken;
-    }
-    const meaningVal = typeof obj[`${slot.id}_meaning`] === "string" ? obj[`${slot.id}_meaning`].trim() : void 0;
-    if (typeof val === "string" && val.trim()) {
-      candidates.push({
-        id: slot.id,
-        label: slot.label,
-        content: val.trim(),
-        meaning: meaningVal,
-        ...extractedVocab ? { vocab: extractedVocab } : {},
-        hideWhenLong: Boolean(slot.hideWhenLong)
-      });
-    }
-  }
-  if (mode.primarySlotId && candidates.length > 1) {
-    const pIdx = candidates.findIndex((c) => c.id.toLowerCase() === mode.primarySlotId?.toLowerCase());
-    if (pIdx > 0) {
-      const [primary] = candidates.splice(pIdx, 1);
-      candidates.unshift(primary);
-    }
-  }
-  return candidates.length > 0 ? candidates : null;
-}
-function stripLingualContextWhenOff(systemPrompt, lastUserText = "", tunerArmed = false) {
-  if (!systemPrompt) return systemPrompt;
-  if (tunerArmed || /(?:lingual-tuner|\/lingual\s+(?:tuner|tune|agent)|(?:定制|配置|调整)伴学)/i.test(lastUserText)) {
-    return systemPrompt;
-  }
-  return systemPrompt.replace(/\s*<skill>\s*<name>lingual-tuner<\/name>[\s\S]*?<\/skill>/gi, "").replace(/\s*<skill[^>]*>[\s\S]*?<name>lingual-tuner<\/name>[\s\S]*?<\/skill>/gi, "");
-}
-var MODE_DISPLAY_BY_LANG = {
-  zh: {
-    companion: SEED_NAMES.zh.companion,
-    direct: SEED_NAMES.zh.direct,
-    candidates: SEED_NAMES.zh.candidates,
-    modify: SEED_NAMES.zh.liveFlow,
-    off: "\u5DF2\u5173\u95ED",
-    notifyOff: (p) => `[${p}] \u5DF2\u5207\u6362\u81F3\u30100 \u5DF2\u5173\u95ED (off)\u3011\uFF1A\u5E95\u680F\u9690\u85CF \xB7 \u76D1\u542C\u5DF2\u5378 \xB7 0 Token \u96F6\u8D1F\u62C5`
-  },
-  tw: {
-    companion: SEED_NAMES.tw.companion,
-    direct: SEED_NAMES.tw.direct,
-    candidates: SEED_NAMES.tw.candidates,
-    modify: SEED_NAMES.tw.liveFlow,
-    off: "\u5DF2\u95DC\u9589",
-    notifyOff: (p) => `[${p}] \u5DF2\u5207\u63DB\u81F3\u30100 \u5DF2\u95DC\u9589 (off)\u3011\uFF1A\u5E95\u6B04\u96B1\u85CF \xB7 \u76E3\u807D\u5DF2\u5378 \xB7 0 Token \u96F6\u8CA0\u64D4`
-  },
-  ja: {
-    companion: SEED_NAMES.ja.companion,
-    direct: SEED_NAMES.ja.direct,
-    candidates: SEED_NAMES.ja.candidates,
-    modify: SEED_NAMES.ja.liveFlow,
-    off: "\u30AA\u30D5",
-    notifyOff: (p) => `[${p}] \u30100 \u30AA\u30D5 (off)\u3011\uFF1A\u4E0B\u90E8\u30D0\u30FC\u975E\u8868\u793A\u30FB\u76E3\u8996\u505C\u6B62\u30FB0 Token \u7121\u8CA0\u8377`
-  },
-  ko: {
-    companion: SEED_NAMES.ko.companion,
-    direct: SEED_NAMES.ko.direct,
-    candidates: SEED_NAMES.ko.candidates,
-    modify: SEED_NAMES.ko.liveFlow,
-    off: "\uAEBC\uC9D0",
-    notifyOff: (p) => `[${p}] \u30100 \uAEBC\uC9D0 (off)\u3011\uFF1A\uC0C1\uD0DC \uC228\uAE40 \xB7 \uB9AC\uC2A4\uB108 \uBD84\uB9AC \xB7 0 \uD1A0\uD070`
-  },
-  es: {
-    companion: SEED_NAMES.es.companion,
-    direct: SEED_NAMES.es.direct,
-    candidates: SEED_NAMES.es.candidates,
-    modify: SEED_NAMES.es.liveFlow,
-    off: "Apagado",
-    notifyOff: (p) => `[${p}] Cambiado a [0 Apagado]: Estado oculto \xB7 0 tokens`
-  },
-  fr: {
-    companion: SEED_NAMES.fr.companion,
-    direct: SEED_NAMES.fr.direct,
-    candidates: SEED_NAMES.fr.candidates,
-    modify: SEED_NAMES.fr.liveFlow,
-    off: "D\xE9sactiv\xE9",
-    notifyOff: (p) => `[${p}] Pass\xE9 en mode [0 D\xE9sactiv\xE9] : Statut masqu\xE9 \xB7 0 tokens`
-  },
-  de: {
-    companion: SEED_NAMES.de.companion,
-    direct: SEED_NAMES.de.direct,
-    candidates: SEED_NAMES.de.candidates,
-    modify: SEED_NAMES.de.liveFlow,
-    off: "Aus",
-    notifyOff: (p) => `[${p}] Gewechselt zu [0 Aus]: Status ausgeblendet \xB7 0 Tokens`
-  },
-  ru: {
-    companion: SEED_NAMES.ru.companion,
-    direct: SEED_NAMES.ru.direct,
-    candidates: SEED_NAMES.ru.candidates,
-    modify: SEED_NAMES.ru.liveFlow,
-    off: "\u0412\u044B\u043A\u043B",
-    notifyOff: (p) => `[${p}] \u041F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0435\u043D\u043E \u0432 \u0440\u0435\u0436\u0438\u043C [0 \u0412\u044B\u043A\u043B]: \u0441\u043A\u0440\u044B\u0442 \u0441\u0442\u0430\u0442\u0443\u0441 \xB7 0 \u0442\u043E\u043A\u0435\u043D\u043E\u0432`
-  },
-  en: {
-    companion: SEED_NAMES.en.companion,
-    direct: SEED_NAMES.en.direct,
-    candidates: SEED_NAMES.en.candidates,
-    modify: SEED_NAMES.en.liveFlow,
-    off: "Off",
-    notifyOff: (p) => `[${p}] Switched to [0 Off] mode: Status hidden \xB7 listeners detached \xB7 0 tokens`
-  }
-};
-function resolveModeDisplaySpec(sourceLang = "en") {
-  const norm = (sourceLang || "en").toLowerCase().split("-")[0];
-  return MODE_DISPLAY_BY_LANG[norm] || MODE_DISPLAY_BY_LANG.en;
-}
-var MODE_ALIAS_MAP = {
-  "1": "original",
-  companion: "original",
-  learn: "original",
-  study: "original",
-  original: "original",
-  orig: "original",
-  "\u7EAF\u4F34\u5B66": "original",
-  "\u7D14\u4F34\u5B78": "original",
-  "\u4F34\u5B66": "original",
-  "\u4F34\u8D70": "original",
-  "2": "english",
-  direct: "english",
-  rewrite: "english",
-  refine: "english",
-  english: "english",
-  en: "english",
-  eng: "english",
-  lazy: "english",
-  "\u89C4\u8303\u76F4\u53D1": "english",
-  "\u76F4\u63A5\u6539": "english",
-  "\u76F4\u6539": "english",
-  "\u76F4\u51FA": "english",
-  "\u4ED5\u69D8\u76F4\u884C": "english",
-  "3": "select",
-  candidates: "select",
-  candidate: "select",
-  select: "select",
-  choices: "select",
-  choice: "select",
-  pick: "select",
-  "\u6311\u5019\u9009": "select",
-  "\u6311\u5019\u9078": "select",
-  "\u5019\u9009": "select",
-  "\u5019\u88DC\u9078": "select",
-  "4": "modify",
-  modify: "modify",
-  polish: "modify",
-  fix: "modify",
-  proofread: "modify",
-  raw: "modify",
-  "live-flow": "modify",
-  "\u5B9E\u6218\u72C2\u98D9": "modify",
-  "\u539F\u53E5\u4FEE\u8865": "modify",
-  "\u539F\u53E5\u4FEE\u88DC": "modify",
-  "\u4FEE\u8865": "modify",
-  "\u5B9F\u6226\u75BE\u8D70": "modify",
-  "\u539F\u6587\u4FEE\u6B63": "modify",
-  "0": "off",
-  off: "off",
-  disable: "off",
-  stop: "off",
-  "\u5DF2\u5173\u95ED": "off",
-  "\u5DF2\u95DC\u9589": "off",
-  "\u5173\u95ED": "off",
-  "\u30AA\u30D5": "off"
-};
-function normalizeLingualModeInput(raw) {
-  if (!raw) return null;
-  return MODE_ALIAS_MAP[raw.trim().toLowerCase()] || null;
-}
-var CURRENT_FEATURE_BANNER_VERSION = "0.6.0";
-function normalizeLocaleTag(raw) {
-  return (raw || "").toLowerCase().replace(/_/g, "-").split(".")[0];
-}
-function isTraditionalChineseLocale(tag) {
-  return tag.startsWith("zh-tw") || tag.startsWith("zh-hk") || tag.startsWith("zh-hant") || tag === "zh-mo";
-}
-function resolveReleaseBannerLang(explicitSourceLang, sessionEntries) {
-  const supported = /* @__PURE__ */ new Set(["zh", "tw", "ja", "ko", "es", "fr", "de", "ru", "en"]);
-  if (explicitSourceLang && explicitSourceLang.trim()) {
-    const clean = explicitSourceLang.trim().toLowerCase().split(/[-_]/)[0];
-    return supported.has(clean) ? clean : "en";
-  }
-  if (Array.isArray(sessionEntries) && sessionEntries.length > 0) {
-    for (let i = sessionEntries.length - 1; i >= 0; i--) {
-      const e = sessionEntries[i];
-      if (e?.type === "message" && e?.message?.role === "user") {
-        const text = Array.isArray(e.message.content) ? e.message.content.map((c) => c?.text || "").join(" ") : String(e.message.content || "");
-        if (/[\u3040-\u309f\u30a0-\u30ff]/.test(text)) return "ja";
-        if (/[\uac00-\ud7af]/.test(text)) return "ko";
-        if (/[\u0400-\u04ff]/.test(text)) return "ru";
-        if (/[\u4e00-\u9fa5]/.test(text)) return "zh";
-      }
-    }
-  }
-  try {
-    const i18nFile = import_node_path.default.join(import_node_os.default.homedir(), ".config", "rpiv-i18n", "config.json");
-    if (import_node_fs.default.existsSync(i18nFile)) {
-      const raw = JSON.parse(import_node_fs.default.readFileSync(i18nFile, "utf8"));
-      const loc = normalizeLocaleTag(String(raw?.locale || raw?.lang || ""));
-      if (isTraditionalChineseLocale(loc)) return "tw";
-      const prefix = loc.split("-")[0];
-      if (supported.has(prefix)) return prefix;
-    }
-  } catch {
-  }
-  try {
-    const envLocale = normalizeLocaleTag(
-      process.env.LC_ALL || process.env.LANGUAGE || process.env.LANG || Intl.DateTimeFormat().resolvedOptions().locale || "en"
-    );
-    if (isTraditionalChineseLocale(envLocale)) return "tw";
-    const prefix = envLocale.split("-")[0];
-    if (supported.has(prefix)) return prefix;
-  } catch {
-  }
-  return "en";
-}
-function resolveSelectPrompts(lang = "en", candidatesCount = 3) {
-  const norm = (lang || "en").toLowerCase().split("-")[0];
-  const selectPrompts = {
-    zh: {
-      title: "\u2726 \u6311\u5019\u9009\u53D1\u9001",
-      keepOrig: "\u539F\u8BDD\u76F4\u53D1",
-      hint: `\u6309\u6570\u5B57 1-${candidatesCount} \u76F4\u63A5\u53D1\u51FA \xB7 \u2190\u2192/\u2191\u2193 \u5207\u6362 Enter \u786E\u8BA4 \xB7 0/Esc \u53D1\u539F\u8BDD`
-    },
-    tw: {
-      title: "\u2726 \u6311\u5019\u9078\u767C\u9001",
-      keepOrig: "\u539F\u8A71\u76F4\u767C",
-      hint: `\u6309\u6578\u5B57 1-${candidatesCount} \u76F4\u63A5\u767C\u51FA \xB7 \u2190\u2192/\u2191\u2193 \u5207\u63DB Enter \u78BA\u8A8D \xB7 0/Esc \u767C\u539F\u8A71`
-    },
-    ja: {
-      title: "\u2726 \u5019\u88DC\u3092\u9078\u3093\u3067\u9001\u4FE1",
-      keepOrig: "\u539F\u6587\u306E\u307E\u307E",
-      hint: `\u6570\u5B57 1-${candidatesCount} \u3067\u5373\u9001\u4FE1 \xB7 \u2190\u2192/\u2191\u2193 \u9078\u629E Enter \u78BA\u5B9A \xB7 0/Esc \u539F\u6587\u9001\u4FE1`
-    },
-    ko: {
-      title: "\u2726 \uD6C4\uBCF4 \uC120\uD0DD \uC804\uC1A1",
-      keepOrig: "\uC6D0\uBB38 \uC804\uC1A1",
-      hint: `\uC22B\uC790 1-${candidatesCount} \uC989\uC2DC \uC804\uC1A1 \xB7 \u2190\u2192/\u2191\u2193 Enter \uD655\uC778 \xB7 0/Esc \uC6D0\uBB38 \uC804\uC1A1`
-    },
-    es: {
-      title: "\u2726 Elegir candidato",
-      keepOrig: "Texto original",
-      hint: `1-${candidatesCount} enviar \xB7 \u2190\u2192/\u2191\u2193 Enter confirmar \xB7 0/Esc original`
-    },
-    fr: {
-      title: "\u2726 Choisir une variante",
-      keepOrig: "Texte original",
-      hint: `1-${candidatesCount} envoyer \xB7 \u2190\u2192/\u2191\u2193 Entr\xE9e valider \xB7 0/Esc original`
-    },
-    de: {
-      title: "\u2726 Variante w\xE4hlen",
-      keepOrig: "Originaltext",
-      hint: `1-${candidatesCount} senden \xB7 \u2190\u2192/\u2191\u2193 Eingabe best\xE4tigen \xB7 0/Esc Original`
-    },
-    ru: {
-      title: "\u2726 \u0412\u044B\u0431\u043E\u0440 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u0430",
-      keepOrig: "\u0418\u0441\u0445\u043E\u0434\u043D\u044B\u0439 \u0442\u0435\u043A\u0441\u0442",
-      hint: `1-${candidatesCount} \u043E\u0442\u043F\u0440\u0430\u0432\u0438\u0442\u044C \xB7 \u2190\u2192/\u2191\u2193 Enter \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044C \xB7 0/Esc \u0438\u0441\u0445\u043E\u0434\u043D\u044B\u0439`
-    },
-    en: {
-      title: "\u2726 Pick candidate",
-      keepOrig: "Send original",
-      hint: `1-${candidatesCount} send \xB7 \u2190\u2192/\u2191\u2193 Enter \xB7 0/Esc original`
-    }
-  };
-  return selectPrompts[norm] || selectPrompts.en;
-}
-function formatReleaseBannerLines(sourceLang = "en", maxCols = 80, fg = (_c, t) => t) {
-  const norm = (sourceLang || "en").toLowerCase().split("-")[0];
-  const effectiveCols = typeof maxCols === "number" && maxCols > 0 ? maxCols : 80;
-  const copyByLang = {
-    zh: {
-      title: "\xB7 [pi-lingual v0.6.0] \u4E09\u6838\u51FA\u5382\uFF1A\u4F34\u5B66 \xB7 \u89C4\u8303\u76F4\u53D1 \xB7 \u5B9E\u6218\u72C2\u98D9",
-      subtitle: "\u2502 \u5728 AI \u751F\u6210\u7684 5-15 \u79D2\u95F4\u9699\u987A\u624B\u6361\u8BED\u611F\uFF1B\u63D0\u793A\u8BCD\u59CB\u7EC8\u7EAF\u51C0\u82F1\u6587",
-      rows: [
-        "\u250C [\u5B9A\u5236\u4E2D\u5FC3 \xB7 Tuner] \u6572 /tuner \u8DDF AI \u8BF4\u8BDD\uFF0C\u968F\u610F\u589E\u5220\u6539\u6A21\u5F0F",
-        "\u2502   (4 \u5927\u914D\u88C5\u5C31\u7EEA\uFF1Aspec \u538B\u94F8 \xB7 commit \u8131\u6C34 \xB7 oss \u5BF9\u7EBF \xB7 yap \u53D1\u63A8)",
-        "\u251C [1 \u7EAF\u4F34\u5B66 \xB7 companion] \u4E2D\u6587\u539F\u6837\u76F4\u53D1\uFF1B\u4E0A\u65B9\u6D6E\u51FA\u53CC\u8BED\u5BF9\u7167\u5361",
-        "\u251C [2 \u89C4\u8303\u76F4\u53D1 \xB7 direct] \u6572\u4E2D\u6587\uFF0C0ms \u8F6C\u6210\u89C4\u8303\u82F1\u6587\u5DE5\u7A0B\u6307\u4EE4",
-        "\u251C [3 \u5B9E\u6218\u72C2\u98D9 \xB7 live-flow] \u6253\u82F1\u6587\uFF1B\u53EA\u4FEE\u9519\u8BCD\uFF0C\u7C97\u53E3\u60C5\u7EEA 100% \u4FDD\u7559",
-        "\u2514   (/lingual 1|2|3 \u6309\u6CE8\u518C\u8868\u987A\u5E8F\uFF1B/lingual <id> \u6C38\u8FDC\u6709\u6548)"
-      ]
-    },
-    tw: {
-      title: "\xB7 [pi-lingual v0.6.0] \u4E09\u6838\u51FA\u5EE0\uFF1A\u7D14\u4F34\u5B78 \xB7 \u898F\u7BC4\u76F4\u767C \xB7 \u5BE6\u6230\u72C2\u98C6",
-      subtitle: "\u2502 \u5728 AI \u751F\u6210\u7684 5-15 \u79D2\u9593\u9699\u9806\u624B\u64BF\u8A9E\u611F\uFF1B\u63D0\u793A\u8A5E\u59CB\u7D42\u7D14\u6DE8\u82F1\u6587",
-      rows: [
-        "\u250C [\u5B9A\u88FD\u4E2D\u5FC3 \xB7 Tuner] \u6572 /tuner \u8DDF AI \u8AAA\u8A71\uFF0C\u96A8\u610F\u589E\u522A\u6539\u6A21\u5F0F",
-        "\u2502   (4 \u5927\u914D\u88DD\u5C31\u7DD2\uFF1Aspec \u58D3\u9444 \xB7 commit \u812B\u6C34 \xB7 oss \u5C0D\u7DDA \xB7 yap \u767C\u63A8)",
-        "\u251C [1 \u7D14\u4F34\u5B78 \xB7 companion] \u4E2D\u6587\u539F\u6A23\u76F4\u767C\uFF1B\u4E0A\u65B9\u6D6E\u51FA\u96D9\u8A9E\u5C0D\u7167\u5361",
-        "\u251C [2 \u898F\u7BC4\u76F4\u767C \xB7 direct] \u6572\u4E2D\u6587\uFF0C0ms \u8F49\u6210\u898F\u7BC4\u82F1\u6587\u5DE5\u7A0B\u6307\u4EE4",
-        "\u251C [3 \u5BE6\u6230\u72C2\u98C6 \xB7 live-flow] \u6253\u82F1\u6587\uFF1B\u53EA\u4FEE\u932F\u8A5E\uFF0C\u7C97\u53E3\u60C5\u7DD2 100% \u4FDD\u7559",
-        "\u2514   (/lingual 1|2|3 \u6309\u8A3B\u518A\u8868\u9806\u5E8F\uFF1B/lingual <id> \u6C38\u9060\u6709\u6548)"
-      ]
-    },
-    ja: {
-      title: "\xB7 [pi-lingual v0.6.0] 3\u30B3\u30A2\uFF1A\u4F34\u8D70 \xB7 \u4ED5\u69D8\u76F4\u884C \xB7 \u5B9F\u6226\u75BE\u8D70",
-      subtitle: "\u2502 AI \u751F\u6210\u306E 5-15 \u79D2\u306B\u8A9E\u611F\u3092\u62FE\u3046\uFF1B\u30D7\u30ED\u30F3\u30D7\u30C8\u306F\u5E38\u306B\u7D14\u82F1\u8A9E",
-      rows: [
-        "\u250C [\u8A2D\u8A08\u30BB\u30F3\u30BF\u30FC \xB7 Tuner] /tuner \u3067 AI \u3068\u5BFE\u8A71\u3057\u30E2\u30FC\u30C9\u3092\u7DE8\u96C6",
-        "\u2502   (4\u5927\u30EC\u30B7\u30D4\uFF1Aspec \u5727\u7E2E \xB7 commit \u8131\u6C34 \xB7 oss \u5BFE\u8AD6 \xB7 yap \u6295\u7A3F)",
-        "\u251C [1 \u4F34\u8D70 \xB7 companion] \u6BCD\u8A9E\u3092\u305D\u306E\u307E\u307E\u9001\u4FE1\uFF1B\u4E0A\u90E8\u306B\u4E8C\u8A00\u8A9E\u30AB\u30FC\u30C9",
-        "\u251C [2 \u4ED5\u69D8\u76F4\u884C \xB7 direct] 0ms \u3067\u6BCD\u8A9E \u2794 \u898F\u7BC4\u7684\u306A\u82F1\u8A9E\u4ED5\u69D8\u306B\u6574\u5F62",
-        "\u251C [3 \u5B9F\u6226\u75BE\u8D70 \xB7 live-flow] \u82F1\u8A9E\u5165\u529B\uFF1B\u8AA4\u5B57\u306E\u307F\u4FEE\u6B63\u3001\u611F\u60C5\u306F\u4FDD\u6301",
-        "\u2514   (/lingual 1|2|3 \u306F\u767B\u9332\u9806\uFF1B/lingual <id> \u306F\u5E38\u306B\u6709\u52B9)"
-      ]
-    },
-    ko: {
-      title: "\xB7 [pi-lingual v0.6.0] 3\uCF54\uC5B4: \uB3D9\uD589\uD559\uC2B5 \xB7 \uB17C\uB9AC\uC815\uC81C \xB7 \uC2E4\uC804\uC9C8\uC8FC",
-      subtitle: "\u2502 AI \uC0DD\uC131 5-15\uCD08\uC5D0 \uC5B4\uAC10\uC744 \uC90D\uB294\uB2E4; \uD504\uB86C\uD504\uD2B8\uB294 \uC21C\uC218 \uC601\uC5B4",
-      rows: [
-        "\u250C [\uC124\uACC4 \uC13C\uD130 \xB7 Tuner] /tuner \uB85C AI \uC640 \uBAA8\uB4DC\uB97C \uD3B8\uC9D1",
-        "\u2502   (4\uB300 \uB808\uC2DC\uD53C: spec \xB7 commit \xB7 oss \xB7 yap)",
-        "\u251C [1 \uB3D9\uD589\uD559\uC2B5 \xB7 companion] \uBAA8\uAD6D\uC5B4 \uC6D0\uBB38 \uC804\uC1A1; \uC774\uC911\uC5B8\uC5B4 \uCE74\uB4DC",
-        "\u251C [2 \uB17C\uB9AC\uC815\uC81C \xB7 direct] 0ms \uB85C \uBAA8\uAD6D\uC5B4 \u2794 \uADDC\uACA9 \uC601\uC5B4 \uC0AC\uC591",
-        "\u251C [3 \uC2E4\uC804\uC9C8\uC8FC \xB7 live-flow] \uC601\uC5B4 \uC785\uB825; \uC624\uD0C0\uB9CC \uC218\uC815, \uAC10\uC815 \uC720\uC9C0",
-        "\u2514   (/lingual 1|2|3 \uC740 \uB4F1\uB85D \uC21C\uC11C; /lingual <id> \uB294 \uD56D\uC0C1 \uC720\uD6A8)"
-      ]
-    },
-    es: {
-      title: "\xB7 [pi-lingual v0.6.0] Tres n\xFAcleos: Compa\xF1ero \xB7 Directo \xB7 Live Flow",
-      subtitle: "\u2502 Aprovecha los 5-15 s; tu prompt siempre en ingl\xE9s limpio",
-      rows: [
-        "\u250C [Centro Tuner] /tuner para crear o editar modos con AI",
-        "\u2502   (4 recetas: spec \xB7 commit \xB7 oss \xB7 yap)",
-        "\u251C [1 Aprendizaje \xB7 companion] Idioma nativo intacto; tarjeta arriba",
-        "\u251C [2 Directo L\xF3gico \xB7 direct] 0ms nativo \u2794 especificaci\xF3n inglesa",
-        "\u251C [3 Flujo en Vivo \xB7 live-flow] Escribe en ingl\xE9s; solo corrige erratas",
-        "\u2514   (/lingual 1|2|3 por registro; /lingual <id> siempre funciona)"
-      ]
-    },
-    fr: {
-      title: "\xB7 [pi-lingual v0.6.0] Trois c\u0153urs : Compagnon \xB7 Direct \xB7 Live Flow",
-      subtitle: "\u2502 Profitez des 5-15 s ; prompt toujours en anglais propre",
-      rows: [
-        "\u250C [Centre Tuner]   Tapez /tuner pour cr\xE9er ou modifier des modes",
-        "\u2502   (4 recettes : spec \xB7 commit \xB7 oss \xB7 yap)",
-        "\u251C [1 Compagnon \xB7 companion] Langue native brute ; carte au-dessus",
-        "\u251C [2 Direct Logique \xB7 direct] 0ms natif \u2794 spec anglaise structur\xE9e",
-        "\u251C [3 Flux en Direct \xB7 live-flow] Tapez en anglais ; seules fautes fix\xE9es",
-        "\u2514   (/lingual 1|2|3 selon registre ; /lingual <id> marche toujours)"
-      ]
-    },
-    de: {
-      title: "\xB7 [pi-lingual v0.6.0] Drei Kerne: Begleitung \xB7 Logik \xB7 Live Flow",
-      subtitle: "\u2502 Nutze die 5-15 s; Prompt bleibt klares Englisch",
-      rows: [
-        "\u250C [Tuner-Zentrale]  /tuner f\xFCr Modi im Gespr\xE4ch",
-        "\u2502   (4 Rezepte: spec \xB7 commit \xB7 oss \xB7 yap)",
-        "\u251C [1 Begleitung \xB7 companion] Muttersprache roh; Karte dar\xFCber",
-        "\u251C [2 Direkte Logik \xB7 direct] 0ms nativ \u2794 englische Spezifikation",
-        "\u251C [3 Live-Fluss \xB7 live-flow] Englisch tippen; nur Fehler korrigiert",
-        "\u2514   (/lingual 1|2|3 nach Registry; /lingual <id> l\xF6st immer auf)"
-      ]
-    },
-    ru: {
-      title: "\xB7 [pi-lingual v0.6.0] \u0422\u0440\u0438 \u044F\u0434\u0440\u0430: \u0421\u043E\u043F\u0440\u043E\u0432\u043E\u0436\u0434\u0435\u043D\u0438\u0435 \xB7 \u041B\u043E\u0433\u0438\u043A\u0430 \xB7 Live Flow",
-      subtitle: "\u2502 \u041B\u043E\u0432\u0438\u0442\u0435 \u044F\u0437\u044B\u043A \u0432 \u043F\u0430\u0443\u0437\u0435 5-15 \u0441; \u043F\u0440\u043E\u043C\u043F\u0442 \u2014 \u0447\u0438\u0441\u0442\u044B\u0439 \u0430\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u0438\u0439",
-      rows: [
-        "\u250C [\u0426\u0435\u043D\u0442\u0440 Tuner]    /tuner \u2014 \u043F\u0440\u0430\u0432\u044C\u0442\u0435 \u0440\u0435\u0436\u0438\u043C\u044B \u0432 \u0434\u0438\u0430\u043B\u043E\u0433\u0435",
-        "\u2502   (4 \u0440\u0435\u0446\u0435\u043F\u0442\u0430: spec \xB7 commit \xB7 oss \xB7 yap)",
-        "\u251C [1 \u0421\u043E\u043F\u0440\u043E\u0432\u043E\u0436\u0434\u0435\u043D\u0438\u0435 \xB7 companion] \u0420\u043E\u0434\u043D\u043E\u0439 \u0442\u0435\u043A\u0441\u0442 \u043A\u0430\u043A \u0435\u0441\u0442\u044C; \u043A\u0430\u0440\u0442\u043E\u0447\u043A\u0430",
-        "\u251C [2 \u041F\u0440\u044F\u043C\u043E\u0439 \u043F\u043E\u0442\u043E\u043A \xB7 direct] 0ms \u0440\u043E\u0434\u043D\u043E\u0439 \u2794 \u0430\u043D\u0433\u043B. \u0441\u043F\u0435\u0446\u0438\u0444\u0438\u043A\u0430\u0446\u0438\u044F",
-        "\u251C [3 \u0416\u0438\u0432\u043E\u0439 \u043F\u043E\u0442\u043E\u043A \xB7 live-flow] English-\u0432\u0432\u043E\u0434; \u043F\u0440\u0430\u0432\u044F\u0442\u0441\u044F \u0442\u043E\u043B\u044C\u043A\u043E \u043E\u043F\u0435\u0447\u0430\u0442\u043A\u0438",
-        "\u2514   (/lingual 1|2|3 \u043F\u043E \u0440\u0435\u0435\u0441\u0442\u0440\u0443; /lingual <id> \u0432\u0441\u0435\u0433\u0434\u0430 \u0440\u0430\u0431\u043E\u0442\u0430\u0435\u0442)"
-      ]
-    },
-    en: {
-      title: "\xB7 [pi-lingual v0.6.0] Three cores: Companion \xB7 Spec \xB7 Live Flow",
-      subtitle: "\u2502 Catch phrasing in the 5-15 s gap; prompts stay clean English",
-      rows: [
-        "\u250C [Architect Tuner] Run /tuner to add or edit modes with AI",
-        "\u2502   (4 tactical loadouts: spec \xB7 commit \xB7 oss \xB7 yap)",
-        "\u251C [1 Companion \xB7 companion] Native text sent raw; card above",
-        "\u251C [2 Logical Spec \xB7 direct] 0ms native \u2794 imperative English spec",
-        "\u251C [3 Live Flow \xB7 live-flow] Draft English; only typos fixed, tone kept",
-        "\u2514   (/lingual 1|2|3 = registry order; /lingual <id> always works)"
-      ]
-    }
-  };
-  const c = copyByLang[norm] || copyByLang.en;
-  const allRawLines = [c.title, c.subtitle, ...c.rows];
-  return allRawLines.map((line) => truncateVisual(`  ${fg("muted", line)}`, effectiveCols));
-}
-
-// src/fsm.ts
-var LingualSessionController = class {
-  activeAbortController = null;
-  currentGeneration = 0;
-  // Pagination state management
-  pagedResults = [];
-  currentPageIndex = 0;
-  totalExpectedPages = 1;
-  lastResult = null;
-  /**
-   * Begins a new session request:
-   * 1. Aborts in-flight HTTP stream/request from previous turn;
-   * 2. Increments monotonic generation counter;
-   * 3. Binds a fresh AbortSignal.
-   */
-  beginRequest() {
-    this.abortActive();
-    this.activeAbortController = new AbortController();
-    const generation = ++this.currentGeneration;
-    return {
-      generation,
-      signal: this.activeAbortController.signal
-    };
-  }
-  /**
-   * Aborts currently active in-flight network requests.
-   */
-  abortActive() {
-    if (this.activeAbortController) {
-      this.activeAbortController.abort();
-      this.activeAbortController = null;
-    }
-  }
-  /**
-   * Checks if the specified generation token is still the latest active generation.
-   */
-  isLatest(generation) {
-    return this.currentGeneration === generation;
-  }
-  /**
-   * Gets the latest generation counter value.
-   */
-  getCurrentGeneration() {
-    return this.currentGeneration;
-  }
-  /**
-   * Initializes the pagination pool when input is split into multiple semantic chunks.
-   */
-  initPagination(totalExpectedPages) {
-    this.pagedResults = [];
-    this.currentPageIndex = 0;
-    this.totalExpectedPages = Math.max(1, totalExpectedPages);
-  }
-  /**
-   * Sets page result for a chunk index with generation guard to reject stale writes.
-   */
-  setPageResult(chunkIndex, result, generation) {
-    if (!this.isLatest(generation)) {
-      return false;
-    }
-    this.pagedResults[chunkIndex] = result;
-    this.lastResult = result;
-    return true;
-  }
-  /**
-   * Gets translation result for currently active page.
-   */
-  getActiveResult() {
-    const readyList = this.getReadyPages();
-    if (readyList.length === 0) {
-      return this.lastResult;
-    }
-    if (this.currentPageIndex >= readyList.length) {
-      this.currentPageIndex = Math.max(0, readyList.length - 1);
-    }
-    return readyList[this.currentPageIndex] || null;
-  }
-  /**
-   * Gets all ready page results.
-   */
-  getReadyPages() {
-    return this.pagedResults.filter((item) => Boolean(item));
-  }
-  /**
-   * Gets a snapshot of the current pagination state.
-   */
-  getPaginationSnapshot() {
-    const readyCount = this.getReadyPages().length;
-    const totalPages = Math.max(readyCount, this.totalExpectedPages);
-    return {
-      pageIndex: this.currentPageIndex,
-      totalPages,
-      readyCount,
-      isMultiPage: totalPages > 1
-    };
-  }
-  /**
-   * Cycles to the next ready page.
-   * Returns true if pagination changed.
-   */
-  nextPage() {
-    const readyList = this.getReadyPages();
-    if (readyList.length <= 1) return false;
-    this.currentPageIndex = (this.currentPageIndex + 1) % readyList.length;
-    return true;
-  }
-  /**
-   * Cycles to the previous ready page.
-   * Returns true if pagination changed.
-   */
-  prevPage() {
-    const readyList = this.getReadyPages();
-    if (readyList.length <= 1) return false;
-    this.currentPageIndex = (this.currentPageIndex - 1 + readyList.length) % readyList.length;
-    return true;
-  }
-  /**
-   * Clears pagination pool on non-translatable input or teardown to prevent ghost cards.
-   */
-  clearPagination() {
-    this.pagedResults = [];
-    this.currentPageIndex = 0;
-    this.totalExpectedPages = 1;
-  }
-  /**
-   * Gets the most recent translation result for /last replay.
-   */
-  getLastResult() {
-    return this.lastResult;
-  }
-  /**
-   * Explicitly sets the last translation result.
-   */
-  setLastResult(result) {
-    this.lastResult = result;
-  }
-  /**
-   * Resets the controller completely.
-   */
-  reset() {
-    this.abortActive();
-    this.clearPagination();
-    this.lastResult = null;
-  }
-};
 
 // src/sanitizer.ts
 var TARGETED_CLIPBOARD_PATH_REGEX = /(?:[a-zA-Z]:[\\\/](?:[^:\r\n\t]+[\\\/])?pi-clipboard-[a-zA-Z0-9\-]+\.png|\/(?:[^\r\n\t]+[\\\/])?pi-clipboard-[a-zA-Z0-9\-]+\.png)/gi;
@@ -5052,49 +4479,909 @@ function sanitizePromptForTranslation(raw) {
     rawPayload
   };
 }
+function ensureCodeTokensPreserved(sourceText, rewrittenText) {
+  if (!sourceText || !rewrittenText) return rewrittenText;
+  const regex = /`([^`\r\n]+)`/g;
+  const seen = /* @__PURE__ */ new Set();
+  const tokens = [];
+  let match;
+  while ((match = regex.exec(sourceText)) !== null) {
+    const rawTok = match[1];
+    const tok = rawTok.trim();
+    if (tok.length >= 2 && tok.length <= 64 && !seen.has(tok)) {
+      seen.add(tok);
+      tokens.push(tok);
+    }
+  }
+  if (tokens.length === 0) return rewrittenText;
+  const missing = tokens.filter((tok) => !rewrittenText.includes(tok));
+  if (missing.length === 0) return rewrittenText;
+  const appendix = ` (${missing.map((t) => `\`${t}\``).join(", ")})`;
+  return `${rewrittenText.trimEnd()}${appendix}`;
+}
 
-// src/extension.ts
-var initialDiskConfig = isTestEnvironment() ? {} : loadUserLingualConfig();
-var initialSourceLang = initialDiskConfig.sourceLang || (isTestEnvironment() ? "en" : resolveReleaseBannerLang());
-var initialTargetLang = initialDiskConfig.targetLang || (initialSourceLang === "en" ? "ja" : "en");
-var initialSlotPreset = initialDiskConfig.slotPreset;
-var initialSlots = Array.isArray(initialDiskConfig.slots) && initialDiskConfig.slots.length > 0 ? initialDiskConfig.slots : initialSlotPreset ? resolveSlotsForPreset(initialSlotPreset, initialSourceLang) : getDefaultSlots(initialSourceLang);
-var initialDirectSlots = Array.isArray(initialDiskConfig.directSlots) && initialDiskConfig.directSlots.length > 0 ? initialDiskConfig.directSlots : getDefaultDirectSlots(initialSourceLang);
-var initialPromptSlots = Array.isArray(initialDiskConfig.promptSlots) && initialDiskConfig.promptSlots.length > 0 ? initialDiskConfig.promptSlots : getDefaultPromptSlots(initialSourceLang);
-var initialModifySlots = Array.isArray(initialDiskConfig.modifySlots) && initialDiskConfig.modifySlots.length > 0 ? initialDiskConfig.modifySlots : getDefaultModifySlots(initialSourceLang);
-var initialModes = resolveModesFromConfig(initialDiskConfig, initialSourceLang);
-var initialLabels = resolveLabelsForLang(initialSourceLang, initialDiskConfig.labels, initialTargetLang);
-var initialRawMode = initialDiskConfig.activeModeId || initialDiskConfig.mode || "companion";
-var initialNormalizedMode = normalizeActiveModeId(
-  { mode: initialRawMode, activeModeId: initialRawMode },
-  initialModes
-);
-var state = {
-  mode: initialNormalizedMode,
-  activeModeId: initialNormalizedMode,
-  defaultMode: initialDiskConfig.defaultMode || "companion",
-  modeLocked: Boolean(initialDiskConfig.modeLocked),
-  compact: Boolean(initialDiskConfig.compact),
-  sourceLang: initialSourceLang,
-  targetLang: initialTargetLang,
-  explainLang: initialDiskConfig.explainLang || (initialSourceLang === "zh" || initialSourceLang === "tw" ? "zh" : initialSourceLang),
-  selectedModel: initialDiskConfig.selectedModel || "auto",
-  slotPreset: initialSlotPreset || "",
-  slots: initialSlots,
-  directSlots: initialDirectSlots,
-  promptSlots: initialPromptSlots,
-  modifySlots: initialModifySlots,
-  modes: initialModes,
-  labels: initialLabels
+// src/banner.ts
+var import_node_fs2 = __toESM(require("fs"), 1);
+var import_node_path2 = __toESM(require("path"), 1);
+var import_node_os2 = __toESM(require("os"), 1);
+var CURRENT_FEATURE_BANNER_VERSION = "0.7.0";
+var MODE_DISPLAY_BY_LANG = {
+  zh: {
+    companion: SEED_NAMES.zh.companion,
+    direct: SEED_NAMES.zh.direct,
+    candidates: SEED_NAMES.zh.candidates,
+    modify: SEED_NAMES.zh.liveFlow,
+    off: "\u5DF2\u5173\u95ED",
+    notifyOff: (p) => `[${p}] \u5DF2\u5207\u6362\u81F3\u30100 \u5DF2\u5173\u95ED (off)\u3011\uFF1A\u5E95\u680F\u9690\u85CF \xB7 \u76D1\u542C\u5DF2\u5378 \xB7 0 Token \u96F6\u8D1F\u62C5`
+  },
+  tw: {
+    companion: SEED_NAMES.tw.companion,
+    direct: SEED_NAMES.tw.direct,
+    candidates: SEED_NAMES.tw.candidates,
+    modify: SEED_NAMES.tw.liveFlow,
+    off: "\u5DF2\u95DC\u9589",
+    notifyOff: (p) => `[${p}] \u5DF2\u5207\u63DB\u81F3\u30100 \u5DF2\u95DC\u9589 (off)\u3011\uFF1A\u5E95\u6B04\u96B1\u85CF \xB7 \u76E3\u807D\u5DF2\u5378 \xB7 0 Token \u96F6\u8CA0\u64D4`
+  },
+  ja: {
+    companion: SEED_NAMES.ja.companion,
+    direct: SEED_NAMES.ja.direct,
+    candidates: SEED_NAMES.ja.candidates,
+    modify: SEED_NAMES.ja.liveFlow,
+    off: "\u30AA\u30D5",
+    notifyOff: (p) => `[${p}] \u30100 \u30AA\u30D5 (off)\u3011\uFF1A\u4E0B\u90E8\u30D0\u30FC\u975E\u8868\u793A\u30FB\u76E3\u8996\u505C\u6B62\u30FB0 Token \u7121\u8CA0\u8377`
+  },
+  ko: {
+    companion: SEED_NAMES.ko.companion,
+    direct: SEED_NAMES.ko.direct,
+    candidates: SEED_NAMES.ko.candidates,
+    modify: SEED_NAMES.ko.liveFlow,
+    off: "\uAEBC\uC9D0",
+    notifyOff: (p) => `[${p}] \u30100 \uAEBC\uC9D0 (off)\u3011\uFF1A\uC0C1\uD0DC \uC228\uAE40 \xB7 \uB9AC\uC2A4\uB108 \uBD84\uB9AC \xB7 0 \uD1A0\uD070`
+  },
+  es: {
+    companion: SEED_NAMES.es.companion,
+    direct: SEED_NAMES.es.direct,
+    candidates: SEED_NAMES.es.candidates,
+    modify: SEED_NAMES.es.liveFlow,
+    off: "Apagado",
+    notifyOff: (p) => `[${p}] Cambiado a [0 Apagado]: Estado oculto \xB7 0 tokens`
+  },
+  fr: {
+    companion: SEED_NAMES.fr.companion,
+    direct: SEED_NAMES.fr.direct,
+    candidates: SEED_NAMES.fr.candidates,
+    modify: SEED_NAMES.fr.liveFlow,
+    off: "D\xE9sactiv\xE9",
+    notifyOff: (p) => `[${p}] Pass\xE9 en mode [0 D\xE9sactiv\xE9] : Statut masqu\xE9 \xB7 0 tokens`
+  },
+  de: {
+    companion: SEED_NAMES.de.companion,
+    direct: SEED_NAMES.de.direct,
+    candidates: SEED_NAMES.de.candidates,
+    modify: SEED_NAMES.de.liveFlow,
+    off: "Aus",
+    notifyOff: (p) => `[${p}] Gewechselt zu [0 Aus]: Status ausgeblendet \xB7 0 Tokens`
+  },
+  ru: {
+    companion: SEED_NAMES.ru.companion,
+    direct: SEED_NAMES.ru.direct,
+    candidates: SEED_NAMES.ru.candidates,
+    modify: SEED_NAMES.ru.liveFlow,
+    off: "\u0412\u044B\u043A\u043B",
+    notifyOff: (p) => `[${p}] \u041F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0435\u043D\u043E \u0432 \u0440\u0435\u0436\u0438\u043C [0 \u0412\u044B\u043A\u043B]: \u0441\u043A\u0440\u044B\u0442 \u0441\u0442\u0430\u0442\u0443\u0441 \xB7 0 \u0442\u043E\u043A\u0435\u043D\u043E\u0432`
+  },
+  en: {
+    companion: SEED_NAMES.en.companion,
+    direct: SEED_NAMES.en.direct,
+    candidates: SEED_NAMES.en.candidates,
+    modify: SEED_NAMES.en.liveFlow,
+    off: "Off",
+    notifyOff: (p) => `[${p}] Switched to [0 Off] mode: Status hidden \xB7 listeners detached \xB7 0 tokens`
+  }
 };
-var session = new LingualSessionController();
-var lastContext = null;
+function resolveModeDisplaySpec(sourceLang = "en") {
+  const norm = (sourceLang || "en").toLowerCase().split("-")[0];
+  return MODE_DISPLAY_BY_LANG[norm] || MODE_DISPLAY_BY_LANG.en;
+}
+function normalizeLocaleTag(raw) {
+  return (raw || "").toLowerCase().replace(/_/g, "-").split(".")[0];
+}
+function isTraditionalChineseLocale(tag) {
+  return tag.startsWith("zh-tw") || tag.startsWith("zh-hk") || tag.startsWith("zh-hant") || tag === "zh-mo";
+}
+function resolveReleaseBannerLang(explicitSourceLang, sessionEntries) {
+  const supported = /* @__PURE__ */ new Set(["zh", "tw", "ja", "ko", "es", "fr", "de", "ru", "en"]);
+  if (explicitSourceLang && explicitSourceLang.trim()) {
+    const clean = explicitSourceLang.trim().toLowerCase().split(/[-_]/)[0];
+    return supported.has(clean) ? clean : "en";
+  }
+  if (Array.isArray(sessionEntries) && sessionEntries.length > 0) {
+    for (let i = sessionEntries.length - 1; i >= 0; i--) {
+      const e = sessionEntries[i];
+      if (e?.type === "message" && e?.message?.role === "user") {
+        const text = Array.isArray(e.message.content) ? e.message.content.map((c) => c?.text || "").join(" ") : String(e.message.content || "");
+        if (/[\u3040-\u309f\u30a0-\u30ff]/.test(text)) return "ja";
+        if (/[\uac00-\ud7af]/.test(text)) return "ko";
+        if (/[\u0400-\u04ff]/.test(text)) return "ru";
+        if (/[\u4e00-\u9fa5]/.test(text)) return "zh";
+      }
+    }
+  }
+  try {
+    const i18nFile = import_node_path2.default.join(import_node_os2.default.homedir(), ".config", "rpiv-i18n", "config.json");
+    if (import_node_fs2.default.existsSync(i18nFile)) {
+      const raw = JSON.parse(import_node_fs2.default.readFileSync(i18nFile, "utf8"));
+      const loc = normalizeLocaleTag(String(raw?.locale || raw?.lang || ""));
+      if (isTraditionalChineseLocale(loc)) return "tw";
+      const prefix = loc.split("-")[0];
+      if (supported.has(prefix)) return prefix;
+    }
+  } catch {
+  }
+  try {
+    const envLocale = normalizeLocaleTag(
+      process.env.LC_ALL || process.env.LANGUAGE || process.env.LANG || Intl.DateTimeFormat().resolvedOptions().locale || "en"
+    );
+    if (isTraditionalChineseLocale(envLocale)) return "tw";
+    const prefix = envLocale.split("-")[0];
+    if (supported.has(prefix)) return prefix;
+  } catch {
+  }
+  return "en";
+}
+function resolveSelectPrompts(lang = "en", candidatesCount = 3) {
+  const norm = (lang || "en").toLowerCase().split("-")[0];
+  const selectPrompts = {
+    zh: {
+      title: "\u2726 \u6311\u5019\u9009\u53D1\u9001",
+      keepOrig: "\u539F\u8BDD\u76F4\u53D1",
+      hint: `\u6309\u6570\u5B57 1-${candidatesCount} \u76F4\u63A5\u53D1\u51FA \xB7 \u2190\u2192/\u2191\u2193 \u5207\u6362 Enter \u786E\u8BA4 \xB7 0/Esc \u53D1\u539F\u8BDD`
+    },
+    tw: {
+      title: "\u2726 \u6311\u5019\u9078\u767C\u9001",
+      keepOrig: "\u539F\u8A71\u76F4\u767C",
+      hint: `\u6309\u6578\u5B57 1-${candidatesCount} \u76F4\u63A5\u767C\u51FA \xB7 \u2190\u2192/\u2191\u2193 \u5207\u63DB Enter \u78BA\u8A8D \xB7 0/Esc \u767C\u539F\u8A71`
+    },
+    ja: {
+      title: "\u2726 \u5019\u88DC\u3092\u9078\u3093\u3067\u9001\u4FE1",
+      keepOrig: "\u539F\u6587\u306E\u307E\u307E",
+      hint: `\u6570\u5B57 1-${candidatesCount} \u3067\u5373\u9001\u4FE1 \xB7 \u2190\u2192/\u2191\u2193 \u9078\u629E Enter \u78BA\u5B9A \xB7 0/Esc \u539F\u6587\u9001\u4FE1`
+    },
+    ko: {
+      title: "\u2726 \uD6C4\uBCF4 \uC120\uD0DD \uC804\uC1A1",
+      keepOrig: "\uC6D0\uBB38 \uC804\uC1A1",
+      hint: `\uC22B\uC790 1-${candidatesCount} \uC989\uC2DC \uC804\uC1A1 \xB7 \u2190\u2192/\u2191\u2193 Enter \uD655\uC778 \xB7 0/Esc \uC6D0\uBB38 \uC804\uC1A1`
+    },
+    es: {
+      title: "\u2726 Elegir candidato",
+      keepOrig: "Texto original",
+      hint: `1-${candidatesCount} enviar \xB7 \u2190\u2192/\u2191\u2193 Enter confirmar \xB7 0/Esc original`
+    },
+    fr: {
+      title: "\u2726 Choisir une variante",
+      keepOrig: "Texte original",
+      hint: `1-${candidatesCount} envoyer \xB7 \u2190\u2192/\u2191\u2193 Entr\xE9e valider \xB7 0/Esc original`
+    },
+    de: {
+      title: "\u2726 Variante w\xE4hlen",
+      keepOrig: "Originaltext",
+      hint: `1-${candidatesCount} senden \xB7 \u2190\u2192/\u2191\u2193 Eingabe best\xE4tigen \xB7 0/Esc Original`
+    },
+    ru: {
+      title: "\u2726 \u0412\u044B\u0431\u043E\u0440 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u0430",
+      keepOrig: "\u0418\u0441\u0445\u043E\u0434\u043D\u044B\u0439 \u0442\u0435\u043A\u0441\u0442",
+      hint: `1-${candidatesCount} \u043E\u0442\u043F\u0440\u0430\u0432\u0438\u0442\u044C \xB7 \u2190\u2192/\u2191\u2193 Enter \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044C \xB7 0/Esc \u0438\u0441\u0445\u043E\u0434\u043D\u044B\u0439`
+    },
+    en: {
+      title: "\u2726 Pick candidate",
+      keepOrig: "Send original",
+      hint: `1-${candidatesCount} send \xB7 \u2190\u2192/\u2191\u2193 Enter \xB7 0/Esc original`
+    }
+  };
+  return selectPrompts[norm] || selectPrompts.en;
+}
+function formatReleaseBannerLines(sourceLang = "en", maxCols = 80, fg = (_c, t) => t) {
+  const norm = (sourceLang || "en").toLowerCase().split("-")[0];
+  const effectiveCols = typeof maxCols === "number" && maxCols > 0 ? maxCols : 80;
+  const copyByLang = {
+    zh: {
+      title: "\xB7 [pi-lingual v0.7.0] \u4E09\u6838\u51FA\u5382\uFF1A\u4F34\u5B66 \xB7 \u89C4\u8303\u76F4\u53D1 \xB7 \u5B9E\u6218\u72C2\u98D9",
+      subtitle: "\u2502 \u5728 AI \u751F\u6210\u7684 5-15 \u79D2\u95F4\u9699\u987A\u624B\u6361\u8BED\u611F\uFF1B\u63D0\u793A\u8BCD\u59CB\u7EC8\u7EAF\u51C0\u82F1\u6587",
+      rows: [
+        "\u250C [\u5B9A\u5236\u4E2D\u5FC3 \xB7 Tuner] \u6572 /tuner \u8DDF AI \u8BF4\u8BDD\uFF0C\u968F\u610F\u589E\u5220\u6539\u6A21\u5F0F",
+        "\u2502   (4 \u5927\u914D\u88C5\u5C31\u7EEA\uFF1Aspec \u538B\u94F8 \xB7 commit \u8131\u6C34 \xB7 oss \u5BF9\u7EBF \xB7 yap \u53D1\u63A8)",
+        "\u251C [1 \u7EAF\u4F34\u5B66 \xB7 companion] \u4E2D\u6587\u539F\u6837\u76F4\u53D1\uFF1B\u4E0A\u65B9\u6D6E\u51FA\u53CC\u8BED\u5BF9\u7167\u5361",
+        "\u251C [2 \u89C4\u8303\u76F4\u53D1 \xB7 direct] \u6572\u4E2D\u6587\uFF0C0ms \u8F6C\u6210\u89C4\u8303\u82F1\u6587\u5DE5\u7A0B\u6307\u4EE4",
+        "\u251C [3 \u5B9E\u6218\u72C2\u98D9 \xB7 live-flow] \u6253\u82F1\u6587\uFF1B\u53EA\u4FEE\u9519\u8BCD\uFF0C\u7C97\u53E3\u60C5\u7EEA 100% \u4FDD\u7559",
+        "\u2514   (/lingual 1|2|3 \u6309\u6CE8\u518C\u8868\u987A\u5E8F\uFF1B/lingual <id> \u6C38\u8FDC\u6709\u6548)"
+      ]
+    },
+    tw: {
+      title: "\xB7 [pi-lingual v0.7.0] \u4E09\u6838\u51FA\u5EE0\uFF1A\u7D14\u4F34\u5B78 \xB7 \u898F\u7BC4\u76F4\u767C \xB7 \u5BE6\u6230\u72C2\u98C6",
+      subtitle: "\u2502 \u5728 AI \u751F\u6210\u7684 5-15 \u79D2\u9593\u9699\u9806\u624B\u64BF\u8A9E\u611F\uFF1B\u63D0\u793A\u8A5E\u59CB\u7D42\u7D14\u6DE8\u82F1\u6587",
+      rows: [
+        "\u250C [\u5B9A\u88FD\u4E2D\u5FC3 \xB7 Tuner] \u6572 /tuner \u8DDF AI \u8AAA\u8A71\uFF0C\u96A8\u610F\u589E\u522A\u6539\u6A21\u5F0F",
+        "\u2502   (4 \u5927\u914D\u88DD\u5C31\u7DD2\uFF1Aspec \u58D3\u9444 \xB7 commit \u812B\u6C34 \xB7 oss \u5C0D\u7DDA \xB7 yap \u767C\u63A8)",
+        "\u251C [1 \u7D14\u4F34\u5B78 \xB7 companion] \u4E2D\u6587\u539F\u6A23\u76F4\u767C\uFF1B\u4E0A\u65B9\u6D6E\u51FA\u96D9\u8A9E\u5C0D\u7167\u5361",
+        "\u251C [2 \u898F\u7BC4\u76F4\u767C \xB7 direct] \u6572\u4E2D\u6587\uFF0C0ms \u8F49\u6210\u898F\u7BC4\u82F1\u6587\u5DE5\u7A0B\u6307\u4EE4",
+        "\u251C [3 \u5BE6\u6230\u72C2\u98C6 \xB7 live-flow] \u6253\u82F1\u6587\uFF1B\u53EA\u4FEE\u932F\u8A5E\uFF0C\u7C97\u53E3\u60C5\u7DD2 100% \u4FDD\u7559",
+        "\u2514   (/lingual 1|2|3 \u6309\u8A3B\u518A\u8868\u9806\u5E8F\uFF1B/lingual <id> \u6C38\u9060\u6709\u6548)"
+      ]
+    },
+    ja: {
+      title: "\xB7 [pi-lingual v0.7.0] 3\u30B3\u30A2\uFF1A\u4F34\u8D70 \xB7 \u4ED5\u69D8\u76F4\u884C \xB7 \u5B9F\u6226\u75BE\u8D70",
+      subtitle: "\u2502 AI \u751F\u6210\u306E 5-15 \u79D2\u306B\u8A9E\u611F\u3092\u62FE\u3046\uFF1B\u30D7\u30ED\u30F3\u30D7\u30C8\u306F\u5E38\u306B\u7D14\u82F1\u8A9E",
+      rows: [
+        "\u250C [\u8A2D\u8A08\u30BB\u30F3\u30BF\u30FC \xB7 Tuner] /tuner \u3067 AI \u3068\u5BFE\u8A71\u3057\u30E2\u30FC\u30C9\u3092\u7DE8\u96C6",
+        "\u2502   (4\u5927\u30EC\u30B7\u30D4\uFF1Aspec \u5727\u7E2E \xB7 commit \u8131\u6C34 \xB7 oss \u5BFE\u8AD6 \xB7 yap \u6295\u7A3F)",
+        "\u251C [1 \u4F34\u8D70 \xB7 companion] \u6BCD\u8A9E\u3092\u305D\u306E\u307E\u307E\u9001\u4FE1\uFF1B\u4E0A\u90E8\u306B\u4E8C\u8A00\u8A9E\u30AB\u30FC\u30C9",
+        "\u251C [2 \u4ED5\u69D8\u76F4\u884C \xB7 direct] 0ms \u3067\u6BCD\u8A9E \u2794 \u898F\u7BC4\u7684\u306A\u82F1\u8A9E\u4ED5\u69D8\u306B\u6574\u5F62",
+        "\u251C [3 \u5B9F\u6226\u75BE\u8D70 \xB7 live-flow] \u82F1\u8A9E\u5165\u529B\uFF1B\u8AA4\u5B57\u306E\u307F\u4FEE\u6B63\u3001\u611F\u60C5\u306F\u4FDD\u6301",
+        "\u2514   (/lingual 1|2|3 \u306F\u767B\u9332\u9806\uFF1B/lingual <id> \u306F\u5E38\u306B\u6709\u52B9)"
+      ]
+    },
+    ko: {
+      title: "\xB7 [pi-lingual v0.7.0] 3\uCF54\uC5B4: \uB3D9\uD589\uD559\uC2B5 \xB7 \uB17C\uB9AC\uC815\uC81C \xB7 \uC2E4\uC804\uC9C8\uC8FC",
+      subtitle: "\u2502 AI \uC0DD\uC131 5-15\uCD08\uC5D0 \uC5B4\uAC10\uC744 \uC90D\uB294\uB2E4; \uD504\uB86C\uD504\uD2B8\uB294 \uC21C\uC218 \uC601\uC5B4",
+      rows: [
+        "\u250C [\uC124\uACC4 \uC13C\uD130 \xB7 Tuner] /tuner \uB85C AI \uC640 \uBAA8\uB4DC\uB97C \uD3B8\uC9D1",
+        "\u2502   (4\uB300 \uB808\uC2DC\uD53C: spec \xB7 commit \xB7 oss \xB7 yap)",
+        "\u251C [1 \uB3D9\uD589\uD559\uC2B5 \xB7 companion] \uBAA8\uAD6D\uC5B4 \uC6D0\uBB38 \uC804\uC1A1; \uC774\uC911\uC5B8\uC5B4 \uCE74\uB4DC",
+        "\u251C [2 \uB17C\uB9AC\uC815\uC81C \xB7 direct] 0ms \uB85C \uBAA8\uAD6D\uC5B4 \u2794 \uADDC\uACA9 \uC601\uC5B4 \uC0AC\uC591",
+        "\u251C [3 \uC2E4\uC804\uC9C8\uC8FC \xB7 live-flow] \uC601\uC5B4 \uC785\uB825; \uC624\uD0C0\uB9CC \uC218\uC815, \uAC10\uC815 \uC720\uC9C0",
+        "\u2514   (/lingual 1|2|3 \uC740 \uB4F1\uB85D \uC21C\uC11C; /lingual <id> \uB294 \uD56D\uC0C1 \uC720\uD6A8)"
+      ]
+    },
+    es: {
+      title: "\xB7 [pi-lingual v0.7.0] Tres n\xFAcleos: Compa\xF1ero \xB7 Directo \xB7 Live Flow",
+      subtitle: "\u2502 Aprovecha los 5-15 s; tu prompt siempre en ingl\xE9s limpio",
+      rows: [
+        "\u250C [Centro Tuner] /tuner para crear o editar modos con AI",
+        "\u2502   (4 recetas: spec \xB7 commit \xB7 oss \xB7 yap)",
+        "\u251C [1 Aprendizaje \xB7 companion] Idioma nativo intacto; tarjeta arriba",
+        "\u251C [2 Directo L\xF3gico \xB7 direct] 0ms nativo \u2794 especificaci\xF3n inglesa",
+        "\u251C [3 Flujo en Vivo \xB7 live-flow] Escribe en ingl\xE9s; solo corrige erratas",
+        "\u2514   (/lingual 1|2|3 por registro; /lingual <id> siempre funciona)"
+      ]
+    },
+    fr: {
+      title: "\xB7 [pi-lingual v0.7.0] Trois c\u0153urs : Compagnon \xB7 Direct \xB7 Live Flow",
+      subtitle: "\u2502 Profitez des 5-15 s ; prompt toujours en anglais propre",
+      rows: [
+        "\u250C [Centre Tuner]   Tapez /tuner pour cr\xE9er ou modifier des modes",
+        "\u2502   (4 recettes : spec \xB7 commit \xB7 oss \xB7 yap)",
+        "\u251C [1 Compagnon \xB7 companion] Langue native brute ; carte au-dessus",
+        "\u251C [2 Direct Logique \xB7 direct] 0ms natif \u2794 spec anglaise structur\xE9e",
+        "\u251C [3 Flux en Direct \xB7 live-flow] Tapez en anglais ; seules fautes fix\xE9es",
+        "\u2514   (/lingual 1|2|3 selon registre ; /lingual <id> marche toujours)"
+      ]
+    },
+    de: {
+      title: "\xB7 [pi-lingual v0.7.0] Drei Kerne: Begleitung \xB7 Logik \xB7 Live Flow",
+      subtitle: "\u2502 Nutze die 5-15 s; Prompt bleibt klares Englisch",
+      rows: [
+        "\u250C [Tuner-Zentrale]  /tuner f\xFCr Modi im Gespr\xE4ch",
+        "\u2502   (4 Rezepte: spec \xB7 commit \xB7 oss \xB7 yap)",
+        "\u251C [1 Begleitung \xB7 companion] Muttersprache roh; Karte dar\xFCber",
+        "\u251C [2 Direkte Logik \xB7 direct] 0ms nativ \u2794 englische Spezifikation",
+        "\u251C [3 Live-Fluss \xB7 live-flow] Englisch tippen; nur Fehler korrigiert",
+        "\u2514   (/lingual 1|2|3 nach Registry; /lingual <id> l\xF6st immer auf)"
+      ]
+    },
+    ru: {
+      title: "\xB7 [pi-lingual v0.7.0] \u0422\u0440\u0438 \u044F\u0434\u0440\u0430: \u0421\u043E\u043F\u0440\u043E\u0432\u043E\u0436\u0434\u0435\u043D\u0438\u0435 \xB7 \u041B\u043E\u0433\u0438\u043A\u0430 \xB7 Live Flow",
+      subtitle: "\u2502 \u041B\u043E\u0432\u0438\u0442\u0435 \u044F\u0437\u044B\u043A \u0432 \u043F\u0430\u0443\u0437\u0435 5-15 \u0441; \u043F\u0440\u043E\u043C\u043F\u0442 \u2014 \u0447\u0438\u0441\u0442\u044B\u0439 \u0430\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u0438\u0439",
+      rows: [
+        "\u250C [\u0426\u0435\u043D\u0442\u0440 Tuner]    /tuner \u2014 \u043F\u0440\u0430\u0432\u044C\u0442\u0435 \u0440\u0435\u0436\u0438\u043C\u044B \u0432 \u0434\u0438\u0430\u043B\u043E\u0433\u0435",
+        "\u2502   (4 \u0440\u0435\u0446\u0435\u043F\u0442\u0430: spec \xB7 commit \xB7 oss \xB7 yap)",
+        "\u251C [1 \u0421\u043E\u043F\u0440\u043E\u0432\u043E\u0436\u0434\u0435\u043D\u0438\u0435 \xB7 companion] \u0420\u043E\u0434\u043D\u043E\u0439 \u0442\u0435\u043A\u0441\u0442 \u043A\u0430\u043A \u0435\u0441\u0442\u044C; \u043A\u0430\u0440\u0442\u043E\u0447\u043A\u0430",
+        "\u251C [2 \u041F\u0440\u044F\u043C\u043E\u0439 \u043F\u043E\u0442\u043E\u043A \xB7 direct] 0ms \u0440\u043E\u0434\u043D\u043E\u0439 \u2794 \u0430\u043D\u0433\u043B. \u0441\u043F\u0435\u0446\u0438\u0444\u0438\u043A\u0430\u0446\u0438\u044F",
+        "\u251C [3 \u0416\u0438\u0432\u043E\u0439 \u043F\u043E\u0442\u043E\u043A \xB7 live-flow] English-\u0432\u0432\u043E\u0434; \u043F\u0440\u0430\u0432\u044F\u0442\u0441\u044F \u0442\u043E\u043B\u044C\u043A\u043E \u043E\u043F\u0435\u0447\u0430\u0442\u043A\u0438",
+        "\u2514   (/lingual 1|2|3 \u043F\u043E \u0440\u0435\u0435\u0441\u0442\u0440\u0443; /lingual <id> \u0432\u0441\u0435\u0433\u0434\u0430 \u0440\u0430\u0431\u043E\u0442\u0430\u0435\u0442)"
+      ]
+    },
+    en: {
+      title: "\xB7 [pi-lingual v0.7.0] Three cores: Companion \xB7 Spec \xB7 Live Flow",
+      subtitle: "\u2502 Catch phrasing in the 5-15 s gap; prompts stay clean English",
+      rows: [
+        "\u250C [Architect Tuner] Run /tuner to add or edit modes with AI",
+        "\u2502   (4 tactical loadouts: spec \xB7 commit \xB7 oss \xB7 yap)",
+        "\u251C [1 Companion \xB7 companion] Native text sent raw; card above",
+        "\u251C [2 Logical Spec \xB7 direct] 0ms native \u2794 imperative English spec",
+        "\u251C [3 Live Flow \xB7 live-flow] Draft English; only typos fixed, tone kept",
+        "\u2514   (/lingual 1|2|3 = registry order; /lingual <id> always works)"
+      ]
+    }
+  };
+  const c = copyByLang[norm] || copyByLang.en;
+  const allRawLines = [c.title, c.subtitle, ...c.rows];
+  return allRawLines.map((line) => truncateVisual(`  ${fg("muted", line)}`, effectiveCols));
+}
+
+// src/engine.ts
+var DEFAULT_CONFIG = {
+  endpoint: process.env.LINGUAL_ENDPOINT || "",
+  apiKey: process.env.LINGUAL_API_KEY || "",
+  model: process.env.LINGUAL_MODEL || "",
+  selectedModel: "auto",
+  mode: "direct",
+  sourceLang: "en",
+  targetLang: "ja",
+  temperature: 0.2,
+  timeoutMs: 3e4
+};
+var LINGUAL_SYSTEM_PROMPT = buildSystemPrompt("en", "ja");
+var MAX_TRANSLATION_CHARS = 2500;
+var MAX_TRANSLATION_LINES = 30;
+function shouldTriggerTranslation(text, sourceLang = "en", allowSameLangPromptOpt = false) {
+  const trimmed = text.trim();
+  if (!trimmed) return false;
+  if (trimmed.length > MAX_TRANSLATION_CHARS) return false;
+  if (trimmed.split(/\r?\n/).length > MAX_TRANSLATION_LINES) return false;
+  if (/^#{1,6}\s/.test(trimmed) || trimmed.startsWith("---")) return false;
+  if (shouldShieldBypass(trimmed)) return false;
+  if (allowSameLangPromptOpt) {
+    if (isNonEnglish(trimmed)) return true;
+    const words2 = trimmed.split(/\s+/);
+    return words2.length >= 2 && /[a-zA-Z]{2,}/.test(trimmed);
+  }
+  const normSource = (sourceLang || "en").toLowerCase().split("-")[0];
+  const nonLatinLangs = /* @__PURE__ */ new Set(["zh", "tw", "ja", "ko", "ru", "ar"]);
+  if (nonLatinLangs.has(normSource)) {
+    return isNonEnglish(trimmed);
+  }
+  if (isNonEnglish(trimmed)) return true;
+  const words = trimmed.split(/\s+/);
+  return words.length >= 2 && /[a-zA-Z]{2,}/.test(trimmed);
+}
+var BLOCKED_JSON_KEYS = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
+function toCleanString(val) {
+  if (typeof val === "string") return val.trim();
+  if (typeof val === "number" || typeof val === "boolean") return String(val);
+  if (Array.isArray(val)) return val.map(toCleanString).filter(Boolean).join(" \xB7 ");
+  return "";
+}
+function repairAndParseJsonObject(raw) {
+  try {
+    if (!raw || typeof raw !== "string" || raw.length > 32768) return null;
+    let cleaned = raw.replace(/<(?:think|thought)>[\s\S]*?<\/(?:think|thought)>/gi, "").trim();
+    const fence = cleaned.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (fence) cleaned = fence[1].trim();
+    const first = cleaned.indexOf("{");
+    const last = cleaned.lastIndexOf("}");
+    if (first === -1 || last <= first) return null;
+    const jsonSubstr = cleaned.slice(first, last + 1);
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonSubstr);
+    } catch {
+      const repaired = jsonSubstr.replace(/,\s*([}\]])/g, "$1").replace(
+        /("[a-zA-Z0-9_-]+"\s*:\s*")([\s\S]*?)("(?=\s*,\s*"|\s*\}))/g,
+        (_m, prefix, content, suffix) => prefix + content.replace(/(?<!\\)"/g, '\\"') + suffix
+      );
+      parsed = JSON.parse(repaired);
+    }
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+function parseLlmResponse(raw) {
+  const parsed = repairAndParseJsonObject(raw);
+  if (!parsed) return null;
+  const spoken = toCleanString(parsed.spoken ?? parsed.casual ?? parsed.slot1);
+  const spokenMeaning = toCleanString(parsed.spoken_meaning ?? parsed.spokenMeaning);
+  const written = toCleanString(parsed.written ?? parsed.academic ?? parsed.slot2);
+  const writtenMeaning = toCleanString(parsed.written_meaning ?? parsed.writtenMeaning);
+  const vocab = toCleanString(parsed.vocab);
+  const summary = toCleanString(parsed.summary ?? parsed.core_intent ?? parsed.coreIntent);
+  const slotOutputs = /* @__PURE__ */ Object.create(null);
+  for (const [k, v] of Object.entries(parsed)) {
+    if (BLOCKED_JSON_KEYS.has(k) || k.endsWith("_meaning") || k === "summary") continue;
+    const textVal = toCleanString(v);
+    if (textVal) {
+      const meaningVal = toCleanString(parsed[k + "_meaning"]);
+      slotOutputs[k] = {
+        content: textVal,
+        meaning: meaningVal || void 0
+      };
+    }
+  }
+  const nonVocabOutputs = Object.entries(slotOutputs).filter(([k]) => k !== "vocab").map(([, val]) => val);
+  const effectiveSpoken = spoken || nonVocabOutputs[0]?.content || vocab || "";
+  const effectiveSpokenMeaning = spokenMeaning || nonVocabOutputs[0]?.meaning || "";
+  if (!effectiveSpoken) return null;
+  return {
+    spoken: effectiveSpoken,
+    spokenMeaning: effectiveSpokenMeaning || void 0,
+    written: written || void 0,
+    writtenMeaning: writtenMeaning || void 0,
+    vocab: vocab || void 0,
+    summary: summary || void 0,
+    slotOutputs: Object.keys(slotOutputs).length > 0 ? slotOutputs : void 0
+  };
+}
+async function executeLlmCompletion(text, sysPrompt, cfg) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), cfg.timeoutMs);
+  let onAbort;
+  if (cfg.signal) {
+    if (cfg.signal.aborted) {
+      clearTimeout(timer);
+      return null;
+    }
+    onAbort = () => controller.abort();
+    cfg.signal.addEventListener("abort", onAbort, { once: true });
+  }
+  try {
+    if (typeof cfg.complete === "function") {
+      return await cfg.complete(text, sysPrompt, controller.signal, {
+        reasoning: cfg.reasoning,
+        onDelta: cfg.onDelta
+      });
+    }
+    if (cfg.endpoint) {
+      const headers = { "Content-Type": "application/json" };
+      if (cfg.apiKey) headers["Authorization"] = `Bearer ${cfg.apiKey}`;
+      const requestBody = {
+        model: cfg.model || "gemini-3.8-flash",
+        messages: [
+          { role: "system", content: sysPrompt },
+          { role: "user", content: text }
+        ]
+      };
+      if (cfg.reasoning) {
+        requestBody.reasoning = cfg.reasoning;
+      } else if (cfg.temperature !== void 0) {
+        requestBody.temperature = cfg.temperature;
+      }
+      const response = await fetch(cfg.endpoint, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(requestBody),
+        signal: controller.signal
+      });
+      if (!response.ok) return null;
+      const json = await response.json();
+      return json?.choices?.[0]?.message?.content ?? null;
+    }
+    return null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+    if (cfg.signal && onAbort) {
+      cfg.signal.removeEventListener("abort", onAbort);
+    }
+  }
+}
+function isDynamicLongInput(text, sourceLang = "en") {
+  const trimmed = text.trim();
+  if (!trimmed) return false;
+  const normSource = (sourceLang || "en").toLowerCase().split("-")[0];
+  const hasCjk = /[\u4e00-\u9fa5\u3040-\u30ff\uac00-\ud7af]/.test(trimmed);
+  const isCjk = normSource === "zh" || normSource === "tw" || normSource === "ja" || normSource === "ko" || hasCjk;
+  if (isCjk) {
+    if (trimmed.length >= 45) return true;
+    const sentenceCount = (trimmed.match(/[。！？；\n]/g) || []).length;
+    if (sentenceCount >= 2 && trimmed.length >= 30) return true;
+  } else {
+    if (trimmed.length >= 85) return true;
+    const sentenceCount = (trimmed.match(/[.!?](\s+|$)|[\n;]/g) || []).length;
+    if (sentenceCount >= 2 && trimmed.length >= 50) return true;
+  }
+  return trimmed.length >= 85;
+}
+async function translatePrompt(text, userConfig = {}) {
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+  const diskConfig = loadUserLingualConfig();
+  const cfg = { ...DEFAULT_CONFIG, ...diskConfig, ...userConfig };
+  if (!shouldTriggerTranslation(trimmed, cfg.sourceLang)) return null;
+  if (shouldShieldBypass(trimmed)) return null;
+  const effectiveSlots = cfg.slots || (cfg.slotPreset ? resolveSlotsForPreset(cfg.slotPreset, cfg.sourceLang) : void 0);
+  const slotSig = Array.isArray(effectiveSlots) ? effectiveSlots.filter((s) => s.enabled !== false).map((s) => s.id).join(",") : void 0;
+  const cacheKey = LingualLruCache.buildKey(trimmed, cfg.sourceLang, cfg.targetLang, slotSig);
+  const cached = globalLingualCache.get(cacheKey);
+  if (cached) return cached;
+  const isLongInput = isDynamicLongInput(trimmed, cfg.sourceLang);
+  const sysPrompt = buildSystemPrompt(
+    cfg.sourceLang,
+    cfg.targetLang,
+    isLongInput,
+    cfg.context,
+    "general",
+    effectiveSlots,
+    cfg.killList,
+    cfg.globalKillList
+  );
+  const streamingCfg = cfg.onPartial ? {
+    ...cfg,
+    onDelta: (full) => {
+      try {
+        cfg.onPartial(parsePartialJsonFields(full));
+      } catch {
+      }
+    }
+  } : cfg;
+  const content = await executeLlmCompletion(trimmed, sysPrompt, streamingCfg);
+  if (typeof content !== "string" || !content.trim()) return null;
+  const payload = parseLlmResponse(content);
+  if (!payload || !payload.spoken) return null;
+  const labels = resolveLabelsForLang(cfg.sourceLang || "en", cfg.labels, cfg.targetLang || "ja");
+  const slot1Label = labels.slot1Label || labels.spokenLabel || "Spoken";
+  const slot2Label = labels.slot2Label || labels.writtenLabel || "Written";
+  const vocabLabel = labels.vocabLabel || "Vocab";
+  const sourceLabel = labels.sourceLabel || "Source";
+  const effectiveSourceText = isLongInput && payload.summary && payload.summary.trim() ? payload.summary.trim() : trimmed;
+  const result = {
+    spoken: payload.spoken,
+    spokenMeaning: payload.spokenMeaning,
+    written: payload.written || "",
+    writtenMeaning: payload.writtenMeaning,
+    vocab: payload.vocab,
+    summary: payload.summary,
+    sourceText: effectiveSourceText,
+    slotOutputs: payload.slotOutputs,
+    annotated: formatTerminalAnnotation(
+      effectiveSourceText,
+      payload.spoken,
+      payload.written,
+      payload.vocab,
+      {
+        spokenMeaning: payload.spokenMeaning,
+        writtenMeaning: payload.writtenMeaning,
+        slot1Label,
+        slot2Label,
+        vocabLabel,
+        sourceLabel
+      }
+    )
+  };
+  globalLingualCache.set(cacheKey, result);
+  return result;
+}
+function shouldInjectNativeReplyGuard(originalText, _sourceLang = "en", enabled = false) {
+  if (!enabled) return false;
+  const trimmed = originalText.trim();
+  if (!trimmed || !isNonEnglish(trimmed)) return false;
+  const isEnglishWritingIntent = /(?:英文|英语|english|in english|pr\b|pull request|commit message|git commit|tweet|twitter|email|邮件|readme)/i.test(trimmed);
+  return !isEnglishWritingIntent;
+}
+function formatNativeReplyGuardHint(sourceLang = "en") {
+  const name = resolveLanguageName(sourceLang);
+  return `
+
+(Please reply and explain in ${name}.)`;
+}
+function extractCleanJsonField(raw, fieldName) {
+  const obj = repairAndParseJsonObject(raw);
+  if (obj && !BLOCKED_JSON_KEYS.has(fieldName)) {
+    const val = obj[fieldName] ?? obj.prompt ?? obj.written ?? obj.spoken;
+    if (typeof val === "string" && val.trim()) return val.trim();
+  }
+  const cleaned = raw.replace(/<(?:think|thought)>[\s\S]*?<\/(?:think|thought)>/gi, "").replace(/```(?:json)?|```/gi, "").trim();
+  const regexFallback = cleaned.match(/"(?:prompt|written|spoken)"\s*:\s*"([\s\S]*?)"\s*\}/);
+  if (regexFallback && regexFallback[1].trim()) {
+    return regexFallback[1].replace(/\\"/g, '"').replace(/\\n/g, "\n").trim();
+  }
+  if (cleaned.startsWith("{") && cleaned.endsWith("}")) {
+    return "";
+  }
+  return cleaned.replace(/^["']|["']$/g, "").trim();
+}
+function compileModeSystemPrompt(mode, options) {
+  const sourceLang = mode.customInputLang || options.sourceLang || "en";
+  const targetLang = mode.customOutputLang || options.targetLang || "en";
+  const explainLang = options.explainLang || sourceLang;
+  const rawSlots = Array.isArray(mode.slots) && mode.slots.length > 0 ? mode.slots : defaultSlotsForMode(mode, sourceLang, explainLang);
+  const interpolatedSlots = rawSlots.map((s) => ({
+    ...s,
+    instruction: s.instruction ? interpolatePromptVariables(s.instruction, {
+      sourceLang,
+      targetLang,
+      explainLang
+    }) : ""
+  }));
+  const slotKillLists = rawSlots.flatMap((s) => s.killList || []);
+  const combinedKillList = [...mode.killList || [], ...slotKillLists];
+  if (mode.flow === "proofread") {
+    return buildModifySystemPrompt({
+      sourceLang,
+      targetLang,
+      explainLang,
+      customSlots: interpolatedSlots,
+      context: options.context,
+      killList: combinedKillList,
+      globalKillList: options.globalKillList,
+      preserveCodeSwitching: mode.preserveCodeSwitching,
+      systemHint: mode.systemHint
+    });
+  }
+  return buildPromptCandidatesSystemPrompt({
+    sourceLang,
+    targetLang,
+    promptSlots: interpolatedSlots,
+    context: options.context,
+    promptRule: mode.systemHint,
+    killList: combinedKillList,
+    globalKillList: options.globalKillList
+  });
+}
+async function executeModeRunner(text, mode, userConfig = {}) {
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+  const diskConfig = loadUserLingualConfig();
+  const cfg = { ...DEFAULT_CONFIG, ...diskConfig, ...userConfig };
+  if (!shouldTriggerTranslation(trimmed, cfg.sourceLang, true)) {
+    return null;
+  }
+  const resolvedReasoning = mode.reasoning ?? cfg.reasoning ?? "low";
+  const effectiveCfg = {
+    ...cfg,
+    reasoning: resolvedReasoning
+  };
+  const effectiveSourceLang = effectiveCfg.sourceLang || "en";
+  const effectiveTargetLang = effectiveCfg.targetLang || "en";
+  const slotSig = Array.isArray(mode.slots) ? mode.slots.filter((s) => s.enabled !== false).map((s) => s.id).join(",") : "";
+  const cacheKey = LingualLruCache.buildKey(
+    trimmed,
+    effectiveSourceLang,
+    effectiveTargetLang,
+    `${mode.id}:${slotSig}:${effectiveCfg.context || ""}`
+  );
+  const cached = globalLingualCache.getCandidates(cacheKey);
+  if (cached) {
+    return cached;
+  }
+  const sysPrompt = compileModeSystemPrompt(mode, {
+    sourceLang: effectiveCfg.sourceLang,
+    targetLang: effectiveCfg.targetLang,
+    explainLang: effectiveCfg.explainLang,
+    globalKillList: effectiveCfg.globalKillList,
+    context: effectiveCfg.context || userConfig.context
+  });
+  const streamingCfg = effectiveCfg.onPartial ? {
+    ...effectiveCfg,
+    onDelta: (full) => {
+      try {
+        effectiveCfg.onPartial(parsePartialJsonFields(full));
+      } catch {
+      }
+      try {
+        effectiveCfg.onDelta?.(full);
+      } catch {
+      }
+    }
+  } : effectiveCfg;
+  const raw = await executeLlmCompletion(trimmed, sysPrompt, streamingCfg);
+  if (typeof raw !== "string" || !raw.trim()) return null;
+  const obj = repairAndParseJsonObject(raw);
+  if (!obj) {
+    const fallbackSingle = extractCleanJsonField(raw, mode.slots[0]?.id || "prompt");
+    if (fallbackSingle) {
+      const fallbackResult = [
+        {
+          id: mode.slots[0]?.id || "concise",
+          label: mode.slots[0]?.label || "Direct",
+          content: ensureCodeTokensPreserved(trimmed, fallbackSingle.trim())
+        }
+      ];
+      globalLingualCache.setCandidates(cacheKey, fallbackResult);
+      return fallbackResult;
+    }
+    return null;
+  }
+  const enabledSlots = mode.slots.filter((s) => s.enabled !== false);
+  const vocabSlot = enabledSlots.find((s) => s.role === "vocab" || s.id === "vocab" || s.id === "fixes");
+  const extractedVocab = vocabSlot && !BLOCKED_JSON_KEYS.has(vocabSlot.id) && typeof obj[vocabSlot.id] === "string" && obj[vocabSlot.id].trim() ? obj[vocabSlot.id].trim() : typeof obj.fixes === "string" && obj.fixes.trim() ? obj.fixes.trim() : typeof obj.vocab === "string" && obj.vocab.trim() ? obj.vocab.trim() : void 0;
+  const rewriteSlots = enabledSlots.filter((s) => s.role !== "vocab" && s.id !== "source");
+  const candidates = [];
+  for (const slot of rewriteSlots) {
+    if (BLOCKED_JSON_KEYS.has(slot.id)) continue;
+    let val = obj[slot.id];
+    if (!val) {
+      if (slot.id === "fixed" && typeof obj.fixed === "string") val = obj.fixed;
+      else if (slot.id === "native" && typeof obj.native === "string") val = obj.native;
+      else if (rewriteSlots.length === 1) val = obj.prompt ?? obj.direct_spec ?? obj.fixed ?? obj.spoken;
+    }
+    const meaningVal = typeof obj[`${slot.id}_meaning`] === "string" ? obj[`${slot.id}_meaning`].trim() : void 0;
+    if (typeof val === "string" && val.trim()) {
+      const finalContent = slot.role !== "vocab" && slot.role !== "source" ? ensureCodeTokensPreserved(trimmed, val.trim()) : val.trim();
+      candidates.push({
+        id: slot.id,
+        label: slot.label,
+        content: finalContent,
+        meaning: meaningVal,
+        ...extractedVocab ? { vocab: extractedVocab } : {},
+        hideWhenLong: Boolean(slot.hideWhenLong)
+      });
+    }
+  }
+  if (mode.primarySlotId && candidates.length > 1) {
+    const pIdx = candidates.findIndex((c) => c.id.toLowerCase() === mode.primarySlotId?.toLowerCase());
+    if (pIdx > 0) {
+      const [primary] = candidates.splice(pIdx, 1);
+      candidates.unshift(primary);
+    }
+  }
+  if (candidates.length > 0) {
+    globalLingualCache.setCandidates(cacheKey, candidates);
+    return candidates;
+  }
+  return null;
+}
+function stripLingualContextWhenOff(systemPrompt, lastUserText = "", tunerArmed = false) {
+  if (!systemPrompt) return systemPrompt;
+  if (tunerArmed || /(?:lingual-tuner|\/lingual\s+(?:tuner|tune|agent)|(?:定制|配置|调整)伴学)/i.test(lastUserText)) {
+    return systemPrompt;
+  }
+  return systemPrompt.replace(/\s*<skill>\s*<name>lingual-tuner<\/name>[\s\S]*?<\/skill>/gi, "").replace(/\s*<skill[^>]*>[\s\S]*?<name>lingual-tuner<\/name>[\s\S]*?<\/skill>/gi, "");
+}
+
+// src/fsm.ts
+var LingualSessionController = class {
+  activeAbortController = null;
+  currentGeneration = 0;
+  // Pagination state management
+  pagedResults = [];
+  currentPageIndex = 0;
+  totalExpectedPages = 1;
+  lastResult = null;
+  /**
+   * Begins a new session request:
+   * 1. Aborts in-flight HTTP stream/request from previous turn;
+   * 2. Increments monotonic generation counter;
+   * 3. Binds a fresh AbortSignal.
+   */
+  beginRequest() {
+    this.abortActive();
+    this.activeAbortController = new AbortController();
+    const generation = ++this.currentGeneration;
+    return {
+      generation,
+      signal: this.activeAbortController.signal
+    };
+  }
+  /**
+   * Aborts currently active in-flight network requests.
+   */
+  abortActive() {
+    if (this.activeAbortController) {
+      this.activeAbortController.abort();
+      this.activeAbortController = null;
+    }
+  }
+  /**
+   * Checks if the specified generation token is still the latest active generation.
+   */
+  isLatest(generation) {
+    return this.currentGeneration === generation;
+  }
+  /**
+   * Gets the latest generation counter value.
+   */
+  getCurrentGeneration() {
+    return this.currentGeneration;
+  }
+  /**
+   * Initializes the pagination pool when input is split into multiple semantic chunks.
+   */
+  initPagination(totalExpectedPages) {
+    this.pagedResults = [];
+    this.currentPageIndex = 0;
+    this.totalExpectedPages = Math.max(1, totalExpectedPages);
+  }
+  /**
+   * Sets page result for a chunk index with generation guard to reject stale writes.
+   */
+  setPageResult(chunkIndex, result, generation) {
+    if (!this.isLatest(generation)) {
+      return false;
+    }
+    this.pagedResults[chunkIndex] = result;
+    this.lastResult = result;
+    return true;
+  }
+  /**
+   * Gets translation result for currently active page.
+   */
+  getActiveResult() {
+    const readyList = this.getReadyPages();
+    if (readyList.length === 0) {
+      return this.lastResult;
+    }
+    if (this.currentPageIndex >= readyList.length) {
+      this.currentPageIndex = Math.max(0, readyList.length - 1);
+    }
+    return readyList[this.currentPageIndex] || null;
+  }
+  /**
+   * Gets all ready page results.
+   */
+  getReadyPages() {
+    return this.pagedResults.filter((item) => Boolean(item));
+  }
+  /**
+   * Gets a snapshot of the current pagination state.
+   */
+  getPaginationSnapshot() {
+    const readyCount = this.getReadyPages().length;
+    const totalPages = Math.max(readyCount, this.totalExpectedPages);
+    return {
+      pageIndex: this.currentPageIndex,
+      totalPages,
+      readyCount,
+      isMultiPage: totalPages > 1
+    };
+  }
+  /**
+   * Cycles to the next ready page.
+   * Returns true if pagination changed.
+   */
+  nextPage() {
+    const readyList = this.getReadyPages();
+    if (readyList.length <= 1) return false;
+    this.currentPageIndex = (this.currentPageIndex + 1) % readyList.length;
+    return true;
+  }
+  /**
+   * Cycles to the previous ready page.
+   * Returns true if pagination changed.
+   */
+  prevPage() {
+    const readyList = this.getReadyPages();
+    if (readyList.length <= 1) return false;
+    this.currentPageIndex = (this.currentPageIndex - 1 + readyList.length) % readyList.length;
+    return true;
+  }
+  /**
+   * Clears pagination pool on non-translatable input or teardown to prevent ghost cards.
+   */
+  clearPagination() {
+    this.pagedResults = [];
+    this.currentPageIndex = 0;
+    this.totalExpectedPages = 1;
+  }
+  /**
+   * Gets the most recent translation result for /last replay.
+   */
+  getLastResult() {
+    return this.lastResult;
+  }
+  /**
+   * Explicitly sets the last translation result.
+   */
+  setLastResult(result) {
+    this.lastResult = result;
+  }
+  /**
+   * Resets the controller completely.
+   */
+  reset() {
+    this.abortActive();
+    this.clearPagination();
+    this.lastResult = null;
+  }
+};
+
+// src/context.ts
+var import_node_child_process = require("child_process");
 function hasActiveUI(ctx) {
   if (!ctx) return false;
   try {
     return Boolean(ctx.hasUI && ctx.ui);
   } catch {
     return false;
+  }
+}
+function safeClearWidget(ctx) {
+  if (!ctx) return;
+  try {
+    if (ctx.ui && typeof ctx.ui.setWidget === "function") {
+      ctx.ui.setWidget("lingual_hud", void 0);
+    }
+  } catch {
   }
 }
 function extractRecentContextAnchor(ctx) {
@@ -5201,15 +5488,1418 @@ function copyToClipboard(text) {
     return false;
   }
 }
-function safeClearWidget(ctx) {
-  if (!ctx) return;
+function captureGitContextSnapshot() {
   try {
-    if (ctx.ui && typeof ctx.ui.setWidget === "function") {
-      ctx.ui.setWidget("lingual_hud", void 0);
+    const diffOutput = (0, import_node_child_process.execFileSync)("git", ["diff", "--stat", "HEAD"], {
+      encoding: "utf8",
+      timeout: 250,
+      stdio: ["ignore", "pipe", "ignore"]
+    });
+    if (diffOutput && diffOutput.trim()) {
+      return `[GIT DIFF]:
+${diffOutput.trim().slice(0, 300)}`;
+    }
+    const statusOutput = (0, import_node_child_process.execFileSync)("git", ["status", "--short"], {
+      encoding: "utf8",
+      timeout: 250,
+      stdio: ["ignore", "pipe", "ignore"]
+    });
+    if (statusOutput && statusOutput.trim()) {
+      return `[GIT STATUS]:
+${statusOutput.trim().slice(0, 300)}`;
     }
   } catch {
   }
+  return "";
 }
+
+// src/completer.ts
+var import_node_fs3 = __toESM(require("fs"), 1);
+var import_node_path3 = __toESM(require("path"), 1);
+var import_node_os3 = __toESM(require("os"), 1);
+function getPiGlobalDefaultModel() {
+  try {
+    const configDir = process.env.PI_CONFIG_DIR || import_node_path3.default.join(import_node_os3.default.homedir(), ".pi", "agent");
+    const settingsPath = import_node_path3.default.join(configDir, "settings.json");
+    if (!import_node_fs3.default.existsSync(settingsPath)) return null;
+    const raw = import_node_fs3.default.readFileSync(settingsPath, "utf-8");
+    const parsed = JSON.parse(raw);
+    const defaultModel = typeof parsed?.defaultModel === "string" ? parsed.defaultModel.trim() : void 0;
+    const defaultProvider = typeof parsed?.defaultProvider === "string" ? parsed.defaultProvider.trim() : void 0;
+    if (defaultModel) {
+      return { modelId: defaultModel, provider: defaultProvider };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+function resolveTargetModel(ctx, selectedModel = "auto") {
+  if (!ctx) return void 0;
+  const available = (ctx.modelRegistry?.getAvailable?.() || []).filter(
+    (m) => m && m.id
+  );
+  if (selectedModel === "session" || selectedModel === "follow") {
+    return ctx.model;
+  }
+  if (selectedModel && selectedModel !== "auto") {
+    const exactFull = available.find(
+      (m) => `${m.provider}/${m.id}` === selectedModel
+    );
+    if (exactFull) return exactFull;
+    const exactId = available.find((m) => m.id === selectedModel);
+    if (exactId) return exactId;
+    const lowerSelected = selectedModel.toLowerCase();
+    const subMatch = available.find((m) => {
+      const full = `${m.provider}/${m.id}`.toLowerCase();
+      const id = (m.id || "").toLowerCase();
+      return full.includes(lowerSelected) || id.includes(lowerSelected);
+    });
+    if (subMatch) return subMatch;
+    if (available.length === 0 && ctx.model) {
+      return ctx.model;
+    }
+    return void 0;
+  }
+  const piDefault = getPiGlobalDefaultModel();
+  if (piDefault?.modelId) {
+    const target = piDefault.modelId.toLowerCase();
+    const matched = available.find((m) => {
+      const full = `${m.provider}/${m.id}`.toLowerCase();
+      const id = (m.id || "").toLowerCase();
+      return full === target || id === target || full.endsWith(`/${target}`) || piDefault.provider && m.provider === piDefault.provider && id === target;
+    });
+    if (matched) {
+      return matched;
+    }
+  }
+  return ctx.model;
+}
+function createModelCompleter(ctx, getSelectedModel, defaultOpts) {
+  return async (text, systemPrompt, signal, callOpts) => {
+    try {
+      if (!ctx.modelRegistry) return null;
+      const selected = typeof getSelectedModel === "function" ? getSelectedModel() : "auto";
+      const targetModel = resolveTargetModel(ctx, selected);
+      if (!targetModel) return null;
+      const diskConfig = loadUserLingualConfig();
+      const effectiveReasoning = callOpts?.reasoning || defaultOpts?.reasoning || diskConfig.reasoning || "low";
+      const requestOptions = {
+        maxTokens: 1500,
+        reasoning: effectiveReasoning
+      };
+      const stream = ctx.modelRegistry.streamSimple(
+        targetModel,
+        {
+          systemPrompt,
+          messages: [
+            {
+              role: "user",
+              content: [{ type: "text", text }],
+              timestamp: Date.now()
+            }
+          ]
+        },
+        requestOptions
+      );
+      const timeoutMs = diskConfig.timeoutMs || 15e3;
+      let timeoutHandle;
+      const timeoutPromise = new Promise((_, reject) => {
+        timeoutHandle = setTimeout(() => reject(new Error("Lingual translation timed out")), timeoutMs);
+      });
+      let abortListener;
+      const abortPromise = new Promise((_, reject) => {
+        if (signal?.aborted) {
+          reject(new Error("Lingual translation aborted"));
+          return;
+        }
+        abortListener = () => reject(new Error("Lingual translation aborted"));
+        signal?.addEventListener("abort", abortListener, { once: true });
+      });
+      let res;
+      try {
+        if (typeof callOpts?.onDelta === "function" && stream && typeof stream[Symbol.asyncIterator] === "function") {
+          const onDelta = callOpts.onDelta;
+          let buffer = "";
+          const consume = (async () => {
+            for await (const ev of stream) {
+              if (signal?.aborted) break;
+              if (ev?.type === "text_delta" && typeof ev.delta === "string") {
+                buffer += ev.delta;
+                try {
+                  onDelta(buffer);
+                } catch {
+                }
+              }
+            }
+            if (!buffer.trim() && typeof stream.result === "function") {
+              const finalRes = await stream.result();
+              const content2 = typeof finalRes === "string" ? finalRes : finalRes?.content?.filter((c) => c?.type === "text" && typeof c.text === "string")?.map((c) => c.text)?.join("");
+              if (content2 && typeof content2 === "string") {
+                buffer = content2;
+                try {
+                  onDelta(buffer);
+                } catch {
+                }
+              }
+            }
+            return buffer;
+          })();
+          res = await Promise.race([consume, timeoutPromise, abortPromise]);
+          return typeof res === "string" && res.trim() ? res.trim() : null;
+        }
+        res = await Promise.race([stream.result(), timeoutPromise, abortPromise]);
+      } finally {
+        if (timeoutHandle) clearTimeout(timeoutHandle);
+        if (signal && abortListener) {
+          signal.removeEventListener("abort", abortListener);
+        }
+      }
+      if (!res) return null;
+      if (typeof res === "string" && res.trim()) return res.trim();
+      const content = res.content?.filter((c) => c?.type === "text" && typeof c.text === "string")?.map((c) => c.text)?.join("");
+      return content && content.trim() ? content.trim() : null;
+    } catch {
+      return null;
+    }
+  };
+}
+
+// src/pickers.ts
+async function openModePicker(ctx, opts) {
+  const diskForMode = loadUserLingualConfig();
+  const diskMode = diskForMode.activeModeId || diskForMode.mode;
+  const modes = Array.isArray(opts.modes) && opts.modes.length > 0 ? opts.modes : resolveModesFromConfig(diskForMode, opts.sourceLang);
+  let currentMode = opts.mode;
+  if (diskMode && diskMode !== opts.mode) {
+    currentMode = normalizeActiveModeId({ mode: diskMode, activeModeId: diskMode }, modes);
+  }
+  const activeModes = modes.filter((m) => m.enabled !== false);
+  const offName = resolveModeDisplayName("off", opts.sourceLang);
+  const lockIndicator = opts.modeLocked ? opts.sourceLang === "zh" ? " \xB7 \u9501\u5B9A" : opts.sourceLang === "tw" ? " \xB7 \u9396\u5B9A" : opts.sourceLang === "ja" ? " \xB7 \u30ED\u30C3\u30AF" : opts.sourceLang === "ko" ? " \xB7 \uC7A0\uAE40" : opts.sourceLang === "es" ? " \xB7 Bloqueado" : opts.sourceLang === "fr" ? " \xB7 Verrouill\xE9" : opts.sourceLang === "de" ? " \xB7 Gesperrt" : opts.sourceLang === "ru" ? " \xB7 \u0411\u043B\u043E\u043A\u0438\u0440\u043E\u0432\u0430\u043D\u043E" : " \xB7 Locked" : "";
+  const pair = `${opts.labels.hudTitle || `${opts.sourceLang} \u21C4 ${opts.targetLang}`}${lockIndicator}`;
+  const title = opts.labels.modePickerTitle || "Mode Switch";
+  const hint = opts.labels.modePickerHint || "Press 1/2/3/0 to switch, Esc to cancel";
+  const options = activeModes.map((m, idx) => ({
+    num: idx + 1,
+    id: m.id,
+    name: localizeModeName(m.id, m.name, opts.sourceLang),
+    englishTag: opts.sourceLang === "en" ? void 0 : m.id === "companion" ? "Companion" : m.id === "direct" ? "Logical Spec" : m.id === "live-flow" ? "Live Flow" : void 0
+  }));
+  options.push({
+    num: 0,
+    id: "off",
+    name: offName,
+    englishTag: "Off"
+  });
+  const currentModeId = currentMode === "off" ? "off" : opts.activeModeId || currentMode || options[0].id;
+  let initialIndex = options.findIndex((o) => o.id === currentModeId);
+  if (initialIndex === -1) initialIndex = 0;
+  if (hasActiveUI(ctx) && typeof ctx.ui.custom === "function") {
+    try {
+      const chosen = await ctx.ui.custom(
+        (tui, theme, _kb, done) => {
+          let selectedIndex = initialIndex;
+          let finished = false;
+          const finish = (val) => {
+            if (finished) return;
+            finished = true;
+            done(val);
+          };
+          return {
+            render(width) {
+              try {
+                return formatModePickerLines(
+                  title,
+                  hint,
+                  pair,
+                  options,
+                  selectedIndex,
+                  width,
+                  theme
+                );
+              } catch {
+                return formatModePickerLines(
+                  title,
+                  hint,
+                  pair,
+                  options,
+                  selectedIndex,
+                  width
+                );
+              }
+            },
+            invalidate() {
+            },
+            handleInput(data) {
+              if (data.startsWith("\x1B[<") || data.startsWith("\x1B[M") || data.startsWith("\x1B[200~")) {
+                return;
+              }
+              if (data === "0") {
+                finish("off");
+                return;
+              }
+              const num = parseInt(data, 10);
+              if (!isNaN(num) && num >= 1 && num <= activeModes.length) {
+                finish(activeModes[num - 1].id);
+                return;
+              }
+              if (data === "\x1B" || data === "q" || data === "") {
+                finish(null);
+                return;
+              }
+              if (data === "\x1B[C" || data === "\x1B[B" || data === "l" || data === "j" || data === "	") {
+                selectedIndex = (selectedIndex + 1) % options.length;
+                tui?.requestRender?.();
+                return;
+              }
+              if (data === "\x1B[D" || data === "\x1B[A" || data === "h" || data === "k") {
+                selectedIndex = (selectedIndex - 1 + options.length) % options.length;
+                tui?.requestRender?.();
+                return;
+              }
+              if (data === "\r" || data === "\n" || data === "\r\n" || data === " ") {
+                finish(options[selectedIndex]?.id || null);
+                return;
+              }
+            }
+          };
+        }
+      );
+      if (chosen !== null && chosen !== void 0) {
+        if (opts.onSelect) await opts.onSelect(chosen, ctx);
+        return chosen;
+      }
+      return null;
+    } catch {
+    }
+  }
+  if (hasActiveUI(ctx) && typeof ctx.ui.select === "function") {
+    try {
+      const selectItems = options.map((opt) => ({
+        label: `[${opt.num}] ${opt.name}${opt.englishTag ? ` (${opt.englishTag})` : ""}`,
+        value: opt.id
+      }));
+      const chosen = await ctx.ui.select(
+        `[lingual \xB7 ${pair}] ${title} (${hint})`,
+        selectItems
+      );
+      if (chosen) {
+        if (opts.onSelect) await opts.onSelect(chosen, ctx);
+        return chosen;
+      }
+      return null;
+    } catch {
+    }
+  }
+  if (opts.onSelect) await opts.onSelect("", ctx);
+  return null;
+}
+async function pickCandidateInteractive(ctx, candidates, sourceLang) {
+  if (!hasActiveUI(ctx) || candidates.length === 0) return null;
+  const langCode = (sourceLang || "en").toLowerCase().split("-")[0];
+  const sp = resolveSelectPrompts(langCode, candidates.length);
+  if (typeof ctx.ui.custom === "function") {
+    const items = [
+      ...candidates.map((c, idx) => ({
+        key: String(idx + 1),
+        label: `[${idx + 1}] ${c.label}`,
+        value: c.content
+      })),
+      { key: "0", label: `[0] ${sp.keepOrig}`, value: "__ORIGINAL__" }
+    ];
+    const pickedVal = await ctx.ui.custom(
+      (tui, theme, keybindings, done) => {
+        let selectedIdx = 0;
+        return {
+          render(width) {
+            const border = theme.fg("dim", "\u2500".repeat(Math.max(10, width)));
+            const headerLine = " " + theme.fg("accent", theme.bold(sp.title)) + "  " + theme.fg("dim", `(${sp.hint})`);
+            const maxLineCols = Math.max(20, width - 2);
+            const pillLines = [];
+            let currentLine = " ";
+            let currentWidth = 1;
+            for (let idx = 0; idx < items.length; idx++) {
+              const it = items[idx];
+              const renderedPill = idx === selectedIdx ? theme.fg("accent", theme.bold(`\u25B8 ${it.label}`)) : `  ${theme.fg("text", it.label)}`;
+              const pillWidth = getVisualWidth(renderedPill);
+              const sep = currentWidth > 1 ? "   " : "";
+              const sepWidth = sep.length;
+              if (currentWidth > 1 && currentWidth + sepWidth + pillWidth > maxLineCols) {
+                pillLines.push(currentLine);
+                currentLine = " " + renderedPill;
+                currentWidth = 1 + pillWidth;
+              } else {
+                currentLine += sep + renderedPill;
+                currentWidth += sepWidth + pillWidth;
+              }
+            }
+            if (currentLine.trim()) {
+              pillLines.push(currentLine);
+            }
+            return [
+              border,
+              truncateVisual(headerLine, width),
+              ...pillLines,
+              border
+            ];
+          },
+          handleInput(keyData) {
+            if (/^[1-9]$/.test(keyData)) {
+              const num = parseInt(keyData, 10);
+              if (num >= 1 && num <= candidates.length) {
+                done(candidates[num - 1].content);
+                return;
+              }
+            }
+            if (keyData === "0" || keyData === "\x1B" || keyData === "" || keybindings?.matches?.(keyData, "tui.select.cancel")) {
+              done("__ORIGINAL__");
+              return;
+            }
+            if (keyData === "h" || keyData === "k" || keyData === "\x1B[A" || keyData === "\x1B[D" || keybindings?.matches?.(keyData, "tui.select.up")) {
+              selectedIdx = (selectedIdx - 1 + items.length) % items.length;
+              tui?.requestRender?.();
+              return;
+            }
+            if (keyData === "l" || keyData === "j" || keyData === "\x1B[B" || keyData === "\x1B[C" || keyData === "	" || keybindings?.matches?.(keyData, "tui.select.down")) {
+              selectedIdx = (selectedIdx + 1) % items.length;
+              tui?.requestRender?.();
+              return;
+            }
+            if (keyData === "\r" || keyData === "\n" || keyData === "\x1BOM" || keybindings?.matches?.(keyData, "tui.select.confirm")) {
+              done(items[selectedIdx]?.value);
+              return;
+            }
+          },
+          invalidate() {
+          }
+        };
+      }
+    );
+    if (!pickedVal || pickedVal === "__ORIGINAL__") {
+      return null;
+    }
+    return pickedVal;
+  }
+  if (typeof ctx.ui.select === "function") {
+    const optionLabels = [
+      ...candidates.map((c, idx) => `[${idx + 1}] ${c.label}`),
+      `[0] ${sp.keepOrig}`
+    ];
+    const picked = await ctx.ui.select(`${sp.title} (${sp.hint})`, optionLabels);
+    if (!picked || picked.startsWith("[0]")) {
+      return null;
+    }
+    const idxMatch = picked.match(/^\[(\d+)\]/);
+    if (idxMatch) {
+      const idx = parseInt(idxMatch[1], 10) - 1;
+      if (candidates[idx]) {
+        return candidates[idx].content;
+      }
+    }
+    return null;
+  }
+  return null;
+}
+
+// src/commands.ts
+function createCommandHandlers(deps) {
+  const {
+    state: state2,
+    session: session2,
+    updateFooter: updateFooter2,
+    refreshActiveView: refreshActiveView2,
+    renderActiveCard: renderActiveCard2,
+    renderHudWidget: renderHudWidget2,
+    activeRuntime: activeRuntime2,
+    renderReleaseBanner,
+    syncResizeListener,
+    clearPendingTimers,
+    armTuner,
+    pi
+  } = deps;
+  const setModeHandler = async (args, ctx) => {
+    session2.abortActive();
+    const trimmed = args?.trim() || "";
+    const pair = state2.labels.hudTitle || `${state2.sourceLang} \u21C4 ${state2.targetLang}`;
+    const modeSpec = resolveModeDisplaySpec(state2.sourceLang);
+    const diskForMode = loadUserLingualConfig();
+    const modes = Array.isArray(state2.modes) && state2.modes.length > 0 ? state2.modes : resolveModesFromConfig(diskForMode);
+    const activeModes = modes.filter((m) => m.enabled !== false);
+    const hasCustomModesOnDisk = Array.isArray(diskForMode.modes) && diskForMode.modes.length > 0;
+    let nextMode;
+    const explicitLegacy = normalizeLingualModeInput(trimmed);
+    if (trimmed) {
+      const lower = trimmed.toLowerCase();
+      const matched = activeModes.find(
+        (m) => m.id.toLowerCase() === lower || m.name.toLowerCase() === lower || Array.isArray(m.aliases) && m.aliases.some((a) => a.toLowerCase() === lower) || resolveModeDisplayName(m.id, state2.sourceLang).toLowerCase() === lower || m.id === "direct" && (lower === "spec" || lower === "logical spec" || lower === "specification" || lower === "direct spec") || m.id === "companion" && (lower === "companion" || lower === "companion mode" || lower === "original") || m.id === "live-flow" && (lower === "live flow" || lower === "flow" || lower === "live" || lower === "modify" || lower === "raw")
+      );
+      const numIdx = parseInt(trimmed, 10);
+      const isNum = !isNaN(numIdx) && String(numIdx) === trimmed;
+      if (isNum && numIdx >= 1 && numIdx <= activeModes.length) {
+        nextMode = activeModes[numIdx - 1].id;
+      } else if (matched) {
+        nextMode = matched.id;
+      } else if (explicitLegacy) {
+        nextMode = explicitLegacy;
+      } else if (lower === "spec" || lower === "logical spec" || lower === "specification") {
+        nextMode = "direct";
+      } else if (lower === "companion" || lower === "companion mode") {
+        nextMode = "companion";
+      } else if (lower === "live flow" || lower === "flow" || lower === "live") {
+        nextMode = "live-flow";
+      } else {
+        nextMode = trimmed;
+      }
+    } else {
+      if (state2.modeLocked) {
+        const currentModeObj = activeModes.find((m) => m.id === state2.mode);
+        const currentName = currentModeObj ? currentModeObj.name : state2.mode === "off" ? modeSpec.off : state2.mode;
+        try {
+          ctx.ui.notify(`[lingual] mode locked to [${currentName}]. Run /lingual unlock to release.`, "warning");
+        } catch {
+        }
+        return;
+      }
+      if (hasCustomModesOnDisk) {
+        const cycleList = [...activeModes.map((m) => m.id), "off"];
+        const currentIdx = cycleList.indexOf(state2.mode);
+        nextMode = currentIdx === -1 ? activeModes[0]?.id || "companion" : cycleList[(currentIdx + 1) % cycleList.length] || activeModes[0]?.id || "companion";
+      } else {
+        nextMode = state2.mode === "original" || state2.mode === "companion" ? "direct" : state2.mode === "english" || state2.mode === "direct" ? "live-flow" : state2.mode === "select" || state2.mode === "candidates" ? "live-flow" : state2.mode === "modify" || state2.mode === "live-flow" ? "off" : "companion";
+      }
+    }
+    const canonical = nextMode === "original" ? "companion" : nextMode === "english" ? "direct" : nextMode === "select" ? "candidates" : nextMode === "modify" ? "live-flow" : nextMode;
+    if (nextMode === "off") {
+      state2.mode = "off";
+      state2.activeModeId = "off";
+      saveUserLingualConfig({ mode: "off", activeModeId: "off" });
+      syncResizeListener();
+      clearPendingTimers();
+      session2.reset();
+      globalLingualCache.clear();
+      safeClearWidget(ctx);
+      updateFooter2(ctx);
+      try {
+        ctx.ui.notify("[lingual: off]", "info");
+      } catch {
+      }
+      return;
+    }
+    const targetMode = activeModes.find(
+      (m) => m.id === canonical || m.id === nextMode || m.name.toLowerCase() === (trimmed || nextMode).toLowerCase() || resolveModeDisplayName(m.id, state2.sourceLang).toLowerCase() === (trimmed || nextMode).toLowerCase()
+    );
+    if (!targetMode) {
+      try {
+        ctx.ui.notify(`[lingual] mode [${trimmed || nextMode}] not in your active registry. Run /lingual mode list to view available modes.`, "warning");
+      } catch {
+      }
+      return;
+    }
+    const finalId = targetMode.id;
+    state2.mode = finalId;
+    state2.activeModeId = finalId;
+    saveUserLingualConfig({ mode: finalId, activeModeId: finalId });
+    syncResizeListener();
+    updateFooter2(ctx);
+    const modeIdx = activeModes.indexOf(targetMode);
+    const modeNum = modeIdx >= 0 ? modeIdx + 1 : 1;
+    const modeName = localizeModeName(targetMode.id, targetMode.name, state2.sourceLang);
+    try {
+      ctx.ui.notify(`[${pair}] ${modeNum}. ${modeName} (${finalId})`, "info");
+    } catch {
+    }
+  };
+  const formatActiveModelLabel = (selectedModel, ctx, followDesc) => {
+    const modelKey = selectedModel || "auto";
+    const resolved = resolveTargetModel(ctx, modelKey);
+    if (modelKey === "auto") {
+      if (resolved && ctx.model && `${resolved.provider}/${resolved.id}` !== `${ctx.model.provider}/${ctx.model.id}`) {
+        return `auto (defaultModel: ${resolved.provider}/${resolved.id} \xB7 session: ${ctx.model.id})`;
+      }
+      return `auto (${resolved ? `${resolved.provider}/${resolved.id}` : followDesc})`;
+    }
+    if (modelKey === "session" || modelKey === "follow") {
+      return `session (${followDesc}: ${ctx.model ? `${ctx.model.provider}/${ctx.model.id}` : "none"})`;
+    }
+    return `${modelKey}${resolved ? ` (resolved: ${resolved.provider}/${resolved.id})` : ""}`;
+  };
+  const setModelHandler = async (args, ctx) => {
+    const trimmed = args.trim();
+    const followSessionDesc = state2.labels.modelFollowSession || "follow session";
+    const currentActive = formatActiveModelLabel(state2.selectedModel, ctx, followSessionDesc);
+    if (!trimmed) {
+      const available = ctx.modelRegistry?.getAvailable?.() || [];
+      const availableList = available.length > 0 ? available.map((m) => `\u2022 ${m.provider}/${m.id}`).slice(0, 8).join("\n") : void 0;
+      const msg = formatModelSelectionMessage(state2.labels, currentActive || "auto", availableList);
+      ctx.ui.notify(msg, "info");
+      if (typeof ctx.ui.select === "function" && available.length > 0) {
+        const title = state2.labels?.modelTitle || "Select Lingual Model";
+        const options = [
+          "auto - Default Pi Model (Recommended)",
+          ...available.map((m) => `${m.provider}/${m.id}`),
+          "session - Follow active conversation model"
+        ];
+        try {
+          const choice = await ctx.ui.select(title, options);
+          const choiceStr = typeof choice === "string" ? choice : choice?.value || choice?.label || "";
+          if (choiceStr) {
+            const key = choiceStr.split(" - ")[0].trim();
+            if (key) {
+              state2.selectedModel = key;
+              saveUserLingualConfig({ selectedModel: key });
+              ctx.ui.notify(`[lingual] model: ${key}`, "info");
+            }
+          }
+        } catch {
+        }
+      }
+      return;
+    }
+    state2.selectedModel = trimmed;
+    saveUserLingualConfig({ selectedModel: trimmed });
+    ctx.ui.notify(`[lingual] model: ${trimmed}`, "info");
+  };
+  const switchLangHandler = async (args, ctx) => {
+    const pair = state2.labels.hudTitle || `${state2.sourceLang} \u21C4 ${state2.targetLang}`;
+    const previousSource = state2.sourceLang;
+    const previousTarget = state2.targetLang;
+    const trimmed = args.trim().toLowerCase();
+    if (!trimmed || trimmed === "list" || trimmed === "help" || trimmed === "?") {
+      const flowText2 = `${state2.sourceLang} \u2794 ${state2.targetLang}`;
+      const template = state2.labels.langHelpText || "[Companion Language: {flow}]\n\u2022 Quick switch: /lang ja (target Japanese) \xB7 /lang en (target English)\n\u2022 Pair switch: /lang en ja \xB7 /lang ja en \xB7 /lang es en\n\u2022 Supported codes: zh, tw, ja, ko, en, es, fr, de, ru";
+      const helpMsg = template.replace("{flow}", flowText2).replace("{pair}", pair);
+      ctx.ui.notify(helpMsg, "info");
+      return;
+    }
+    const parts = trimmed.split(/\s*->\s*|\s*➔\s*|\s+to\s+|\s+/).filter(Boolean);
+    let newSource = state2.sourceLang;
+    let newTarget = state2.targetLang;
+    if (parts.length === 1) {
+      const code = normalizeLangCode(parts[0]);
+      if (!isSupportedLangCode(code)) {
+        ctx.ui.notify(
+          "[lingual] invalid language code. supported: zh, tw, ja, ko, en, es, fr, de, ru",
+          "warning"
+        );
+        return;
+      }
+      if (code === state2.sourceLang) {
+        newTarget = code === "en" ? "ja" : "en";
+      } else {
+        newTarget = code;
+      }
+    } else {
+      newSource = normalizeLangCode(parts[0]);
+      newTarget = normalizeLangCode(parts[1]);
+      if (!isSupportedLangCode(newSource) || !isSupportedLangCode(newTarget)) {
+        ctx.ui.notify(
+          "[lingual] invalid language code. supported: zh, tw, ja, ko, en, es, fr, de, ru",
+          "warning"
+        );
+        return;
+      }
+    }
+    const diskBeforeSwitch = loadUserLingualConfig();
+    state2.sourceLang = newSource;
+    state2.targetLang = newTarget;
+    if (!diskBeforeSwitch.explainLang || diskBeforeSwitch.explainLang === previousSource || diskBeforeSwitch.explainLang === "zh") {
+      state2.explainLang = newSource === "zh" || newSource === "tw" ? "zh" : newSource;
+    } else {
+      state2.explainLang = diskBeforeSwitch.explainLang;
+    }
+    state2.labels = resolveLabelsForLang(newSource, void 0, newTarget);
+    if (state2.slotPreset) {
+      state2.slots = resolveSlotsForPreset(state2.slotPreset, newSource);
+    } else {
+      state2.slots = getDefaultSlots(newSource);
+    }
+    state2.directSlots = getDefaultDirectSlots(newSource);
+    state2.promptSlots = getDefaultPromptSlots(newSource);
+    state2.modifySlots = getDefaultModifySlots(newSource, state2.explainLang);
+    const currentModes = Array.isArray(state2.modes) && state2.modes.length > 0 ? state2.modes : resolveModesFromConfig(diskBeforeSwitch, newSource);
+    const isFactory = !diskBeforeSwitch.modes || diskBeforeSwitch.modes.length === 0 || currentModes.length === 3 && currentModes.every((m) => ["companion", "direct", "live-flow"].includes(m.id));
+    if (isFactory) {
+      state2.modes = getDefaultFactoryModes(newSource, state2.explainLang);
+    } else {
+      state2.modes = localizeModes(currentModes, newSource, state2.explainLang);
+    }
+    state2.mode = normalizeActiveModeId({ mode: state2.mode, activeModeId: state2.activeModeId }, state2.modes);
+    state2.activeModeId = state2.mode;
+    saveUserLingualConfig({
+      sourceLang: newSource,
+      targetLang: newTarget,
+      explainLang: state2.explainLang,
+      modes: state2.modes,
+      slots: state2.slots,
+      directSlots: state2.directSlots,
+      promptSlots: state2.promptSlots
+    });
+    session2.reset();
+    globalLingualCache.clear();
+    updateFooter2(ctx);
+    const isTargetOnly = newSource === previousSource && newTarget !== previousTarget;
+    const flowText = `${newSource} \u21C4 ${newTarget}`;
+    const msg = isTargetOnly ? `[${flowText}] Target language switched to: ${newTarget} (${newSource} unchanged)` : `[${flowText}]`;
+    ctx.ui.notify(msg, "info");
+  };
+  const toggleCompactHandler = async (_args, ctx) => {
+    state2.compact = !state2.compact;
+    saveUserLingualConfig({ compact: state2.compact });
+    const msg = state2.compact ? "[lingual: Capsule mode enabled]" : "[lingual: tree HUD mode restored]";
+    ctx.ui.notify(msg, "info");
+    refreshActiveView2(ctx);
+  };
+  const switchSlotsHandler = async (args, ctx) => {
+    const rawArgs = args.trim();
+    const parts = rawArgs.split(/\s+/).filter(Boolean);
+    const subCmd = (parts[0] || "").toLowerCase();
+    const lbl = state2.labels;
+    const disk = loadUserLingualConfig();
+    const currentModes = Array.isArray(state2.modes) && state2.modes.length > 0 ? state2.modes : resolveModesFromConfig(disk);
+    const activeModeId = normalizeActiveModeId(
+      { mode: state2.mode, activeModeId: state2.activeModeId || disk.activeModeId },
+      currentModes
+    );
+    const activeMode = currentModes.find((m) => m.id === activeModeId) || currentModes[0];
+    const pair = lbl.hudTitle || `${state2.sourceLang} \u21C4 ${state2.targetLang}`;
+    if (!subCmd || subCmd === "list" || subCmd === "ls") {
+      const modeSlots = activeMode.slots || [];
+      const lines = modeSlots.map((s, idx) => {
+        const status = s.enabled !== false ? lbl.slotsStatusEnabled || "enabled" : lbl.slotsStatusDisabled || "disabled";
+        const inst = s.instruction ? ` // ${s.instruction.slice(0, 50)}...` : "";
+        return `  ${idx + 1}. [${s.id}] "${s.label}" (${s.role || "rewrite"}, ${status})${inst}`;
+      });
+      const header = `\u2726 [${activeMode.name}] Dynamic Slots (${modeSlots.filter((s) => s.enabled !== false).length}/${modeSlots.length} active):
+`;
+      const body = lines.length > 0 ? lines.join("\n") : `  (${lbl.slotsNone || "No slots configured"})`;
+      const cliHelp = `
+
+Usage:
+  /slots add <id> <label> [instruction...]  Add or update slot in active mode
+  /slots rm <id>                            Remove slot by ID
+  /slots toggle <id>                        Toggle enabled state
+  /slots reset                              Reset active mode slots to defaults`;
+      ctx.ui.notify(`${header}${body}${cliHelp}`, "info");
+      return;
+    }
+    if (subCmd === "reset") {
+      const factoryDefaults = getDefaultFactoryModes(state2.sourceLang, disk.explainLang);
+      const matchDefault = factoryDefaults.find((m) => m.id === activeMode.id);
+      if (matchDefault) {
+        activeMode.slots = [...matchDefault.slots];
+      } else {
+        activeMode.slots = defaultSlotsForMode(activeMode, state2.sourceLang, disk.explainLang);
+      }
+      state2.modes = currentModes;
+      saveUserLingualConfig({ modes: currentModes });
+      globalLingualCache.clear();
+      ctx.ui.notify(`[${pair}] Reset slots for mode [${activeMode.name}] to clean defaults.`, "info");
+      updateFooter2(ctx);
+      refreshActiveView2(ctx);
+      return;
+    }
+    if (subCmd === "hide-source" || subCmd === "no-source") {
+      activeMode.slots = activeMode.slots.filter((s) => s.id !== "source");
+      state2.modes = currentModes;
+      saveUserLingualConfig({ modes: currentModes });
+      globalLingualCache.clear();
+      ctx.ui.notify(`[${pair}] Hidden [source] row in mode [${activeMode.name}].`, "info");
+      updateFooter2(ctx);
+      refreshActiveView2(ctx);
+      return;
+    }
+    if (subCmd === "show-source" || subCmd === "with-source") {
+      const hasSource = (activeMode.slots || []).some((s) => s.id === "source");
+      if (!hasSource) {
+        activeMode.slots = [
+          { id: "source", label: lbl.sourceLabel || "Original", role: "rewrite", instruction: "Source text", enabled: true },
+          ...activeMode.slots || []
+        ];
+      } else {
+        activeMode.slots = (activeMode.slots || []).map((s) => s.id === "source" ? { ...s, enabled: true } : s);
+      }
+      state2.modes = currentModes;
+      saveUserLingualConfig({ modes: currentModes });
+      globalLingualCache.clear();
+      ctx.ui.notify(`[${pair}] Restored [source] row in mode [${activeMode.name}].`, "info");
+      updateFooter2(ctx);
+      refreshActiveView2(ctx);
+      return;
+    }
+    if (subCmd === "rm" || subCmd === "remove" || subCmd === "del") {
+      const targetId = (parts[1] || "").toLowerCase();
+      if (!targetId) {
+        ctx.ui.notify(lbl.slotsUsageRm || "Usage: /slots rm <slot-id>", "warning");
+        return;
+      }
+      const existing = (activeMode.slots || []).find((s) => s.id.toLowerCase() === targetId);
+      if (!existing) {
+        const notFoundMsg = (lbl.slotsNotFound || "Slot [{id}] not found").replace("{pair}", pair).replace("{id}", targetId);
+        ctx.ui.notify(notFoundMsg, "warning");
+        return;
+      }
+      activeMode.slots = activeMode.slots.filter((s) => s.id.toLowerCase() !== targetId);
+      state2.modes = currentModes;
+      saveUserLingualConfig({ modes: currentModes });
+      globalLingualCache.clear();
+      ctx.ui.notify(`[${pair}] Removed slot [${targetId}] ("${existing.label}") from mode [${activeMode.name}].`, "info");
+      updateFooter2(ctx);
+      refreshActiveView2(ctx);
+      return;
+    }
+    if (subCmd === "toggle") {
+      const targetId = (parts[1] || "").toLowerCase();
+      if (!targetId) {
+        ctx.ui.notify(lbl.slotsUsageToggle || "Usage: /slots toggle <slot-id>", "warning");
+        return;
+      }
+      const existing = (activeMode.slots || []).find((s) => s.id.toLowerCase() === targetId);
+      if (!existing) {
+        const notFoundMsg = (lbl.slotsNotFound || "Slot [{id}] not found").replace("{pair}", pair).replace("{id}", targetId);
+        ctx.ui.notify(notFoundMsg, "warning");
+        return;
+      }
+      activeMode.slots = activeMode.slots.map(
+        (s) => s.id.toLowerCase() === targetId ? { ...s, enabled: s.enabled === false } : s
+      );
+      state2.modes = currentModes;
+      saveUserLingualConfig({ modes: currentModes });
+      globalLingualCache.clear();
+      const updated = activeMode.slots.find((s) => s.id.toLowerCase() === targetId);
+      const statusText = updated?.enabled !== false ? lbl.slotsStatusEnabled || "enabled" : lbl.slotsStatusDisabled || "disabled";
+      ctx.ui.notify(`[${pair}] Slot [${targetId}] is now ${statusText} in mode [${activeMode.name}].`, "info");
+      updateFooter2(ctx);
+      refreshActiveView2(ctx);
+      return;
+    }
+    if (subCmd === "add") {
+      const id = (parts[1] || "").toLowerCase();
+      const label = parts[2];
+      const instruction = parts.slice(3).join(" ");
+      if (!id || !label) {
+        ctx.ui.notify(lbl.slotsUsageAdd || "Usage: /slots add <id> <label> [instruction...]", "warning");
+        return;
+      }
+      const newPromptSlot = {
+        id,
+        label,
+        role: id === "vocab" || id === "fixes" ? "vocab" : "rewrite",
+        instruction: instruction || `Target Language: \${targetLang}. Output in \${targetLang} ONLY: Generate output matching "${label}" style without summarizing.`,
+        enabled: true
+      };
+      const existingIdx = activeMode.slots.findIndex((s) => s.id.toLowerCase() === id);
+      if (existingIdx >= 0) {
+        activeMode.slots[existingIdx] = newPromptSlot;
+      } else {
+        activeMode.slots.push(newPromptSlot);
+      }
+      let hudUpgraded = false;
+      const enabledTranslationCount = activeMode.slots.filter(
+        (s) => s.enabled !== false && s.role !== "vocab" && s.id !== "source"
+      ).length;
+      if (activeMode.hud === "preview" && enabledTranslationCount > 1) {
+        activeMode.hud = "tree";
+        hudUpgraded = true;
+      }
+      state2.modes = currentModes;
+      saveUserLingualConfig({ modes: currentModes });
+      globalLingualCache.clear();
+      const upgradeHint = hudUpgraded ? ` (HUD layout auto-upgraded to "tree" for multi-slot visibility)` : "";
+      ctx.ui.notify(`[${pair}] Added/updated slot [${id}] "${label}" in mode [${activeMode.name}]${upgradeHint}.`, "info");
+      updateFooter2(ctx);
+      refreshActiveView2(ctx);
+      return;
+    }
+    const matchedPreset = SLOT_PRESETS[subCmd];
+    if (matchedPreset) {
+      state2.slotPreset = subCmd;
+      state2.slots = resolveSlotsForPreset(subCmd, state2.sourceLang);
+      saveUserLingualConfig({ slotPreset: subCmd === "developer" ? void 0 : subCmd, slots: state2.slots });
+      globalLingualCache.clear();
+      ctx.ui.notify(`[lingual] applied preset [${subCmd}]: ${matchedPreset.description}`, "info");
+      updateFooter2(ctx);
+      refreshActiveView2(ctx);
+      return;
+    }
+    const unknownTpl = lbl.slotsUnknown || 'Unknown slot command or preset "{cmd}".';
+    ctx.ui.notify(unknownTpl.replace("{pair}", lbl.hudTitle).replace("{cmd}", subCmd), "warning");
+  };
+  const showStatusHandler = async (_args, ctx) => {
+    const followDesc = state2.labels.modelFollowSession || "follow session";
+    const activeModel = formatActiveModelLabel(state2.selectedModel, ctx, followDesc);
+    const currentModes = Array.isArray(state2.modes) && state2.modes.length > 0 ? state2.modes : resolveModesFromConfig(loadUserLingualConfig());
+    const activeModeId = normalizeActiveModeId(
+      { mode: state2.mode, activeModeId: state2.activeModeId },
+      currentModes
+    );
+    const activeMode = currentModes.find((m) => m.id === activeModeId) || currentModes[0];
+    const diskCfg = loadUserLingualConfig();
+    const activeEffort = activeMode.reasoning || diskCfg.reasoning || "low";
+    const statusMsg = formatStatusReport(state2.labels, {
+      mode: state2.mode,
+      sourceLang: state2.sourceLang,
+      targetLang: state2.targetLang,
+      activeModel,
+      layout: state2.compact ? "capsule" : "tree",
+      cacheStats: globalLingualCache.getStats()
+    }) + `
+\u2022 Active Mode: [${activeMode.name}] (${activeMode.id}) \xB7 flow: ${activeMode.flow} \xB7 action: ${activeMode.action}
+\u2022 Dynamic Slots: [${(activeMode.slots || []).filter((s) => s.enabled !== false).map((s) => s.label).join(", ")}]
+\u2022 Reasoning Effort: ${activeEffort} (mode: ${activeMode.reasoning || "default"}, global: ${diskCfg.reasoning || "low"})`;
+    ctx.ui.notify(statusMsg, "info");
+  };
+  const showLastHandler = async (_args, ctx) => {
+    if (session2.getReadyPages().length > 0) {
+      renderActiveCard2(ctx);
+      return;
+    }
+    const last = session2.getLastResult();
+    if (!last) {
+      try {
+        ctx.ui.notify("[lingual] no previous card", "info");
+      } catch {
+      }
+      return;
+    }
+    renderHudWidget2(ctx, last, activeRuntime2());
+  };
+  const copyLastHandler = async (args, ctx) => {
+    const res = session2.getActiveResult() || session2.getLastResult();
+    if (!res) {
+      try {
+        ctx.ui.notify("[lingual] no active card to copy", "warning");
+      } catch {
+      }
+      return;
+    }
+    let nonSourceSlots = [];
+    if (Array.isArray(res.slots) && res.slots.length > 0) {
+      nonSourceSlots = res.slots.filter((s) => s.role !== "source" && Boolean(s.content)).map((s) => ({ id: s.id, label: s.label || s.id, content: s.content }));
+    } else if (res.slotOutputs && Object.keys(res.slotOutputs).length > 0) {
+      nonSourceSlots = Object.entries(res.slotOutputs).filter(([id, out]) => id !== "source" && Boolean(out?.content)).map(([id, out]) => ({ id, label: id, content: out.content }));
+    } else {
+      const fallback = [
+        { id: "spoken", label: "Spoken", content: res.spoken },
+        { id: "written", label: "Written", content: res.written },
+        ...res.vocab ? [{ id: "vocab", label: "Vocab", content: res.vocab }] : []
+      ];
+      nonSourceSlots = fallback.filter((s) => Boolean(s.content));
+    }
+    if (nonSourceSlots.length === 0) {
+      try {
+        ctx.ui.notify("[lingual] no active card to copy", "warning");
+      } catch {
+      }
+      return;
+    }
+    const trimmedArg = (args || "").trim();
+    let chosen;
+    const numIdx = parseInt(trimmedArg, 10);
+    if (!isNaN(numIdx) && String(numIdx) === trimmedArg && numIdx >= 1 && numIdx <= nonSourceSlots.length) {
+      chosen = nonSourceSlots[numIdx - 1];
+    } else if (trimmedArg) {
+      const lower = trimmedArg.toLowerCase();
+      chosen = nonSourceSlots.find(
+        (s) => s.id.toLowerCase() === lower || s.label.toLowerCase() === lower
+      );
+    }
+    if (!chosen) {
+      const primary = pickPrimaryContent(res, activeRuntime2());
+      if (primary) {
+        chosen = nonSourceSlots.find((s) => s.content === primary) || nonSourceSlots[0];
+      } else {
+        chosen = nonSourceSlots[0];
+      }
+    }
+    if (!chosen || !chosen.content) {
+      try {
+        ctx.ui.notify("[lingual] no active card to copy", "warning");
+      } catch {
+      }
+      return;
+    }
+    copyToClipboard(chosen.content);
+    try {
+      ctx.ui.notify(`[lingual] Copied [${chosen.label}] to clipboard`, "info");
+    } catch {
+    }
+  };
+  const manageModesHandler = async (args, ctx) => {
+    const trimmed = args.trim();
+    const disk = loadUserLingualConfig();
+    const currentModes = Array.isArray(state2.modes) && state2.modes.length > 0 ? state2.modes : resolveModesFromConfig(disk);
+    const pair = state2.labels.hudTitle || `${state2.sourceLang} \u21C4 ${state2.targetLang}`;
+    if (!trimmed || trimmed === "list") {
+      const modeLines = currentModes.map((m, idx) => {
+        const status = m.enabled !== false ? "[\u2713]" : "[x]";
+        const isCurrent = m.id === state2.mode || m.id === state2.activeModeId ? " \u25B8" : "  ";
+        const reasoningTag = `[${m.reasoning || "low"}]`;
+        return `${isCurrent} [${idx + 1}] ${m.id} (${m.name}) ${reasoningTag} \xB7 flow: ${m.flow} \xB7 action: ${m.action} \xB7 hud: ${m.hud} \xB7 ${m.slots?.length || 0} slots ${status}`;
+      });
+      const report = `\u2726 [pi-lingual Modes Registry] (Current: ${state2.mode})
+` + modeLines.join("\n") + `
+
+Usage: /lingual mode [list | add <id> <name> [flow] [action] [hud] | rm <id> | toggle <id> | reset]`;
+      ctx.ui.notify(report, "info");
+      return;
+    }
+    const parts = trimmed.split(/\s+/);
+    const subCmd = parts[0].toLowerCase();
+    const id = parts[1]?.toLowerCase();
+    if (subCmd === "reset") {
+      const defaults = getDefaultFactoryModes(state2.sourceLang, disk.explainLang);
+      state2.modes = defaults;
+      saveUserLingualConfig({ modes: defaults });
+      ctx.ui.notify(`[${pair}] Reset modes registry to factory golden defaults (${defaults.map((m) => m.name).join(" & ")})`, "info");
+      updateFooter2(ctx);
+      return;
+    }
+    if (subCmd === "rm" || subCmd === "remove" || subCmd === "del" || subCmd === "delete") {
+      if (!id) {
+        ctx.ui.notify(`[${pair}] Missing mode ID. Usage: /lingual mode rm <id>`, "warning");
+        return;
+      }
+      const updated = removeCustomMode(currentModes, id);
+      if (updated.length === currentModes.length) {
+        ctx.ui.notify(`[${pair}] Mode [${id}] not found in modes registry.`, "warning");
+        return;
+      }
+      state2.modes = updated;
+      saveUserLingualConfig({ modes: updated });
+      ctx.ui.notify(`[${pair}] Removed custom mode [${id}] from registry.`, "info");
+      updateFooter2(ctx);
+      return;
+    }
+    if (subCmd === "toggle") {
+      if (!id) {
+        ctx.ui.notify(`[${pair}] Missing mode ID. Usage: /lingual mode toggle <id>`, "warning");
+        return;
+      }
+      const updated = toggleCustomMode(currentModes, id);
+      const target = updated.find((m) => m.id === id);
+      if (!target) {
+        ctx.ui.notify(`[${pair}] Mode [${id}] not found in modes registry.`, "warning");
+        return;
+      }
+      state2.modes = updated;
+      saveUserLingualConfig({ modes: updated });
+      ctx.ui.notify(`[${pair}] Mode [${id}] is now ${target.enabled ? "enabled [\u2713]" : "disabled [x]"}.`, "info");
+      updateFooter2(ctx);
+      return;
+    }
+    if (subCmd === "add") {
+      if (!id || !parts[2]) {
+        ctx.ui.notify(`[${pair}] Missing arguments. Usage: /lingual mode add <id> <name> [flow] [action] [hud]`, "warning");
+        return;
+      }
+      const name = parts[2];
+      const flow = parts[3] || "translate";
+      const action = parts[4] || "transform";
+      const hud = parts[5] || "preview";
+      const customInstruction = parts.slice(6).join(" ").trim();
+      const newMode = {
+        id,
+        name,
+        flow: flow === "proofread" || flow === "custom" ? flow : "translate",
+        action: action === "pass-through" || action === "select" ? action : "transform",
+        hud: hud === "tree" || hud === "adaptive-takeaway" || hud === "none" ? hud : "preview",
+        slots: action === "select" ? getDefaultPromptSlots(state2.sourceLang) : [
+          {
+            id: `${id}_slot`,
+            label: name,
+            role: "rewrite",
+            instruction: customInstruction || `Translate and polish from \${sourceLang} into \${targetLang} matching ${name} style.`,
+            enabled: true
+          }
+        ],
+        enabled: true
+      };
+      const updated = addCustomMode(currentModes, newMode);
+      state2.modes = updated;
+      saveUserLingualConfig({ modes: updated });
+      ctx.ui.notify(`[${pair}] Added custom mode [${id}] "${name}" to registry.`, "info");
+      updateFooter2(ctx);
+      return;
+    }
+    ctx.ui.notify(`[${pair}] Unknown mode subcommand "${subCmd}". Usage: /lingual mode [list|add|rm|toggle|reset]`, "warning");
+  };
+  const manageLoadoutsHandler = async (args, ctx) => {
+    const trimmed = args.trim();
+    const disk = loadUserLingualConfig();
+    const currentModes = Array.isArray(state2.modes) && state2.modes.length > 0 ? state2.modes : resolveModesFromConfig(disk);
+    const pair = state2.labels.hudTitle || `${state2.sourceLang} \u21C4 ${state2.targetLang}`;
+    const loadouts = listPresetLoadouts();
+    if (!trimmed || trimmed === "list" || trimmed === "ls") {
+      const lines = loadouts.map((l, idx) => {
+        const isInstalled = currentModes.some((m) => m.id === l.id);
+        const status = isInstalled ? "[installed \u2713]" : "[available]";
+        return `  ${idx + 1}. [${l.id}] ${l.name} - ${l.description} ${status}`;
+      });
+      const report = `\u2726 [pi-lingual Tactical Loadouts]
+` + lines.join("\n") + `
+
+Usage: /lingual loadout [list | apply <id>] (e.g. /lingual loadout apply spec)`;
+      ctx.ui.notify(report, "info");
+      return;
+    }
+    const parts = trimmed.split(/\s+/);
+    const subCmd = parts[0].toLowerCase();
+    const targetId = (subCmd === "apply" || subCmd === "add" ? parts[1] : subCmd)?.toLowerCase();
+    if (!targetId) {
+      ctx.ui.notify(`[${pair}] Missing loadout ID. Usage: /lingual loadout apply <spec|commit|oss|yap>`, "warning");
+      return;
+    }
+    const loadoutConfig = getPresetLoadout(targetId, state2.sourceLang, disk.explainLang);
+    if (!loadoutConfig) {
+      ctx.ui.notify(
+        `[${pair}] Loadout [${targetId}] not found. Available: ${loadouts.map((l) => l.id).join(", ")}`,
+        "warning"
+      );
+      return;
+    }
+    const updated = addCustomMode(currentModes, loadoutConfig);
+    state2.modes = updated;
+    saveUserLingualConfig({ modes: updated });
+    ctx.ui.notify(
+      `[${pair}] Applied tactical loadout [${loadoutConfig.id}] "${loadoutConfig.name}" to active modes! Run /lingual ${loadoutConfig.id} to activate.`,
+      "info"
+    );
+    updateFooter2(ctx);
+  };
+  const showAgentGuideHandler = async (_args, ctx) => {
+    const guide = `  pi-lingual Customization Map          Legend: ( ) Edit  (+) Add/Remove  [\u2713] Toggle
+  \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+  [Mode 1 \xB7 Companion]  Send raw text in 0ms, show learning card above editor
+    \xB7 Source Row                                                        [\u2713] Show/Hide
+    \u251C (Label) : (Language) \xB7 (Style: Spoken / Written / Paper / Script) (+) N Rows
+    \u2502   \u21B3 Native Nuance Sub-line                                        [\u2713] On/Off
+    \u2514 Vocab Row : (Focus: Idioms / Exam Collocations)                   [\u2713] On/Off
+
+  [Mode 2 \xB7 Direct]     Convert 1-to-1 on Enter using a single dedicated rule
+    \u251C (Label) : (Language) \xB7 (Style: Faithful Direct / Keigo / Spec)    1-to-1 Rule
+    \u2514 Vocab Row : Extract 1-line key expressions                        [\u2713] On/Off
+
+  [Mode 3 \xB7 Candidates] Generate N options, press keys 1..N to send (0 for raw)
+    \xB7 Source Row                                                        [\u2713] Show/Hide
+    \u251C 1..N (Label) : (Language) \xB7 (Style: Business / Keigo / PR)        (+) N Options
+    \u2514 Vocab Row : Extract 1-line key expressions                        [\u2713] On/Off
+
+  [Model & Cost]        Isolate translation sidecar from heavy reasoning brains
+    \u2022 Target Model : [${state2.selectedModel || "auto"}] (auto = Pi defaultModel \xB7 /lingual model <id>)
+  \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+  Run /lingual tuner [request] to launch the adaptive wizard in your native language (${state2.sourceLang}).`;
+    ctx.ui.notify(guide, "info");
+  };
+  const setReasoningHandler = async (args, ctx) => {
+    const trimmed = args.trim().toLowerCase();
+    const disk = loadUserLingualConfig();
+    const currentModes = Array.isArray(state2.modes) && state2.modes.length > 0 ? state2.modes : resolveModesFromConfig(disk);
+    const activeModeId = normalizeActiveModeId(
+      { mode: state2.mode, activeModeId: state2.activeModeId || disk.activeModeId },
+      currentModes
+    );
+    const activeMode = currentModes.find((m) => m.id === activeModeId) || currentModes[0];
+    const pair = state2.labels.hudTitle || `${state2.sourceLang} \u21C4 ${state2.targetLang}`;
+    if (!trimmed) {
+      const activeEffort = activeMode.reasoning || disk.reasoning || "low";
+      const globalEffort = disk.reasoning || "low";
+      ctx.ui.notify(
+        `[${pair}] Reasoning effort: mode [${activeMode.name}] = "${activeEffort}" \xB7 global = "${globalEffort}". Usage: /lingual reasoning <low|medium|high>`,
+        "info"
+      );
+      return;
+    }
+    if (trimmed !== "low" && trimmed !== "medium" && trimmed !== "high") {
+      ctx.ui.notify(
+        `[${pair}] Invalid reasoning effort "${trimmed}". Available options: low, medium, high.`,
+        "warning"
+      );
+      return;
+    }
+    const newEffort = trimmed;
+    const updatedModes = currentModes.map(
+      (m) => m.id === activeMode.id ? { ...m, reasoning: newEffort } : m
+    );
+    state2.modes = updatedModes;
+    saveUserLingualConfig({ modes: updatedModes, reasoning: newEffort });
+    ctx.ui.notify(
+      `[${pair}] Reasoning effort for mode [${activeMode.name}] set to "${newEffort}".`,
+      "info"
+    );
+    updateFooter2(ctx);
+  };
+  const setDefaultModeHandler = async (args, ctx) => {
+    const trimmed = args?.trim();
+    const disk = loadUserLingualConfig();
+    const currentModes = Array.isArray(state2.modes) && state2.modes.length > 0 ? state2.modes : resolveModesFromConfig(disk, state2.sourceLang);
+    const currentDefault = disk.defaultMode || state2.defaultMode || "companion";
+    const defaultModeObj = currentModes.find((m) => m.id === currentDefault) || currentModes[0];
+    const defaultIdx = currentModes.indexOf(defaultModeObj);
+    const defaultNum = defaultIdx >= 0 ? defaultIdx + 1 : 1;
+    const defaultName = defaultModeObj ? localizeModeName(defaultModeObj.id, defaultModeObj.name, state2.sourceLang) : currentDefault;
+    if (!trimmed) {
+      ctx.ui.notify(
+        `[lingual] Default mode for new sessions: ${defaultNum}. ${defaultName} (${currentDefault}). Set with: /lingual default <1|2|3|0|id>`,
+        "info"
+      );
+      return;
+    }
+    let targetId;
+    const num = parseInt(trimmed, 10);
+    if (!isNaN(num) && num === 0) {
+      targetId = "off";
+    } else if (!isNaN(num) && num >= 1 && num <= currentModes.length) {
+      targetId = currentModes[num - 1].id;
+    } else {
+      const lower = trimmed.toLowerCase();
+      const matched = currentModes.find(
+        (m) => m.id.toLowerCase() === lower || m.name.toLowerCase() === lower || Array.isArray(m.aliases) && m.aliases.some((a) => a.toLowerCase() === lower) || resolveModeDisplayName(m.id, state2.sourceLang).toLowerCase() === lower
+      );
+      if (matched) {
+        targetId = matched.id;
+      } else if (lower === "off") {
+        targetId = "off";
+      } else if (lower === "companion" || lower === "original") {
+        targetId = "companion";
+      } else if (lower === "direct" || lower === "spec" || lower === "lazy") {
+        targetId = "direct";
+      } else if (lower === "live-flow" || lower === "flow" || lower === "raw" || lower === "modify") {
+        targetId = "live-flow";
+      }
+    }
+    if (!targetId) {
+      ctx.ui.notify(
+        `[lingual] Unknown mode "${trimmed}". Valid options: 1, 2, 3, 0, companion, direct, live-flow, off.`,
+        "warning"
+      );
+      return;
+    }
+    state2.defaultMode = targetId;
+    saveUserLingualConfig({ defaultMode: targetId });
+    const targetObj = currentModes.find((m) => m.id === targetId);
+    const targetIdx = targetObj ? currentModes.indexOf(targetObj) : -1;
+    const targetNum = targetId === "off" ? 0 : targetIdx >= 0 ? targetIdx + 1 : 1;
+    const targetName = targetId === "off" ? resolveModeDisplayName("off", state2.sourceLang) : targetObj ? localizeModeName(targetObj.id, targetObj.name, state2.sourceLang) : targetId;
+    ctx.ui.notify(
+      `[lingual] Default mode for new sessions set to: ${targetNum}. ${targetName} (${targetId})`,
+      "info"
+    );
+  };
+  const masterCommandHandler = async (args, ctx) => {
+    const diskForMode = loadUserLingualConfig();
+    const diskMode = diskForMode.activeModeId || diskForMode.mode;
+    if (diskMode && diskMode !== state2.mode) {
+      state2.mode = normalizeActiveModeId({ mode: diskMode, activeModeId: diskMode }, state2.modes);
+      state2.activeModeId = state2.mode;
+      syncResizeListener();
+      updateFooter2(ctx);
+    }
+    const trimmed = args?.trim();
+    if (!trimmed) {
+      try {
+        await openModePicker(ctx, {
+          mode: state2.mode,
+          activeModeId: state2.activeModeId,
+          modes: state2.modes,
+          sourceLang: state2.sourceLang,
+          targetLang: state2.targetLang,
+          labels: state2.labels,
+          modeLocked: state2.modeLocked,
+          onSelect: setModeHandler
+        });
+      } catch {
+        try {
+          await setModeHandler("", ctx);
+        } catch {
+        }
+      }
+      return;
+    }
+    const lower = trimmed.toLowerCase();
+    const spaceIndex = lower.indexOf(" ");
+    const sub = spaceIndex === -1 ? lower : lower.slice(0, spaceIndex);
+    const subArgs = spaceIndex === -1 ? "" : trimmed.slice(spaceIndex + 1).trim();
+    if (sub === "on") {
+      await setModeHandler("1", ctx);
+      return;
+    }
+    if (sub === "off") {
+      await setModeHandler("0", ctx);
+      return;
+    }
+    if (sub === "reasoning" || sub === "effort") {
+      await setReasoningHandler(subArgs, ctx);
+      return;
+    }
+    if (sub === "default" || sub === "def") {
+      await setDefaultModeHandler(subArgs, ctx);
+      return;
+    }
+    if (sub === "mode" || sub === "modes") {
+      await manageModesHandler(subArgs, ctx);
+      return;
+    }
+    if (sub === "loadout" || sub === "loadouts" || sub === "preset" || sub === "presets") {
+      await manageLoadoutsHandler(subArgs, ctx);
+      return;
+    }
+    if (sub === "lang" || sub === "language") {
+      await switchLangHandler(subArgs, ctx);
+      return;
+    }
+    if (sub === "slots" || sub === "slot" || sub === "preset") {
+      await switchSlotsHandler(subArgs, ctx);
+      return;
+    }
+    if (sub === "hide-source" || sub === "no-source" || sub === "show-source" || sub === "with-source") {
+      await switchSlotsHandler(sub, ctx);
+      return;
+    }
+    if (sub === "model") {
+      await setModelHandler(subArgs, ctx);
+      return;
+    }
+    if (sub === "compact" || sub === "capsule" || sub === "layout") {
+      await toggleCompactHandler(subArgs, ctx);
+      return;
+    }
+    if (sub === "status" || sub === "info" || sub === "report") {
+      await showStatusHandler(subArgs, ctx);
+      return;
+    }
+    if (sub === "last" || sub === "prev" || sub === "history" || sub === "replay") {
+      await showLastHandler(subArgs, ctx);
+      return;
+    }
+    if (sub === "copy" || sub === "cp" || sub === "yank") {
+      await copyLastHandler(subArgs, ctx);
+      return;
+    }
+    if (sub === "tuner" || sub === "tune" || sub === "agent" || sub === "help" || sub === "?") {
+      armTuner();
+      const promptBody = subArgs ? `[lingual-tuner] Load the lingual-tuner skill and update ~/.pi/agent/lingual.json (user native language sourceLang="${state2.sourceLang}"). Consult on prompt styling, custom slots, and translation model routing (auto Pi default vs pinned sidecar model). Communicate strictly in the user's native language (${state2.sourceLang}) and apply: ${subArgs}` : `[lingual-tuner] Load the lingual-tuner skill and launch the interactive customization wizard (user native language sourceLang="${state2.sourceLang}"). Consult on prompt styling, custom slots, and translation model routing (auto Pi default vs pinned sidecar model). Render the Customization Map and all questions/options strictly in the user's native language (${state2.sourceLang}).`;
+      if ((sub === "tuner" || sub === "tune" || subArgs) && typeof pi.sendMessage === "function") {
+        pi.sendMessage(
+          { customType: "lingual-tuner", content: promptBody, display: false },
+          { triggerTurn: true }
+        );
+        return;
+      }
+      if ((sub === "tuner" || sub === "tune" || subArgs) && typeof pi.sendUserMessage === "function") {
+        pi.sendUserMessage(promptBody);
+        return;
+      }
+      await showAgentGuideHandler(subArgs, ctx);
+      return;
+    }
+    if (sub === "news" || sub === "whatsnew" || sub === "changelog") {
+      const diskCfg = loadUserLingualConfig();
+      renderReleaseBanner(ctx, diskCfg.sourceLang || state2.sourceLang);
+      return;
+    }
+    if (sub === "lock") {
+      state2.modeLocked = true;
+      saveUserLingualConfig({ modeLocked: true });
+      const activeObj = state2.modes.find((m) => m.id === state2.mode);
+      const currentName = activeObj ? activeObj.name : state2.mode;
+      try {
+        ctx.ui.notify(`[lingual] mode locked to [${currentName}]`, "info");
+      } catch {
+      }
+      updateFooter2(ctx);
+      return;
+    }
+    if (sub === "unlock") {
+      state2.modeLocked = false;
+      saveUserLingualConfig({ modeLocked: false });
+      try {
+        ctx.ui.notify("[lingual] mode unlocked", "info");
+      } catch {
+      }
+      updateFooter2(ctx);
+      return;
+    }
+    const currentModes = Array.isArray(state2.modes) && state2.modes.length > 0 ? state2.modes : resolveModesFromConfig(loadUserLingualConfig(), state2.sourceLang);
+    const isMatchedMode = currentModes.some((m) => {
+      const idMatch = m.id.toLowerCase() === sub || m.id.toLowerCase() === lower;
+      const nameMatch = m.name.toLowerCase() === sub || m.name.toLowerCase() === lower;
+      const aliasMatch = Array.isArray(m.aliases) && m.aliases.some((a) => a.toLowerCase() === sub || a.toLowerCase() === lower);
+      const locName = resolveModeDisplayName(m.id, state2.sourceLang).toLowerCase();
+      const locMatch = locName === sub || locName === lower;
+      const specMatch = m.id === "direct" && (sub === "spec" || lower === "spec" || lower === "logical spec" || lower === "specification" || lower === "direct spec");
+      const compMatch = m.id === "companion" && (sub === "companion" || lower === "companion" || lower === "companion mode" || lower === "original");
+      const flowMatch = m.id === "live-flow" && (sub === "flow" || lower === "flow" || lower === "live flow" || lower === "live" || lower === "modify" || lower === "raw");
+      return idMatch || nameMatch || aliasMatch || locMatch || specMatch || compMatch || flowMatch;
+    });
+    const numIdx = parseInt(sub, 10);
+    const isNum = !isNaN(numIdx) && String(numIdx) === sub;
+    const isKnownMode = sub === "mode" || isMatchedMode || isNum && numIdx >= 0 && numIdx <= currentModes.length || normalizeLingualModeInput(sub) !== null || normalizeLingualModeInput(lower) !== null;
+    if (isKnownMode) {
+      await setModeHandler(sub === "mode" ? subArgs : trimmed, ctx);
+      return;
+    }
+    const possibleLang = normalizeLangCode(sub);
+    if (LANGUAGE_PRESETS[possibleLang]) {
+      await switchLangHandler(trimmed, ctx);
+      return;
+    }
+    try {
+      ctx.ui.notify(`[lingual] unknown: "${trimmed}". run /lingual for help`, "warning");
+    } catch {
+    }
+  };
+  return {
+    setModeHandler,
+    setModelHandler,
+    switchLangHandler,
+    toggleCompactHandler,
+    switchSlotsHandler,
+    showStatusHandler,
+    showLastHandler,
+    copyLastHandler,
+    manageModesHandler,
+    manageLoadoutsHandler,
+    showAgentGuideHandler,
+    setReasoningHandler,
+    setDefaultModeHandler,
+    masterCommandHandler
+  };
+}
+
+// src/extension.ts
+var initialDiskConfig = isTestEnvironment() ? {} : loadUserLingualConfig();
+var initialSourceLang = initialDiskConfig.sourceLang || (isTestEnvironment() ? "en" : resolveReleaseBannerLang());
+var initialTargetLang = initialDiskConfig.targetLang || (initialSourceLang === "en" ? "ja" : "en");
+var initialSlotPreset = initialDiskConfig.slotPreset;
+var initialSlots = initialDiskConfig.slots?.length ? initialDiskConfig.slots : initialSlotPreset ? resolveSlotsForPreset(initialSlotPreset, initialSourceLang) : getDefaultSlots(initialSourceLang);
+var initialDirectSlots = initialDiskConfig.directSlots?.length ? initialDiskConfig.directSlots : getDefaultDirectSlots(initialSourceLang);
+var initialPromptSlots = initialDiskConfig.promptSlots?.length ? initialDiskConfig.promptSlots : getDefaultPromptSlots(initialSourceLang);
+var initialModifySlots = initialDiskConfig.modifySlots?.length ? initialDiskConfig.modifySlots : getDefaultModifySlots(initialSourceLang);
+var initialModes = resolveModesFromConfig(initialDiskConfig, initialSourceLang);
+var initialLabels = resolveLabelsForLang(initialSourceLang, initialDiskConfig.labels, initialTargetLang);
+var initialRawMode = initialDiskConfig.activeModeId || initialDiskConfig.mode || "companion";
+var initialNormalizedMode = normalizeActiveModeId({ mode: initialRawMode, activeModeId: initialRawMode }, initialModes);
+var state = {
+  mode: initialNormalizedMode,
+  activeModeId: initialNormalizedMode,
+  defaultMode: initialDiskConfig.defaultMode || "companion",
+  modeLocked: Boolean(initialDiskConfig.modeLocked),
+  compact: Boolean(initialDiskConfig.compact),
+  sourceLang: initialSourceLang,
+  targetLang: initialTargetLang,
+  explainLang: initialDiskConfig.explainLang || (initialSourceLang === "zh" || initialSourceLang === "tw" ? "zh" : initialSourceLang),
+  selectedModel: initialDiskConfig.selectedModel || "auto",
+  slotPreset: initialSlotPreset || "",
+  slots: initialSlots,
+  directSlots: initialDirectSlots,
+  promptSlots: initialPromptSlots,
+  modifySlots: initialModifySlots,
+  modes: initialModes,
+  labels: initialLabels
+};
+var session = new LingualSessionController();
+var lastContext = null;
 function updateFooter(ctx) {
   if (!hasActiveUI(ctx)) return;
   try {
@@ -5217,56 +6907,80 @@ function updateFooter(ctx) {
       ctx.ui.setStatus("lingual", void 0);
       return;
     }
-    let pair = `${state.sourceLang} \u21C4 ${state.targetLang}`;
-    const canonicalId = state.mode === "english" ? "direct" : state.mode === "original" ? "companion" : state.mode === "select" ? "candidates" : state.mode === "modify" ? "live-flow" : state.mode;
-    const canonicalKey = canonicalId === "live-flow" ? "modify" : canonicalId;
-    const inMemory = Array.isArray(state.modes) ? state.modes : [];
-    const activeMode = inMemory.find((m) => m.id === state.mode || m.id === canonicalId) || resolveModesFromConfig(loadUserLingualConfig(), state.sourceLang).find((m) => m.id === state.mode || m.id === canonicalId);
-    const modeSlots = activeMode && Array.isArray(activeMode.slots) ? activeMode.slots : [];
-    const enabledSlots = (modeSlots.length > 0 ? modeSlots : state.slots || []).filter((s) => s.enabled !== false);
+    const rt = activeRuntime();
+    let pair = runtimeLanguagePair(rt, `${state.sourceLang} \u21C4 ${state.targetLang}`);
+    const enabledSlots = (rt.slots.length > 0 ? rt.slots : state.slots || []).filter(
+      (s) => s.enabled !== false
+    );
     const nonSourceCount = enabledSlots.filter((s) => s.role !== "source").length;
     if (nonSourceCount !== 2 && enabledSlots.length > 0) {
       pair += ` \xB7 ${enabledSlots.length}s`;
     } else if (state.slotPreset) {
       pair += ` \xB7 ${state.slotPreset}`;
     }
-    const modeName = activeMode ? activeMode.name : resolveModeDisplayName(canonicalId, state.sourceLang);
-    ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", `${pair} \xB7 ${modeName}`));
+    ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", `${pair} \xB7 ${rt.name}`));
   } catch {
   }
 }
-function renderHudWidget(ctx, sourceText, spoken, written, vocab, spokenMeaning, writtenMeaning, pagination, slotOutputs, slots) {
+function fallbackSlotsFor(mode) {
+  if (mode.action === "select") {
+    return resolveCandidateSlotsFromConfig({ sourceLang: state.sourceLang, promptSlots: state.promptSlots });
+  }
+  if (mode.flow === "proofread") {
+    return resolveModifySlotsFromConfig({ sourceLang: state.sourceLang, explainLang: state.explainLang, modifySlots: state.modifySlots });
+  }
+  if (mode.action === "transform") {
+    return resolveDirectSlotsFromConfig({ sourceLang: state.sourceLang, directSlots: state.directSlots });
+  }
+  return state.slots;
+}
+function runtimeForMode(mode) {
+  return resolveModeRuntime(mode, {
+    sourceLang: state.sourceLang,
+    targetLang: state.targetLang,
+    explainLang: state.explainLang,
+    fallbackSlots: fallbackSlotsFor(mode),
+    globalKillList: loadUserLingualConfig().globalKillList
+  });
+}
+function activeRuntime() {
+  const id = normalizeActiveModeId({ mode: state.mode, activeModeId: state.activeModeId }, state.modes);
+  const mode = state.modes.find((m) => m.id === id) || state.modes[0];
+  if (mode) return runtimeForMode(mode);
+  return resolveModeRuntime(
+    { id: "companion", name: "Companion", flow: "translate", action: "pass-through", hud: "tree", slots: state.slots },
+    { sourceLang: state.sourceLang, targetLang: state.targetLang, fallbackSlots: state.slots }
+  );
+}
+function renderHudWidget(ctx, result, rt, extras) {
   if (!hasActiveUI(ctx)) return;
+  if (rt.hud === "none") {
+    safeClearWidget(ctx);
+    return;
+  }
   try {
     const isCompact = state.compact || (process.stdout?.rows ? process.stdout.rows < 22 : false);
     const maxCols = getEffectiveMaxCols();
-    const pageTag = pagination && pagination.totalPages > 1 ? ctx.ui.theme.fg("muted", ` [${pagination.pageIndex + 1}/${pagination.totalPages} \u2325.]`) : "";
-    const lines = renderCardLayout(
-      {
-        spoken,
-        written: written || "",
-        vocab,
-        spokenMeaning,
-        writtenMeaning,
-        sourceText,
-        annotated: "",
-        slotOutputs,
-        slots
-      },
-      state.labels,
-      {
-        maxCols,
-        maxLines: 9,
-        isCompact,
-        slots: state.slots,
-        pageTag,
-        themeDecorators: {
-          muted: (s) => ctx.ui.theme.fg("muted", s),
-          accent: (s) => ctx.ui.theme.fg("accent", s),
-          dim: (s) => ctx.ui.theme.fg("dim", s)
-        }
+    const hudSlots = rt.slots.length > 0 ? rt.slots : state.slots;
+    const lines = renderCardLayout(result, state.labels, {
+      maxCols,
+      maxLines: rt.hud === "preview" ? 2 : extras?.isLong ? 10 : 9,
+      isCompact,
+      variant: rt.hud,
+      isLong: extras?.isLong,
+      isStreaming: extras?.isStreaming,
+      slots: hudSlots,
+      pageTag: extras?.pageTag || "",
+      themeDecorators: {
+        muted: (s) => ctx.ui.theme.fg("muted", s),
+        accent: (s) => ctx.ui.theme.fg("accent", s),
+        dim: (s) => ctx.ui.theme.fg("dim", s)
       }
-    );
+    });
+    if (lines.length === 0) {
+      safeClearWidget(ctx);
+      return;
+    }
     ctx.ui.setWidget("lingual_hud", lines, { placement: "aboveEditor" });
   } catch {
   }
@@ -5279,22 +6993,19 @@ function renderActiveCard(ctx) {
     const snapshot = session.getPaginationSnapshot();
     const res = session.getActiveResult();
     if (!res) return;
-    renderHudWidget(
-      ctx,
-      res.sourceText,
-      res.spoken,
-      res.written,
-      res.vocab,
-      res.spokenMeaning,
-      res.writtenMeaning,
-      {
-        pageIndex: snapshot.pageIndex,
-        totalPages: snapshot.readyCount
-      },
-      res.slotOutputs,
-      res.slots
-    );
+    const rt = activeRuntime();
+    const pageTag = snapshot.readyCount > 1 ? ctx.ui.theme.fg("muted", ` [${snapshot.pageIndex + 1}/${snapshot.readyCount} \u2325.]`) : "";
+    renderHudWidget(ctx, res, rt, { pageTag });
   } catch {
+  }
+}
+function refreshActiveView(ctx) {
+  if (!hasActiveUI(ctx)) return;
+  if (session.getReadyPages().length > 0) {
+    renderActiveCard(ctx);
+  } else if (session.getLastResult()) {
+    const last = session.getLastResult();
+    renderHudWidget(ctx, last, activeRuntime());
   }
 }
 function extension_default(pi) {
@@ -5386,27 +7097,16 @@ function extension_default(pi) {
       state.mode = state.modes[0]?.id || "companion";
       state.activeModeId = state.mode;
     }
-    if (diskCfg.sourceLang) {
-      state.sourceLang = diskCfg.sourceLang;
-    }
-    if (diskCfg.targetLang) {
-      state.targetLang = diskCfg.targetLang;
-    }
+    if (diskCfg.sourceLang) state.sourceLang = diskCfg.sourceLang;
+    if (diskCfg.targetLang) state.targetLang = diskCfg.targetLang;
     state.explainLang = diskCfg.explainLang || (state.sourceLang === "zh" || state.sourceLang === "tw" ? "zh" : state.sourceLang);
     state.labels = resolveLabelsForLang(state.sourceLang, diskCfg.labels, state.targetLang);
-    if (Array.isArray(diskCfg.modes) && diskCfg.modes.length > 0) {
-      state.modes = localizeModes(diskCfg.modes, state.sourceLang, state.explainLang || state.sourceLang);
-    } else {
-      state.modes = resolveModesFromConfig(diskCfg, state.sourceLang);
-    }
+    state.modes = Array.isArray(diskCfg.modes) && diskCfg.modes.length > 0 ? localizeModes(diskCfg.modes, state.sourceLang, state.explainLang || state.sourceLang) : resolveModesFromConfig(diskCfg, state.sourceLang);
     const isBrandNewSession = event?.reason === "new" || event?.reason === "startup" || !event?.reason;
     const targetDefault = diskCfg.defaultMode || "companion";
     state.defaultMode = targetDefault;
     const rawDiskMode = isBrandNewSession ? targetDefault : diskCfg.activeModeId || diskCfg.mode || targetDefault || state.mode;
-    state.mode = normalizeActiveModeId(
-      { mode: rawDiskMode, activeModeId: rawDiskMode },
-      state.modes
-    );
+    state.mode = normalizeActiveModeId({ mode: rawDiskMode, activeModeId: rawDiskMode }, state.modes);
     state.activeModeId = state.mode;
     if (isBrandNewSession && diskCfg.activeModeId && diskCfg.activeModeId !== state.mode) {
       saveUserLingualConfig({ activeModeId: state.mode, mode: state.mode });
@@ -5414,12 +7114,8 @@ function extension_default(pi) {
     if (diskCfg.slots && Array.isArray(diskCfg.slots) && diskCfg.slots.length > 0) {
       state.slots = state.sourceLang === "zh" || state.sourceLang === "tw" ? diskCfg.slots : diskCfg.slots.map((s) => ({ ...s, label: localizeSlotLabel(s.id, s.label, state.sourceLang) }));
     }
-    if (diskCfg.directSlots && Array.isArray(diskCfg.directSlots) && diskCfg.directSlots.length > 0) {
-      state.directSlots = diskCfg.directSlots;
-    }
-    if (diskCfg.promptSlots && Array.isArray(diskCfg.promptSlots) && diskCfg.promptSlots.length > 0) {
-      state.promptSlots = diskCfg.promptSlots;
-    }
+    if (diskCfg.directSlots?.length) state.directSlots = diskCfg.directSlots;
+    if (diskCfg.promptSlots?.length) state.promptSlots = diskCfg.promptSlots;
     if (state.sourceLang !== "zh" && state.sourceLang !== "tw") {
       const serialized = JSON.stringify(diskCfg.modes || "");
       if (/[\u4e00-\u9fa5]/.test(serialized)) {
@@ -5440,9 +7136,7 @@ function extension_default(pi) {
   pi.on("agent_start", async (_event, ctx) => {
     if (showingReleaseBanner) {
       showingReleaseBanner = false;
-      if (hasActiveUI(ctx)) {
-        safeClearWidget(ctx);
-      }
+      if (hasActiveUI(ctx)) safeClearWidget(ctx);
     }
   });
   pi.on("before_agent_start", async (event) => {
@@ -5465,1096 +7159,56 @@ function extension_default(pi) {
       globalThis.__piLingualResizeListener = void 0;
     }
   });
-  const setModeHandler = async (args, ctx) => {
-    session.abortActive();
-    const trimmed = args?.trim() || "";
-    const pair = state.labels.hudTitle || `${state.sourceLang} \u21C4 ${state.targetLang}`;
-    const modeSpec = resolveModeDisplaySpec(state.sourceLang);
-    const diskForMode = loadUserLingualConfig();
-    const modes = Array.isArray(state.modes) && state.modes.length > 0 ? state.modes : resolveModesFromConfig(diskForMode);
-    const activeModes = modes.filter((m) => m.enabled !== false);
-    const hasCustomModesOnDisk = Array.isArray(diskForMode.modes) && diskForMode.modes.length > 0;
-    let nextMode;
-    const explicitLegacy = normalizeLingualModeInput(trimmed);
-    if (trimmed) {
-      const lower = trimmed.toLowerCase();
-      const matched = activeModes.find(
-        (m) => m.id.toLowerCase() === lower || m.name.toLowerCase() === lower || Array.isArray(m.aliases) && m.aliases.some((a) => a.toLowerCase() === lower) || resolveModeDisplayName(m.id, state.sourceLang).toLowerCase() === lower || m.id === "direct" && (lower === "spec" || lower === "logical spec" || lower === "specification" || lower === "direct spec") || m.id === "companion" && (lower === "companion" || lower === "companion mode" || lower === "original") || m.id === "live-flow" && (lower === "live flow" || lower === "flow" || lower === "live" || lower === "modify" || lower === "raw")
-      );
-      const numIdx = parseInt(trimmed, 10);
-      const isNum = !isNaN(numIdx) && String(numIdx) === trimmed;
-      if (isNum && numIdx >= 1 && numIdx <= activeModes.length) {
-        nextMode = activeModes[numIdx - 1].id;
-      } else if (matched) {
-        nextMode = matched.id;
-      } else if (explicitLegacy) {
-        nextMode = explicitLegacy;
-      } else if (lower === "spec" || lower === "logical spec" || lower === "specification") {
-        nextMode = "direct";
-      } else if (lower === "companion" || lower === "companion mode") {
-        nextMode = "companion";
-      } else if (lower === "live flow" || lower === "flow" || lower === "live") {
-        nextMode = "live-flow";
-      } else {
-        nextMode = trimmed;
-      }
-    } else {
-      if (state.modeLocked) {
-        const currentModeObj = activeModes.find((m) => m.id === state.mode);
-        const currentName = currentModeObj ? currentModeObj.name : state.mode === "off" ? modeSpec.off : state.mode;
-        try {
-          ctx.ui.notify(`[lingual] mode locked to [${currentName}]. Run /lingual unlock to release.`, "warning");
-        } catch {
-        }
-        return;
-      }
-      if (hasCustomModesOnDisk) {
-        const cycleList = [...activeModes.map((m) => m.id), "off"];
-        const currentIdx = cycleList.indexOf(state.mode);
-        nextMode = currentIdx === -1 ? activeModes[0]?.id || "companion" : cycleList[(currentIdx + 1) % cycleList.length] || activeModes[0]?.id || "companion";
-      } else {
-        nextMode = state.mode === "original" || state.mode === "companion" ? "direct" : state.mode === "english" || state.mode === "direct" ? "live-flow" : state.mode === "select" || state.mode === "candidates" ? "live-flow" : state.mode === "modify" || state.mode === "live-flow" ? "off" : "companion";
-      }
-    }
-    const canonical = nextMode === "original" ? "companion" : nextMode === "english" ? "direct" : nextMode === "select" ? "candidates" : nextMode === "modify" ? "live-flow" : nextMode;
-    if (nextMode === "off") {
-      state.mode = "off";
-      state.activeModeId = "off";
-      saveUserLingualConfig({ mode: "off", activeModeId: "off" });
-      syncResizeListener();
-      clearPendingTimers();
-      session.reset();
-      globalLingualCache.clear();
-      safeClearWidget(ctx);
-      updateFooter(ctx);
-      try {
-        ctx.ui.notify("[lingual: off]", "info");
-      } catch {
-      }
-      return;
-    }
-    const targetMode = activeModes.find(
-      (m) => m.id === canonical || m.id === nextMode || m.name.toLowerCase() === (trimmed || nextMode).toLowerCase() || resolveModeDisplayName(m.id, state.sourceLang).toLowerCase() === (trimmed || nextMode).toLowerCase()
-    );
-    if (!targetMode) {
-      try {
-        ctx.ui.notify(`[lingual] mode [${trimmed || nextMode}] not in your active registry. Run /lingual mode list to view available modes.`, "warning");
-      } catch {
-      }
-      return;
-    }
-    const finalId = targetMode.id;
-    state.mode = finalId;
-    state.activeModeId = finalId;
-    saveUserLingualConfig({ mode: finalId, activeModeId: finalId });
-    syncResizeListener();
-    updateFooter(ctx);
-    const modeIdx = activeModes.indexOf(targetMode);
-    const modeNum = modeIdx >= 0 ? modeIdx + 1 : 1;
-    const modeName = localizeModeName(targetMode.id, targetMode.name, state.sourceLang);
-    try {
-      ctx.ui.notify(`[${pair}] ${modeNum}. ${modeName} (${finalId})`, "info");
-    } catch {
-    }
-  };
-  const setModelHandler = async (args, ctx) => {
-    const trimmed = args.trim();
-    const followSessionDesc = state.labels.modelFollowSession || "follow session";
-    const currentActive = state.selectedModel === "auto" ? ctx.model ? `auto (${followSessionDesc}: ${ctx.model.provider}/${ctx.model.id})` : "auto" : state.selectedModel;
-    if (!trimmed) {
-      const available = ctx.modelRegistry?.getAvailable?.() || [];
-      const availableList = available.length > 0 ? available.map((m) => `\u2022 ${m.provider}/${m.id}`).slice(0, 8).join("\n") : void 0;
-      const msg = formatModelSelectionMessage(state.labels, currentActive || "auto", availableList);
-      ctx.ui.notify(msg, "info");
-      return;
-    }
-    state.selectedModel = trimmed;
-    saveUserLingualConfig({ selectedModel: trimmed });
-    ctx.ui.notify(`[lingual] model: ${trimmed}`, "info");
-  };
-  const switchLangHandler = async (args, ctx) => {
-    const pair = state.labels.hudTitle || `${state.sourceLang} \u21C4 ${state.targetLang}`;
-    const previousSource = state.sourceLang;
-    const previousTarget = state.targetLang;
-    const trimmed = args.trim().toLowerCase();
-    if (!trimmed || trimmed === "list" || trimmed === "help" || trimmed === "?") {
-      const flowText2 = `${state.sourceLang} \u2794 ${state.targetLang}`;
-      const template = state.labels.langHelpText || "[Companion Language: {flow}]\n\u2022 Quick switch: /lang ja (target Japanese) \xB7 /lang en (target English)\n\u2022 Pair switch: /lang en ja \xB7 /lang ja en \xB7 /lang es en\n\u2022 Supported codes: zh, tw, ja, ko, en, es, fr, de, ru";
-      const helpMsg = template.replace("{flow}", flowText2).replace("{pair}", pair);
-      ctx.ui.notify(helpMsg, "info");
-      return;
-    }
-    const parts = trimmed.split(/\s*->\s*|\s*➔\s*|\s+to\s+|\s+/).filter(Boolean);
-    let newSource = state.sourceLang;
-    let newTarget = state.targetLang;
-    if (parts.length === 1) {
-      const code = normalizeLangCode(parts[0]);
-      if (!isSupportedLangCode(code)) {
-        ctx.ui.notify(
-          "[lingual] invalid language code. supported: zh, tw, ja, ko, en, es, fr, de, ru",
-          "warning"
-        );
-        return;
-      }
-      if (code === state.sourceLang) {
-        newTarget = code === "en" ? "ja" : "en";
-      } else {
-        newTarget = code;
-      }
-    } else {
-      newSource = normalizeLangCode(parts[0]);
-      newTarget = normalizeLangCode(parts[1]);
-      if (!isSupportedLangCode(newSource) || !isSupportedLangCode(newTarget)) {
-        ctx.ui.notify(
-          "[lingual] invalid language code. supported: zh, tw, ja, ko, en, es, fr, de, ru",
-          "warning"
-        );
-        return;
-      }
-    }
-    const diskBeforeSwitch = loadUserLingualConfig();
-    state.sourceLang = newSource;
-    state.targetLang = newTarget;
-    if (!diskBeforeSwitch.explainLang || diskBeforeSwitch.explainLang === previousSource || diskBeforeSwitch.explainLang === "zh") {
-      state.explainLang = newSource === "zh" || newSource === "tw" ? "zh" : newSource;
-    } else {
-      state.explainLang = diskBeforeSwitch.explainLang;
-    }
-    state.labels = resolveLabelsForLang(newSource, void 0, newTarget);
-    if (state.slotPreset) {
-      state.slots = resolveSlotsForPreset(state.slotPreset, newSource);
-    } else {
-      state.slots = getDefaultSlots(newSource);
-    }
-    state.directSlots = getDefaultDirectSlots(newSource);
-    state.promptSlots = getDefaultPromptSlots(newSource);
-    state.modifySlots = getDefaultModifySlots(newSource, state.explainLang);
-    const currentModes = Array.isArray(state.modes) && state.modes.length > 0 ? state.modes : resolveModesFromConfig(diskBeforeSwitch, newSource);
-    const isFactory = !diskBeforeSwitch.modes || diskBeforeSwitch.modes.length === 0 || currentModes.length === 3 && currentModes.every((m) => ["companion", "direct", "live-flow"].includes(m.id));
-    if (isFactory) {
-      state.modes = getDefaultFactoryModes(newSource, state.explainLang);
-    } else {
-      state.modes = localizeModes(currentModes, newSource, state.explainLang);
-    }
-    state.mode = normalizeActiveModeId({ mode: state.mode, activeModeId: state.activeModeId }, state.modes);
-    state.activeModeId = state.mode;
-    saveUserLingualConfig({
-      sourceLang: newSource,
-      targetLang: newTarget,
-      explainLang: state.explainLang,
-      modes: state.modes,
-      slots: state.slots,
-      directSlots: state.directSlots,
-      promptSlots: state.promptSlots
-    });
-    session.reset();
-    globalLingualCache.clear();
-    updateFooter(ctx);
-    const isTargetOnly = newSource === previousSource && newTarget !== previousTarget;
-    const flowText = `${newSource} \u21C4 ${newTarget}`;
-    const msg = isTargetOnly ? `[${flowText}] Target language switched to: ${newTarget} (${newSource} unchanged)` : `[${flowText}]`;
-    ctx.ui.notify(msg, "info");
-  };
-  const toggleCompactHandler = async (_args, ctx) => {
-    state.compact = !state.compact;
-    saveUserLingualConfig({ compact: state.compact });
-    const msg = state.compact ? "[lingual: Capsule mode enabled]" : "[lingual: tree HUD mode restored]";
-    ctx.ui.notify(msg, "info");
-    if (session.getReadyPages().length > 0) {
-      renderActiveCard(ctx);
-    } else if (session.getLastResult()) {
-      const last = session.getLastResult();
-      renderHudWidget(
-        ctx,
-        last.sourceText,
-        last.spoken,
-        last.written,
-        last.vocab,
-        last.spokenMeaning,
-        last.writtenMeaning,
-        void 0,
-        last.slotOutputs,
-        last.slots
-      );
-    }
-  };
-  const refreshActiveView = (ctx) => {
-    if (session.getReadyPages().length > 0) {
-      renderActiveCard(ctx);
-    } else if (session.getLastResult()) {
-      const last = session.getLastResult();
-      renderHudWidget(
-        ctx,
-        last.sourceText,
-        last.spoken,
-        last.written,
-        last.vocab,
-        last.spokenMeaning,
-        last.writtenMeaning,
-        void 0,
-        last.slotOutputs,
-        last.slots
-      );
-    }
-  };
-  const switchSlotsHandler = async (args, ctx) => {
-    const rawArgs = args.trim();
-    const parts = rawArgs.split(/\s+/).filter(Boolean);
-    const subCmd = (parts[0] || "").toLowerCase();
-    const lbl = state.labels;
-    const disk = loadUserLingualConfig();
-    const currentModes = Array.isArray(state.modes) && state.modes.length > 0 ? state.modes : resolveModesFromConfig(disk);
-    const activeModeId = normalizeActiveModeId(
-      { mode: state.mode, activeModeId: state.activeModeId || disk.activeModeId },
-      currentModes
-    );
-    const activeMode = currentModes.find((m) => m.id === activeModeId) || currentModes[0];
-    const pair = lbl.hudTitle || `${state.sourceLang} \u21C4 ${state.targetLang}`;
-    if (!subCmd || subCmd === "list" || subCmd === "ls") {
-      const modeSlots = activeMode.slots || [];
-      const lines = modeSlots.map((s, idx) => {
-        const status = s.enabled !== false ? lbl.slotsStatusEnabled || "enabled" : lbl.slotsStatusDisabled || "disabled";
-        const inst = s.instruction ? ` // ${s.instruction.slice(0, 50)}...` : "";
-        return `  ${idx + 1}. [${s.id}] "${s.label}" (${s.role || "rewrite"}, ${status})${inst}`;
-      });
-      const header = `\u2726 [${activeMode.name}] Dynamic Slots (${modeSlots.filter((s) => s.enabled !== false).length}/${modeSlots.length} active):
-`;
-      const body = lines.length > 0 ? lines.join("\n") : `  (${lbl.slotsNone || "No slots configured"})`;
-      const cliHelp = `
-
-Usage:
-  /slots add <id> <label> [instruction...]  Add or update slot in active mode
-  /slots rm <id>                            Remove slot by ID
-  /slots toggle <id>                        Toggle enabled state
-  /slots reset                              Reset active mode slots to defaults`;
-      ctx.ui.notify(`${header}${body}${cliHelp}`, "info");
-      return;
-    }
-    if (subCmd === "reset") {
-      const factoryDefaults = getDefaultFactoryModes(state.sourceLang, disk.explainLang);
-      const matchDefault = factoryDefaults.find((m) => m.id === activeMode.id);
-      if (matchDefault) {
-        activeMode.slots = [...matchDefault.slots];
-      } else {
-        activeMode.slots = defaultSlotsForMode(activeMode, state.sourceLang, disk.explainLang);
-      }
-      state.modes = currentModes;
-      saveUserLingualConfig({ modes: currentModes });
-      globalLingualCache.clear();
-      ctx.ui.notify(`[${pair}] Reset slots for mode [${activeMode.name}] to clean defaults.`, "info");
-      updateFooter(ctx);
-      refreshActiveView(ctx);
-      return;
-    }
-    if (subCmd === "hide-source" || subCmd === "no-source") {
-      activeMode.slots = activeMode.slots.filter((s) => s.id !== "source");
-      state.modes = currentModes;
-      saveUserLingualConfig({ modes: currentModes });
-      globalLingualCache.clear();
-      ctx.ui.notify(`[${pair}] Hidden [source] row in mode [${activeMode.name}].`, "info");
-      updateFooter(ctx);
-      refreshActiveView(ctx);
-      return;
-    }
-    if (subCmd === "show-source" || subCmd === "with-source") {
-      const hasSource = (activeMode.slots || []).some((s) => s.id === "source");
-      if (!hasSource) {
-        activeMode.slots = [
-          { id: "source", label: lbl.sourceLabel || "Original", role: "rewrite", instruction: "Source text", enabled: true },
-          ...activeMode.slots || []
-        ];
-      } else {
-        activeMode.slots = (activeMode.slots || []).map((s) => s.id === "source" ? { ...s, enabled: true } : s);
-      }
-      state.modes = currentModes;
-      saveUserLingualConfig({ modes: currentModes });
-      globalLingualCache.clear();
-      ctx.ui.notify(`[${pair}] Restored [source] row in mode [${activeMode.name}].`, "info");
-      updateFooter(ctx);
-      refreshActiveView(ctx);
-      return;
-    }
-    if (subCmd === "rm" || subCmd === "remove" || subCmd === "del") {
-      const targetId = (parts[1] || "").toLowerCase();
-      if (!targetId) {
-        ctx.ui.notify(lbl.slotsUsageRm || "Usage: /slots rm <slot-id>", "warning");
-        return;
-      }
-      const existing = (activeMode.slots || []).find((s) => s.id.toLowerCase() === targetId);
-      if (!existing) {
-        const notFoundMsg = (lbl.slotsNotFound || "Slot [{id}] not found").replace("{pair}", pair).replace("{id}", targetId);
-        ctx.ui.notify(notFoundMsg, "warning");
-        return;
-      }
-      activeMode.slots = activeMode.slots.filter((s) => s.id.toLowerCase() !== targetId);
-      state.modes = currentModes;
-      saveUserLingualConfig({ modes: currentModes });
-      globalLingualCache.clear();
-      ctx.ui.notify(`[${pair}] Removed slot [${targetId}] ("${existing.label}") from mode [${activeMode.name}].`, "info");
-      updateFooter(ctx);
-      refreshActiveView(ctx);
-      return;
-    }
-    if (subCmd === "toggle") {
-      const targetId = (parts[1] || "").toLowerCase();
-      if (!targetId) {
-        ctx.ui.notify(lbl.slotsUsageToggle || "Usage: /slots toggle <slot-id>", "warning");
-        return;
-      }
-      const existing = (activeMode.slots || []).find((s) => s.id.toLowerCase() === targetId);
-      if (!existing) {
-        const notFoundMsg = (lbl.slotsNotFound || "Slot [{id}] not found").replace("{pair}", pair).replace("{id}", targetId);
-        ctx.ui.notify(notFoundMsg, "warning");
-        return;
-      }
-      activeMode.slots = activeMode.slots.map(
-        (s) => s.id.toLowerCase() === targetId ? { ...s, enabled: s.enabled === false } : s
-      );
-      state.modes = currentModes;
-      saveUserLingualConfig({ modes: currentModes });
-      globalLingualCache.clear();
-      const updated = activeMode.slots.find((s) => s.id.toLowerCase() === targetId);
-      const statusText = updated?.enabled !== false ? lbl.slotsStatusEnabled || "enabled" : lbl.slotsStatusDisabled || "disabled";
-      ctx.ui.notify(`[${pair}] Slot [${targetId}] is now ${statusText} in mode [${activeMode.name}].`, "info");
-      updateFooter(ctx);
-      refreshActiveView(ctx);
-      return;
-    }
-    if (subCmd === "add") {
-      const id = (parts[1] || "").toLowerCase();
-      const label = parts[2];
-      const instruction = parts.slice(3).join(" ");
-      if (!id || !label) {
-        ctx.ui.notify(lbl.slotsUsageAdd || "Usage: /slots add <id> <label> [instruction...]", "warning");
-        return;
-      }
-      const newPromptSlot = {
-        id,
-        label,
-        role: id === "vocab" || id === "fixes" ? "vocab" : "rewrite",
-        instruction: instruction || `Target Language: \${targetLang}. Output in \${targetLang} ONLY: Generate output matching "${label}" style without summarizing.`,
-        enabled: true
-      };
-      const existingIdx = activeMode.slots.findIndex((s) => s.id.toLowerCase() === id);
-      if (existingIdx >= 0) {
-        activeMode.slots[existingIdx] = newPromptSlot;
-      } else {
-        activeMode.slots.push(newPromptSlot);
-      }
-      let hudUpgraded = false;
-      const enabledTranslationCount = activeMode.slots.filter(
-        (s) => s.enabled !== false && s.role !== "vocab" && s.id !== "source"
-      ).length;
-      if (activeMode.hud === "preview" && enabledTranslationCount > 1) {
-        activeMode.hud = "tree";
-        hudUpgraded = true;
-      }
-      state.modes = currentModes;
-      saveUserLingualConfig({ modes: currentModes });
-      globalLingualCache.clear();
-      const upgradeHint = hudUpgraded ? ` (HUD layout auto-upgraded to "tree" for multi-slot visibility)` : "";
-      ctx.ui.notify(`[${pair}] Added/updated slot [${id}] "${label}" in mode [${activeMode.name}]${upgradeHint}.`, "info");
-      updateFooter(ctx);
-      refreshActiveView(ctx);
-      return;
-    }
-    const matchedPreset = SLOT_PRESETS[subCmd];
-    if (matchedPreset) {
-      state.slotPreset = subCmd;
-      state.slots = resolveSlotsForPreset(subCmd, state.sourceLang);
-      saveUserLingualConfig({ slotPreset: subCmd === "developer" ? void 0 : subCmd, slots: state.slots });
-      globalLingualCache.clear();
-      ctx.ui.notify(`[lingual] applied preset [${subCmd}]: ${matchedPreset.description}`, "info");
-      updateFooter(ctx);
-      refreshActiveView(ctx);
-      return;
-    }
-    const unknownTpl = lbl.slotsUnknown || 'Unknown slot command or preset "{cmd}".';
-    ctx.ui.notify(unknownTpl.replace("{pair}", lbl.hudTitle).replace("{cmd}", subCmd), "warning");
-  };
-  const showStatusHandler = async (_args, ctx) => {
-    const followDesc = state.labels.modelFollowSession || "follow session";
-    const activeModel = state.selectedModel === "auto" ? ctx.model ? `auto (${followDesc}: ${ctx.model.provider}/${ctx.model.id})` : "auto" : state.selectedModel || "auto";
-    const currentModes = Array.isArray(state.modes) && state.modes.length > 0 ? state.modes : resolveModesFromConfig(loadUserLingualConfig());
-    const activeModeId = normalizeActiveModeId(
-      { mode: state.mode, activeModeId: state.activeModeId },
-      currentModes
-    );
-    const activeMode = currentModes.find((m) => m.id === activeModeId) || currentModes[0];
-    const diskCfg = loadUserLingualConfig();
-    const activeEffort = activeMode.reasoning || diskCfg.reasoning || "low";
-    const statusMsg = formatStatusReport(state.labels, {
-      mode: state.mode,
-      sourceLang: state.sourceLang,
-      targetLang: state.targetLang,
-      activeModel,
-      layout: state.compact ? "capsule" : "tree",
-      cacheStats: globalLingualCache.getStats()
-    }) + `
-\u2022 Active Mode: [${activeMode.name}] (${activeMode.id}) \xB7 flow: ${activeMode.flow} \xB7 action: ${activeMode.action}
-\u2022 Dynamic Slots: [${(activeMode.slots || []).filter((s) => s.enabled !== false).map((s) => s.label).join(", ")}]
-\u2022 Reasoning Effort: ${activeEffort} (mode: ${activeMode.reasoning || "default"}, global: ${diskCfg.reasoning || "low"})`;
-    ctx.ui.notify(statusMsg, "info");
-  };
-  const showLastHandler = async (_args, ctx) => {
-    if (session.getReadyPages().length > 0) {
-      renderActiveCard(ctx);
-      return;
-    }
-    const last = session.getLastResult();
-    if (!last) {
-      try {
-        ctx.ui.notify("[lingual] no previous card", "info");
-      } catch {
-      }
-      return;
-    }
-    renderHudWidget(
-      ctx,
-      last.sourceText,
-      last.spoken,
-      last.written,
-      last.vocab,
-      last.spokenMeaning,
-      last.writtenMeaning,
-      void 0,
-      last.slotOutputs,
-      last.slots
-    );
-  };
-  const manageModesHandler = async (args, ctx) => {
-    const trimmed = args.trim();
-    const disk = loadUserLingualConfig();
-    const currentModes = Array.isArray(state.modes) && state.modes.length > 0 ? state.modes : resolveModesFromConfig(disk);
-    const pair = state.labels.hudTitle || `${state.sourceLang} \u21C4 ${state.targetLang}`;
-    if (!trimmed || trimmed === "list") {
-      const modeLines = currentModes.map((m, idx) => {
-        const status = m.enabled !== false ? "[\u2713]" : "[x]";
-        const isCurrent = m.id === state.mode || m.id === state.activeModeId ? " \u25B8" : "  ";
-        const reasoningTag = `[${m.reasoning || "low"}]`;
-        return `${isCurrent} [${idx + 1}] ${m.id} (${m.name}) ${reasoningTag} \xB7 flow: ${m.flow} \xB7 action: ${m.action} \xB7 hud: ${m.hud} \xB7 ${m.slots?.length || 0} slots ${status}`;
-      });
-      const report = `\u2726 [pi-lingual Modes Registry] (Current: ${state.mode})
-` + modeLines.join("\n") + `
-
-Usage: /lingual mode [list | add <id> <name> [flow] [action] [hud] | rm <id> | toggle <id> | reset]`;
-      ctx.ui.notify(report, "info");
-      return;
-    }
-    const parts = trimmed.split(/\s+/);
-    const subCmd = parts[0].toLowerCase();
-    const id = parts[1]?.toLowerCase();
-    if (subCmd === "reset") {
-      const defaults = getDefaultFactoryModes(state.sourceLang, disk.explainLang);
-      state.modes = defaults;
-      saveUserLingualConfig({ modes: defaults });
-      ctx.ui.notify(`[${pair}] Reset modes registry to factory golden defaults (${defaults.map((m) => m.name).join(" & ")})`, "info");
-      updateFooter(ctx);
-      return;
-    }
-    if (subCmd === "rm" || subCmd === "remove" || subCmd === "del" || subCmd === "delete") {
-      if (!id) {
-        ctx.ui.notify(`[${pair}] Missing mode ID. Usage: /lingual mode rm <id>`, "warning");
-        return;
-      }
-      const updated = removeCustomMode(currentModes, id);
-      if (updated.length === currentModes.length) {
-        ctx.ui.notify(`[${pair}] Mode [${id}] not found in modes registry.`, "warning");
-        return;
-      }
-      state.modes = updated;
-      saveUserLingualConfig({ modes: updated });
-      ctx.ui.notify(`[${pair}] Removed custom mode [${id}] from registry.`, "info");
-      updateFooter(ctx);
-      return;
-    }
-    if (subCmd === "toggle") {
-      if (!id) {
-        ctx.ui.notify(`[${pair}] Missing mode ID. Usage: /lingual mode toggle <id>`, "warning");
-        return;
-      }
-      const updated = toggleCustomMode(currentModes, id);
-      const target = updated.find((m) => m.id === id);
-      if (!target) {
-        ctx.ui.notify(`[${pair}] Mode [${id}] not found in modes registry.`, "warning");
-        return;
-      }
-      state.modes = updated;
-      saveUserLingualConfig({ modes: updated });
-      ctx.ui.notify(`[${pair}] Mode [${id}] is now ${target.enabled ? "enabled [\u2713]" : "disabled [x]"}.`, "info");
-      updateFooter(ctx);
-      return;
-    }
-    if (subCmd === "add") {
-      if (!id || !parts[2]) {
-        ctx.ui.notify(`[${pair}] Missing arguments. Usage: /lingual mode add <id> <name> [flow] [action] [hud]`, "warning");
-        return;
-      }
-      const name = parts[2];
-      const flow = parts[3] || "translate";
-      const action = parts[4] || "transform";
-      const hud = parts[5] || "preview";
-      const customInstruction = parts.slice(6).join(" ").trim();
-      const newMode = {
-        id,
-        name,
-        flow: flow === "proofread" || flow === "custom" ? flow : "translate",
-        action: action === "pass-through" || action === "select" ? action : "transform",
-        hud: hud === "tree" || hud === "adaptive-takeaway" || hud === "none" ? hud : "preview",
-        slots: action === "select" ? getDefaultPromptSlots(state.sourceLang) : [
-          {
-            id: `${id}_slot`,
-            label: name,
-            role: "rewrite",
-            instruction: customInstruction || `Translate and polish from \${sourceLang} into \${targetLang} matching ${name} style.`,
-            enabled: true
-          }
-        ],
-        enabled: true
-      };
-      const updated = addCustomMode(currentModes, newMode);
-      state.modes = updated;
-      saveUserLingualConfig({ modes: updated });
-      ctx.ui.notify(`[${pair}] Added custom mode [${id}] "${name}" to registry.`, "info");
-      updateFooter(ctx);
-      return;
-    }
-    ctx.ui.notify(`[${pair}] Unknown mode subcommand "${subCmd}". Usage: /lingual mode [list|add|rm|toggle|reset]`, "warning");
-  };
-  const manageLoadoutsHandler = async (args, ctx) => {
-    const trimmed = args.trim();
-    const disk = loadUserLingualConfig();
-    const currentModes = Array.isArray(state.modes) && state.modes.length > 0 ? state.modes : resolveModesFromConfig(disk);
-    const pair = state.labels.hudTitle || `${state.sourceLang} \u21C4 ${state.targetLang}`;
-    const loadouts = listPresetLoadouts();
-    if (!trimmed || trimmed === "list" || trimmed === "ls") {
-      const lines = loadouts.map((l, idx) => {
-        const isInstalled = currentModes.some((m) => m.id === l.id);
-        const status = isInstalled ? "[installed \u2713]" : "[available]";
-        return `  ${idx + 1}. [${l.id}] ${l.name} - ${l.description} ${status}`;
-      });
-      const report = `\u2726 [pi-lingual Tactical Loadouts]
-` + lines.join("\n") + `
-
-Usage: /lingual loadout [list | apply <id>] (e.g. /lingual loadout apply spec)`;
-      ctx.ui.notify(report, "info");
-      return;
-    }
-    const parts = trimmed.split(/\s+/);
-    const subCmd = parts[0].toLowerCase();
-    const targetId = (subCmd === "apply" || subCmd === "add" ? parts[1] : subCmd)?.toLowerCase();
-    if (!targetId) {
-      ctx.ui.notify(`[${pair}] Missing loadout ID. Usage: /lingual loadout apply <spec|commit|oss|yap>`, "warning");
-      return;
-    }
-    const loadoutConfig = getPresetLoadout(targetId, state.sourceLang, disk.explainLang);
-    if (!loadoutConfig) {
-      ctx.ui.notify(
-        `[${pair}] Loadout [${targetId}] not found. Available: ${loadouts.map((l) => l.id).join(", ")}`,
-        "warning"
-      );
-      return;
-    }
-    const updated = addCustomMode(currentModes, loadoutConfig);
-    state.modes = updated;
-    saveUserLingualConfig({ modes: updated });
-    ctx.ui.notify(
-      `[${pair}] Applied tactical loadout [${loadoutConfig.id}] "${loadoutConfig.name}" to active modes! Run /lingual ${loadoutConfig.id} to activate.`,
-      "info"
-    );
-    updateFooter(ctx);
-  };
-  const showAgentGuideHandler = async (_args, ctx) => {
-    const guide = `  pi-lingual Customization Map          Legend: ( ) Edit  (+) Add/Remove  [\u2713] Toggle
-  \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-  [Mode 1 \xB7 Companion]  Send raw text in 0ms, show learning card above editor
-    \xB7 Source Row                                                        [\u2713] Show/Hide
-    \u251C (Label) : (Language) \xB7 (Style: Spoken / Written / Paper / Script) (+) N Rows
-    \u2502   \u21B3 Native Nuance Sub-line                                        [\u2713] On/Off
-    \u2514 Vocab Row : (Focus: Idioms / Exam Collocations)                   [\u2713] On/Off
-
-  [Mode 2 \xB7 Direct]     Convert 1-to-1 on Enter using a single dedicated rule
-    \u251C (Label) : (Language) \xB7 (Style: Faithful Direct / Keigo / Spec)    1-to-1 Rule
-    \u2514 Vocab Row : Extract 1-line key expressions                        [\u2713] On/Off
-
-  [Mode 3 \xB7 Candidates] Generate N options, press keys 1..N to send (0 for raw)
-    \xB7 Source Row                                                        [\u2713] Show/Hide
-    \u251C 1..N (Label) : (Language) \xB7 (Style: Business / Keigo / PR)        (+) N Options
-    \u2514 Vocab Row : Extract 1-line key expressions                        [\u2713] On/Off
-  \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-  Run /lingual tuner [request] to launch the adaptive wizard in your native language (${state.sourceLang}).`;
-    ctx.ui.notify(guide, "info");
-  };
-  const setReasoningHandler = async (args, ctx) => {
-    const trimmed = args.trim().toLowerCase();
-    const disk = loadUserLingualConfig();
-    const currentModes = Array.isArray(state.modes) && state.modes.length > 0 ? state.modes : resolveModesFromConfig(disk);
-    const activeModeId = normalizeActiveModeId(
-      { mode: state.mode, activeModeId: state.activeModeId || disk.activeModeId },
-      currentModes
-    );
-    const activeMode = currentModes.find((m) => m.id === activeModeId) || currentModes[0];
-    const pair = state.labels.hudTitle || `${state.sourceLang} \u21C4 ${state.targetLang}`;
-    if (!trimmed) {
-      const activeEffort = activeMode.reasoning || disk.reasoning || "low";
-      const globalEffort = disk.reasoning || "low";
-      ctx.ui.notify(
-        `[${pair}] Reasoning effort: mode [${activeMode.name}] = "${activeEffort}" \xB7 global = "${globalEffort}". Usage: /lingual reasoning <low|medium|high>`,
-        "info"
-      );
-      return;
-    }
-    if (trimmed !== "low" && trimmed !== "medium" && trimmed !== "high") {
-      ctx.ui.notify(
-        `[${pair}] Invalid reasoning effort "${trimmed}". Available options: low, medium, high.`,
-        "warning"
-      );
-      return;
-    }
-    const newEffort = trimmed;
-    const updatedModes = currentModes.map(
-      (m) => m.id === activeMode.id ? { ...m, reasoning: newEffort } : m
-    );
-    state.modes = updatedModes;
-    saveUserLingualConfig({ modes: updatedModes, reasoning: newEffort });
-    ctx.ui.notify(
-      `[${pair}] Reasoning effort for mode [${activeMode.name}] set to "${newEffort}".`,
-      "info"
-    );
-    updateFooter(ctx);
-  };
-  const setDefaultModeHandler = async (args, ctx) => {
-    const trimmed = args?.trim();
-    const disk = loadUserLingualConfig();
-    const currentModes = Array.isArray(state.modes) && state.modes.length > 0 ? state.modes : resolveModesFromConfig(disk, state.sourceLang);
-    const currentDefault = disk.defaultMode || state.defaultMode || "companion";
-    const defaultModeObj = currentModes.find((m) => m.id === currentDefault) || currentModes[0];
-    const defaultIdx = currentModes.indexOf(defaultModeObj);
-    const defaultNum = defaultIdx >= 0 ? defaultIdx + 1 : 1;
-    const defaultName = defaultModeObj ? localizeModeName(defaultModeObj.id, defaultModeObj.name, state.sourceLang) : currentDefault;
-    if (!trimmed) {
-      ctx.ui.notify(
-        `[lingual] Default mode for new sessions: ${defaultNum}. ${defaultName} (${currentDefault}). Set with: /lingual default <1|2|3|0|id>`,
-        "info"
-      );
-      return;
-    }
-    let targetId;
-    const num = parseInt(trimmed, 10);
-    if (!isNaN(num) && num === 0) {
-      targetId = "off";
-    } else if (!isNaN(num) && num >= 1 && num <= currentModes.length) {
-      targetId = currentModes[num - 1].id;
-    } else {
-      const lower = trimmed.toLowerCase();
-      const matched = currentModes.find(
-        (m) => m.id.toLowerCase() === lower || m.name.toLowerCase() === lower || Array.isArray(m.aliases) && m.aliases.some((a) => a.toLowerCase() === lower) || resolveModeDisplayName(m.id, state.sourceLang).toLowerCase() === lower
-      );
-      if (matched) {
-        targetId = matched.id;
-      } else if (lower === "off") {
-        targetId = "off";
-      } else if (lower === "companion" || lower === "original") {
-        targetId = "companion";
-      } else if (lower === "direct" || lower === "spec" || lower === "lazy") {
-        targetId = "direct";
-      } else if (lower === "live-flow" || lower === "flow" || lower === "raw" || lower === "modify") {
-        targetId = "live-flow";
-      }
-    }
-    if (!targetId) {
-      ctx.ui.notify(
-        `[lingual] Unknown mode "${trimmed}". Valid options: 1, 2, 3, 0, companion, direct, live-flow, off.`,
-        "warning"
-      );
-      return;
-    }
-    state.defaultMode = targetId;
-    saveUserLingualConfig({ defaultMode: targetId });
-    const targetObj = currentModes.find((m) => m.id === targetId);
-    const targetIdx = targetObj ? currentModes.indexOf(targetObj) : -1;
-    const targetNum = targetId === "off" ? 0 : targetIdx >= 0 ? targetIdx + 1 : 1;
-    const targetName = targetId === "off" ? resolveModeDisplayName("off", state.sourceLang) : targetObj ? localizeModeName(targetObj.id, targetObj.name, state.sourceLang) : targetId;
-    ctx.ui.notify(
-      `[lingual] Default mode for new sessions set to: ${targetNum}. ${targetName} (${targetId})`,
-      "info"
-    );
-  };
-  const openModePicker = async (ctx) => {
-    const diskForMode = loadUserLingualConfig();
-    const diskMode = diskForMode.activeModeId || diskForMode.mode;
-    if (diskMode && diskMode !== state.mode) {
-      state.mode = normalizeActiveModeId({ mode: diskMode, activeModeId: diskMode }, state.modes);
-      state.activeModeId = state.mode;
-    }
-    const modes = Array.isArray(state.modes) && state.modes.length > 0 ? state.modes : resolveModesFromConfig(diskForMode, state.sourceLang);
-    const activeModes = modes.filter((m) => m.enabled !== false);
-    const offName = resolveModeDisplayName("off", state.sourceLang);
-    const lockIndicator = state.modeLocked ? state.sourceLang === "zh" ? " \xB7 \u9501\u5B9A" : state.sourceLang === "tw" ? " \xB7 \u9396\u5B9A" : state.sourceLang === "ja" ? " \xB7 \u30ED\u30C3\u30AF" : state.sourceLang === "ko" ? " \xB7 \uC7A0\uAE40" : state.sourceLang === "es" ? " \xB7 Bloqueado" : state.sourceLang === "fr" ? " \xB7 Verrouill\xE9" : state.sourceLang === "de" ? " \xB7 Gesperrt" : state.sourceLang === "ru" ? " \xB7 \u0411\u043B\u043E\u043A\u0438\u0440\u043E\u0432\u0430\u043D\u043E" : " \xB7 Locked" : "";
-    const pair = `${state.labels.hudTitle || `${state.sourceLang} \u21C4 ${state.targetLang}`}${lockIndicator}`;
-    const title = state.labels.modePickerTitle || "Mode Switch";
-    const hint = state.labels.modePickerHint || "Press 1/2/3/0 to switch, Esc to cancel";
-    const options = activeModes.map((m, idx) => ({
-      num: idx + 1,
-      id: m.id,
-      name: localizeModeName(m.id, m.name, state.sourceLang),
-      englishTag: state.sourceLang === "en" ? void 0 : m.id === "companion" ? "Companion" : m.id === "direct" ? "Logical Spec" : m.id === "live-flow" ? "Live Flow" : void 0
-    }));
-    options.push({
-      num: 0,
-      id: "off",
-      name: offName,
-      englishTag: "Off"
-    });
-    const currentModeId = state.mode === "off" ? "off" : state.activeModeId || state.mode || options[0].id;
-    let initialIndex = options.findIndex((o) => o.id === currentModeId);
-    if (initialIndex === -1) initialIndex = 0;
-    if (hasActiveUI(ctx) && typeof ctx.ui.custom === "function") {
-      try {
-        const chosen = await ctx.ui.custom(
-          (tui, theme, _kb, done) => {
-            let selectedIndex = initialIndex;
-            let finished = false;
-            const finish = (val) => {
-              if (finished) return;
-              finished = true;
-              done(val);
-            };
-            return {
-              render(width) {
-                try {
-                  return formatModePickerLines(
-                    title,
-                    hint,
-                    pair,
-                    options,
-                    selectedIndex,
-                    width,
-                    theme
-                  );
-                } catch {
-                  return formatModePickerLines(
-                    title,
-                    hint,
-                    pair,
-                    options,
-                    selectedIndex,
-                    width
-                  );
-                }
-              },
-              invalidate() {
-              },
-              handleInput(data) {
-                if (data.startsWith("\x1B[<") || data.startsWith("\x1B[M") || data.startsWith("\x1B[200~")) {
-                  return;
-                }
-                if (data === "0") {
-                  finish("off");
-                  return;
-                }
-                const num = parseInt(data, 10);
-                if (!isNaN(num) && num >= 1 && num <= activeModes.length) {
-                  finish(activeModes[num - 1].id);
-                  return;
-                }
-                if (data === "\x1B" || data === "q" || data === "") {
-                  finish(null);
-                  return;
-                }
-                if (data === "\x1B[C" || data === "\x1B[B" || data === "l" || data === "j" || data === "	") {
-                  selectedIndex = (selectedIndex + 1) % options.length;
-                  tui?.requestRender?.();
-                  return;
-                }
-                if (data === "\x1B[D" || data === "\x1B[A" || data === "h" || data === "k") {
-                  selectedIndex = (selectedIndex - 1 + options.length) % options.length;
-                  tui?.requestRender?.();
-                  return;
-                }
-                if (data === "\r" || data === "\n" || data === "\r\n" || data === " ") {
-                  finish(options[selectedIndex]?.id || null);
-                  return;
-                }
-              }
-            };
-          }
-        );
-        if (chosen !== null && chosen !== void 0) {
-          await setModeHandler(chosen, ctx);
-          return chosen;
-        }
-        return null;
-      } catch {
-      }
-    }
-    if (hasActiveUI(ctx) && typeof ctx.ui.select === "function") {
-      try {
-        const selectItems = options.map((opt) => ({
-          label: `[${opt.num}] ${opt.name}${opt.englishTag ? ` (${opt.englishTag})` : ""}`,
-          value: opt.id
-        }));
-        const chosen = await ctx.ui.select(
-          `[lingual \xB7 ${pair}] ${title} (${hint})`,
-          selectItems
-        );
-        if (chosen) {
-          await setModeHandler(chosen, ctx);
-          return chosen;
-        }
-        return null;
-      } catch {
-      }
-    }
-    await setModeHandler("", ctx);
-    return null;
-  };
-  const masterCommandHandler = async (args, ctx) => {
-    const diskForMode = loadUserLingualConfig();
-    const diskMode = diskForMode.activeModeId || diskForMode.mode;
-    if (diskMode && diskMode !== state.mode) {
-      state.mode = normalizeActiveModeId({ mode: diskMode, activeModeId: diskMode }, state.modes);
-      state.activeModeId = state.mode;
-      syncResizeListener();
-      updateFooter(ctx);
-    }
-    const trimmed = args?.trim();
-    if (!trimmed) {
-      try {
-        await openModePicker(ctx);
-      } catch {
-        try {
-          await setModeHandler("", ctx);
-        } catch {
-        }
-      }
-      return;
-    }
-    const lower = trimmed.toLowerCase();
-    const spaceIndex = lower.indexOf(" ");
-    const sub = spaceIndex === -1 ? lower : lower.slice(0, spaceIndex);
-    const subArgs = spaceIndex === -1 ? "" : trimmed.slice(spaceIndex + 1).trim();
-    if (sub === "on") {
-      await setModeHandler("1", ctx);
-      return;
-    }
-    if (sub === "off") {
-      await setModeHandler("0", ctx);
-      return;
-    }
-    if (sub === "reasoning" || sub === "effort") {
-      await setReasoningHandler(subArgs, ctx);
-      return;
-    }
-    if (sub === "default" || sub === "def") {
-      await setDefaultModeHandler(subArgs, ctx);
-      return;
-    }
-    if (sub === "mode" || sub === "modes") {
-      await manageModesHandler(subArgs, ctx);
-      return;
-    }
-    if (sub === "loadout" || sub === "loadouts" || sub === "preset" || sub === "presets") {
-      await manageLoadoutsHandler(subArgs, ctx);
-      return;
-    }
-    if (sub === "lang" || sub === "language") {
-      await switchLangHandler(subArgs, ctx);
-      return;
-    }
-    if (sub === "slots" || sub === "slot" || sub === "preset") {
-      await switchSlotsHandler(subArgs, ctx);
-      return;
-    }
-    if (sub === "hide-source" || sub === "no-source" || sub === "show-source" || sub === "with-source") {
-      await switchSlotsHandler(sub, ctx);
-      return;
-    }
-    if (sub === "model") {
-      await setModelHandler(subArgs, ctx);
-      return;
-    }
-    if (sub === "compact" || sub === "capsule" || sub === "layout") {
-      await toggleCompactHandler(subArgs, ctx);
-      return;
-    }
-    if (sub === "status" || sub === "info" || sub === "report") {
-      await showStatusHandler(subArgs, ctx);
-      return;
-    }
-    if (sub === "last" || sub === "prev" || sub === "history" || sub === "replay") {
-      await showLastHandler(subArgs, ctx);
-      return;
-    }
-    if (sub === "tuner" || sub === "tune" || sub === "agent" || sub === "help" || sub === "?") {
+  const handlers = createCommandHandlers({
+    state,
+    session,
+    updateFooter,
+    refreshActiveView,
+    renderActiveCard,
+    renderHudWidget,
+    activeRuntime,
+    renderReleaseBanner,
+    syncResizeListener,
+    clearPendingTimers,
+    armTuner: () => {
       tunerArmed = true;
-      const promptBody = subArgs ? `[lingual-tuner] Load the lingual-tuner skill and update ~/.pi/agent/lingual.json (user native language sourceLang="${state.sourceLang}"). Communicate strictly in the user's native language (${state.sourceLang}) and apply: ${subArgs}` : `[lingual-tuner] Load the lingual-tuner skill and launch the interactive customization wizard (user native language sourceLang="${state.sourceLang}"). Render the Customization Map and all questions/options strictly in the user's native language (${state.sourceLang}).`;
-      if ((sub === "tuner" || sub === "tune" || subArgs) && typeof pi.sendMessage === "function") {
-        pi.sendMessage(
-          { customType: "lingual-tuner", content: promptBody, display: false },
-          { triggerTurn: true }
-        );
-        return;
-      }
-      if ((sub === "tuner" || sub === "tune" || subArgs) && typeof pi.sendUserMessage === "function") {
-        pi.sendUserMessage(promptBody);
-        return;
-      }
-      await showAgentGuideHandler(subArgs, ctx);
-      return;
-    }
-    if (sub === "news" || sub === "whatsnew" || sub === "changelog") {
-      const diskCfg = loadUserLingualConfig();
-      renderReleaseBanner(ctx, diskCfg.sourceLang || state.sourceLang);
-      return;
-    }
-    if (sub === "lock") {
-      state.modeLocked = true;
-      saveUserLingualConfig({ modeLocked: true });
-      const activeObj = state.modes.find((m) => m.id === state.mode);
-      const currentName = activeObj ? activeObj.name : state.mode;
-      try {
-        ctx.ui.notify(`[lingual] mode locked to [${currentName}]`, "info");
-      } catch {
-      }
-      updateFooter(ctx);
-      return;
-    }
-    if (sub === "unlock") {
-      state.modeLocked = false;
-      saveUserLingualConfig({ modeLocked: false });
-      try {
-        ctx.ui.notify("[lingual] mode unlocked", "info");
-      } catch {
-      }
-      updateFooter(ctx);
-      return;
-    }
-    const currentModes = Array.isArray(state.modes) && state.modes.length > 0 ? state.modes : resolveModesFromConfig(loadUserLingualConfig(), state.sourceLang);
-    const isMatchedMode = currentModes.some((m) => {
-      const idMatch = m.id.toLowerCase() === sub || m.id.toLowerCase() === lower;
-      const nameMatch = m.name.toLowerCase() === sub || m.name.toLowerCase() === lower;
-      const aliasMatch = Array.isArray(m.aliases) && m.aliases.some((a) => a.toLowerCase() === sub || a.toLowerCase() === lower);
-      const locName = resolveModeDisplayName(m.id, state.sourceLang).toLowerCase();
-      const locMatch = locName === sub || locName === lower;
-      const specMatch = m.id === "direct" && (sub === "spec" || lower === "spec" || lower === "logical spec" || lower === "specification" || lower === "direct spec");
-      const compMatch = m.id === "companion" && (sub === "companion" || lower === "companion" || lower === "companion mode" || lower === "original");
-      const flowMatch = m.id === "live-flow" && (sub === "flow" || lower === "flow" || lower === "live flow" || lower === "live" || lower === "modify" || lower === "raw");
-      return idMatch || nameMatch || aliasMatch || locMatch || specMatch || compMatch || flowMatch;
-    });
-    const numIdx = parseInt(sub, 10);
-    const isNum = !isNaN(numIdx) && String(numIdx) === sub;
-    const isKnownMode = sub === "mode" || isMatchedMode || isNum && numIdx >= 0 && numIdx <= currentModes.length || normalizeLingualModeInput(sub) !== null || normalizeLingualModeInput(lower) !== null;
-    if (isKnownMode) {
-      await setModeHandler(sub === "mode" ? subArgs : trimmed, ctx);
-      return;
-    }
-    const possibleLang = normalizeLangCode(sub);
-    if (LANGUAGE_PRESETS[possibleLang]) {
-      await switchLangHandler(trimmed, ctx);
-      return;
-    }
-    try {
-      ctx.ui.notify(`[lingual] unknown: "${trimmed}". run /lingual for help`, "warning");
-    } catch {
-    }
-  };
+    },
+    pi
+  });
   pi.registerCommand("lingual", {
     description: state.labels.cmdDescMode || "Interactive mode picker or manage: /lingual [1|2|3|0|on|off|default|lang|last|lock|status]",
-    handler: masterCommandHandler
+    handler: handlers.masterCommandHandler
   });
   pi.registerCommand("l", {
     description: "Alias for /lingual",
-    handler: masterCommandHandler
+    handler: handlers.masterCommandHandler
   });
   pi.registerCommand("lang", {
     description: "Switch companion language (alias for /lingual lang): /lang <pair>",
-    handler: switchLangHandler
+    handler: handlers.switchLangHandler
   });
   if (typeof pi.registerShortcut === "function") {
     pi.registerShortcut("alt+.", {
       description: state.labels.shortcutNextPage || "Switch to next companion segment",
       handler: async (ctx) => {
-        if (state.mode === "off") return;
-        if (session.nextPage()) {
-          renderActiveCard(ctx);
-        }
+        if (state.mode !== "off" && session.nextPage()) renderActiveCard(ctx);
       }
     });
     pi.registerShortcut("alt+,", {
       description: state.labels.shortcutPrevPage || "Switch to previous companion segment",
       handler: async (ctx) => {
-        if (state.mode === "off") return;
-        if (session.prevPage()) {
-          renderActiveCard(ctx);
+        if (state.mode !== "off" && session.prevPage()) renderActiveCard(ctx);
+      }
+    });
+    pi.registerShortcut("alt+c", {
+      description: state.labels.shortcutCopyLast || "Copy current or last lingual card to clipboard",
+      handler: async (ctx) => {
+        if (state.mode !== "off") {
+          await handlers.copyLastHandler("", ctx);
         }
       }
     });
   }
-  const createModelCompleter = (ctx, defaultOpts) => {
-    return async (text, systemPrompt, signal, callOpts) => {
-      try {
-        if (!ctx.modelRegistry) return null;
-        let targetModel = ctx.model;
-        if (state.selectedModel && state.selectedModel !== "auto") {
-          const available = ctx.modelRegistry.getAvailable?.() || [];
-          const match = available.find(
-            (m) => m.id === state.selectedModel || `${m.provider}/${m.id}` === state.selectedModel || m.id.toLowerCase().includes(state.selectedModel.toLowerCase())
-          );
-          if (match) targetModel = match;
-        }
-        if (!targetModel) return null;
-        const diskConfig = loadUserLingualConfig();
-        const effectiveReasoning = callOpts?.reasoning || defaultOpts?.reasoning || diskConfig.reasoning || "low";
-        const requestOptions = {
-          maxTokens: 1500,
-          reasoning: effectiveReasoning
-        };
-        const stream = ctx.modelRegistry.streamSimple(
-          targetModel,
-          {
-            systemPrompt,
-            messages: [
-              {
-                role: "user",
-                content: [{ type: "text", text }],
-                timestamp: Date.now()
-              }
-            ]
-          },
-          requestOptions
-        );
-        const timeoutMs = diskConfig.timeoutMs || 15e3;
-        let timeoutHandle;
-        const timeoutPromise = new Promise((_, reject) => {
-          timeoutHandle = setTimeout(() => reject(new Error("Lingual translation timed out")), timeoutMs);
-        });
-        let abortListener;
-        const abortPromise = new Promise((_, reject) => {
-          if (signal?.aborted) {
-            reject(new Error("Lingual translation aborted"));
-            return;
-          }
-          abortListener = () => reject(new Error("Lingual translation aborted"));
-          signal?.addEventListener("abort", abortListener, { once: true });
-        });
-        let res;
-        try {
-          res = await Promise.race([stream.result(), timeoutPromise, abortPromise]);
-        } finally {
-          if (timeoutHandle) clearTimeout(timeoutHandle);
-          if (signal && abortListener) {
-            signal.removeEventListener("abort", abortListener);
-          }
-        }
-        if (!res) return null;
-        const content = res.content?.filter((c) => c.type === "text")?.map((c) => c.text)?.join("");
-        return content && content.trim() ? content.trim() : null;
-      } catch {
-        return null;
-      }
-    };
-  };
   pi.on("input", async (event, ctx) => {
     lastRawInputText = event?.text || "";
     if (showingReleaseBanner) {
@@ -6577,12 +7231,10 @@ Usage: /lingual loadout [list | apply <id>] (e.g. /lingual loadout apply spec)`;
     if (footerNeedsRefresh) {
       state.labels = resolveLabelsForLang(state.sourceLang, latestDisk.labels, state.targetLang);
     }
-    if (latestDisk.modeLocked !== void 0 && latestDisk.modeLocked !== state.modeLocked) {
-      state.modeLocked = latestDisk.modeLocked;
-    }
-    if (Array.isArray(latestDisk.modes) && latestDisk.modes.length > 0) {
+    if (latestDisk.modeLocked !== void 0) state.modeLocked = latestDisk.modeLocked;
+    if (latestDisk.modes?.length) {
       state.modes = latestDisk.modes;
-    } else if (!state.modes || state.modes.length === 0) {
+    } else if (!state.modes?.length) {
       state.modes = resolveModesFromConfig(latestDisk);
     }
     if (footerNeedsRefresh && hasActiveUI(ctx)) {
@@ -6623,10 +7275,11 @@ Usage: /lingual loadout [list | apply <id>] (e.g. /lingual loadout apply spec)`;
       latestModes
     );
     const currentMode = latestModes.find((m) => m.id === activeModeId) || latestModes[0];
-    const isPromptOptMode = currentMode ? currentMode.action !== "pass-through" : state.mode !== "original" && state.mode !== "off";
+    const rt = runtimeForMode(currentMode);
+    const isPromptOptMode = rt.dispatcher !== "pass-through";
     const isTargetInput = isTargetLanguageOnly(promptToTranslate, state.sourceLang, state.targetLang);
     if (isTargetInput) {
-      if (!isPromptOptMode || currentMode.action === "pass-through") {
+      if (rt.dispatcher === "pass-through") {
         clearPendingTimers();
         session.abortActive();
         session.clearPagination();
@@ -6636,17 +7289,15 @@ Usage: /lingual loadout [list | apply <id>] (e.g. /lingual loadout apply spec)`;
         }
         return { action: "continue" };
       }
-      if (currentMode.id === "direct" || currentMode.action === "transform" && currentMode.flow === "translate") {
-        if (isImperativeEngineeringPrompt(promptToTranslate)) {
-          clearPendingTimers();
-          session.abortActive();
-          session.clearPagination();
-          if (hasActiveUI(ctx)) {
-            safeClearWidget(ctx);
-            ctx.ui.setStatus("lingual", ctx.ui.theme.fg("muted", `[${state.targetLang} \xB7 spec ok]`));
-          }
-          return { action: "continue" };
+      if (rt.dispatcher === "transform" && rt.flow === "translate" && isImperativeEngineeringPrompt(promptToTranslate)) {
+        clearPendingTimers();
+        session.abortActive();
+        session.clearPagination();
+        if (hasActiveUI(ctx)) {
+          safeClearWidget(ctx);
+          ctx.ui.setStatus("lingual", ctx.ui.theme.fg("muted", `[${state.targetLang} \xB7 spec ok]`));
         }
+        return { action: "continue" };
       }
     }
     if (!sanitized.hasNaturalLanguage || !shouldTriggerTranslation(promptToTranslate, state.sourceLang, isPromptOptMode)) {
@@ -6661,100 +7312,103 @@ Usage: /lingual loadout [list | apply <id>] (e.g. /lingual loadout apply spec)`;
     }
     lastContext = ctx;
     const { generation, signal } = session.beginRequest();
-    const resolvedReasoning = currentMode.reasoning ?? latestDisk.reasoning ?? "low";
-    const completer = createModelCompleter(ctx, { reasoning: resolvedReasoning });
+    const resolvedReasoning = rt.reasoning ?? latestDisk.reasoning ?? "low";
+    const completer = createModelCompleter(ctx, () => state.selectedModel, { reasoning: resolvedReasoning });
     session.initPagination(1);
-    const isOriginalMode = state.mode === "original" || state.mode === "companion" || currentMode?.action === "pass-through";
-    if (isOriginalMode) {
+    if (rt.dispatcher === "pass-through") {
+      const hudSlots = rt.slots.length > 0 ? rt.slots : state.slots;
+      const isLong = isDynamicLongInput(promptToTranslate, state.sourceLang);
       if (hasActiveUI(ctx)) {
         try {
-          ctx.ui.setWidget("lingual_hud", void 0);
           ctx.ui.setStatus("lingual", ctx.ui.theme.fg("accent", "\u21C4 [lingual] polishing..."));
         } catch {
         }
+        renderHudWidget(
+          ctx,
+          { spoken: "", written: "", sourceText: promptToTranslate, annotated: "" },
+          rt,
+          { isLong }
+        );
       }
+      let lastPaint2 = 0;
+      const paintPartial = (fields) => {
+        const now = Date.now();
+        if (now - lastPaint2 < 90) return;
+        lastPaint2 = now;
+        if (!session.isLatest(generation) || signal.aborted) return;
+        const activeCtx = hasActiveUI(ctx) ? ctx : hasActiveUI(lastContext) ? lastContext : null;
+        if (!activeCtx) return;
+        renderHudWidget(activeCtx, buildStreamingResult(fields, promptToTranslate), rt, {
+          isLong,
+          isStreaming: true
+        });
+      };
       clearTimeout(polishTimer);
       polishTimer = setTimeout(() => {
         polishTimer = void 0;
-        if (!session.isLatest(generation) || !isOriginalMode && signal.aborted) {
+        if (!session.isLatest(generation) || signal.aborted) {
           return;
         }
-        const passThroughSlots = currentMode && Array.isArray(currentMode.slots) && currentMode.slots.length > 0 && currentMode.id !== "companion" ? currentMode.slots.map((s) => ({
-          id: s.id,
-          label: s.label,
-          role: s.role === "vocab" ? "vocab" : s.id === "source" ? "source" : "translation",
-          instruction: s.instruction,
-          showMeaning: true,
-          enabled: s.enabled !== false
-        })) : state.slots;
         translatePrompt(promptToTranslate, {
           sourceLang: state.sourceLang,
           targetLang: state.targetLang,
           labels: state.labels,
-          slots: passThroughSlots,
+          slots: hudSlots,
           slotPreset: state.slotPreset,
+          killList: rt.killList,
+          globalKillList: rt.globalKillList,
           complete: completer,
           signal,
+          onPartial: paintPartial,
           context: extractRecentContextAnchor(ctx)
         }).then((result) => {
           if (!session.isLatest(generation) || signal.aborted) {
             return;
           }
-          if (currentMode.hud === "none") {
-            const activeCtx = hasActiveUI(ctx) ? ctx : hasActiveUI(lastContext) ? lastContext : null;
+          if (!result) return;
+          session.setPageResult(0, result, generation);
+          const activeCtx = hasActiveUI(ctx) ? ctx : hasActiveUI(lastContext) ? lastContext : null;
+          if (!activeCtx) return;
+          if (rt.target === "clipboard") {
+            const chosen = pickPrimaryContent(result, rt);
+            if (chosen) {
+              copyToClipboard(chosen);
+              activeCtx.ui.notify("[lingual] Copied to clipboard", "info");
+            }
             safeClearWidget(activeCtx);
             return;
           }
-          if (result) {
-            session.setPageResult(0, result, generation);
-            const activeCtx = hasActiveUI(ctx) ? ctx : hasActiveUI(lastContext) ? lastContext : null;
-            if (activeCtx) {
-              renderHudWidget(
-                activeCtx,
-                result.sourceText,
-                result.spoken,
-                result.written,
-                result.vocab,
-                result.spokenMeaning,
-                result.writtenMeaning,
-                void 0,
-                result.slotOutputs,
-                result.slots
-              );
-            }
-          }
+          renderHudWidget(activeCtx, result, rt, { isLong });
         }).catch(() => {
         }).finally(() => {
           if (session.isLatest(generation)) {
             const activeCtx = hasActiveUI(ctx) ? ctx : hasActiveUI(lastContext) ? lastContext : null;
-            if (activeCtx) {
-              updateFooter(activeCtx);
-            }
+            if (activeCtx) updateFooter(activeCtx);
           }
         });
       }, 80);
       return { action: "continue" };
     }
-    const isSelectMode = state.mode === "select" || state.mode === "candidates" || currentMode.action === "select";
-    const isModifyMode = !isSelectMode && (state.mode === "modify" || state.mode === "live-flow" || currentMode.flow === "proofread");
-    const isDirectMode = !isSelectMode && !isModifyMode && (state.mode === "english" || state.mode === "direct" || currentMode.action === "transform");
-    const isolatedModeSlots = isModifyMode ? resolveModifySlotsFromConfig({
-      sourceLang: state.sourceLang,
-      explainLang: latestDisk.explainLang,
-      modifySlots: latestDisk.modifySlots ?? state.modifySlots
-    }) : isDirectMode ? resolveDirectSlotsFromConfig({
-      sourceLang: state.sourceLang,
-      directSlots: latestDisk.directSlots ?? state.directSlots
-    }) : resolveCandidateSlotsFromConfig({
-      sourceLang: state.sourceLang,
-      promptSlots: latestDisk.promptSlots ?? state.promptSlots
-    });
-    const rewriteSlots = isolatedModeSlots.filter((s) => s.role !== "vocab");
-    const vocabSlots = isolatedModeSlots.filter((s) => s.role === "vocab");
-    const fallbackFirst = isModifyMode ? getDefaultModifySlots(state.sourceLang, latestDisk.explainLang)[0] : getDefaultDirectSlots(state.sourceLang)[0];
-    const hasExplicitLegacySlots = isModifyMode ? Array.isArray(latestDisk.modifySlots) && latestDisk.modifySlots.length > 0 : isDirectMode ? Array.isArray(latestDisk.directSlots) && latestDisk.directSlots.length > 0 : Array.isArray(latestDisk.promptSlots) && latestDisk.promptSlots.length > 0;
-    const slotsToRun = isSelectMode ? currentMode.action === "select" && currentMode.slots && currentMode.slots.length > 0 ? currentMode.slots : [...rewriteSlots.length > 0 ? rewriteSlots : getDefaultPromptSlots(state.sourceLang), ...vocabSlots] : isModifyMode ? currentMode.flow === "proofread" && currentMode.slots && currentMode.slots.length > 0 ? currentMode.slots : isolatedModeSlots.length > 0 ? isolatedModeSlots : getDefaultModifySlots(state.sourceLang, latestDisk.explainLang) : isDirectMode ? currentMode.action === "transform" && currentMode.flow === "translate" && currentMode.slots && currentMode.slots.length > 0 ? currentMode.slots : [rewriteSlots[0] || fallbackFirst, ...vocabSlots] : currentMode.slots && currentMode.slots.length > 0 ? currentMode.slots : getDefaultPromptSlots(state.sourceLang);
-    if (hasActiveUI(ctx) && currentMode.hud !== "none") {
+    const isSelectMode = rt.dispatcher === "select";
+    const isModifyMode = rt.isProofread;
+    const isDirectMode = rt.dispatcher === "transform";
+    const isLongInput = isDynamicLongInput(promptToTranslate, state.sourceLang);
+    const slotsToRun = rt.slots.length > 0 ? rt.slots : [];
+    let lastPaint = 0;
+    const onPartial = hasActiveUI(ctx) && rt.hud !== "none" ? (fields) => {
+      if (Object.keys(fields).length === 0) return;
+      const now = Date.now();
+      if (now - lastPaint < 90) return;
+      lastPaint = now;
+      if (!session.isLatest(generation) || signal.aborted) return;
+      const activeCtx = hasActiveUI(ctx) ? ctx : hasActiveUI(lastContext) ? lastContext : null;
+      if (!activeCtx) return;
+      renderHudWidget(activeCtx, buildStreamingResult(fields, promptToTranslate), rt, {
+        isLong: isLongInput,
+        isStreaming: true
+      });
+    } : void 0;
+    if (hasActiveUI(ctx) && rt.hud !== "none") {
       try {
         const rawLoadingMsg = isModifyMode ? state.labels.loadingFixSyntax || "  \u22EF [lingual] fixing syntax & typos..." : isDirectMode ? state.labels.loadingOptimizePrompt || "  \u22EF [lingual] optimizing prompt..." : state.labels.loadingCandidates || "  \u22EF [lingual] generating prompt candidates...";
         const loadingMsg = formatLoadingMessage(rawLoadingMsg);
@@ -6768,36 +7422,15 @@ Usage: /lingual loadout [list | apply <id>] (e.g. /lingual loadout apply spec)`;
         );
       } catch {
       }
-    } else if (hasActiveUI(ctx) && currentMode.hud === "none") {
+    } else if (hasActiveUI(ctx) && rt.hud === "none") {
       safeClearWidget(ctx);
     }
     try {
       let recentContext = "";
-      if (currentMode.id === "commit" || currentMode.contextAware === true) {
-        try {
-          const diffOutput = (0, import_node_child_process.execFileSync)("git", ["diff", "--stat", "HEAD"], {
-            encoding: "utf8",
-            timeout: 250,
-            stdio: ["ignore", "pipe", "ignore"]
-          });
-          if (diffOutput && diffOutput.trim()) {
-            recentContext = `[GIT DIFF]:
-${diffOutput.trim().slice(0, 300)}`;
-          } else {
-            const statusOutput = (0, import_node_child_process.execFileSync)("git", ["status", "--short"], {
-              encoding: "utf8",
-              timeout: 250,
-              stdio: ["ignore", "pipe", "ignore"]
-            });
-            if (statusOutput && statusOutput.trim()) {
-              recentContext = `[GIT STATUS]:
-${statusOutput.trim().slice(0, 300)}`;
-            }
-          }
-        } catch {
-        }
+      if (currentMode.id === "commit" || currentMode.contextAware === true || rt.contextAware) {
+        recentContext = captureGitContextSnapshot();
       }
-      if (isDirectMode || currentMode.contextAware === true) {
+      if (isDirectMode || currentMode.contextAware === true || rt.contextAware) {
         const assistantAnchor = extractRecentContextAnchor(ctx);
         if (assistantAnchor) {
           recentContext = recentContext ? `${recentContext}
@@ -6811,12 +7444,14 @@ ${statusOutput.trim().slice(0, 300)}`;
         slots: slotsToRun
       };
       const candidates = await executeModeRunner(promptToTranslate, modeToRun, {
-        sourceLang: state.sourceLang,
-        targetLang: state.targetLang,
-        explainLang: latestDisk.explainLang,
+        sourceLang: rt.inputLang,
+        targetLang: rt.outputLang,
+        explainLang: rt.explainLang,
+        globalKillList: rt.globalKillList,
         context: recentContext,
         complete: completer,
-        signal
+        signal,
+        onPartial
       });
       if (!session.isLatest(generation)) {
         return { action: "continue" };
@@ -6824,7 +7459,7 @@ ${statusOutput.trim().slice(0, 300)}`;
       if (!candidates || candidates.length === 0) {
         if (hasActiveUI(ctx)) {
           safeClearWidget(ctx);
-          if (currentMode.action === "transform") {
+          if (rt.dispatcher === "transform") {
             try {
               ctx.ui.notify("[lingual] prompt rewrite timed out; original prompt passed", "warning");
             } catch {
@@ -6833,215 +7468,75 @@ ${statusOutput.trim().slice(0, 300)}`;
         }
         return { action: "continue" };
       }
-      const maxCols = getEffectiveMaxCols();
       const singleLineSource = promptToTranslate.replace(/\s*\r?\n\s*/g, " \u21B5 ");
       const candidateVocab = candidates[0]?.vocab;
-      const isProofreadFlow = currentMode.flow === "proofread";
-      const isAdaptiveTakeaway = currentMode.hud === "adaptive-takeaway" || isProofreadFlow;
-      const isLongModifyInput = isAdaptiveTakeaway && (promptToTranslate.length > 120 || (promptToTranslate.match(/[.!?。！？\n]/g) || []).length >= 3);
-      const keepSourceRow = !isProofreadFlow && (currentMode.slots || []).some((s) => s.id === "source" && s.enabled !== false);
-      const takeawayLabel = isProofreadFlow ? slotsToRun.find((s) => s.role === "vocab")?.label || "Takeaway" : state.labels.vocabLabel || "Vocab";
+      const keepSourceRow = rt.slots.some((s) => s.role === "source");
+      const takeawayLabel = rt.takeawaySlot?.label || state.labels.vocabLabel || "Vocab";
       const candidateSlotResults = [
         ...keepSourceRow ? [{ id: "source", label: state.labels.sourceLabel || "Original", role: "source", content: singleLineSource }] : [],
-        ...!isLongModifyInput ? candidates.map((c, idx) => ({
+        ...candidates.map((c, idx) => ({
           id: c.id,
-          label: isProofreadFlow ? c.label : currentMode.action === "transform" ? `\u26A1${c.label}` : `${idx + 1}:${c.label}`,
+          label: isModifyMode ? c.label : isSelectMode ? `${idx + 1}:${c.label}` : `\u26A1${c.label}`,
           role: "translation",
-          content: c.content.replace(/\s*\r?\n\s*/g, " \u21B5 ")
-        })) : [],
+          content: c.content.replace(/\s*\r?\n\s*/g, " \u21B5 "),
+          meaning: c.meaning,
+          hideWhenLong: c.hideWhenLong
+        })),
         ...candidateVocab ? [{ id: "vocab", label: takeawayLabel, role: "vocab", content: candidateVocab }] : []
       ];
-      session.setPageResult(
-        0,
-        {
-          sourceText: singleLineSource,
-          spoken: candidates[0].content.replace(/\s*\r?\n\s*/g, " \u21B5 "),
-          written: candidates[1]?.content.replace(/\s*\r?\n\s*/g, " \u21B5 ") || "",
-          vocab: candidateVocab,
-          annotated: "",
-          slots: candidateSlotResults
-        },
-        generation
-      );
-      if (hasActiveUI(ctx)) {
-        if (currentMode.hud === "none") {
-          safeClearWidget(ctx);
-        } else {
-          const hasMultipleTranslationSlots = candidateSlotResults.filter(
-            (s) => s.role !== "vocab" && s.id !== "source"
-          ).length > 1;
-          const isPreviewHud = currentMode.hud === "preview" && !hasMultipleTranslationSlots;
-          const effectiveMaxLines = isPreviewHud ? 4 : 9;
-          const displaySlotResults = isPreviewHud ? candidateSlotResults.filter((s, idx) => s.role === "vocab" || idx === 0) : candidateSlotResults;
-          const layoutSlots = displaySlotResults.map((sr) => ({
-            id: sr.id,
-            label: sr.label,
-            role: sr.role,
-            showMeaning: false,
-            enabled: true
-          }));
-          const cardLines = renderCardLayout(
-            {
-              sourceText: singleLineSource,
-              spoken: candidates[0].content.replace(/\s*\r?\n\s*/g, " \u21B5 "),
-              written: candidates[1]?.content.replace(/\s*\r?\n\s*/g, " \u21B5 ") || "",
-              vocab: candidateVocab,
-              annotated: "",
-              slots: displaySlotResults
-            },
-            state.labels,
-            {
-              maxCols,
-              maxLines: effectiveMaxLines,
-              isCompact: state.compact,
-              slots: layoutSlots,
-              themeDecorators: {
-                muted: (s) => ctx.ui.theme.fg("muted", s),
-                accent: (s) => ctx.ui.theme.fg("accent", s),
-                dim: (s) => ctx.ui.theme.fg("dim", s)
-              }
-            }
-          );
-          try {
-            ctx.ui.setWidget("lingual_hud", cardLines, { placement: "aboveEditor" });
-          } catch {
-          }
-        }
-      }
+      const result = {
+        sourceText: singleLineSource,
+        spoken: candidates[0].content.replace(/\s*\r?\n\s*/g, " \u21B5 "),
+        spokenMeaning: candidates[0].meaning,
+        written: candidates[1]?.content.replace(/\s*\r?\n\s*/g, " \u21B5 ") || "",
+        writtenMeaning: candidates[1]?.meaning,
+        vocab: candidateVocab,
+        annotated: "",
+        slots: candidateSlotResults,
+        slotOutputs: Object.fromEntries(
+          candidates.map((c) => [
+            c.id,
+            { content: c.content.replace(/\s*\r?\n\s*/g, " \u21B5 "), meaning: c.meaning }
+          ])
+        )
+      };
+      session.setPageResult(0, result, generation);
+      renderHudWidget(ctx, result, rt, { isLong: isLongInput });
       let chosenText = candidates[0].content;
-      if (currentMode.primarySlotId) {
-        const match = candidates.find((c) => c.id.toLowerCase() === currentMode.primarySlotId?.toLowerCase());
+      const dispatchSlot = primarySlot(rt);
+      if (dispatchSlot) {
+        const match = candidates.find((c) => c.id.toLowerCase() === dispatchSlot.id.toLowerCase());
         if (match) chosenText = match.content;
-      } else if (isProofreadFlow) {
-        const fixedCandidate = candidates.find((c) => c.id === "fixed");
-        if (fixedCandidate) chosenText = fixedCandidate.content;
       } else {
         const firstRewrite = candidates.find((c) => c.id !== "source" && c.id !== "vocab");
         if (firstRewrite) chosenText = firstRewrite.content;
       }
       if (isSelectMode && hasActiveUI(ctx)) {
-        const langCode = (state.sourceLang || "en").toLowerCase().split("-")[0];
-        const sp = resolveSelectPrompts(langCode, candidates.length);
-        if (typeof ctx.ui.custom === "function") {
-          const items = [
-            ...candidates.map((c, idx) => ({ key: String(idx + 1), label: `[${idx + 1}] ${c.label}`, value: c.content })),
-            { key: "0", label: `[0] ${sp.keepOrig}`, value: "__ORIGINAL__" }
-          ];
-          const pickedVal = await ctx.ui.custom((tui, theme, keybindings, done) => {
-            let selectedIdx = 0;
-            return {
-              render(width) {
-                const border = theme.fg("dim", "\u2500".repeat(Math.max(10, width)));
-                const headerLine = " " + theme.fg("accent", theme.bold(sp.title)) + "  " + theme.fg("dim", `(${sp.hint})`);
-                const maxLineCols = Math.max(20, width - 2);
-                const pillLines = [];
-                let currentLine = " ";
-                let currentWidth = 1;
-                for (let idx = 0; idx < items.length; idx++) {
-                  const it = items[idx];
-                  const renderedPill = idx === selectedIdx ? theme.fg("accent", theme.bold(`\u25B8 ${it.label}`)) : `  ${theme.fg("text", it.label)}`;
-                  const pillWidth = getVisualWidth(renderedPill);
-                  const sep = currentWidth > 1 ? "   " : "";
-                  const sepWidth = sep.length;
-                  if (currentWidth > 1 && currentWidth + sepWidth + pillWidth > maxLineCols) {
-                    pillLines.push(currentLine);
-                    currentLine = " " + renderedPill;
-                    currentWidth = 1 + pillWidth;
-                  } else {
-                    currentLine += sep + renderedPill;
-                    currentWidth += sepWidth + pillWidth;
-                  }
-                }
-                if (currentLine.trim()) {
-                  pillLines.push(currentLine);
-                }
-                return [
-                  border,
-                  truncateVisual(headerLine, width),
-                  ...pillLines,
-                  border
-                ];
-              },
-              handleInput(keyData) {
-                if (/^[1-9]$/.test(keyData)) {
-                  const num = parseInt(keyData, 10);
-                  if (num >= 1 && num <= candidates.length) {
-                    done(candidates[num - 1].content);
-                    return;
-                  }
-                }
-                if (keyData === "0" || keyData === "\x1B" || keyData === "" || keybindings?.matches?.(keyData, "tui.select.cancel")) {
-                  done("__ORIGINAL__");
-                  return;
-                }
-                if (keyData === "h" || keyData === "k" || keyData === "\x1B[A" || keyData === "\x1B[D" || keybindings?.matches?.(keyData, "tui.select.up")) {
-                  selectedIdx = (selectedIdx - 1 + items.length) % items.length;
-                  tui?.requestRender?.();
-                  return;
-                }
-                if (keyData === "l" || keyData === "j" || keyData === "\x1B[B" || keyData === "\x1B[C" || keyData === "	" || keybindings?.matches?.(keyData, "tui.select.down")) {
-                  selectedIdx = (selectedIdx + 1) % items.length;
-                  tui?.requestRender?.();
-                  return;
-                }
-                if (keyData === "\r" || keyData === "\n" || keyData === "\x1BOM" || keybindings?.matches?.(keyData, "tui.select.confirm")) {
-                  done(items[selectedIdx]?.value);
-                  return;
-                }
-              },
-              invalidate() {
-              }
-            };
-          });
-          if (!pickedVal || pickedVal === "__ORIGINAL__") {
-            safeClearWidget(ctx);
-            updateFooter(ctx);
-            return { action: "continue" };
-          }
-          chosenText = pickedVal;
-        } else if (typeof ctx.ui.select === "function") {
-          const optionLabels = [
-            ...candidates.map((c, idx) => `[${idx + 1}] ${c.label}`),
-            `[0] ${sp.keepOrig}`
-          ];
-          const picked = await ctx.ui.select(`${sp.title} (${sp.hint})`, optionLabels);
-          if (!picked || picked.startsWith("[0]")) {
-            safeClearWidget(ctx);
-            updateFooter(ctx);
-            return { action: "continue" };
-          }
-          const idxMatch = picked.match(/^\[(\d+)\]/);
-          if (idxMatch) {
-            const idx = parseInt(idxMatch[1], 10) - 1;
-            if (candidates[idx]) {
-              chosenText = candidates[idx].content;
-            }
-          }
+        const picked = await pickCandidateInteractive(ctx, candidates, state.sourceLang);
+        if (!picked) {
+          safeClearWidget(ctx);
+          updateFooter(ctx);
+          return { action: "continue" };
         }
+        chosenText = picked;
       }
       let finalText = sanitized.rawPayload ? `${chosenText}
 
 ${sanitized.rawPayload}` : chosenText;
       const diskConfig = loadUserLingualConfig();
-      if (currentMode.target !== "clipboard" && shouldInjectNativeReplyGuard(event.text, state.sourceLang, diskConfig.replyInSourceLang)) {
+      if (rt.target !== "clipboard" && shouldInjectNativeReplyGuard(event.text, state.sourceLang, diskConfig.replyInSourceLang)) {
         finalText += formatNativeReplyGuardHint(state.sourceLang);
       }
-      if (currentMode.target === "clipboard") {
+      if (rt.target === "clipboard") {
         copyToClipboard(finalText);
-        if (hasActiveUI(ctx)) {
-          ctx.ui.notify("[lingual] Copied to clipboard", "info");
-        }
+        if (hasActiveUI(ctx)) ctx.ui.notify("[lingual] Copied to clipboard", "info");
         return { action: "handled" };
       }
-      return {
-        action: "transform",
-        text: finalText,
-        images: event.images
-      };
+      return { action: "transform", text: finalText, images: event.images };
     } catch {
       if (hasActiveUI(ctx)) {
         safeClearWidget(ctx);
-        if (currentMode.action === "transform") {
+        if (rt.dispatcher === "transform") {
           try {
             ctx.ui.notify("[lingual] prompt rewrite error; original prompt passed", "warning");
           } catch {
@@ -7052,9 +7547,7 @@ ${sanitized.rawPayload}` : chosenText;
     } finally {
       if (session.isLatest(generation)) {
         const activeCtx = hasActiveUI(ctx) ? ctx : hasActiveUI(lastContext) ? lastContext : null;
-        if (activeCtx) {
-          updateFooter(activeCtx);
-        }
+        if (activeCtx) updateFooter(activeCtx);
       }
     }
   });

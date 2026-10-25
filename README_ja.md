@@ -8,7 +8,7 @@ Pi Coding Agent のためのバイリンガル・ターミナル HUD ＆ プロ�
 [![npm downloads](https://img.shields.io/npm/dm/pi-lingual?color=22c55e&label=downloads)](https://www.npmjs.com/package/pi-lingual)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Built for Pi](https://img.shields.io/badge/Built%20for-Pi%20Coding%20Agent-orange)](https://github.com/earendil-works/pi-coding-agent)
-[![Tests](https://img.shields.io/badge/Tests-197%2F197%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
+[![Tests](https://img.shields.io/badge/Tests-222%2F222%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict%20Zero%20Error-blue)](tsconfig.json)
 
 [English](./README.md) | [简体中文](./README_zh.md) | **日本語**
@@ -181,7 +181,7 @@ Pi の `/` コマンドメニューを汚さないよう、登録されるトッ
 
 ```bash
 npm run typecheck   # TypeScript 厳格型チェック (0 エラー)
-npm test            # 全自動単体テスト (197/197 全件パス)
+npm test            # 全自動単体テスト (222/222 全件パス)
 npm run build       # 多重エントリビルド (拡張機能 + コアエンジン)
 ```
 
