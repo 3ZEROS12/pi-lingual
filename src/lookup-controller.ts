@@ -89,11 +89,22 @@ export class LookupController {
     this.last = normalizeSelection(raw);
     if (!settings.config.enabled) return;
     if (!isLookupSelection(raw, settings.config, settings.nativeLang, settings.foreignLang)) return;
-    void this.show(raw);
+    // A lookup is best-effort: an unhandled rejection here reaches pi's
+    // uncaughtException handler and takes the whole process down.
+    void this.show(raw).catch(() => {});
   }
 
   /** Open the popup for `raw`. Resolves once the translation is on screen or has failed. */
   async show(raw: string): Promise<void> {
+    try {
+      await this.showUnsafe(raw);
+    } catch {
+      // Reading a stale ctx or a theme the renderer no longer exposes must not
+      // surface as a crash; the popup simply does not appear.
+    }
+  }
+
+  private async showUnsafe(raw: string): Promise<void> {
     const text = normalizeSelection(raw);
     if (!text) return;
     const settings = this.settings();
@@ -169,7 +180,14 @@ export class LookupController {
     const ctx = this.ctx;
     const tui = this.tui;
     if (!ctx || !tui || typeof tui.showOverlay !== "function") return undefined;
-    const theme = (ctx.ui as { theme?: unknown })?.theme as PopupTheme | undefined;
+    let theme: PopupTheme | undefined;
+    try {
+      theme = (ctx.ui as unknown as { theme?: PopupTheme })?.theme;
+    } catch {
+      // pi asserts a live ctx on every property access, and a captured ctx goes
+      // stale after reload or session replacement.
+      return undefined;
+    }
     if (!theme || typeof theme.fg !== "function") return undefined;
 
     this.close();

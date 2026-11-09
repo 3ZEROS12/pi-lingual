@@ -292,6 +292,7 @@ declare class LookupController {
     private onCopy;
     /** Open the popup for `raw`. Resolves once the translation is on screen or has failed. */
     show(raw: string): Promise<void>;
+    private showUnsafe;
     close(): void;
     private openPopup;
     private requestRender;

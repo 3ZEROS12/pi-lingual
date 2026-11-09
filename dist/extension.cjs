@@ -5781,8 +5781,19 @@ var LOOKUP_MAX_TOKENS = MAX_TOKENS;
 var INSTALLED = /* @__PURE__ */ Symbol.for("pi-lingual.lookup-copy-hook");
 function notify(listener, text) {
   try {
-    listener(text);
+    const result = listener(text);
+    if (result && typeof result.then === "function") {
+      result.catch(() => {
+      });
+    }
   } catch {
+  }
+}
+async function callOriginal(call, fallback) {
+  try {
+    return await call();
+  } catch {
+    return fallback;
   }
 }
 function attachCopyHook(tui, listener) {
@@ -5798,7 +5809,7 @@ function attachCopyHook(tui, listener) {
   if (typeof record.copySelection === "function") {
     const original = record.copySelection;
     record.copySelection = async (text) => {
-      const result = await original.call(tui, text);
+      const result = await callOriginal(() => original.call(tui, text), false);
       if (result === true) notify(installed.listener, text);
       return result;
     };
@@ -5806,7 +5817,7 @@ function attachCopyHook(tui, listener) {
   } else if (typeof record.copyTextToClipboard === "function") {
     const original = record.copyTextToClipboard;
     record.copyTextToClipboard = async (text) => {
-      const ok = await original.call(tui, text);
+      const ok = await callOriginal(() => original.call(tui, text), false);
       if (ok) notify(installed.listener, text);
       return ok;
     };
@@ -5942,10 +5953,17 @@ var LookupController = class {
     this.last = normalizeSelection(raw);
     if (!settings.config.enabled) return;
     if (!isLookupSelection(raw, settings.config, settings.nativeLang, settings.foreignLang)) return;
-    void this.show(raw);
+    void this.show(raw).catch(() => {
+    });
   }
   /** Open the popup for `raw`. Resolves once the translation is on screen or has failed. */
   async show(raw) {
+    try {
+      await this.showUnsafe(raw);
+    } catch {
+    }
+  }
+  async showUnsafe(raw) {
     const text = normalizeSelection(raw);
     if (!text) return;
     const settings = this.settings();
@@ -6010,7 +6028,12 @@ var LookupController = class {
     const ctx = this.ctx;
     const tui = this.tui;
     if (!ctx || !tui || typeof tui.showOverlay !== "function") return void 0;
-    const theme = ctx.ui?.theme;
+    let theme;
+    try {
+      theme = ctx.ui?.theme;
+    } catch {
+      return void 0;
+    }
     if (!theme || typeof theme.fg !== "function") return void 0;
     this.close();
     const popup = new LookupPopup(

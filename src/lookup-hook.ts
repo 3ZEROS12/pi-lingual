@@ -26,9 +26,23 @@ const INSTALLED = Symbol.for("pi-lingual.lookup-copy-hook");
 
 function notify(listener: CopyListener, text: string): void {
   try {
-    listener(text);
+    const result = listener(text) as unknown;
+    // A listener that went async must not re-enter pi as an unhandled rejection:
+    // that path ends in pi's uncaughtException handler, which exits the process.
+    if (result && typeof (result as Promise<unknown>).then === "function") {
+      (result as Promise<unknown>).catch(() => {});
+    }
   } catch {
     // A lookup failure must never turn into a failed copy.
+  }
+}
+
+/** Runs the callback below ours; a broken wrapper ahead of us returns a failed copy instead of a crash. */
+async function callOriginal<T>(call: () => Promise<T>, fallback: T): Promise<T> {
+  try {
+    return await call();
+  } catch {
+    return fallback;
   }
 }
 
@@ -47,7 +61,7 @@ export function attachCopyHook(tui: unknown, listener: CopyListener): CopyHookTa
   if (typeof record.copySelection === "function") {
     const original = record.copySelection as CopyFn;
     record.copySelection = async (text: string): Promise<boolean | string> => {
-      const result = await original.call(tui, text);
+      const result = await callOriginal(() => original.call(tui, text), false);
       if (result === true) notify(installed.listener, text);
       return result;
     };
@@ -55,7 +69,7 @@ export function attachCopyHook(tui: unknown, listener: CopyListener): CopyHookTa
   } else if (typeof record.copyTextToClipboard === "function") {
     const original = record.copyTextToClipboard as CopyTextFn;
     record.copyTextToClipboard = async (text: string): Promise<boolean> => {
-      const ok = await original.call(tui, text);
+      const ok = await callOriginal(() => original.call(tui, text), false);
       if (ok) notify(installed.listener, text);
       return ok;
     };

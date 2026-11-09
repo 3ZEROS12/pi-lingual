@@ -11,6 +11,8 @@ import {
   resolveLookupConfig,
 } from "../src/lookup.js";
 import { LookupPopup, lookupPopupWidth } from "../src/lookup-popup.js";
+import { LookupController } from "../src/lookup-controller.js";
+import { attachCopyHook } from "../src/lookup-hook.js";
 import { resolveLookupStrings } from "../src/lookup-strings.js";
 import { getVisualWidth } from "../src/layout.js";
 
@@ -217,4 +219,98 @@ test("lookupPopupWidth keeps a usable minimum on narrow splits", () => {
   assert.ok(lookupPopupWidth(20) >= 20);
   assert.ok(lookupPopupWidth(200) <= 64);
   assert.ok(lookupPopupWidth(120) > lookupPopupWidth(40));
+});
+
+// --- Integration guards: a failing lookup must never reach pi's uncaughtException handler ---
+
+const lookupSettings = {
+  config: { ...DEFAULT_LOOKUP },
+  nativeLang: "zh",
+  foreignLang: "en",
+  strings,
+};
+
+function overlayHost(onComponent?: (component: any) => void) {
+  return {
+    terminal: { columns: 100 },
+    showOverlay: (component: any) => {
+      onComponent?.(component);
+      return { hide: () => {} };
+    },
+    requestRender: () => {},
+  };
+}
+
+test("a stale extension ctx makes the lookup a no-op instead of a throw", async () => {
+  const controller = new LookupController(() => lookupSettings);
+  const staleCtx = {
+    get ui(): never {
+      throw new Error("This extension ctx is stale after session replacement or reload");
+    },
+  } as any;
+  controller.setContext(staleCtx);
+  controller.attach(overlayHost(), () => {});
+
+  await assert.doesNotReject(async () => {
+    await controller.show("under contention");
+  });
+  controller.close();
+});
+
+test("a failing backend reports inside the popup instead of rejecting", async () => {
+  let component: any;
+  const controller = new LookupController(() => lookupSettings, {
+    translate: async () => {
+      throw new Error("network down");
+    },
+  });
+  controller.setContext({ ui: { theme: plainTheme } } as any);
+  controller.attach(overlayHost((c) => (component = c)), () => {});
+
+  await controller.show("under contention");
+  assert.equal(component.currentStatus, "error");
+  assert.match(component.currentBody, /network down/);
+  controller.close();
+});
+
+test("a click dismisses the overlay without throwing during teardown", async () => {
+  let hidden = 0;
+  const host = {
+    terminal: { columns: 100 },
+    showOverlay: () => ({ hide: () => (hidden += 1) }),
+    requestRender: () => {},
+  };
+  const controller = new LookupController(() => lookupSettings, { translate: async () => "争论中" });
+  controller.setContext({ ui: { theme: plainTheme } } as any);
+  controller.attach(host, () => {});
+
+  await controller.show("under contention");
+  controller.close();
+  assert.equal(hidden, 1);
+});
+
+test("the copy hook returns a failed copy when a wrapper below it throws", async () => {
+  const renderer = {
+    copySelection: async () => {
+      throw new Error("This extension ctx is stale after session replacement or reload");
+    },
+  };
+  const seen: string[] = [];
+  attachCopyHook(renderer, (text) => {
+    seen.push(text);
+  });
+
+  const result = await (renderer as any).copySelection("word");
+  assert.equal(result, false);
+  assert.deepEqual(seen, []);
+});
+
+test("the copy hook absorbs a listener that returns a rejecting promise", async () => {
+  const renderer = { copySelection: async () => true };
+  attachCopyHook(renderer, (() => Promise.reject(new Error("async boom"))) as any);
+
+  const result = await (renderer as any).copySelection("word");
+  assert.equal(result, true);
+  // Give the rejection a turn to surface as unhandled, which the hook must have prevented.
+  await new Promise((resolve) => setTimeout(resolve, 10));
 });
