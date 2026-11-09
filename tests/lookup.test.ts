@@ -314,3 +314,38 @@ test("the copy hook absorbs a listener that returns a rejecting promise", async 
   // Give the rejection a turn to surface as unhandled, which the hook must have prevented.
   await new Promise((resolve) => setTimeout(resolve, 10));
 });
+
+test("LookupPopup calls theme methods on the object, so a theme implemented as a class keeps working", () => {
+  // pi 1.5 implements Theme.fg as a class method; a destructured reference
+  // loses `this` and throws inside the renderer.
+  class ClassTheme {
+    constructor(private readonly prefix: string) {}
+    fg(_color: string, text: string): string {
+      return `${this.prefix}${text}`;
+    }
+    bold(text: string): string {
+      return text;
+    }
+  }
+  const popup = new LookupPopup(new ClassTheme("»"), strings, "sticky", strings.dismiss(12), () => {});
+  popup.setResult("黏性的");
+  const lines = popup.render(60);
+  assert.ok(lines[0].includes("»"));
+  assert.ok(lines.some((line) => line.includes("黏性的")));
+});
+
+test("LookupPopup degrades to plain text when the theme is no longer usable", () => {
+  const deadTheme = {
+    fg: (): string => {
+      throw new TypeError("Cannot read properties of undefined (reading 'tokenAnsi')");
+    },
+    bold: (): string => {
+      throw new TypeError("theme torn down");
+    },
+  };
+  const popup = new LookupPopup(deadTheme, strings, "sticky", strings.dismiss(0), () => {});
+  popup.setResult("黏性的");
+  const lines = popup.render(60);
+  assert.ok(lines[0].includes("sticky"));
+  assert.ok(lines.some((line) => line.includes("黏性的")));
+});

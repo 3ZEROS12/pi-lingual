@@ -5843,31 +5843,48 @@ var LookupPopup = class {
     return lines;
   }
   layout(width) {
-    const { fg, bold } = this.theme;
     const headLabel = `[${this.strings.title}] `;
     const headRoom = Math.max(10, width - 4 - getVisualWidth(headLabel));
-    const head = `  ${fg("muted", "\xB7 ")}${fg("dim", headLabel)}${bold(fg("accent", truncateVisual(this.headword, headRoom)))}`;
+    const head = `  ${this.paint("muted", "\xB7 ")}${this.paint("dim", headLabel)}${this.strong(this.paint("accent", truncateVisual(this.headword, headRoom)))}`;
     const bodyRoom = Math.max(10, width - 4);
     const bodyLines = wrapVisualText(this.bodyText(), bodyRoom).slice(0, MAX_LINES - 2);
     const body = bodyLines.length > 0 ? bodyLines : [""];
-    const hint = fg("dim", truncateVisual(this.hint, bodyRoom));
+    const hint = this.paint("dim", truncateVisual(this.hint, bodyRoom));
     const lines = [head];
     body.forEach((line, index) => {
       const rail = index === 0 ? "\u250C" : "\u2502";
-      lines.push(`  ${fg("muted", `${rail} `)}${line}`);
+      lines.push(`  ${this.paint("muted", `${rail} `)}${line}`);
     });
-    lines.push(`  ${fg("muted", "\u2514 ")}${hint}`);
+    lines.push(`  ${this.paint("muted", "\u2514 ")}${hint}`);
     return lines.slice(0, MAX_LINES);
   }
   bodyText() {
-    const { fg } = this.theme;
     switch (this.status) {
       case "loading":
-        return fg("muted", this.strings.loading);
+        return this.paint("muted", this.strings.loading);
       case "error":
-        return fg("error", this.body);
+        return this.paint("error", this.body);
       default:
-        return fg("text", this.body);
+        return this.paint("text", this.body);
+    }
+  }
+  /**
+   * Theme methods must be called through the object: pi implements `fg` as a
+   * class method, so a destructured reference loses `this` and throws inside
+   * the renderer. A dead theme degrades to plain text instead of a crash.
+   */
+  paint(color, text) {
+    try {
+      return this.theme.fg(color, text) || text;
+    } catch {
+      return text;
+    }
+  }
+  strong(text) {
+    try {
+      return this.theme.bold(text) || text;
+    } catch {
+      return text;
     }
   }
 };
