@@ -1,5 +1,5 @@
-import { L as LingualResult, a as LingualI18nLabels, S as SlotConfig, E as ExtensionState, M as ModeRuntime } from './index-CUTAjDOa.js';
-export { C as CURRENT_FEATURE_BANNER_VERSION, b as CacheStats, c as CustomModeConfig, d as CustomSlotsConfig, D as DEFAULT_CONFIG, e as DEFAULT_KILL_LIST, H as HudVariant, f as LANGUAGE_PAIR_ANCHORS, g as LANGUAGE_PRESETS, h as LANGUAGE_SPECS, i as LEGACY_SLOT_PRESETS, j as LINGUAL_SYSTEM_PROMPT, k as LINGUA_SYSTEM_PROMPT, l as LanguageAnchor, m as LanguageSpec, n as LinguaConfig, o as LinguaI18nLabels, p as LinguaLruCache, q as LinguaMode, r as LinguaResult, s as LingualConfig, t as LingualCoreOptions, u as LingualLruCache, v as LingualMode, w as LingualRequest, x as LingualResponse, y as LoadoutDefinition, z as MAX_TRANSLATION_CHARS, A as MAX_TRANSLATION_LINES, B as ModeAction, F as ModeDisplaySpec, G as ModeFlow, I as ModeHud, J as ModeTarget, P as PRESET_LOADOUTS, K as PROMPT_RULE_PRESETS, N as PromptCandidate, O as PromptSlotConfig, R as ReasoningEffort, Q as ResolveModeOptions, T as SEED_NAMES, U as SLOT_PRESETS, V as SUPPORTED_LANG_CODES, W as SanitizedPromptResult, X as SeedNames, Y as SelectPromptSpec, Z as SlotDefinition, _ as SlotPresetDefinition, $ as SlotResult, a0 as SlotRole, a1 as TranslationPayload, a2 as UserLingualConfig, a3 as addCustomMode, a4 as addSlotToList, a5 as addSlotToMode, a6 as buildDirectRewriteSystemPrompt, a7 as buildModifySystemPrompt, a8 as buildPromptCandidatesSystemPrompt, a9 as buildStreamingResult, aa as buildSystemPrompt, ab as compileKillListInstruction, ac as compileModeSystemPrompt, ad as createCustomSlot, ae as defaultSlotsForMode, af as detectScriptLanguage, ag as ensureCodeTokensPreserved, ah as executeModeRunner, ai as formatModelSelectionMessage, aj as formatNativeReplyGuardHint, ak as formatReleaseBannerLines, al as formatStatusReport, am as generatePromptCandidates, an as getDefaultDirectSlots, ao as getDefaultFactoryModes, ap as getDefaultModifySlots, aq as getDefaultPromptSlots, ar as getDefaultSlots, as as getPresetLoadout, at as globalLinguaCache, au as globalLingualCache, av as hasSourceScript, aw as interpolatePromptVariables, ax as invalidateUserConfigCache, ay as isDynamicLongInput, az as isImperativeEngineeringPrompt, aA as isNonEnglish, aB as isSupportedLangCode, aC as isTargetLanguageOnly, aD as isTestEnvironment, aE as isUserLingualConfigured, aF as listPresetLoadouts, aG as loadUserConfig, aH as loadUserLingualConfig, aI as localizeModeName, aJ as localizeModes, aK as localizeSlotLabel, aL as moveSlotInList, aM as normalizeActiveModeId, aN as normalizeHudVariant, aO as normalizeLangCode, aP as normalizeLingualModeInput, aQ as normalizePromptRules, aR as parseLlmResponse, aS as parsePartialJsonFields, aT as pickPrimaryContent, aU as primarySlot, aV as removeCustomMode, aW as removeSlotFromList, aX as removeSlotFromMode, aY as repairAndParseJsonObject, aZ as resolveCandidateSlotsFromConfig, a_ as resolveDirectSlotsFromConfig, a$ as resolveLabelsForLang, b0 as resolveLangPair, b1 as resolveLanguageName, b2 as resolveLanguagePairAnchors, b3 as resolveModeDisplayName, b4 as resolveModeDisplaySpec, b5 as resolveModeRuntime, b6 as resolveModesFromConfig, b7 as resolveModifySlotsFromConfig, b8 as resolvePromptRulePreset, b9 as resolvePromptTargetLangName, ba as resolveReleaseBannerLang, bb as resolveSeedNames, bc as resolveSelectPrompts, bd as resolveSlotLabels, be as resolveSlotsForPreset, bf as rewritePromptDirect, bg as runtimeLanguagePair, bh as sanitizePromptForTranslation, bi as saveUserLingualConfig, bj as shouldInjectNativeReplyGuard, bk as shouldShieldBypass, bl as shouldTriggerTranslation, bm as stripLinguaAnnotation, bn as stripLingualAnnotation, bo as stripLingualContextWhenOff, bp as toggleCustomMode, bq as toggleSlotInList, br as translateCore, bs as translatePrompt, bt as updateCustomMode, bu as updateSlotInList } from './index-CUTAjDOa.js';
+import { L as LingualResult, a as LingualI18nLabels, S as SlotConfig, b as LookupConfig, c as LookupStrings, d as LookupRequest, E as ExtensionState, M as ModeRuntime } from './index-CnpWv_ur.js';
+export { C as CURRENT_FEATURE_BANNER_VERSION, e as CacheStats, f as CustomModeConfig, g as CustomSlotsConfig, D as DEFAULT_CONFIG, h as DEFAULT_KILL_LIST, H as HudVariant, i as LANGUAGE_PAIR_ANCHORS, j as LANGUAGE_PRESETS, k as LANGUAGE_SPECS, l as LEGACY_SLOT_PRESETS, m as LINGUAL_SYSTEM_PROMPT, n as LINGUA_SYSTEM_PROMPT, o as LanguageAnchor, p as LanguageSpec, q as LinguaConfig, r as LinguaI18nLabels, s as LinguaLruCache, t as LinguaMode, u as LinguaResult, v as LingualConfig, w as LingualCoreOptions, x as LingualLruCache, y as LingualMode, z as LingualRequest, A as LingualResponse, B as LoadoutDefinition, F as MAX_TRANSLATION_CHARS, G as MAX_TRANSLATION_LINES, I as ModeAction, J as ModeDisplaySpec, K as ModeFlow, N as ModeHud, O as ModeTarget, P as PRESET_LOADOUTS, Q as PROMPT_RULE_PRESETS, R as PromptCandidate, T as PromptSlotConfig, U as ReasoningEffort, V as ResolveModeOptions, W as SEED_NAMES, X as SLOT_PRESETS, Y as SUPPORTED_LANG_CODES, Z as SanitizedPromptResult, _ as SeedNames, $ as SelectPromptSpec, a0 as SlotDefinition, a1 as SlotPresetDefinition, a2 as SlotResult, a3 as SlotRole, a4 as TranslationPayload, a5 as UserLingualConfig, a6 as addCustomMode, a7 as addSlotToList, a8 as addSlotToMode, a9 as buildDirectRewriteSystemPrompt, aa as buildModifySystemPrompt, ab as buildPromptCandidatesSystemPrompt, ac as buildStreamingResult, ad as buildSystemPrompt, ae as compileKillListInstruction, af as compileModeSystemPrompt, ag as createCustomSlot, ah as defaultSlotsForMode, ai as detectScriptLanguage, aj as ensureCodeTokensPreserved, ak as executeModeRunner, al as formatModelSelectionMessage, am as formatNativeReplyGuardHint, an as formatReleaseBannerLines, ao as formatStatusReport, ap as generatePromptCandidates, aq as getDefaultDirectSlots, ar as getDefaultFactoryModes, as as getDefaultModifySlots, at as getDefaultPromptSlots, au as getDefaultSlots, av as getPresetLoadout, aw as globalLinguaCache, ax as globalLingualCache, ay as hasSourceScript, az as interpolatePromptVariables, aA as invalidateUserConfigCache, aB as isDynamicLongInput, aC as isImperativeEngineeringPrompt, aD as isNonEnglish, aE as isSupportedLangCode, aF as isTargetLanguageOnly, aG as isTestEnvironment, aH as isUserLingualConfigured, aI as listPresetLoadouts, aJ as loadUserConfig, aK as loadUserLingualConfig, aL as localizeModeName, aM as localizeModes, aN as localizeSlotLabel, aO as moveSlotInList, aP as normalizeActiveModeId, aQ as normalizeHudVariant, aR as normalizeLangCode, aS as normalizeLingualModeInput, aT as normalizePromptRules, aU as parseLlmResponse, aV as parsePartialJsonFields, aW as pickPrimaryContent, aX as primarySlot, aY as removeCustomMode, aZ as removeSlotFromList, a_ as removeSlotFromMode, a$ as repairAndParseJsonObject, b0 as resolveCandidateSlotsFromConfig, b1 as resolveDirectSlotsFromConfig, b2 as resolveLabelsForLang, b3 as resolveLangPair, b4 as resolveLanguageName, b5 as resolveLanguagePairAnchors, b6 as resolveModeDisplayName, b7 as resolveModeDisplaySpec, b8 as resolveModeRuntime, b9 as resolveModesFromConfig, ba as resolveModifySlotsFromConfig, bb as resolvePromptRulePreset, bc as resolvePromptTargetLangName, bd as resolveReleaseBannerLang, be as resolveSeedNames, bf as resolveSelectPrompts, bg as resolveSlotLabels, bh as resolveSlotsForPreset, bi as rewritePromptDirect, bj as runtimeLanguagePair, bk as sanitizePromptForTranslation, bl as saveUserLingualConfig, bm as shouldInjectNativeReplyGuard, bn as shouldShieldBypass, bo as shouldTriggerTranslation, bp as stripLinguaAnnotation, bq as stripLingualAnnotation, br as stripLingualContextWhenOff, bs as toggleCustomMode, bt as toggleSlotInList, bu as translateCore, bv as translatePrompt, bw as updateCustomMode, bx as updateSlotInList } from './index-CnpWv_ur.js';
 import { ExtensionContext, ExtensionAPI } from '@earendil-works/pi-coding-agent';
 
 /**
@@ -233,6 +233,72 @@ declare class LingualSessionController {
     reset(): void;
 }
 
+/**
+ * Observing what the user copied in the fullscreen transcript.
+ *
+ * Fullscreen mode owns text selection: a double-click, a drag, and the copy
+ * keybinding all end in the same injected clipboard callback that pi hands to
+ * the alternate-screen renderer. The TUI exposes no copy event and consumes
+ * mouse input before extension listeners see it, so that callback is the only
+ * place a lookup can learn "the user copied this". We wrap it on the live
+ * renderer instance, leave pi's own clipboard behaviour untouched, and notify
+ * only after a copy that actually succeeded.
+ */
+type CopyHookTarget = "copySelection" | "copyTextToClipboard" | "none";
+
+/**
+ * Wires a copied selection to the lookup popup.
+ *
+ * The controller owns the short-lived state a popup needs: the overlay handle,
+ * the auto-dismiss timer, the in-flight request, and a small cache so that
+ * double-clicking the same word twice does not buy the same lookup twice.
+ * Settings are read through a callback on every use, so `/lang` and
+ * `/lingual lookup` take effect without re-attaching anything.
+ */
+
+type LookupComplete = (text: string, systemPrompt: string, signal: AbortSignal) => Promise<string | null>;
+interface LookupSettings {
+    config: LookupConfig;
+    /** Reader's language: where the copied text is translated to. */
+    nativeLang: string;
+    /** Language of the transcript: what a copied selection is expected to be. */
+    foreignLang: string;
+    strings: LookupStrings;
+    complete?: LookupComplete;
+}
+interface LookupControllerDeps {
+    translate?: (request: LookupRequest, deps: {
+        complete?: LookupComplete;
+    }) => Promise<string>;
+}
+declare class LookupController {
+    private readonly settings;
+    private readonly runLookup;
+    private ctx?;
+    private tui?;
+    private overlay?;
+    private popup?;
+    private dismissTimer?;
+    private abort?;
+    private inFlight?;
+    private last?;
+    private unsupportedWarned;
+    constructor(settings: () => LookupSettings, deps?: LookupControllerDeps);
+    /** The freshest context, so the popup follows `/model` and other session changes. */
+    setContext(ctx: ExtensionContext | null | undefined): void;
+    get lastSelection(): string | undefined;
+    /** Wraps the renderer's clipboard callback. Returns which callback was found. */
+    attach(tui: unknown, notifyUnsupported: (message: string) => void): CopyHookTarget;
+    private onCopy;
+    /** Open the popup for `raw`. Resolves once the translation is on screen or has failed. */
+    show(raw: string): Promise<void>;
+    close(): void;
+    private openPopup;
+    private requestRender;
+    private scheduleDismiss;
+    private clearDismissTimer;
+}
+
 interface CommandHandlerDeps {
     state: ExtensionState;
     session: LingualSessionController;
@@ -249,6 +315,7 @@ interface CommandHandlerDeps {
     syncResizeListener: () => void;
     clearPendingTimers: () => void;
     armTuner: () => void;
+    lookupController: LookupController;
     pi: ExtensionAPI;
 }
 interface CommandHandlers {
@@ -265,6 +332,7 @@ interface CommandHandlers {
     showAgentGuideHandler: (args: string, ctx: ExtensionContext) => Promise<void>;
     setReasoningHandler: (args: string, ctx: ExtensionContext) => Promise<void>;
     setDefaultModeHandler: (args: string, ctx: ExtensionContext) => Promise<void>;
+    lookupHandler: (args: string, ctx: ExtensionContext) => Promise<void>;
     masterCommandHandler: (args: string, ctx: ExtensionContext) => Promise<void>;
 }
 declare function createCommandHandlers(deps: CommandHandlerDeps): CommandHandlers;

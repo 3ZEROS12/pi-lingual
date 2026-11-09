@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- **Double-Click Lookup (双击查词)**: double-clicking or drag-selecting a word in the fullscreen transcript now copies as before and opens a lookup card above the editor, translated in the opposite direction of the companion card (foreign → native). The language pair comes from `/lang`; nothing else needs configuring.
+  - **Key-less by default**: the Google dictionary endpoint answers a single word in a few hundred milliseconds and consumes no model budget. `/lingual lookup model` switches to the model transport, reusing the sidecar model pinned with `/lingual model`.
+  - **Filtered selections**: code blocks, paths, URLs, shell commands, and sentences in the reader's own language never trigger it; `maxWords` / `maxChars` set the granularity.
+  - **Non-capturing overlay**: typing keeps going to the editor, the card dismisses on click or timeout, and repeats are served from a 200-entry LRU cache.
+  - **Fullscreen only**: regular mode leaves selection to the terminal, where `/lingual lookup <text>` is the manual path.
+  - **New command**: `/lingual lookup [on|off|google|model|status|<text>]`, plus a `lookup` block in `~/.pi/agent/lingual.json`.
+  - Localized for every supported language (`en`, `zh`, `tw`, `ja`, `ko`, `es`, `fr`, `de`, `ru`), including the model prompt.
+
 ## 0.6.0
 
 - **Three-Core Factory Defaults**: the registry now ships `companion` (pass-through + bilingual card) alongside `Logical Spec` and `Live Flow`, so the 5-second-gap companion experience from the project's origin story works on a fresh install. Bar numerals resolve positionally from the active registry, and the release banner names each shipped mode.

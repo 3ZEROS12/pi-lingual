@@ -1,3 +1,5 @@
+import type { LookupConfig } from "./lookup.js";
+
 export type LingualMode = "original" | "english" | "select" | "modify" | "off" | string;
 export type LinguaMode = LingualMode;
 
@@ -242,6 +244,7 @@ export interface LingualConfig {
   reasoning?: ReasoningEffort | string;
   timeoutMs?: number;
   killList?: string[];             // Mode-level forbidden AI clichés (pass-through modes)
+  lookup?: Partial<LookupConfig>;  // Double-click word lookup (provider, model, popup timing, selection caps)
   onDelta?: (fullText: string) => void;              // Streaming transport hook (internal)
   onPartial?: (fields: Record<string, string>) => void; // Parsed partial JSON fields (internal)
   complete?: (text: string, systemPrompt: string, signal?: AbortSignal, options?: { reasoning?: string; onDelta?: (fullText: string) => void }) => Promise<string | null>;

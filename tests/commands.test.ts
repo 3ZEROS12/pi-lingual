@@ -1054,6 +1054,7 @@ test("createCommandHandlers factory exposes all slash-command handlers", () => {
     syncResizeListener: () => {},
     clearPendingTimers: () => {},
     armTuner: () => {},
+    lookupController: { show: async () => {}, setContext: () => {}, close: () => {}, attach: () => "none", lastSelection: undefined } as any,
     pi: { registerCommand() {}, on() {} } as any,
   });
 

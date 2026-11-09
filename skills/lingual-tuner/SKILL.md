@@ -133,6 +133,14 @@ To inspect or update user modes, write valid JSON directly to `~/.pi/agent/lingu
   "explainLang": "en",
   "selectedModel": "auto", // "auto" (default: uses Pi's global defaultModel), "session" (follows active chat), or pinned model ID
   "reasoning": "low", // reasoning effort for reasoning models: "low" | "medium" | "high"
+  "lookup": {
+    "enabled": true, // double-click word lookup in the fullscreen transcript (foreign -> sourceLang)
+    "provider": "google", // "google" (key-less dictionary, no model budget) | "model" (reuses selectedModel)
+    "model": "provider/model", // optional pin for the model provider; omit to follow selectedModel
+    "seconds": 12, // popup lifetime, 0 = stays until clicked
+    "maxWords": 4, // selections longer than this are treated as prose
+    "maxChars": 48
+  },
   "activeModeId": "direct",
   "modes": [
     {

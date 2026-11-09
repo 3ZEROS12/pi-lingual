@@ -478,6 +478,7 @@ test("/lingual copy and /lingual copy 2 copy the expected slot from active HUD c
     syncResizeListener: () => {},
     clearPendingTimers: () => {},
     armTuner: () => {},
+    lookupController: { show: async () => {}, setContext: () => {}, close: () => {}, attach: () => "none", lastSelection: undefined } as any,
     pi: { on: () => {}, registerCommand: () => {}, registerShortcut: () => {} } as any,
   });
 
@@ -705,6 +706,7 @@ test("setModelHandler and showStatusHandler format defaultModel display", async 
       syncResizeListener: () => {},
       clearPendingTimers: () => {},
       armTuner: () => {},
+      lookupController: { show: async () => {}, setContext: () => {}, close: () => {}, attach: () => "none", lastSelection: undefined } as any,
       pi: { on: () => {}, registerCommand: () => {}, registerShortcut: () => {} } as any,
     });
 

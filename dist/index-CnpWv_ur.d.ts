@@ -1,3 +1,92 @@
+/**
+ * In-Memory LRU Cache for Lingual Translations (Zero-Dependency In-Process Cache)
+ *
+ * High-frequency developer phrases ("continue", "agree", "proceed", "sounds good")
+ * are served with 0ms latency from an in-memory LRU cache (default capacity: 50 entries).
+ * Cache hits consume zero network round-trips and zero model tokens.
+ */
+interface CacheStats {
+    hits: number;
+    misses: number;
+    size: number;
+    capacity: number;
+}
+declare class LingualLruCache<T> {
+    readonly capacity: number;
+    private cache;
+    private candidatesCache;
+    private hits;
+    private misses;
+    constructor(capacity?: number);
+    /**
+     * Generates a normalized cache key incorporating language pairs and slot signature.
+     */
+    static buildKey(text: string, sourceLang?: string, targetLang?: string, slotSignature?: string): string;
+    get(key: string): T | undefined;
+    set(key: string, val: T): void;
+    getCandidates<C = any>(key: string): C[] | undefined;
+    setCandidates<C = any>(key: string, candidates: C[]): void;
+    has(key: string): boolean;
+    clear(): void;
+    get size(): number;
+    getStats(): CacheStats;
+}
+declare const LinguaLruCache: typeof LingualLruCache;
+declare const globalLingualCache: LingualLruCache<any>;
+declare const globalLinguaCache: LingualLruCache<any>;
+
+/**
+ * Localized copy for the lookup popup and its command.
+ *
+ * Kept next to the feature instead of in the i18n label table: the lookup
+ * surface is small, and every supported language gets its own strings so the
+ * Language Surface Parity invariant holds even when `sourceLang !== "zh"`.
+ */
+interface LookupStrings {
+    title: string;
+    loading: string;
+    dismiss: (seconds: number) => string;
+    timeout: string;
+    unavailable: string;
+    enabled: string;
+    disabled: string;
+    usage: string;
+    provider: (name: string) => string;
+    systemPrompt: (languageName: string) => string;
+}
+
+/**
+ * Word lookup for copied selections.
+ *
+ * A double-click in the fullscreen transcript is a different request from a
+ * prompt: it is one word or a short phrase the reader wants translated into
+ * their own language, right now. So the direction is reversed (foreign →
+ * native) and the backend defaults to a key-less dictionary endpoint that
+ * answers in well under a second, which is what a double-click deserves.
+ * The model backend exists for networks where Google is unreachable and for
+ * phrases that need context.
+ */
+
+type LookupProvider = "google" | "model";
+interface LookupConfig {
+    enabled: boolean;
+    provider: LookupProvider;
+    /** `provider/id` pinned for the model backend; empty follows `/lingual model`. */
+    model?: string;
+    /** Seconds the popup stays on screen. `0` keeps it until it is clicked away. */
+    seconds: number;
+    maxWords: number;
+    maxChars: number;
+}
+interface LookupRequest {
+    text: string;
+    config: LookupConfig;
+    /** Reader's language: the translation target. */
+    nativeLang: string;
+    strings: LookupStrings;
+    signal: AbortSignal;
+}
+
 type LingualMode = "original" | "english" | "select" | "modify" | "off" | string;
 type LinguaMode = LingualMode;
 type ModeAction = "pass-through" | "transform" | "select";
@@ -214,6 +303,7 @@ interface LingualConfig {
     reasoning?: ReasoningEffort | string;
     timeoutMs?: number;
     killList?: string[];
+    lookup?: Partial<LookupConfig>;
     onDelta?: (fullText: string) => void;
     onPartial?: (fields: Record<string, string>) => void;
     complete?: (text: string, systemPrompt: string, signal?: AbortSignal, options?: {
@@ -551,43 +641,6 @@ declare function isImperativeEngineeringPrompt(text: string): boolean;
  */
 declare function detectScriptLanguage(text: string): string | null;
 
-/**
- * In-Memory LRU Cache for Lingual Translations (Zero-Dependency In-Process Cache)
- *
- * High-frequency developer phrases ("continue", "agree", "proceed", "sounds good")
- * are served with 0ms latency from an in-memory LRU cache (default capacity: 50 entries).
- * Cache hits consume zero network round-trips and zero model tokens.
- */
-interface CacheStats {
-    hits: number;
-    misses: number;
-    size: number;
-    capacity: number;
-}
-declare class LingualLruCache<T> {
-    readonly capacity: number;
-    private cache;
-    private candidatesCache;
-    private hits;
-    private misses;
-    constructor(capacity?: number);
-    /**
-     * Generates a normalized cache key incorporating language pairs and slot signature.
-     */
-    static buildKey(text: string, sourceLang?: string, targetLang?: string, slotSignature?: string): string;
-    get(key: string): T | undefined;
-    set(key: string, val: T): void;
-    getCandidates<C = any>(key: string): C[] | undefined;
-    setCandidates<C = any>(key: string, candidates: C[]): void;
-    has(key: string): boolean;
-    clear(): void;
-    get size(): number;
-    getStats(): CacheStats;
-}
-declare const LinguaLruCache: typeof LingualLruCache;
-declare const globalLingualCache: LingualLruCache<any>;
-declare const globalLinguaCache: LingualLruCache<any>;
-
 declare function invalidateUserConfigCache(): void;
 declare function isTestEnvironment(): boolean;
 /**
@@ -822,4 +875,4 @@ declare function buildStreamingResult(fields: Record<string, string>, sourceText
 /** The payload a `target: "clipboard"` mode should copy. */
 declare function pickPrimaryContent(result: LingualResult, rt: ModeRuntime): string | undefined;
 
-export { type SlotResult as $, MAX_TRANSLATION_LINES as A, type ModeAction as B, CURRENT_FEATURE_BANNER_VERSION as C, DEFAULT_CONFIG as D, type ExtensionState as E, type ModeDisplaySpec as F, type ModeFlow as G, type HudVariant as H, type ModeHud as I, type ModeTarget as J, PROMPT_RULE_PRESETS as K, type LingualResult as L, type ModeRuntime as M, type PromptCandidate as N, type PromptSlotConfig as O, PRESET_LOADOUTS as P, type ResolveModeOptions as Q, type ReasoningEffort as R, type SlotConfig as S, SEED_NAMES as T, SLOT_PRESETS as U, SUPPORTED_LANG_CODES as V, type SanitizedPromptResult as W, type SeedNames as X, type SelectPromptSpec as Y, type SlotDefinition as Z, type SlotPresetDefinition as _, type LingualI18nLabels as a, resolveLabelsForLang as a$, type SlotRole as a0, type TranslationPayload as a1, type UserLingualConfig as a2, addCustomMode as a3, addSlotToList as a4, addSlotToMode as a5, buildDirectRewriteSystemPrompt as a6, buildModifySystemPrompt as a7, buildPromptCandidatesSystemPrompt as a8, buildStreamingResult as a9, isNonEnglish as aA, isSupportedLangCode as aB, isTargetLanguageOnly as aC, isTestEnvironment as aD, isUserLingualConfigured as aE, listPresetLoadouts as aF, loadUserConfig as aG, loadUserLingualConfig as aH, localizeModeName as aI, localizeModes as aJ, localizeSlotLabel as aK, moveSlotInList as aL, normalizeActiveModeId as aM, normalizeHudVariant as aN, normalizeLangCode as aO, normalizeLingualModeInput as aP, normalizePromptRules as aQ, parseLlmResponse as aR, parsePartialJsonFields as aS, pickPrimaryContent as aT, primarySlot as aU, removeCustomMode as aV, removeSlotFromList as aW, removeSlotFromMode as aX, repairAndParseJsonObject as aY, resolveCandidateSlotsFromConfig as aZ, resolveDirectSlotsFromConfig as a_, buildSystemPrompt as aa, compileKillListInstruction as ab, compileModeSystemPrompt as ac, createCustomSlot as ad, defaultSlotsForMode as ae, detectScriptLanguage as af, ensureCodeTokensPreserved as ag, executeModeRunner as ah, formatModelSelectionMessage as ai, formatNativeReplyGuardHint as aj, formatReleaseBannerLines as ak, formatStatusReport as al, generatePromptCandidates as am, getDefaultDirectSlots as an, getDefaultFactoryModes as ao, getDefaultModifySlots as ap, getDefaultPromptSlots as aq, getDefaultSlots as ar, getPresetLoadout as as, globalLinguaCache as at, globalLingualCache as au, hasSourceScript as av, interpolatePromptVariables as aw, invalidateUserConfigCache as ax, isDynamicLongInput as ay, isImperativeEngineeringPrompt as az, type CacheStats as b, resolveLangPair as b0, resolveLanguageName as b1, resolveLanguagePairAnchors as b2, resolveModeDisplayName as b3, resolveModeDisplaySpec as b4, resolveModeRuntime as b5, resolveModesFromConfig as b6, resolveModifySlotsFromConfig as b7, resolvePromptRulePreset as b8, resolvePromptTargetLangName as b9, resolveReleaseBannerLang as ba, resolveSeedNames as bb, resolveSelectPrompts as bc, resolveSlotLabels as bd, resolveSlotsForPreset as be, rewritePromptDirect as bf, runtimeLanguagePair as bg, sanitizePromptForTranslation as bh, saveUserLingualConfig as bi, shouldInjectNativeReplyGuard as bj, shouldShieldBypass as bk, shouldTriggerTranslation as bl, stripLinguaAnnotation as bm, stripLingualAnnotation as bn, stripLingualContextWhenOff as bo, toggleCustomMode as bp, toggleSlotInList as bq, translateCore as br, translatePrompt as bs, updateCustomMode as bt, updateSlotInList as bu, type CustomModeConfig as c, type CustomSlotsConfig as d, DEFAULT_KILL_LIST as e, LANGUAGE_PAIR_ANCHORS as f, LANGUAGE_PRESETS as g, LANGUAGE_SPECS as h, LEGACY_SLOT_PRESETS as i, LINGUAL_SYSTEM_PROMPT as j, LINGUA_SYSTEM_PROMPT as k, type LanguageAnchor as l, type LanguageSpec as m, type LinguaConfig as n, type LinguaI18nLabels as o, LinguaLruCache as p, type LinguaMode as q, type LinguaResult as r, type LingualConfig as s, type LingualCoreOptions as t, LingualLruCache as u, type LingualMode as v, type LingualRequest as w, type LingualResponse as x, type LoadoutDefinition as y, MAX_TRANSLATION_CHARS as z };
+export { type SelectPromptSpec as $, type LingualResponse as A, type LoadoutDefinition as B, CURRENT_FEATURE_BANNER_VERSION as C, DEFAULT_CONFIG as D, type ExtensionState as E, MAX_TRANSLATION_CHARS as F, MAX_TRANSLATION_LINES as G, type HudVariant as H, type ModeAction as I, type ModeDisplaySpec as J, type ModeFlow as K, type LingualResult as L, type ModeRuntime as M, type ModeHud as N, type ModeTarget as O, PRESET_LOADOUTS as P, PROMPT_RULE_PRESETS as Q, type PromptCandidate as R, type SlotConfig as S, type PromptSlotConfig as T, type ReasoningEffort as U, type ResolveModeOptions as V, SEED_NAMES as W, SLOT_PRESETS as X, SUPPORTED_LANG_CODES as Y, type SanitizedPromptResult as Z, type SeedNames as _, type LingualI18nLabels as a, repairAndParseJsonObject as a$, type SlotDefinition as a0, type SlotPresetDefinition as a1, type SlotResult as a2, type SlotRole as a3, type TranslationPayload as a4, type UserLingualConfig as a5, addCustomMode as a6, addSlotToList as a7, addSlotToMode as a8, buildDirectRewriteSystemPrompt as a9, invalidateUserConfigCache as aA, isDynamicLongInput as aB, isImperativeEngineeringPrompt as aC, isNonEnglish as aD, isSupportedLangCode as aE, isTargetLanguageOnly as aF, isTestEnvironment as aG, isUserLingualConfigured as aH, listPresetLoadouts as aI, loadUserConfig as aJ, loadUserLingualConfig as aK, localizeModeName as aL, localizeModes as aM, localizeSlotLabel as aN, moveSlotInList as aO, normalizeActiveModeId as aP, normalizeHudVariant as aQ, normalizeLangCode as aR, normalizeLingualModeInput as aS, normalizePromptRules as aT, parseLlmResponse as aU, parsePartialJsonFields as aV, pickPrimaryContent as aW, primarySlot as aX, removeCustomMode as aY, removeSlotFromList as aZ, removeSlotFromMode as a_, buildModifySystemPrompt as aa, buildPromptCandidatesSystemPrompt as ab, buildStreamingResult as ac, buildSystemPrompt as ad, compileKillListInstruction as ae, compileModeSystemPrompt as af, createCustomSlot as ag, defaultSlotsForMode as ah, detectScriptLanguage as ai, ensureCodeTokensPreserved as aj, executeModeRunner as ak, formatModelSelectionMessage as al, formatNativeReplyGuardHint as am, formatReleaseBannerLines as an, formatStatusReport as ao, generatePromptCandidates as ap, getDefaultDirectSlots as aq, getDefaultFactoryModes as ar, getDefaultModifySlots as as, getDefaultPromptSlots as at, getDefaultSlots as au, getPresetLoadout as av, globalLinguaCache as aw, globalLingualCache as ax, hasSourceScript as ay, interpolatePromptVariables as az, type LookupConfig as b, resolveCandidateSlotsFromConfig as b0, resolveDirectSlotsFromConfig as b1, resolveLabelsForLang as b2, resolveLangPair as b3, resolveLanguageName as b4, resolveLanguagePairAnchors as b5, resolveModeDisplayName as b6, resolveModeDisplaySpec as b7, resolveModeRuntime as b8, resolveModesFromConfig as b9, resolveModifySlotsFromConfig as ba, resolvePromptRulePreset as bb, resolvePromptTargetLangName as bc, resolveReleaseBannerLang as bd, resolveSeedNames as be, resolveSelectPrompts as bf, resolveSlotLabels as bg, resolveSlotsForPreset as bh, rewritePromptDirect as bi, runtimeLanguagePair as bj, sanitizePromptForTranslation as bk, saveUserLingualConfig as bl, shouldInjectNativeReplyGuard as bm, shouldShieldBypass as bn, shouldTriggerTranslation as bo, stripLinguaAnnotation as bp, stripLingualAnnotation as bq, stripLingualContextWhenOff as br, toggleCustomMode as bs, toggleSlotInList as bt, translateCore as bu, translatePrompt as bv, updateCustomMode as bw, updateSlotInList as bx, type LookupStrings as c, type LookupRequest as d, type CacheStats as e, type CustomModeConfig as f, type CustomSlotsConfig as g, DEFAULT_KILL_LIST as h, LANGUAGE_PAIR_ANCHORS as i, LANGUAGE_PRESETS as j, LANGUAGE_SPECS as k, LEGACY_SLOT_PRESETS as l, LINGUAL_SYSTEM_PROMPT as m, LINGUA_SYSTEM_PROMPT as n, type LanguageAnchor as o, type LanguageSpec as p, type LinguaConfig as q, type LinguaI18nLabels as r, LinguaLruCache as s, type LinguaMode as t, type LinguaResult as u, type LingualConfig as v, type LingualCoreOptions as w, LingualLruCache as x, type LingualMode as y, type LingualRequest as z };

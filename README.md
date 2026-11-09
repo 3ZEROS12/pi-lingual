@@ -156,6 +156,24 @@ Two layouts designed to protect your editor workspace:
 
 ---
 
+## Double-Click Lookup: A Dictionary Inside the Transcript
+
+In fullscreen mode, double-click (or drag-select) a word: the copy still happens, and a lookup card appears above the editor in the opposite direction of the companion card — **foreign language → your native language**. The language pair is the one `/lang` already holds, so there is no second configuration.
+
+```text
+  · [Lookup] over-engineered
+  ┌ over-engineered; also used for a design that is more elaborate than the problem needs
+  └ click to close · 12s
+```
+
+- **Key-less dictionary by default**: Google answers a single word in a few hundred milliseconds and spends no model budget. `/lingual lookup model` switches to the model transport (reusing the sidecar model pinned with `/lingual model`) for networks where Google is unreachable or for phrases that need context.
+- **Only worth-looking-up selections pop up**: whole code blocks, paths, URLs, shell commands, and sentences in your own language never trigger it; `maxWords` and `maxChars` set the granularity.
+- **Never steals focus**: the card is a non-capturing overlay, typing keeps going to the editor, and it dismisses on click or timeout. Repeat lookups of the same word come from a 200-entry LRU cache instead of a new request.
+- **Fullscreen only**: in regular mode the terminal owns the selection and the plugin never sees the copy, so use `/lingual lookup <text>` there.
+- **Turn it off**: `/lingual lookup off` (zero listeners, zero requests).
+
+---
+
 ## Real-World Multilingual Matrix
 
 Translating into English is the primary focus, but major languages are supported bidirectionally:
@@ -229,6 +247,7 @@ To prevent autocomplete pollution in Pi's `/` menu, `pi-lingual` registers stric
 | ↳ Quick Toggle | `/lingual on` \| `off` | Quickly enable companion mode or turn off (0 pixels, 0 listeners, 0 tokens) |
 | ↳ Language Pair | `/lingual lang [pair]` or `/lang` | Switch language direction (e.g. `/lang ja`, `/lingual lang ja en`) |
 | ↳ Replay Card | `/lingual last` \| `replay` | Replay the most recent companion or rewrite card |
+| ↳ Word Lookup | `/lingual lookup [on\|off\|google\|model\|status\|<text>]` | Double-click a word in fullscreen to look it up foreign → native; Google by default, model transport optional |
 | ↳ Default Mode | `/lingual default [1\|2\|3\|0\|id]` | View or pin default mode for all new sessions (`defaultMode` in `lingual.json`) |
 | ↳ Layout Mode | `/lingual compact` | Toggle dense single-line capsule mode vs open Left-Rail Tree HUD |
 | ↳ Mode Lock | `/lingual lock` \| `unlock` | Lock active mode to prevent external process drift (human commands always 100% priority) |

@@ -4703,6 +4703,7 @@ function loadUserLingualConfig() {
     const timeoutMs = typeof target.timeoutMs === "number" && Number.isFinite(target.timeoutMs) ? Math.min(6e4, Math.max(1e3, target.timeoutMs)) : void 0;
     const replyInSourceLang = target.replyInSourceLang !== void 0 ? Boolean(target.replyInSourceLang) : void 0;
     const modeLocked = target.modeLocked !== void 0 ? Boolean(target.modeLocked) : void 0;
+    const lookup = target.lookup && typeof target.lookup === "object" && !Array.isArray(target.lookup) ? target.lookup : void 0;
     const labels = resolveLabelsForLang(sourceLang || "en", target.labels, targetLang || "ja");
     const normalizedMode = typeof target.mode === "string" ? normalizeLingualModeInput(target.mode) || target.mode : void 0;
     cachedUserConfig = {
@@ -4728,6 +4729,7 @@ function loadUserLingualConfig() {
       ...reasoning ? { reasoning } : {},
       ...timeoutMs ? { timeoutMs } : {},
       ...replyInSourceLang !== void 0 ? { replyInSourceLang } : {},
+      ...lookup ? { lookup } : {},
       labels
     };
     lastConfigCheckTime = now;
@@ -6275,6 +6277,193 @@ function createModelCompleter(ctx, getSelectedModel, defaultOpts) {
   };
 }
 
+// src/lookup.ts
+var DEFAULT_LOOKUP = {
+  enabled: true,
+  provider: "google",
+  seconds: 12,
+  maxWords: 4,
+  maxChars: 48
+};
+var CACHE_CAPACITY = 200;
+var globalLookupCache = new LingualLruCache(CACHE_CAPACITY);
+function clampInt(value, fallback, min, max) {
+  const parsed = typeof value === "number" ? value : Number.parseInt(String(value ?? ""), 10);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, Math.round(parsed)));
+}
+function resolveLookupConfig(raw, overrides = {}) {
+  const source = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+  const provider = String(overrides.provider ?? source.provider ?? DEFAULT_LOOKUP.provider).toLowerCase();
+  const model = String(overrides.model ?? source.model ?? "").trim();
+  return {
+    enabled: Boolean(overrides.enabled ?? source.enabled ?? DEFAULT_LOOKUP.enabled),
+    provider: provider === "model" || provider === "llm" ? "model" : "google",
+    ...model ? { model } : {},
+    seconds: clampInt(overrides.seconds ?? source.seconds ?? source.popupSeconds, DEFAULT_LOOKUP.seconds, 0, 600),
+    maxWords: clampInt(overrides.maxWords ?? source.maxWords, DEFAULT_LOOKUP.maxWords, 1, 20),
+    maxChars: clampInt(overrides.maxChars ?? source.maxChars, DEFAULT_LOOKUP.maxChars, 2, 500)
+  };
+}
+
+// src/lookup-strings.ts
+var ENGLISH_PROMPT = (languageName) => [
+  `You translate a short selection from a terminal transcript into ${languageName}.`,
+  "Reply with the translation only: no preamble, no quotes, no markdown, at most three lines.",
+  "For a single word, start with the phonetic transcription in slashes when you are confident of it,",
+  'then give the main senses separated by "\uFF1B", each tagged with its part of speech.',
+  "For a phrase or a sentence, give one natural translation."
+].join(" ");
+var TABLE = {
+  en: {
+    title: "Lookup",
+    loading: "looking up\u2026",
+    dismissZero: "click to close",
+    dismissWithSeconds: (s) => `click to close \xB7 ${s}s`,
+    timeout: "lookup timed out",
+    unavailable: "this pi build does not copy through the fullscreen renderer, so double-click lookup is off",
+    enabled: "lookup popup on",
+    disabled: "lookup popup off",
+    usage: "usage: /lingual lookup [on|off|google|model|status|<text>]",
+    provider: (name) => `lookup provider: ${name}`
+  },
+  zh: {
+    title: "\u67E5\u8BCD",
+    loading: "\u67E5\u8BE2\u4E2D\u2026",
+    dismissZero: "\u70B9\u51FB\u5173\u95ED",
+    dismissWithSeconds: (s) => `\u70B9\u51FB\u5173\u95ED \xB7 ${s}s`,
+    timeout: "\u67E5\u8BE2\u8D85\u65F6",
+    unavailable: "\u6B64 pi \u7248\u672C\u7684\u5168\u5C4F\u6E32\u67D3\u5668\u4E0D\u66B4\u9732\u590D\u5236\u56DE\u8C03\uFF0C\u53CC\u51FB\u67E5\u8BCD\u4E0D\u53EF\u7528",
+    enabled: "\u53CC\u51FB\u67E5\u8BCD\u5DF2\u5F00\u542F",
+    disabled: "\u53CC\u51FB\u67E5\u8BCD\u5DF2\u5173\u95ED",
+    usage: "\u7528\u6CD5\uFF1A/lingual lookup [on|off|google|model|status|<\u6587\u672C>]",
+    provider: (name) => `\u67E5\u8BCD\u901A\u9053\uFF1A${name}`
+  },
+  tw: {
+    title: "\u67E5\u8A5E",
+    loading: "\u67E5\u8A62\u4E2D\u2026",
+    dismissZero: "\u9EDE\u64CA\u95DC\u9589",
+    dismissWithSeconds: (s) => `\u9EDE\u64CA\u95DC\u9589 \xB7 ${s}s`,
+    timeout: "\u67E5\u8A62\u903E\u6642",
+    unavailable: "\u6B64 pi \u7248\u672C\u7684\u5168\u87A2\u5E55\u6E32\u67D3\u5668\u4E0D\u66B4\u9732\u8907\u88FD\u56DE\u547C\uFF0C\u96D9\u64CA\u67E5\u8A5E\u4E0D\u53EF\u7528",
+    enabled: "\u96D9\u64CA\u67E5\u8A5E\u5DF2\u958B\u555F",
+    disabled: "\u96D9\u64CA\u67E5\u8A5E\u5DF2\u95DC\u9589",
+    usage: "\u7528\u6CD5\uFF1A/lingual lookup [on|off|google|model|status|<\u6587\u5B57>]",
+    provider: (name) => `\u67E5\u8A5E\u901A\u9053\uFF1A${name}`
+  },
+  ja: {
+    title: "\u8F9E\u66F8",
+    loading: "\u691C\u7D22\u4E2D\u2026",
+    dismissZero: "\u30AF\u30EA\u30C3\u30AF\u3067\u9589\u3058\u308B",
+    dismissWithSeconds: (s) => `\u30AF\u30EA\u30C3\u30AF\u3067\u9589\u3058\u308B \xB7 ${s}s`,
+    timeout: "\u691C\u7D22\u304C\u30BF\u30A4\u30E0\u30A2\u30A6\u30C8\u3057\u307E\u3057\u305F",
+    unavailable: "\u3053\u306E pi \u30D3\u30EB\u30C9\u306E\u5168\u753B\u9762\u30EC\u30F3\u30C0\u30E9\u30FC\u306F\u30B3\u30D4\u30FC\u30B3\u30FC\u30EB\u30D0\u30C3\u30AF\u3092\u516C\u958B\u3057\u306A\u3044\u305F\u3081\u3001\u30C0\u30D6\u30EB\u30AF\u30EA\u30C3\u30AF\u691C\u7D22\u306F\u4F7F\u3048\u307E\u305B\u3093",
+    enabled: "\u30C0\u30D6\u30EB\u30AF\u30EA\u30C3\u30AF\u691C\u7D22\u3092\u6709\u52B9\u5316",
+    disabled: "\u30C0\u30D6\u30EB\u30AF\u30EA\u30C3\u30AF\u691C\u7D22\u3092\u7121\u52B9\u5316",
+    usage: "\u4F7F\u3044\u65B9: /lingual lookup [on|off|google|model|status|<\u30C6\u30AD\u30B9\u30C8>]",
+    provider: (name) => `\u691C\u7D22\u30D7\u30ED\u30D0\u30A4\u30C0\u30FC: ${name}`
+  },
+  ko: {
+    title: "\uB2E8\uC5B4 \uCC3E\uAE30",
+    loading: "\uAC80\uC0C9 \uC911\u2026",
+    dismissZero: "\uD074\uB9AD\uD558\uC5EC \uB2EB\uAE30",
+    dismissWithSeconds: (s) => `\uD074\uB9AD\uD558\uC5EC \uB2EB\uAE30 \xB7 ${s}s`,
+    timeout: "\uAC80\uC0C9 \uC2DC\uAC04 \uCD08\uACFC",
+    unavailable: "\uC774 pi \uBE4C\uB4DC\uC758 \uC804\uCCB4 \uD654\uBA74 \uB80C\uB354\uB7EC\uB294 \uBCF5\uC0AC \uCF5C\uBC31\uC744 \uB178\uCD9C\uD558\uC9C0 \uC54A\uC544 \uB354\uBE14\uD074\uB9AD \uAC80\uC0C9\uC744 \uC4F8 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    enabled: "\uB354\uBE14\uD074\uB9AD \uAC80\uC0C9 \uCF1C\uC9D0",
+    disabled: "\uB354\uBE14\uD074\uB9AD \uAC80\uC0C9 \uAEBC\uC9D0",
+    usage: "\uC0AC\uC6A9\uBC95: /lingual lookup [on|off|google|model|status|<\uD14D\uC2A4\uD2B8>]",
+    provider: (name) => `\uAC80\uC0C9 \uC81C\uACF5\uC790: ${name}`
+  },
+  es: {
+    title: "Consulta",
+    loading: "consultando\u2026",
+    dismissZero: "clic para cerrar",
+    dismissWithSeconds: (s) => `clic para cerrar \xB7 ${s}s`,
+    timeout: "la consulta expir\xF3",
+    unavailable: "esta versi\xF3n de pi no expone la copia del renderizador a pantalla completa, as\xED que la consulta por doble clic est\xE1 desactivada",
+    enabled: "consulta por doble clic activada",
+    disabled: "consulta por doble clic desactivada",
+    usage: "uso: /lingual lookup [on|off|google|model|status|<texto>]",
+    provider: (name) => `proveedor de consulta: ${name}`
+  },
+  fr: {
+    title: "Consultation",
+    loading: "recherche\u2026",
+    dismissZero: "cliquer pour fermer",
+    dismissWithSeconds: (s) => `cliquer pour fermer \xB7 ${s}s`,
+    timeout: "la recherche a expir\xE9",
+    unavailable: "cette version de pi n'expose pas la copie du rendu plein \xE9cran, la recherche par double-clic est d\xE9sactiv\xE9e",
+    enabled: "recherche par double-clic activ\xE9e",
+    disabled: "recherche par double-clic d\xE9sactiv\xE9e",
+    usage: "usage : /lingual lookup [on|off|google|model|status|<texte>]",
+    provider: (name) => `service de recherche : ${name}`
+  },
+  de: {
+    title: "Nachschlagen",
+    loading: "suche\u2026",
+    dismissZero: "klicken zum Schlie\xDFen",
+    dismissWithSeconds: (s) => `klicken zum Schlie\xDFen \xB7 ${s}s`,
+    timeout: "Zeit\xFCberschreitung beim Nachschlagen",
+    unavailable: "diese pi-Version gibt den Kopier-Callback des Vollbild-Renderers nicht frei, Doppelklick-Suche ist aus",
+    enabled: "Doppelklick-Suche an",
+    disabled: "Doppelklick-Suche aus",
+    usage: "Nutzung: /lingual lookup [on|off|google|model|status|<Text>]",
+    provider: (name) => `Suchdienst: ${name}`
+  },
+  ru: {
+    title: "\u041F\u043E\u0438\u0441\u043A",
+    loading: "\u043F\u043E\u0438\u0441\u043A\u2026",
+    dismissZero: "\u043D\u0430\u0436\u043C\u0438\u0442\u0435, \u0447\u0442\u043E\u0431\u044B \u0437\u0430\u043A\u0440\u044B\u0442\u044C",
+    dismissWithSeconds: (s) => `\u043D\u0430\u0436\u043C\u0438\u0442\u0435, \u0447\u0442\u043E\u0431\u044B \u0437\u0430\u043A\u0440\u044B\u0442\u044C \xB7 ${s}s`,
+    timeout: "\u0432\u0440\u0435\u043C\u044F \u043F\u043E\u0438\u0441\u043A\u0430 \u0438\u0441\u0442\u0435\u043A\u043B\u043E",
+    unavailable: "\u044D\u0442\u0430 \u0441\u0431\u043E\u0440\u043A\u0430 pi \u043D\u0435 \u043E\u0442\u0434\u0430\u0451\u0442 \u043A\u043E\u043B\u0431\u044D\u043A \u043A\u043E\u043F\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u044F \u043F\u043E\u043B\u043D\u043E\u044D\u043A\u0440\u0430\u043D\u043D\u043E\u0433\u043E \u0440\u0435\u043D\u0434\u0435\u0440\u0435\u0440\u0430, \u043F\u043E\u0438\u0441\u043A \u043F\u043E \u0434\u0432\u043E\u0439\u043D\u043E\u043C\u0443 \u043A\u043B\u0438\u043A\u0443 \u043E\u0442\u043A\u043B\u044E\u0447\u0451\u043D",
+    enabled: "\u043F\u043E\u0438\u0441\u043A \u043F\u043E \u0434\u0432\u043E\u0439\u043D\u043E\u043C\u0443 \u043A\u043B\u0438\u043A\u0443 \u0432\u043A\u043B\u044E\u0447\u0451\u043D",
+    disabled: "\u043F\u043E\u0438\u0441\u043A \u043F\u043E \u0434\u0432\u043E\u0439\u043D\u043E\u043C\u0443 \u043A\u043B\u0438\u043A\u0443 \u043E\u0442\u043A\u043B\u044E\u0447\u0451\u043D",
+    usage: "\u0438\u0441\u043F\u043E\u043B\u044C\u0437\u043E\u0432\u0430\u043D\u0438\u0435: /lingual lookup [on|off|google|model|status|<\u0442\u0435\u043A\u0441\u0442>]",
+    provider: (name) => `\u0441\u0435\u0440\u0432\u0438\u0441 \u043F\u043E\u0438\u0441\u043A\u0430: ${name}`
+  }
+};
+var NATIVE_LANGUAGE_NAME = {
+  en: "English",
+  zh: "\u7B80\u4F53\u4E2D\u6587",
+  tw: "\u7E41\u9AD4\u4E2D\u6587",
+  ja: "\u65E5\u672C\u8A9E",
+  ko: "\uD55C\uAD6D\uC5B4",
+  es: "espa\xF1ol",
+  fr: "fran\xE7ais",
+  de: "Deutsch",
+  ru: "\u0440\u0443\u0441\u0441\u043A\u0438\u0439"
+};
+var SYSTEM_PROMPTS = {
+  zh: (name) => `\u628A\u7EC8\u7AEF\u8BB0\u5F55\u91CC\u9009\u4E2D\u7684\u4E00\u5C0F\u6BB5\u6587\u5B57\u7FFB\u8BD1\u6210${name}\u3002\u53EA\u8F93\u51FA\u8BD1\u6587\u672C\u8EAB\uFF1A\u4E0D\u8981\u5F00\u573A\u767D\u3001\u4E0D\u8981\u5F15\u53F7\u3001\u4E0D\u8981 markdown\uFF0C\u6700\u591A\u4E09\u884C\u3002\u5982\u679C\u662F\u5355\u4E2A\u5355\u8BCD\uFF0C\u5148\u7ED9\u51FA\u4F60\u6709\u628A\u63E1\u7684\u97F3\u6807\uFF08\u7528\u659C\u6760\u5305\u88F9\uFF09\uFF0C\u518D\u7528\u201C\uFF1B\u201D\u5206\u9694\u6309\u8BCD\u6027\u6807\u6CE8\u4E3B\u8981\u4E49\u9879\u3002\u5982\u679C\u662F\u77ED\u8BED\u6216\u53E5\u5B50\uFF0C\u7ED9\u51FA\u4E00\u6761\u81EA\u7136\u8BD1\u6587\u3002`,
+  tw: (name) => `\u628A\u7D42\u7AEF\u8A18\u9304\u4E2D\u9078\u53D6\u7684\u4E00\u5C0F\u6BB5\u6587\u5B57\u7FFB\u8B6F\u6210${name}\u3002\u53EA\u8F38\u51FA\u8B6F\u6587\u672C\u8EAB\uFF1A\u4E0D\u8981\u958B\u5834\u767D\u3001\u4E0D\u8981\u5F15\u865F\u3001\u4E0D\u8981 markdown\uFF0C\u6700\u591A\u4E09\u884C\u3002\u5982\u679C\u662F\u55AE\u500B\u55AE\u8A5E\uFF0C\u5148\u7D66\u51FA\u4F60\u6709\u628A\u63E1\u7684\u97F3\u6A19\uFF08\u7528\u659C\u7DDA\u5305\u88F9\uFF09\uFF0C\u518D\u7528\u300C\uFF1B\u300D\u5206\u9694\u6309\u8A5E\u6027\u6A19\u8A3B\u4E3B\u8981\u7FA9\u9805\u3002\u5982\u679C\u662F\u7247\u8A9E\u6216\u53E5\u5B50\uFF0C\u7D66\u51FA\u4E00\u689D\u81EA\u7136\u8B6F\u6587\u3002`,
+  ja: (name) => `\u30BF\u30FC\u30DF\u30CA\u30EB\u5C65\u6B74\u3067\u9078\u629E\u3055\u308C\u305F\u77ED\u3044\u30C6\u30AD\u30B9\u30C8\u3092${name}\u306B\u7FFB\u8A33\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u8A33\u6587\u3060\u3051\u3092\u51FA\u529B\u3057\u3001\u524D\u7F6E\u304D\u30FB\u5F15\u7528\u7B26\u30FBmarkdown \u306F\u4F7F\u308F\u305A\u3001\u6700\u59273\u884C\u307E\u3067\u306B\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u5358\u8A9E\u306E\u5834\u5408\u306F\u3001\u78BA\u4FE1\u304C\u3042\u308B\u3068\u304D\u3060\u3051\u767A\u97F3\u8A18\u53F7\u3092\u30B9\u30E9\u30C3\u30B7\u30E5\u3067\u56F2\u3093\u3067\u5148\u306B\u793A\u3057\u3001\u305D\u306E\u5F8C\u3001\u54C1\u8A5E\u30BF\u30B0\u4ED8\u304D\u306E\u4E3B\u306A\u8A9E\u7FA9\u3092\u300C\uFF1B\u300D\u3067\u533A\u5207\u3063\u3066\u793A\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u53E5\u3084\u6587\u306E\u5834\u5408\u306F\u3001\u81EA\u7136\u306A\u8A33\u6587\u30921\u3064\u793A\u3057\u3066\u304F\u3060\u3055\u3044\u3002`,
+  ko: (name) => `\uD130\uBBF8\uB110 \uAE30\uB85D\uC5D0\uC11C \uC120\uD0DD\uD55C \uC9E7\uC740 \uD14D\uC2A4\uD2B8\uB97C ${name}(\uC73C)\uB85C \uBC88\uC5ED\uD558\uC138\uC694. \uBC88\uC5ED\uBB38\uB9CC \uCD9C\uB825\uD558\uACE0, \uC11C\uB450\xB7\uB530\uC634\uD45C\xB7markdown \uC5C6\uC774 \uCD5C\uB300 \uC138 \uC904\uB85C \uC791\uC131\uD558\uC138\uC694.\uB2E8\uC5B4\uB77C\uBA74 \uD655\uC2E4\uD560 \uB54C \uBC1C\uC74C \uAE30\uD638\uB97C \uC2AC\uB798\uC2DC\uB85C \uAC10\uC2F8 \uBA3C\uC800 \uC81C\uC2DC\uD558\uACE0, \uADF8\uB2E4\uC74C \uD488\uC0AC \uD45C\uAE30\uAC00 \uBD99\uC740 \uC8FC\uC694 \uB73B\uC744 '\uFF1B'\uB85C \uAD6C\uBD84\uD574 \uC81C\uC2DC\uD558\uC138\uC694.\uAD6C\uB098 \uBB38\uC7A5\uC774\uB77C\uBA74 \uC790\uC5F0\uC2A4\uB7EC\uC6B4 \uBC88\uC5ED \uD558\uB098\uB97C \uC81C\uC2DC\uD558\uC138\uC694.`,
+  es: (name) => `Traduce al ${name} una selecci\xF3n breve del historial de la terminal. Responde solo con la traducci\xF3n: sin pre\xE1mbulo, sin comillas, sin markdown, como m\xE1ximo tres l\xEDneas. Si es una sola palabra, empieza por la transcripci\xF3n fon\xE9tica entre barras cuando est\xE9s seguro y despu\xE9s da las acepciones principales separadas por \xAB\uFF1B\xBB, cada una con su categor\xEDa gramatical. Si es una frase o una oraci\xF3n, da una traducci\xF3n natural.`,
+  fr: (name) => `Traduis en ${name} une courte s\xE9lection de l'historique du terminal. R\xE9ponds uniquement par la traduction : sans pr\xE9ambule, sans guillemets, sans markdown, trois lignes maximum. S'il s'agit d'un mot, commence par la transcription phon\xE9tique entre barres quand tu en es s\xFBr, puis donne les sens principaux s\xE9par\xE9s par \xAB ; \xBB, chacun \xE9tiquet\xE9 par sa nature grammaticale. S'il s'agit d'une expression ou d'une phrase, donne une traduction naturelle.`,
+  de: (name) => `\xDCbersetze eine kurze Auswahl aus dem Terminalverlauf ins ${name}. Antworte nur mit der \xDCbersetzung: keine Einleitung, keine Anf\xFChrungszeichen, kein Markdown, h\xF6chstens drei Zeilen. Bei einem einzelnen Wort beginne mit der Lautschrift in Schr\xE4gstrichen, wenn du sicher bist, und gib danach die Hauptbedeutungen durch "\uFF1B" getrennt an, jeweils mit Wortart. Bei einer Wendung oder einem Satz gib eine nat\xFCrliche \xDCbersetzung.`,
+  ru: (name) => `\u041F\u0435\u0440\u0435\u0432\u0435\u0434\u0438 \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u0444\u0440\u0430\u0433\u043C\u0435\u043D\u0442 \u0438\u0437 \u0438\u0441\u0442\u043E\u0440\u0438\u0438 \u0442\u0435\u0440\u043C\u0438\u043D\u0430\u043B\u0430 \u043D\u0430 ${name}. \u041E\u0442\u0432\u0435\u0447\u0430\u0439 \u0442\u043E\u043B\u044C\u043A\u043E \u043F\u0435\u0440\u0435\u0432\u043E\u0434\u043E\u043C: \u0431\u0435\u0437 \u0432\u0441\u0442\u0443\u043F\u043B\u0435\u043D\u0438\u044F, \u0431\u0435\u0437 \u043A\u0430\u0432\u044B\u0447\u0435\u043A, \u0431\u0435\u0437 markdown, \u043D\u0435 \u0431\u043E\u043B\u0435\u0435 \u0442\u0440\u0451\u0445 \u0441\u0442\u0440\u043E\u043A. \u0415\u0441\u043B\u0438 \u044D\u0442\u043E \u043E\u0434\u043D\u043E \u0441\u043B\u043E\u0432\u043E, \u0441\u043D\u0430\u0447\u0430\u043B\u0430 \u0434\u0430\u0439 \u0442\u0440\u0430\u043D\u0441\u043A\u0440\u0438\u043F\u0446\u0438\u044E \u0432 \u043A\u043E\u0441\u044B\u0445 \u0447\u0435\u0440\u0442\u0430\u0445, \u0435\u0441\u043B\u0438 \u0443\u0432\u0435\u0440\u0435\u043D, \u0437\u0430\u0442\u0435\u043C \u043E\u0441\u043D\u043E\u0432\u043D\u044B\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F \u0447\u0435\u0440\u0435\u0437 \xAB\uFF1B\xBB \u0441 \u0443\u043A\u0430\u0437\u0430\u043D\u0438\u0435\u043C \u0447\u0430\u0441\u0442\u0438 \u0440\u0435\u0447\u0438. \u0415\u0441\u043B\u0438 \u044D\u0442\u043E \u0444\u0440\u0430\u0437\u0430 \u0438\u043B\u0438 \u043F\u0440\u0435\u0434\u043B\u043E\u0436\u0435\u043D\u0438\u0435, \u0434\u0430\u0439 \u043E\u0434\u0438\u043D \u0435\u0441\u0442\u0435\u0441\u0442\u0432\u0435\u043D\u043D\u044B\u0439 \u043F\u0435\u0440\u0435\u0432\u043E\u0434.`
+};
+function resolveLookupStrings(lang) {
+  const norm = (lang || "en").toLowerCase().split(/[-_]/)[0];
+  const table = TABLE[norm] || TABLE.en;
+  const prompt = SYSTEM_PROMPTS[norm] || ENGLISH_PROMPT;
+  const selfName = NATIVE_LANGUAGE_NAME[norm];
+  return {
+    title: table.title,
+    loading: table.loading,
+    dismiss: (seconds) => seconds > 0 ? table.dismissWithSeconds(seconds) : table.dismissZero,
+    timeout: table.timeout,
+    unavailable: table.unavailable,
+    enabled: table.enabled,
+    disabled: table.disabled,
+    usage: table.usage,
+    provider: table.provider,
+    systemPrompt: (languageName) => prompt(selfName || languageName)
+  };
+}
+
 // src/commands.ts
 function createCommandHandlers(deps) {
   const {
@@ -6289,6 +6478,7 @@ function createCommandHandlers(deps) {
     syncResizeListener,
     clearPendingTimers,
     armTuner,
+    lookupController,
     pi
   } = deps;
   const setModeHandler = async (args, ctx) => {
@@ -6709,6 +6899,10 @@ Usage:
     const activeMode = currentModes.find((m) => m.id === activeModeId) || currentModes[0];
     const diskCfg = loadUserLingualConfig();
     const activeEffort = activeMode.reasoning || diskCfg.reasoning || "low";
+    const lookupCfg = resolveLookupConfig(diskCfg.lookup, {
+      model: String(diskCfg.lookup?.model || "").trim() || state.selectedModel
+    });
+    const lookupBackend = lookupCfg.provider === "model" ? `model:${lookupCfg.model || state.selectedModel}` : "google";
     const statusMsg = formatStatusReport(state.labels, {
       mode: state.mode,
       sourceLang: state.sourceLang,
@@ -6719,7 +6913,8 @@ Usage:
     }) + `
 \u2022 Active Mode: [${activeMode.name}] (${activeMode.id}) \xB7 flow: ${activeMode.flow} \xB7 action: ${activeMode.action}
 \u2022 Dynamic Slots: [${(activeMode.slots || []).filter((s) => s.enabled !== false).map((s) => s.label).join(", ")}]
-\u2022 Reasoning Effort: ${activeEffort} (mode: ${activeMode.reasoning || "default"}, global: ${diskCfg.reasoning || "low"})`;
+\u2022 Reasoning Effort: ${activeEffort} (mode: ${activeMode.reasoning || "default"}, global: ${diskCfg.reasoning || "low"})
+\u2022 Lookup: ${lookupCfg.enabled ? "on" : "off"} \xB7 ${lookupBackend} \xB7 ${state.targetLang} \u2192 ${state.sourceLang}`;
     ctx.ui.notify(statusMsg, "info");
   };
   const showLastHandler = async (_args, ctx) => {
@@ -6960,6 +7155,8 @@ Usage: /lingual loadout [list | apply <id>] (e.g. /lingual loadout apply spec)`;
 
   [Model & Cost]        Isolate translation sidecar from heavy reasoning brains
     \u2022 Target Model : [${state.selectedModel || "auto"}] (auto = Pi defaultModel \xB7 /lingual model <id>)
+  [Word Lookup]         Double-click a word in fullscreen: foreign \u2192 your language
+    \u2022 Provider : [${loadUserLingualConfig().lookup?.provider || "google"}] (google = key-less \xB7 /lingual lookup [on|off|google|model])
   \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
   Run /lingual tuner [request] to launch the adaptive wizard in your native language (${state.sourceLang}).`;
     ctx.ui.notify(guide, "info");
@@ -7059,6 +7256,46 @@ Usage: /lingual loadout [list | apply <id>] (e.g. /lingual loadout apply spec)`;
       "info"
     );
   };
+  const lookupHandler = async (args, ctx) => {
+    const disk = loadUserLingualConfig();
+    const raw = disk.lookup;
+    const pinned = String(raw?.model || "").trim();
+    const config = resolveLookupConfig(raw, { model: pinned || state.selectedModel });
+    const strings = resolveLookupStrings(state.sourceLang);
+    const trimmed = (args || "").trim();
+    const lower = trimmed.toLowerCase();
+    const describe = () => {
+      const backend = config.provider === "model" ? `model:${config.model || state.selectedModel}` : "google";
+      return `[lingual] lookup: ${config.enabled ? "on" : "off"} \xB7 ${strings.provider(backend)} \xB7 ${state.targetLang} \u2192 ${state.sourceLang} \xB7 ${config.seconds}s`;
+    };
+    if (!trimmed || lower === "status" || lower === "info") {
+      try {
+        ctx.ui.notify(`${describe()}
+${strings.usage}`, "info");
+      } catch {
+      }
+      return;
+    }
+    if (lower === "on" || lower === "off") {
+      const enabled = lower === "on";
+      saveUserLingualConfig({ lookup: { ...raw && typeof raw === "object" ? raw : {}, enabled } });
+      try {
+        ctx.ui.notify(`[lingual] ${enabled ? strings.enabled : strings.disabled}`, "info");
+      } catch {
+      }
+      return;
+    }
+    if (lower === "google" || lower === "model") {
+      saveUserLingualConfig({ lookup: { ...raw && typeof raw === "object" ? raw : {}, provider: lower } });
+      try {
+        ctx.ui.notify(`[lingual] ${strings.provider(lower)}`, "info");
+      } catch {
+      }
+      return;
+    }
+    lookupController.setContext(ctx);
+    await lookupController.show(trimmed);
+  };
   const masterCommandHandler = async (args, ctx) => {
     const diskForMode = loadUserLingualConfig();
     const diskMode = diskForMode.activeModeId || diskForMode.mode;
@@ -7139,6 +7376,10 @@ Usage: /lingual loadout [list | apply <id>] (e.g. /lingual loadout apply spec)`;
     }
     if (sub === "status" || sub === "info" || sub === "report") {
       await showStatusHandler(subArgs, ctx);
+      return;
+    }
+    if (sub === "lookup" || sub === "dict" || sub === "word") {
+      await lookupHandler(subArgs, ctx);
       return;
     }
     if (sub === "last" || sub === "prev" || sub === "history" || sub === "replay") {
@@ -7236,6 +7477,7 @@ Usage: /lingual loadout [list | apply <id>] (e.g. /lingual loadout apply spec)`;
     showAgentGuideHandler,
     setReasoningHandler,
     setDefaultModeHandler,
+    lookupHandler,
     masterCommandHandler
   };
 }

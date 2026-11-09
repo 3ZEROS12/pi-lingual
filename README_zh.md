@@ -156,6 +156,24 @@ pi install npm:pi-lingual
 
 ---
 
+## 双击查词：全屏记录里的随手字典
+
+全屏模式下双击（或拖选）一个单词，复制照旧发生，同时输入框上方浮出一张查词卡片，方向与伴学卡相反：**外语 → 你的母语**。语言对直接复用 `/lang` 的设置（`zh ⇄ en` 下双击英文词查中文，`en ⇄ ja` 下双击日文词查英文），不需要第二套配置。
+
+```text
+  · [查词] over-engineered
+  ┌ 过度工程化；也可以指方案设计得比实际需要复杂
+  └ 点击关闭 · 12s
+```
+
+- **默认走 Google 免费词典**：无需 key，单词级查询通常在几百毫秒内返回，不占用模型额度。`/lingual lookup model` 可切到模型通道（复用 `/lingual model` 指定的侧车模型），适合 Google 不可达的网络，或需要上下文的长短语。
+- **只对值得查的东西弹窗**：整段代码、路径、URL、命令行、以及你自己语言的句子一律不触发；可用词数与字数上限（`maxWords` / `maxChars`）控制颗粒度。
+- **不抢输入焦点**：卡片是 non-capturing 浮层，打字继续进编辑器，点一下或等超时后自动消失；同样的词在 200 条 LRU 缓存内秒回，不重复发请求。
+- **仅在 fullscreen 生效**：regular 模式下终端拥有选区，插件拿不到复制事件，此时请用 `/lingual lookup <文本>` 手动查。
+- **关闭**：`/lingual lookup off`（关闭态零监听、零请求）。
+
+---
+
 ## 多语言真实场景对照
 
 核心功能是将母语转为高阶英文，但也支持主流工程语言双向互转：
@@ -228,6 +246,7 @@ pi install npm:pi-lingual
 | ↳ 快捷开关 | `/lingual on` \| `off` | 快捷开启伴学或完全关闭（关闭态 0 像素、0 监听、0 Token 消耗） |
 | ↳ 语言对切换 | `/lingual lang [pair]` 或 `/lang` | 切换伴学语言流向（如 `/lang ja`、`/lingual lang ja en`、`/lingual lang 日语`） |
 | ↳ 认知卡回放 | `/lingual last` \| `replay` | 重新浮现上一条伴学或改写认知卡片 |
+| ↳ 双击查词 | `/lingual lookup [on\|off\|google\|model\|status\|<文本>]` | 全屏双击单词弹出外语→母语查词卡；默认 Google，可切模型通道 |
 | ↳ 默认模式定锚 | `/lingual default [1\|2\|3\|0\|id]` | 查看或固定所有新会话的默认模式（`defaultMode`），彻底避免多会话相互漂移 |
 | ↳ 布局切换 | `/lingual compact` | 切换单行胶囊模式与开放式左导轨树状架构 |
 | ↳ 思考深度 | `/lingual reasoning [low\|medium\|high]` | 调节模型推理思考深度（日常 `low` 快速响应（取决于模型提供商），结构化 `spec` 自适应 `medium`） |

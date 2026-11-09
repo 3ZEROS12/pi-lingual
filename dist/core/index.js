@@ -3543,6 +3543,7 @@ function loadUserLingualConfig() {
     const timeoutMs = typeof target.timeoutMs === "number" && Number.isFinite(target.timeoutMs) ? Math.min(6e4, Math.max(1e3, target.timeoutMs)) : void 0;
     const replyInSourceLang = target.replyInSourceLang !== void 0 ? Boolean(target.replyInSourceLang) : void 0;
     const modeLocked = target.modeLocked !== void 0 ? Boolean(target.modeLocked) : void 0;
+    const lookup = target.lookup && typeof target.lookup === "object" && !Array.isArray(target.lookup) ? target.lookup : void 0;
     const labels = resolveLabelsForLang(sourceLang || "en", target.labels, targetLang || "ja");
     const normalizedMode = typeof target.mode === "string" ? normalizeLingualModeInput(target.mode) || target.mode : void 0;
     cachedUserConfig = {
@@ -3568,6 +3569,7 @@ function loadUserLingualConfig() {
       ...reasoning ? { reasoning } : {},
       ...timeoutMs ? { timeoutMs } : {},
       ...replyInSourceLang !== void 0 ? { replyInSourceLang } : {},
+      ...lookup ? { lookup } : {},
       labels
     };
     lastConfigCheckTime = now;

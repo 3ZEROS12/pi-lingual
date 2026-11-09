@@ -48,6 +48,9 @@ import {
   addCustomMode,
 } from "./presets.js";
 import { resolveTargetModel } from "./completer.js";
+import type { LookupController } from "./lookup-controller.js";
+import { resolveLookupConfig } from "./lookup.js";
+import { resolveLookupStrings } from "./lookup-strings.js";
 
 export interface CommandHandlerDeps {
   state: ExtensionState;
@@ -66,6 +69,7 @@ export interface CommandHandlerDeps {
   syncResizeListener: () => void;
   clearPendingTimers: () => void;
   armTuner: () => void;
+  lookupController: LookupController;
   pi: ExtensionAPI;
 }
 
@@ -83,6 +87,7 @@ export interface CommandHandlers {
   showAgentGuideHandler: (args: string, ctx: ExtensionContext) => Promise<void>;
   setReasoningHandler: (args: string, ctx: ExtensionContext) => Promise<void>;
   setDefaultModeHandler: (args: string, ctx: ExtensionContext) => Promise<void>;
+  lookupHandler: (args: string, ctx: ExtensionContext) => Promise<void>;
   masterCommandHandler: (args: string, ctx: ExtensionContext) => Promise<void>;
 }
 
@@ -99,6 +104,7 @@ export function createCommandHandlers(deps: CommandHandlerDeps): CommandHandlers
     syncResizeListener,
     clearPendingTimers,
     armTuner,
+    lookupController,
     pi,
   } = deps;
 
@@ -634,6 +640,12 @@ export function createCommandHandlers(deps: CommandHandlerDeps): CommandHandlers
     const activeMode = currentModes.find((m) => m.id === activeModeId) || currentModes[0];
     const diskCfg = loadUserLingualConfig();
     const activeEffort = activeMode.reasoning || diskCfg.reasoning || "low";
+    const lookupCfg = resolveLookupConfig((diskCfg as any).lookup, {
+      model: String((diskCfg as any).lookup?.model || "").trim() || state.selectedModel,
+    });
+    const lookupBackend = lookupCfg.provider === "model"
+      ? `model:${lookupCfg.model || state.selectedModel}`
+      : "google";
 
     const statusMsg = formatStatusReport(state.labels, {
       mode: state.mode,
@@ -645,7 +657,8 @@ export function createCommandHandlers(deps: CommandHandlerDeps): CommandHandlers
     }) +
       `\n• Active Mode: [${activeMode.name}] (${activeMode.id}) · flow: ${activeMode.flow} · action: ${activeMode.action}` +
       `\n• Dynamic Slots: [${(activeMode.slots || []).filter(s => s.enabled !== false).map(s => s.label).join(", ")}]` +
-      `\n• Reasoning Effort: ${activeEffort} (mode: ${activeMode.reasoning || "default"}, global: ${diskCfg.reasoning || "low"})`;
+      `\n• Reasoning Effort: ${activeEffort} (mode: ${activeMode.reasoning || "default"}, global: ${diskCfg.reasoning || "low"})` +
+      `\n• Lookup: ${lookupCfg.enabled ? "on" : "off"} · ${lookupBackend} · ${state.targetLang} → ${state.sourceLang}`;
 
     ctx.ui.notify(statusMsg, "info");
   };
@@ -919,6 +932,8 @@ export function createCommandHandlers(deps: CommandHandlerDeps): CommandHandlers
       `    └ Vocab Row : Extract 1-line key expressions                        [✓] On/Off\n\n` +
       `  [Model & Cost]        Isolate translation sidecar from heavy reasoning brains\n` +
       `    • Target Model : [${state.selectedModel || "auto"}] (auto = Pi defaultModel · /lingual model <id>)\n` +
+      `  [Word Lookup]         Double-click a word in fullscreen: foreign → your language\n` +
+      `    • Provider : [${(loadUserLingualConfig() as any).lookup?.provider || "google"}] (google = key-less · /lingual lookup [on|off|google|model])\n` +
       `  ──────────────────────────────────────────────────────────────────────────────────\n` +
       `  Run /lingual tuner [request] to launch the adaptive wizard in your native language (${state.sourceLang}).`;
     ctx.ui.notify(guide, "info");
@@ -1043,6 +1058,52 @@ export function createCommandHandlers(deps: CommandHandlerDeps): CommandHandlers
     );
   };
 
+  // Double-click word lookup: same language pair and model as the HUD card,
+  // but reversed (foreign → native) and backed by a key-less dictionary by default.
+  const lookupHandler = async (args: string, ctx: ExtensionContext) => {
+    const disk = loadUserLingualConfig();
+    const raw = (disk as any).lookup;
+    const pinned = String(raw?.model || "").trim();
+    const config = resolveLookupConfig(raw, { model: pinned || state.selectedModel });
+    const strings = resolveLookupStrings(state.sourceLang);
+    const trimmed = (args || "").trim();
+    const lower = trimmed.toLowerCase();
+
+    const describe = () => {
+      const backend = config.provider === "model"
+        ? `model:${config.model || state.selectedModel}`
+        : "google";
+      return `[lingual] lookup: ${config.enabled ? "on" : "off"} · ${strings.provider(backend)} · ${state.targetLang} → ${state.sourceLang} · ${config.seconds}s`;
+    };
+
+    if (!trimmed || lower === "status" || lower === "info") {
+      try {
+        ctx.ui.notify(`${describe()}\n${strings.usage}`, "info");
+      } catch {}
+      return;
+    }
+
+    if (lower === "on" || lower === "off") {
+      const enabled = lower === "on";
+      saveUserLingualConfig({ lookup: { ...(raw && typeof raw === "object" ? raw : {}), enabled } });
+      try {
+        ctx.ui.notify(`[lingual] ${enabled ? strings.enabled : strings.disabled}`, "info");
+      } catch {}
+      return;
+    }
+
+    if (lower === "google" || lower === "model") {
+      saveUserLingualConfig({ lookup: { ...(raw && typeof raw === "object" ? raw : {}), provider: lower } });
+      try {
+        ctx.ui.notify(`[lingual] ${strings.provider(lower)}`, "info");
+      } catch {}
+      return;
+    }
+
+    lookupController.setContext(ctx);
+    await lookupController.show(trimmed);
+  };
+
   // Master command bus: handles subcommands and mode cycling
   const masterCommandHandler = async (args: string, ctx: ExtensionContext) => {
     const diskForMode = loadUserLingualConfig();
@@ -1148,6 +1209,12 @@ export function createCommandHandlers(deps: CommandHandlerDeps): CommandHandlers
     // 4. Subcommand: status report (/lingual status)
     if (sub === "status" || sub === "info" || sub === "report") {
       await showStatusHandler(subArgs, ctx);
+      return;
+    }
+
+    // 4.1 Subcommand: double-click word lookup (/lingual lookup [on|off|google|model|status|<text>])
+    if (sub === "lookup" || sub === "dict" || sub === "word") {
+      await lookupHandler(subArgs, ctx);
       return;
     }
 
@@ -1271,6 +1338,7 @@ export function createCommandHandlers(deps: CommandHandlerDeps): CommandHandlers
     showAgentGuideHandler,
     setReasoningHandler,
     setDefaultModeHandler,
+    lookupHandler,
     masterCommandHandler,
   };
 }

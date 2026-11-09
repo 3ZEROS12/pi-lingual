@@ -73,7 +73,10 @@ import {
   captureGitContextSnapshot,
   extractRecentContextAnchor,
 } from "./context.js";
-import { createModelCompleter } from "./completer.js";
+import { createModelCompleter, resolveTargetModel } from "./completer.js";
+import { LookupController } from "./lookup-controller.js";
+import { LOOKUP_MAX_TOKENS, resolveLookupConfig } from "./lookup.js";
+import { resolveLookupStrings } from "./lookup-strings.js";
 import { pickCandidateInteractive } from "./pickers.js";
 import { createCommandHandlers } from "./commands.js";
 
@@ -116,6 +119,63 @@ const state: ExtensionState = {
 // Monotonic FSM session controller, eliminating concurrent input races and ghost cards, aborting upstream sockets.
 const session = new LingualSessionController();
 let lastContext: ExtensionContext | null = null;
+
+/**
+ * Lookup transport for the model backend. Reuses the same model resolution as
+ * the HUD card so a pinned `/lingual model` also serves double-click lookups.
+ */
+async function completeLookupWithModel(
+  text: string,
+  systemPrompt: string,
+  signal: AbortSignal
+): Promise<string | null> {
+  const ctx = lastContext;
+  if (!ctx?.modelRegistry) return null;
+  const disk = loadUserLingualConfig();
+  const pinned = String((disk as any).lookup?.model || "").trim();
+  const model = resolveTargetModel(ctx, pinned || state.selectedModel);
+  if (!model) return null;
+  const response = await ctx.modelRegistry.complete(
+    model,
+    {
+      systemPrompt,
+      messages: [
+        {
+          role: "user",
+          content: [{ type: "text", text }],
+          timestamp: Date.now(),
+        },
+      ],
+    },
+    { signal, maxTokens: LOOKUP_MAX_TOKENS }
+  );
+  if (response.stopReason === "aborted") return null;
+  const out = response.content
+    .filter((part) => part.type === "text")
+    .map((part: any) => part.text)
+    .join("")
+    .trim();
+  return out || null;
+}
+
+/**
+ * Lookup reads the same language pair and model as the HUD card, lazily, so
+ * `/lang` and `/lingual lookup` apply to the next double-click.
+ */
+function currentLookupSettings() {
+  const disk = loadUserLingualConfig();
+  const raw = (disk as any).lookup;
+  const pinned = String(raw?.model || "").trim();
+  return {
+    config: resolveLookupConfig(raw, { model: pinned || state.selectedModel }),
+    nativeLang: state.sourceLang,
+    foreignLang: state.targetLang,
+    strings: resolveLookupStrings(state.sourceLang),
+    complete: completeLookupWithModel,
+  };
+}
+
+const lookupController = new LookupController(currentLookupSettings);
 
 function updateFooter(ctx: ExtensionContext | null | undefined) {
   if (!hasActiveUI(ctx)) return;
@@ -336,6 +396,33 @@ export default function (pi: ExtensionAPI) {
     if (resizeTimer) { clearTimeout(resizeTimer); resizeTimer = undefined; }
   };
 
+  /**
+   * Double-click lookup needs the renderer instance, and pi only hands that to a
+   * widget factory. A below-editor widget that renders nothing costs no rows.
+   */
+  const attachLookupHost = (ctx: ExtensionContext) => {
+    lookupController.setContext(ctx);
+    if (ctx.mode !== "tui") return;
+    const ui = ctx.ui as any;
+    if (typeof ui?.setWidget !== "function") return;
+    try {
+      ui.setWidget(
+        "lingual_lookup_host",
+        (tui: unknown) => {
+          lookupController.attach(tui, (message) => {
+            try {
+              ctx.ui.notify(`[lingual] ${message}`, "warning");
+            } catch {}
+          });
+          return { render: () => [], invalidate() {} };
+        },
+        { placement: "belowEditor" }
+      );
+    } catch {
+      // Widget factories are unavailable in some harnesses; the command path still works.
+    }
+  };
+
   pi.on("session_start", async (event: any, ctx) => {
     clearPendingTimers();
     session.abortActive();
@@ -424,6 +511,7 @@ export default function (pi: ExtensionAPI) {
     }
     // Non-intrusive cold boot: hide footer badge if off mode
     updateFooter(ctx);
+    attachLookupHost(ctx);
   });
 
   pi.on("agent_start" as any, async (_event: any, ctx: ExtensionContext) => {
@@ -449,6 +537,7 @@ export default function (pi: ExtensionAPI) {
   pi.on("session_shutdown", async () => {
     clearPendingTimers();
     session.abortActive();
+    lookupController.close();
     lastContext = null;
     if (process.stdout && typeof (process.stdout as any).off === "function") {
       (process.stdout as any).off("resize", onResize);
@@ -472,6 +561,7 @@ export default function (pi: ExtensionAPI) {
     armTuner: () => {
       tunerArmed = true;
     },
+    lookupController,
     pi,
   });
 
@@ -479,7 +569,7 @@ export default function (pi: ExtensionAPI) {
   pi.registerCommand("lingual", {
     description:
       state.labels.cmdDescMode ||
-      "Interactive mode picker or manage: /lingual [1|2|3|0|on|off|default|lang|last|lock|status]",
+      "Interactive mode picker or manage: /lingual [1|2|3|0|on|off|default|lang|last|lookup|lock|status]",
     handler: handlers.masterCommandHandler,
   });
 
