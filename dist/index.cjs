@@ -3272,6 +3272,7 @@ function isNonEnglish(text) {
 function shouldShieldBypass(text) {
   const trimmed = text.trim();
   if (!trimmed) return true;
+  if (/^(?:pin|note|便签|备忘)\s*[:：]/i.test(trimmed)) return true;
   if (trimmed.startsWith("```")) {
     const withoutCodeFence = trimmed.replace(/```[\s\S]*?```/g, "").trim();
     if (withoutCodeFence && (/[?？]/.test(withoutCodeFence) || /(?:为什么|怎么|如何|帮我|排查|优化|修改|修复|为何|报错|审查|看下|explain|why|how|please|help|could you|fix)/i.test(withoutCodeFence))) {

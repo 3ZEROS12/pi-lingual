@@ -38,7 +38,7 @@ export function isNonEnglish(text: string): boolean {
 export function shouldShieldBypass(text: string): boolean {
   const trimmed = text.trim();
   if (!trimmed) return true;
-
+  if (/^(?:pin|note|便签|备忘)\s*[:：]/i.test(trimmed)) return true;
   // 1. Markdown code fences (starting with ```)
   if (trimmed.startsWith("```")) {
     // If text outside code fences contains natural technical questions or instructions, do not bypass

@@ -37,6 +37,8 @@ test("shield: 0ms bypass for pure CLI commands, code blocks, URLs, JSON, and fil
     "/Users/dev/project/src/index.ts",
     "C:\\Users\\Jason\\.pi\\agent\\sessions\\session.jsonl",
     "ID: 01a1354c-b212-70b2-94f5-1f0f2e4de168",
+    "pin: 明天把Token改Cookie",
+    "便签: 检查网关重试 [1/4]",
   ]) {
     assert.equal(shouldShieldBypass(code), true, `Code/path should bypass: ${code}`);
   }

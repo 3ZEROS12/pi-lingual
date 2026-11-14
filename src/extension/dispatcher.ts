@@ -154,7 +154,7 @@ export function createInputDispatcher(deps: InputDispatcherDeps) {
         }
       }
     }
-    if (raw.startsWith("/") || raw.startsWith("!")) {
+    if (raw.startsWith("/") || raw.startsWith("!") || /^(?:pin|note|便签|备忘)\s*[:：]/i.test(raw)) {
       clearPendingTimers();
       session.abortActive();
       if (hasActiveUI(ctx)) hud.updateFooter(ctx);
