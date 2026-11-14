@@ -7,8 +7,7 @@ Code in your native language. See real-time Silicon Valley spoken phrasing and f
 [![npm version](https://img.shields.io/npm/v/pi-lingual?color=blue)](https://www.npmjs.com/package/pi-lingual)
 [![npm downloads](https://img.shields.io/npm/dm/pi-lingual?color=22c55e&label=downloads)](https://www.npmjs.com/package/pi-lingual)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Built for Pi](https://img.shields.io/badge/Built%20for-Pi%20Coding%20Agent-orange)](https://github.com/earendil-works/pi-coding-agent)
-[![Tests](https://img.shields.io/badge/Tests-116%2F116%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
+[![Tests](https://img.shields.io/badge/Tests-146%2F146%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict%20Zero%20Error-blue)](tsconfig.json)
 
 **English** | [简体中文](./README_zh.md) | [日本語](./README_ja.md)
@@ -155,6 +154,35 @@ Two layouts designed to protect your editor workspace:
    *Saves over 80% vertical space in tight split panes (tmux, WezTerm). Activates automatically when terminal height is $< 22$ lines.*
 
 ---
+## Double-Click Lookup: A Dictionary Inside the Transcript
+
+In fullscreen mode, double-click (or drag-select) a word: the copy still happens, and a lookup card appears above the editor in the opposite direction of the companion card — **foreign language → your native language**. The language pair is the one `/lang` already holds, so there is no second configuration.
+
+```text
+  · [Lookup] over-engineered
+  ┌ over-engineered; also used for a design that is more elaborate than the problem needs
+  └ click to close · 12s
+```
+
+- **Key-less dictionary by default**: Google answers a single word in a few hundred milliseconds and spends no model budget. `/lingual lookup model` switches to the model transport (reusing the sidecar model pinned with `/lingual model`) for networks where Google is unreachable or for phrases that need context.
+- **Only worth-looking-up selections pop up**: whole code blocks, paths, URLs, shell commands, and sentences in your own language never trigger it; `maxWords` and `maxChars` set the granularity.
+- **Never steals focus**: the card is a non-capturing overlay, typing keeps going to the editor, and it dismisses on click or timeout. Repeat lookups of the same word come from a 200-entry LRU cache instead of a new request.
+- **Fullscreen only**: in regular mode the terminal owns the selection and the plugin never sees the copy, so use `/lingual lookup <text>` there.
+- **Turn it off**: `/lingual lookup off` (zero listeners, zero requests).
+
+---
+
+## Daily Markdown Journal: Learn & Review Without Extra Prompt Overhead
+
+Never lose your companion cards after terminal scrollback clears. `pi-lingual` provides an opt-in zero-overhead daily Markdown journal that archives every generated companion card into dated local notes (`~/lingual-log/YYYY-MM-DD.md`).
+
+- **Enable anytime**: Set `LINGUAL_LOG=1` in your environment, or run `/lingual log on` inside Pi.
+- **Zero extra model calls**: Appends directly from the active turn's translation payload and localized UI slot labels (`[Source]`, `[Spoken]`, `[Written]`, `[Vocab]`).
+- **Automatic deduplication**: Identical source prompts on the same day are recorded once, keeping daily notes clean and concise.
+- **Custom storage path**: Configure a dedicated notes directory via `LINGUAL_LOG_DIR=/path/to/notes` or `/lingual log dir <path>`.
+
+---
+
 
 ## Real-World Multilingual Matrix
 
@@ -229,6 +257,8 @@ To prevent autocomplete pollution in Pi's `/` menu, `pi-lingual` registers stric
 | ↳ Quick Toggle | `/lingual on` \| `off` | Quickly enable companion mode or turn off (0 pixels, 0 listeners, 0 tokens) |
 | ↳ Language Pair | `/lingual lang [pair]` or `/lang` | Switch language direction (e.g. `/lang ja`, `/lingual lang ja en`) |
 | ↳ Replay Card | `/lingual last` \| `replay` | Replay the most recent companion or rewrite card |
+| ↳ Word Lookup | `/lingual lookup [on\|off\|google\|model\|status\|<text>]` | Double-click a word in fullscreen to look it up foreign → native; Google by default, model transport optional |
+| ↳ Daily Journal | `/lingual log [on\|off\|status\|dir <path>]` | Append companion cards to daily Markdown log (`~/lingual-log/YYYY-MM-DD.md`) |
 | ↳ Default Mode | `/lingual default [1\|2\|3\|0\|id]` | View or pin default mode for all new sessions (`defaultMode` in `lingual.json`) |
 | ↳ Layout Mode | `/lingual compact` | Toggle dense single-line capsule mode vs open Left-Rail Tree HUD |
 | ↳ Mode Lock | `/lingual lock` \| `unlock` | Lock active mode to prevent external process drift (human commands always 100% priority) |
@@ -309,7 +339,7 @@ I hope everyone takes the time to tune a prompt that works best for them, catche
 
 ```bash
 npm run typecheck   # Strict tsc --noEmit check (0 errors)
-npm test            # 116/116 test assertions passing (100% green)
+npm test            # 146/146 test assertions passing (100% green)
 npm run build       # Multi-entry compilation via tsup (extension + core engine)
 ```
 

@@ -194,6 +194,12 @@ export function loadUserLingualConfig(): Partial<LingualConfig> {
       : undefined;
     const replyInSourceLang = target.replyInSourceLang !== undefined ? Boolean(target.replyInSourceLang) : undefined;
     const modeLocked = target.modeLocked !== undefined ? Boolean(target.modeLocked) : undefined;
+    const lookup =
+      target.lookup && typeof target.lookup === "object" && !Array.isArray(target.lookup)
+        ? target.lookup
+        : undefined;
+    const journal = target.journal !== undefined ? Boolean(target.journal) : undefined;
+    const journalDir = typeof target.journalDir === "string" && target.journalDir.trim() ? target.journalDir.trim() : undefined;
     const labels = resolveLabelsForLang(sourceLang || "en", target.labels, targetLang || "ja");
     const normalizedMode = typeof target.mode === "string" ? (normalizeLingualModeInput(target.mode) || target.mode) : undefined;
 
@@ -220,6 +226,9 @@ export function loadUserLingualConfig(): Partial<LingualConfig> {
       ...(reasoning ? { reasoning: reasoning as any } : {}),
       ...(timeoutMs ? { timeoutMs } : {}),
       ...(replyInSourceLang !== undefined ? { replyInSourceLang } : {}),
+      ...(lookup ? { lookup } : {}),
+      ...(journal !== undefined ? { journal } : {}),
+      ...(journalDir ? { journalDir } : {}),
       labels,
     };
     lastConfigCheckTime = now;

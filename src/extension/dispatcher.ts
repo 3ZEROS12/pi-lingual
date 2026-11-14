@@ -33,6 +33,7 @@ import { getDefaultFactoryModes, getDefaultSlots, resolveLabelsForLang, resolveS
 import { sanitizePromptForTranslation } from "../sanitizer.js";
 import { formatRepoGroundingHint, resolveRepoFileAnchors } from "../grounding.js";
 import { recordPhrasebookFromResult } from "../phrasebook.js";
+import { appendJournalCard } from "../journal.js";
 import {
   detectScriptLanguage,
   isImperativeEngineeringPrompt,
@@ -281,7 +282,11 @@ export function createInputDispatcher(deps: InputDispatcherDeps) {
                 modeId: currentMode.id,
               });
             }
-
+            appendJournalCard(result, {
+              labels: state.labels,
+              sourceLang: rt.inputLang,
+              targetLang: rt.outputLang,
+            });
             const activeCtx = hasActiveUI(ctx) ? ctx : hasActiveUI(getLastContext()) ? getLastContext() : null;
             if (!activeCtx) return;
 

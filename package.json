@@ -1,6 +1,6 @@
 {
   "name": "pi-lingual",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "description": "Bilingual developer companion & declarative Prompt Optimizer for Pi — Mode as Configuration, Dual-Core Golden Defaults, Zero-Residue First-Run Handshake, and S-Tier Prompt Architect.",
   "type": "module",
   "main": "dist/index.js",

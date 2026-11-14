@@ -25,8 +25,15 @@ export function createCommandHandlers(deps: CommandHandlerDeps): CommandHandlers
   const { setModeHandler, manageModesHandler, manageLoadoutsHandler, setDefaultModeHandler } =
     createModeHandlers(deps);
   const { switchSlotsHandler } = createSlotHandlers(deps);
-  const { showStatusHandler, showLastHandler, copyLastHandler, showAgentGuideHandler, digestHandler } =
-    createMetaHandlers(deps);
+  const {
+    showStatusHandler,
+    showLastHandler,
+    copyLastHandler,
+    showAgentGuideHandler,
+    digestHandler,
+    lookupHandler,
+    journalHandler,
+  } = createMetaHandlers(deps);
 
   const masterCommandHandler = async (args: string, ctx: ExtensionContext) => {
     if (hasExternalConfigUpdate()) {
@@ -87,6 +94,8 @@ export function createCommandHandlers(deps: CommandHandlerDeps): CommandHandlers
     }
     if (sub === "copy" || sub === "cp" || sub === "yank") return copyLastHandler(subArgs, ctx);
     if (sub === "digest" || sub === "phrasebook" || sub === "vocab") return digestHandler(subArgs, ctx);
+    if (sub === "lookup" || sub === "dict" || sub === "word") return lookupHandler(subArgs, ctx);
+    if (sub === "log" || sub === "journal") return journalHandler(subArgs, ctx);
     if (sub === "news" || sub === "whatsnew" || sub === "changelog") {
       const diskCfg = loadUserLingualConfig();
       renderReleaseBanner(ctx, diskCfg.sourceLang || state.sourceLang);
@@ -177,6 +186,8 @@ export function createCommandHandlers(deps: CommandHandlerDeps): CommandHandlers
     digestHandler,
     setReasoningHandler,
     setDefaultModeHandler,
+    lookupHandler,
+    journalHandler,
     masterCommandHandler,
   };
 }

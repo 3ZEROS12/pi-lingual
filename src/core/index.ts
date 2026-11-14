@@ -65,3 +65,13 @@ export {
   exportPhrasebook,
   type PhrasebookEntry,
 } from "../phrasebook.js";
+export {
+  formatJournalDate,
+  formatJournalTime,
+  resolveJournalConfig,
+  resolveDailyJournalPath,
+  formatJournalCardMarkdown,
+  appendJournalCard,
+  clearJournalMemoryCache,
+  type JournalConfig,
+} from "../journal.js";

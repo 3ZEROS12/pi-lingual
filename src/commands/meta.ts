@@ -7,6 +7,7 @@ import {
   loadUserLingualConfig,
   resolveModesFromConfig,
   normalizeActiveModeId,
+  saveUserLingualConfig,
 } from "../engine.js";
 import { formatStatusReport } from "../presets.js";
 import { formatActiveModelLabel } from "./lang-model.js";
@@ -16,10 +17,12 @@ import {
   formatPhrasebookDigest,
   exportPhrasebook,
 } from "../phrasebook.js";
-
+import { resolveLookupConfig } from "../lookup.js";
+import { resolveLookupStrings } from "../lookup-strings.js";
+import { resolveJournalConfig, resolveDailyJournalPath } from "../journal.js";
+import { resolveTargetModel } from "../completer.js";
 export function createMetaHandlers(deps: CommandHandlerDeps) {
-  const { state, session, renderActiveCard, renderHudWidget, activeRuntime } = deps;
-
+  const { state, session, renderActiveCard, renderHudWidget, activeRuntime, lookupController } = deps;
   const showStatusHandler = async (_args: string, ctx: ExtensionContext) => {
     const followDesc = state.labels.modelFollowSession || "follow session";
     const activeModel = formatActiveModelLabel(state.selectedModel, ctx, followDesc);
@@ -47,8 +50,15 @@ export function createMetaHandlers(deps: CommandHandlerDeps) {
       }) +
       `\n• Active Mode: [${activeMode.name}] (${activeMode.id}) · flow: ${activeMode.flow} · action: ${activeMode.action}` +
       `\n• Dynamic Slots: [${(activeMode.slots || []).filter((s) => s.enabled !== false).map((s) => s.label).join(", ")}]` +
-      `\n• Reasoning Effort: ${activeEffort} (mode: ${activeMode.reasoning || "default"}, global: ${diskCfg.reasoning || "low"})`;
-
+      `\n• Reasoning Effort: ${activeEffort} (mode: ${activeMode.reasoning || "default"}, global: ${diskCfg.reasoning || "low"})` +
+      (() => {
+        const lk = resolveLookupConfig(diskCfg.lookup);
+        const jn = resolveJournalConfig();
+        return (
+          `\n• Word Lookup: ${lk.enabled && state.mode !== "off" ? `ON (${lk.provider})` : "OFF"}` +
+          `\n• Daily Journal: ${jn.enabled ? `ON (${jn.dir})` : "OFF (enable via LINGUAL_LOG=1 or /lingual log on)"}`
+        );
+      })();
     ctx.ui.notify(statusMsg, "info");
   };
 
@@ -192,6 +202,109 @@ export function createMetaHandlers(deps: CommandHandlerDeps) {
 
     ctx.ui.notify(formatPhrasebookDigest(entries), "info");
   };
+  const lookupHandler = async (args: string, ctx: ExtensionContext) => {
+    const disk = loadUserLingualConfig();
+    const raw = (disk as any).lookup;
+    const pinned = String(raw?.model || "").trim();
+    const config = resolveLookupConfig(raw, { model: pinned || state.selectedModel });
+    const strings = resolveLookupStrings(state.sourceLang);
+    const trimmed = (args || "").trim();
+    const lower = trimmed.toLowerCase();
+
+    const describe = () => {
+      const backend =
+        config.provider === "model" ? `model:${config.model || state.selectedModel}` : "google";
+      return `[lingual] lookup: ${config.enabled ? "on" : "off"} · ${strings.provider(backend)} · ${state.targetLang} → ${state.sourceLang} · ${config.seconds}s`;
+    };
+
+    if (!trimmed || lower === "status" || lower === "info") {
+      try {
+        ctx.ui.notify(`${describe()}\n${strings.usage}`, "info");
+      } catch {}
+      return;
+    }
+
+    if (lower === "on" || lower === "off" || lower === "enable" || lower === "disable") {
+      const enabled = lower === "on" || lower === "enable";
+      saveUserLingualConfig({
+        lookup: { ...(raw && typeof raw === "object" ? raw : {}), enabled },
+      });
+      if (!enabled) lookupController?.close();
+      try {
+        ctx.ui.notify(`[lingual] ${enabled ? strings.enabled : strings.disabled}`, "info");
+      } catch {}
+      return;
+    }
+
+    if (lower === "google" || lower === "dict" || lower === "dictionary") {
+      saveUserLingualConfig({
+        lookup: { ...(raw && typeof raw === "object" ? raw : {}), enabled: true, provider: "google" },
+      });
+      try {
+        ctx.ui.notify(`[lingual] ${strings.provider("google")}`, "info");
+      } catch {}
+      return;
+    }
+
+    if (lower === "model" || lower === "llm" || lower.startsWith("model ")) {
+      const nextPinned = trimmed.slice("model".length).trim() || undefined;
+      saveUserLingualConfig({
+        lookup: {
+          ...(raw && typeof raw === "object" ? raw : {}),
+          enabled: true,
+          provider: "model",
+          ...(nextPinned ? { model: nextPinned } : {}),
+        },
+      });
+      try {
+        ctx.ui.notify(`[lingual] ${strings.provider(nextPinned ? `model:${nextPinned}` : "model")}`, "info");
+      } catch {}
+      return;
+    }
+
+    lookupController?.setContext(ctx);
+    await lookupController?.show(trimmed);
+  };
+
+  const journalHandler = async (args: string, ctx: ExtensionContext) => {
+    const trimmed = (args || "").trim();
+    const lower = trimmed.toLowerCase();
+
+    if (!trimmed || lower === "status") {
+      const cfg = resolveJournalConfig();
+      const todayPath = resolveDailyJournalPath();
+      const msg = cfg.enabled
+        ? `[lingual] Daily Markdown Journal: ON -> ${todayPath || cfg.dir}`
+        : `[lingual] Daily Markdown Journal: OFF (enable via LINGUAL_LOG=1 or /lingual log on · dir: ${cfg.dir || "~/lingual-log"})`;
+      ctx.ui.notify(msg, "info");
+      return;
+    }
+
+    if (lower === "on" || lower === "enable" || lower === "1" || lower === "true") {
+      saveUserLingualConfig({ journal: true });
+      const todayPath = resolveDailyJournalPath();
+      ctx.ui.notify(`[lingual] Daily Markdown Journal enabled -> ${todayPath || "~/lingual-log/YYYY-MM-DD.md"}`, "info");
+      return;
+    }
+
+    if (lower === "off" || lower === "disable" || lower === "0" || lower === "false") {
+      saveUserLingualConfig({ journal: false });
+      ctx.ui.notify("[lingual] Daily Markdown Journal disabled.", "info");
+      return;
+    }
+
+    if (lower.startsWith("dir ")) {
+      const customDir = trimmed.slice(4).trim();
+      if (customDir) {
+        saveUserLingualConfig({ journal: true, journalDir: customDir });
+        const todayPath = resolveDailyJournalPath(customDir);
+        ctx.ui.notify(`[lingual] Daily Markdown Journal directory set -> ${todayPath || customDir}`, "info");
+        return;
+      }
+    }
+
+    ctx.ui.notify("Usage: /lingual log [on|off|status|dir <path>]", "info");
+  };
 
   return {
     showStatusHandler,
@@ -199,5 +312,7 @@ export function createMetaHandlers(deps: CommandHandlerDeps) {
     copyLastHandler,
     showAgentGuideHandler,
     digestHandler,
+    lookupHandler,
+    journalHandler,
   };
 }

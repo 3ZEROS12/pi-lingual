@@ -1,3 +1,116 @@
+/**
+ * In-Memory LRU Cache for Lingual Translations (Zero-Dependency In-Process Cache)
+ *
+ * High-frequency developer phrases ("continue", "agree", "proceed", "sounds good")
+ * are served with 0ms latency from an in-memory LRU cache (default capacity: 50 entries).
+ * Cache hits consume zero network round-trips and zero model tokens.
+ */
+interface CacheStats {
+    hits: number;
+    misses: number;
+    size: number;
+    capacity: number;
+}
+declare class LingualLruCache<T> {
+    readonly capacity: number;
+    private cache;
+    private candidatesCache;
+    private hits;
+    private misses;
+    constructor(capacity?: number);
+    /**
+     * Generates a normalized cache key incorporating language pairs and slot signature.
+     */
+    static buildKey(text: string, sourceLang?: string, targetLang?: string, slotSignature?: string): string;
+    get(key: string): T | undefined;
+    set(key: string, val: T): void;
+    getCandidates<C = any>(key: string): C[] | undefined;
+    setCandidates<C = any>(key: string, candidates: C[]): void;
+    has(key: string): boolean;
+    clear(): void;
+    get size(): number;
+    getStats(): CacheStats;
+}
+declare const LinguaLruCache: typeof LingualLruCache;
+declare const globalLingualCache: LingualLruCache<any>;
+declare const globalLinguaCache: LingualLruCache<any>;
+
+/**
+ * Localized copy for the lookup popup and its command.
+ *
+ * Kept next to the feature instead of in the i18n label table: the lookup
+ * surface is small, and every supported language gets its own strings so the
+ * Language Surface Parity invariant holds even when `sourceLang !== "zh"`.
+ */
+interface LookupStrings {
+    title: string;
+    loading: string;
+    dismiss: (seconds: number) => string;
+    timeout: string;
+    unavailable: string;
+    enabled: string;
+    disabled: string;
+    usage: string;
+    provider: (name: string) => string;
+    systemPrompt: (languageName: string) => string;
+}
+declare function resolveLookupStrings(lang: string): LookupStrings;
+
+/**
+ * Word lookup for copied selections.
+ *
+ * A double-click in the fullscreen transcript is a different request from a
+ * prompt: it is one word or a short phrase the reader wants translated into
+ * their own language, right now. So the direction is reversed (foreign →
+ * native) and the backend defaults to a key-less dictionary endpoint that
+ * answers in well under a second, which is what a double-click deserves.
+ * The model backend exists for networks where Google is unreachable and for
+ * phrases that need context.
+ */
+
+type LookupProvider = "google" | "model";
+interface LookupConfig {
+    enabled: boolean;
+    provider: LookupProvider;
+    /** `provider/id` pinned for the model backend; empty follows `/lingual model`. */
+    model?: string;
+    /** Seconds the popup stays on screen. `0` keeps it until it is clicked away. */
+    seconds: number;
+    maxWords: number;
+    maxChars: number;
+}
+declare const DEFAULT_LOOKUP: LookupConfig;
+declare const globalLookupCache: LingualLruCache<string>;
+declare class LookupError extends Error {
+}
+declare function googleTargetCode(lang: string): string;
+declare function resolveLookupConfig(raw: unknown, overrides?: Partial<LookupConfig>): LookupConfig;
+/** Collapse the newlines and runs of spaces a terminal selection carries. */
+declare function normalizeSelection(raw: string): string;
+/**
+ * Whether a copied selection is worth a popup. Every copy reaches this filter,
+ * including drag selections of whole code blocks and long paragraphs, so a
+ * selection has to look like a word or a short phrase in the foreign language.
+ */
+declare function isLookupSelection(raw: string, config: Pick<LookupConfig, "maxWords" | "maxChars">, nativeLang: string, foreignLang: string): boolean;
+declare function lookupSystemPrompt(nativeLang: string, strings: LookupStrings): string;
+declare function parseGoogleLookup(payload: unknown): string;
+interface LookupRequest {
+    text: string;
+    config: LookupConfig;
+    /** Reader's language: the translation target. */
+    nativeLang: string;
+    strings: LookupStrings;
+    signal: AbortSignal;
+}
+interface LookupDeps {
+    fetch?: typeof fetch;
+    /** Model transport, injected so the engine stays free of pi session state. */
+    complete?: (text: string, systemPrompt: string, signal: AbortSignal) => Promise<string | null>;
+}
+declare function lookupTranslate(request: LookupRequest, deps?: LookupDeps): Promise<string>;
+declare const LOOKUP_MAX_TOKENS = 300;
+
 type LingualMode = "original" | "english" | "select" | "modify" | "off" | string;
 type ModeAction = "pass-through" | "transform" | "select";
 type ModeFlow = "translate" | "proofread" | "custom";
@@ -213,6 +326,9 @@ interface LingualConfig {
     reasoning?: ReasoningEffort | string;
     timeoutMs?: number;
     killList?: string[];
+    lookup?: Partial<LookupConfig>;
+    journal?: boolean;
+    journalDir?: string;
     onDelta?: (fullText: string) => void;
     onPartial?: (fields: Record<string, string>) => void;
     complete?: (text: string, systemPrompt: string, signal?: AbortSignal, options?: {
@@ -431,43 +547,6 @@ declare function withStreamingPartial(cfg: LingualConfig): LingualConfig;
  * Unified LLM transport primitive: handles AbortController timeout synthesis, custom completer, and OpenAI endpoint fallback.
  */
 declare function executeLlmCompletion(text: string, sysPrompt: string, cfg: LingualConfig): Promise<string | null>;
-
-/**
- * In-Memory LRU Cache for Lingual Translations (Zero-Dependency In-Process Cache)
- *
- * High-frequency developer phrases ("continue", "agree", "proceed", "sounds good")
- * are served with 0ms latency from an in-memory LRU cache (default capacity: 50 entries).
- * Cache hits consume zero network round-trips and zero model tokens.
- */
-interface CacheStats {
-    hits: number;
-    misses: number;
-    size: number;
-    capacity: number;
-}
-declare class LingualLruCache<T> {
-    readonly capacity: number;
-    private cache;
-    private candidatesCache;
-    private hits;
-    private misses;
-    constructor(capacity?: number);
-    /**
-     * Generates a normalized cache key incorporating language pairs and slot signature.
-     */
-    static buildKey(text: string, sourceLang?: string, targetLang?: string, slotSignature?: string): string;
-    get(key: string): T | undefined;
-    set(key: string, val: T): void;
-    getCandidates<C = any>(key: string): C[] | undefined;
-    setCandidates<C = any>(key: string, candidates: C[]): void;
-    has(key: string): boolean;
-    clear(): void;
-    get size(): number;
-    getStats(): CacheStats;
-}
-declare const LinguaLruCache: typeof LingualLruCache;
-declare const globalLingualCache: LingualLruCache<any>;
-declare const globalLinguaCache: LingualLruCache<any>;
 
 declare const LINGUAL_SYSTEM_PROMPT: string;
 declare const MAX_TRANSLATION_CHARS = 2500;
@@ -742,4 +821,41 @@ declare function exportPhrasebook(entries: PhrasebookEntry[], format: "md" | "an
     count: number;
 };
 
-export { buildPromptCandidatesSystemPrompt as $, PRESET_LOADOUTS as A, BLOCKED_JSON_KEYS as B, type CustomModeConfig as C, DEFAULT_CONFIG as D, type ExtensionState as E, PROMPT_RULE_PRESETS as F, type PhrasebookEntry as G, type HudVariant as H, type PromptCandidate as I, type ResolveModeOptions as J, SEED_NAMES as K, type LingualResult as L, type ModeRuntime as M, SUPPORTED_LANG_CODES as N, type SanitizedPromptResult as O, type PromptSlotConfig as P, type SeedNames as Q, type ReasoningEffort as R, type SlotConfig as S, type SlotDefinition as T, type SlotLabelsDef as U, type SlotResult as V, type SlotRole as W, type TranslationPayload as X, type UserLingualConfig as Y, buildDirectRewriteSystemPrompt as Z, buildModifySystemPrompt as _, type LingualI18nLabels as a, resolveLabelsForLang as a$, buildStreamingResult as a0, buildSystemPrompt as a1, clearPhrasebook as a2, clearRepoFileCache as a3, compileKillListInstruction as a4, compileModeSystemPrompt as a5, defaultSlotsForMode as a6, detectScriptLanguage as a7, ensureCodeTokensPreserved as a8, executeLlmCompletion as a9, isSupportedLangCode as aA, isTargetLanguageOnly as aB, isTestEnvironment as aC, isUserLingualConfigured as aD, listPresetLoadouts as aE, listRepoFiles as aF, loadUserConfig as aG, loadUserLingualConfig as aH, localizeModeName as aI, localizeModes as aJ, localizeSlotLabel as aK, markConfigSynced as aL, normalizeActiveModeId as aM, normalizeHudVariant as aN, normalizeLangCode as aO, normalizeLingualModeInput as aP, normalizePromptRules as aQ, parseLlmResponse as aR, parsePartialJsonFields as aS, parseVocabEntries as aT, pickPrimaryContent as aU, primarySlot as aV, readPhrasebook as aW, recordPhrasebookFromResult as aX, repairAndParseJsonObject as aY, resolveCandidateSlotsFromConfig as aZ, resolveDirectSlotsFromConfig as a_, executeModeRunner as aa, exportPhrasebook as ab, extractCleanJsonField as ac, extractQueryIdentifiers as ad, formatModelSelectionMessage as ae, formatNativeReplyGuardHint as af, formatPhrasebookDigest as ag, formatRepoGroundingHint as ah, formatStatusReport as ai, generatePromptCandidates as aj, getDefaultDirectSlots as ak, getDefaultFactoryModes as al, getDefaultModifySlots as am, getDefaultPromptSlots as an, getDefaultSlots as ao, getPiAgentDir as ap, getPresetLoadout as aq, globalLinguaCache as ar, globalLingualCache as as, hasExternalConfigUpdate as at, hasSourceScript as au, interpolatePromptVariables as av, invalidateUserConfigCache as aw, isDynamicLongInput as ax, isImperativeEngineeringPrompt as ay, isNonEnglish as az, type CacheStats as b, resolveLangPair as b0, resolveLanguageName as b1, resolveLanguagePairAnchors as b2, resolveModeDisplayName as b3, resolveModeRuntime as b4, resolveModesFromConfig as b5, resolveModifySlotsFromConfig as b6, resolvePhrasebookPath as b7, resolvePromptRulePreset as b8, resolvePromptTargetLangName as b9, resolveRepoFileAnchors as ba, resolveSeedNames as bb, resolveSlotLabels as bc, rewritePromptDirect as bd, runtimeLanguagePair as be, sanitizePromptForTranslation as bf, saveUserLingualConfig as bg, shouldInjectNativeReplyGuard as bh, shouldShieldBypass as bi, shouldTriggerTranslation as bj, stripLingualAnnotation as bk, toCleanString as bl, translateCore as bm, translatePrompt as bn, withStreamingPartial as bo, type CustomSlotsConfig as c, DEFAULT_KILL_LIST as d, LANGUAGE_PAIR_ANCHORS as e, LANGUAGE_PRESETS as f, LANGUAGE_SPECS as g, LEGACY_SLOT_PRESETS as h, LINGUAL_SYSTEM_PROMPT as i, type LanguageAnchor as j, type LanguageSpec as k, type LinguaI18nLabels as l, LinguaLruCache as m, type LingualConfig as n, type LingualCoreOptions as o, LingualLruCache as p, type LingualMode as q, type LingualRequest as r, type LingualResponse as s, type LoadoutDefinition as t, MAX_TRANSLATION_CHARS as u, MAX_TRANSLATION_LINES as v, type ModeAction as w, type ModeFlow as x, type ModeHud as y, type ModeTarget as z };
+/**
+ * Opt-in Daily Markdown Journal (`LINGUAL_LOG=1` / `/lingual log`).
+ *
+ * Appends generated companion cards to a local Markdown file (`~/lingual-log/YYYY-MM-DD.md`
+ * or `$LINGUAL_LOG_DIR/YYYY-MM-DD.md`), deduplicated by source text per day, using the
+ * active localized UI slot labels and zero extra model calls.
+ */
+
+interface JournalConfig {
+    enabled: boolean;
+    dir: string;
+}
+declare function formatJournalDate(now?: Date): string;
+declare function formatJournalTime(now?: Date): string;
+declare function resolveJournalConfig(overrides?: {
+    enabled?: boolean;
+    dir?: string;
+}): JournalConfig;
+declare function resolveDailyJournalPath(customDir?: string, now?: Date): string | null;
+declare function formatJournalCardMarkdown(result: LingualResult, options?: {
+    labels?: Partial<LingualI18nLabels>;
+    sourceLang?: string;
+    targetLang?: string;
+    now?: Date;
+}): string;
+declare function appendJournalCard(result: LingualResult, options?: {
+    labels?: Partial<LingualI18nLabels>;
+    sourceLang?: string;
+    targetLang?: string;
+    customDir?: string;
+    now?: Date;
+}): {
+    written: boolean;
+    filePath?: string;
+};
+declare function clearJournalMemoryCache(): void;
+
+export { type SeedNames as $, LookupError as A, BLOCKED_JSON_KEYS as B, type CustomModeConfig as C, DEFAULT_CONFIG as D, type ExtensionState as E, type LookupProvider as F, MAX_TRANSLATION_CHARS as G, type HudVariant as H, MAX_TRANSLATION_LINES as I, type JournalConfig as J, type ModeAction as K, type LingualResult as L, type ModeRuntime as M, type ModeFlow as N, type ModeHud as O, type PromptSlotConfig as P, type ModeTarget as Q, PRESET_LOADOUTS as R, type SlotConfig as S, PROMPT_RULE_PRESETS as T, type PhrasebookEntry as U, type PromptCandidate as V, type ReasoningEffort as W, type ResolveModeOptions as X, SEED_NAMES as Y, SUPPORTED_LANG_CODES as Z, type SanitizedPromptResult as _, type LingualI18nLabels as a, localizeSlotLabel as a$, type SlotDefinition as a0, type SlotLabelsDef as a1, type SlotResult as a2, type SlotRole as a3, type TranslationPayload as a4, type UserLingualConfig as a5, appendJournalCard as a6, buildDirectRewriteSystemPrompt as a7, buildModifySystemPrompt as a8, buildPromptCandidatesSystemPrompt as a9, getDefaultModifySlots as aA, getDefaultPromptSlots as aB, getDefaultSlots as aC, getPiAgentDir as aD, getPresetLoadout as aE, globalLinguaCache as aF, globalLingualCache as aG, globalLookupCache as aH, googleTargetCode as aI, hasExternalConfigUpdate as aJ, hasSourceScript as aK, interpolatePromptVariables as aL, invalidateUserConfigCache as aM, isDynamicLongInput as aN, isImperativeEngineeringPrompt as aO, isLookupSelection as aP, isNonEnglish as aQ, isSupportedLangCode as aR, isTargetLanguageOnly as aS, isTestEnvironment as aT, isUserLingualConfigured as aU, listPresetLoadouts as aV, listRepoFiles as aW, loadUserConfig as aX, loadUserLingualConfig as aY, localizeModeName as aZ, localizeModes as a_, buildStreamingResult as aa, buildSystemPrompt as ab, clearJournalMemoryCache as ac, clearPhrasebook as ad, clearRepoFileCache as ae, compileKillListInstruction as af, compileModeSystemPrompt as ag, defaultSlotsForMode as ah, detectScriptLanguage as ai, ensureCodeTokensPreserved as aj, executeLlmCompletion as ak, executeModeRunner as al, exportPhrasebook as am, extractCleanJsonField as an, extractQueryIdentifiers as ao, formatJournalCardMarkdown as ap, formatJournalDate as aq, formatJournalTime as ar, formatModelSelectionMessage as as, formatNativeReplyGuardHint as at, formatPhrasebookDigest as au, formatRepoGroundingHint as av, formatStatusReport as aw, generatePromptCandidates as ax, getDefaultDirectSlots as ay, getDefaultFactoryModes as az, type LookupConfig as b, lookupSystemPrompt as b0, lookupTranslate as b1, markConfigSynced as b2, normalizeActiveModeId as b3, normalizeHudVariant as b4, normalizeLangCode as b5, normalizeLingualModeInput as b6, normalizePromptRules as b7, normalizeSelection as b8, parseGoogleLookup as b9, resolveSeedNames as bA, resolveSlotLabels as bB, rewritePromptDirect as bC, runtimeLanguagePair as bD, sanitizePromptForTranslation as bE, saveUserLingualConfig as bF, shouldInjectNativeReplyGuard as bG, shouldShieldBypass as bH, shouldTriggerTranslation as bI, stripLingualAnnotation as bJ, toCleanString as bK, translateCore as bL, translatePrompt as bM, withStreamingPartial as bN, parseLlmResponse as ba, parsePartialJsonFields as bb, parseVocabEntries as bc, pickPrimaryContent as bd, primarySlot as be, readPhrasebook as bf, recordPhrasebookFromResult as bg, repairAndParseJsonObject as bh, resolveCandidateSlotsFromConfig as bi, resolveDailyJournalPath as bj, resolveDirectSlotsFromConfig as bk, resolveJournalConfig as bl, resolveLabelsForLang as bm, resolveLangPair as bn, resolveLanguageName as bo, resolveLanguagePairAnchors as bp, resolveLookupConfig as bq, resolveLookupStrings as br, resolveModeDisplayName as bs, resolveModeRuntime as bt, resolveModesFromConfig as bu, resolveModifySlotsFromConfig as bv, resolvePhrasebookPath as bw, resolvePromptRulePreset as bx, resolvePromptTargetLangName as by, resolveRepoFileAnchors as bz, type LookupStrings as c, type LookupRequest as d, type CacheStats as e, type CustomSlotsConfig as f, DEFAULT_KILL_LIST as g, DEFAULT_LOOKUP as h, LANGUAGE_PAIR_ANCHORS as i, LANGUAGE_PRESETS as j, LANGUAGE_SPECS as k, LEGACY_SLOT_PRESETS as l, LINGUAL_SYSTEM_PROMPT as m, LOOKUP_MAX_TOKENS as n, type LanguageAnchor as o, type LanguageSpec as p, type LinguaI18nLabels as q, LinguaLruCache as r, type LingualConfig as s, type LingualCoreOptions as t, LingualLruCache as u, type LingualMode as v, type LingualRequest as w, type LingualResponse as x, type LoadoutDefinition as y, type LookupDeps as z };

@@ -7,8 +7,7 @@
 [![npm version](https://img.shields.io/npm/v/pi-lingual?color=blue)](https://www.npmjs.com/package/pi-lingual)
 [![npm downloads](https://img.shields.io/npm/dm/pi-lingual?color=22c55e&label=downloads)](https://www.npmjs.com/package/pi-lingual)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Built for Pi](https://img.shields.io/badge/Built%20for-Pi%20Coding%20Agent-orange)](https://github.com/earendil-works/pi-coding-agent)
-[![Tests](https://img.shields.io/badge/Tests-116%2F116%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
+[![Tests](https://img.shields.io/badge/Tests-146%2F146%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict%20Zero%20Error-blue)](tsconfig.json)
 
 [English](./README.md) | **简体中文** | [日本語](./README_ja.md)
@@ -155,6 +154,35 @@ pi install npm:pi-lingual
    *在 tmux、WezTerm 等窄分屏下节省 80% 纵向空间。当终端高度不足 22 行时自动生效。*
 
 ---
+## 双击查词：全屏记录里的随手字典
+
+全屏模式下双击（或拖选）一个单词，复制照旧发生，同时输入框上方浮出一张查词卡片，方向与伴学卡相反：**外语 → 你的母语**。语言对直接复用 `/lang` 的设置（`zh ⇄ en` 下双击英文词查中文，`en ⇄ ja` 下双击日文词查英文），不需要第二套配置。
+
+```text
+  · [查词] over-engineered
+  ┌ 过度工程化；也可以指方案设计得比实际需要复杂
+  └ 点击关闭 · 12s
+```
+
+- **默认走 Google 免费词典**：无需 key，单词级查询通常在几百毫秒内返回，不占用模型额度。`/lingual lookup model` 可切到模型通道（复用 `/lingual model` 指定的侧车模型），适合 Google 不可达的网络，或需要上下文的长短语。
+- **只对值得查的东西弹窗**：整段代码、路径、URL、命令行、以及你自己语言的句子一律不触发；可用词数与字数上限（`maxWords` / `maxChars`）控制颗粒度。
+- **不抢输入焦点**：卡片是 non-capturing 浮层，打字继续进编辑器，点一下或等超时后自动消失；同样的词在 200 条 LRU 缓存内秒回，不重复发请求。
+- **仅在 fullscreen 生效**：regular 模式下终端拥有选区，插件拿不到复制事件，此时请用 `/lingual lookup <文本>` 手动查。
+- **关闭**：`/lingual lookup off`（关闭态零监听、零请求）。
+
+---
+
+## 每日 Markdown 伴学手账：课后复盘与生词沉淀
+
+伴学卡片在终端滚动后不会丢失！`pi-lingual` 原生提供 0 额外 Token 消耗的每日 Markdown 手账功能，将伴学卡片（原文、口语、书面语、词汇，按日自动去重）记录到本地日记文件（`~/lingual-log/YYYY-MM-DD.md`）。
+
+- **即开即用**：设置环境变量 `LINGUAL_LOG=1` 或在 Pi 内执行 `/lingual log on`。
+- **零额外模型调用**：直接复用当轮伴学结果与当前本地化槽位标签（`[原文]`、`[口语]`、`[写作]`、`[重点]`），不发多余网络请求。
+- **按日去重**：同一天内相同的输入提示词自动去重，手账精炼干净。
+- **支持自定义目录**：通过 `LINGUAL_LOG_DIR=/path/to/notes` 或 `/lingual log dir <path>` 指定手账存放目录。
+
+---
+
 
 ## 多语言真实场景对照
 
@@ -228,6 +256,8 @@ pi install npm:pi-lingual
 | ↳ 快捷开关 | `/lingual on` \| `off` | 快捷开启伴学或完全关闭（关闭态 0 像素、0 监听、0 Token 消耗） |
 | ↳ 语言对切换 | `/lingual lang [pair]` 或 `/lang` | 切换伴学语言流向（如 `/lang ja`、`/lingual lang ja en`、`/lingual lang 日语`） |
 | ↳ 认知卡回放 | `/lingual last` \| `replay` | 重新浮现上一条伴学或改写认知卡片 |
+| ↳ 双击查词 | `/lingual lookup [on\|off\|google\|model\|status\|<文本>]` | 全屏双击单词弹出外语→母语查词卡；默认 Google，可切模型通道 |
+| ↳ 每日手账 | `/lingual log [on\|off\|status\|dir <路径>]` | 将伴学卡片按天归档至本地 Markdown 手账（`~/lingual-log/YYYY-MM-DD.md`） |
 | ↳ 默认模式定锚 | `/lingual default [1\|2\|3\|0\|id]` | 查看或固定所有新会话的默认模式（`defaultMode`），彻底避免多会话相互漂移 |
 | ↳ 布局切换 | `/lingual compact` | 切换单行胶囊模式与开放式左导轨树状架构 |
 | ↳ 思考深度 | `/lingual reasoning [low\|medium\|high]` | 调节模型推理思考深度（日常 `low` 快速响应（取决于模型提供商），结构化 `spec` 自适应 `medium`） |
@@ -318,7 +348,7 @@ npm run build       # 多入口生产构建 (插件 + 核心语言引擎)
 
 ```bash
 npm run typecheck   # TypeScript Strict 严格类型检查 (0 错误)
-npm test            # 116/116 项自动化物理测试全绿通过 (100% 通过)
+npm test            # 146/146 项自动化物理测试全绿通过 (100% 通过)
 npm run build       # tsup 多入口双架构编译 (extension + core engine)
 ```
 

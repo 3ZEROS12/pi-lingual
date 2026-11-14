@@ -16,4 +16,10 @@ export * from "./completer.js";
 export * from "./core/index.js";
 export * from "./grounding.js";
 export * from "./phrasebook.js";
+export * from "./lookup.js";
+export * from "./lookup-strings.js";
+export * from "./lookup-popup.js";
+export * from "./lookup-hook.js";
+export * from "./lookup-controller.js";
+export * from "./journal.js";
 

@@ -2,6 +2,7 @@ import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-a
 import type { ExtensionState, LingualResult } from "../types.js";
 import type { ModeRuntime } from "../runtime.js";
 import type { LingualSessionController } from "../fsm.js";
+import type { LookupController } from "../lookup-controller.js";
 
 export interface CommandHandlerDeps {
   state: ExtensionState;
@@ -20,6 +21,7 @@ export interface CommandHandlerDeps {
   syncResizeListener: () => void;
   clearPendingTimers: () => void;
   armTuner: () => void;
+  lookupController?: LookupController;
   pi: ExtensionAPI;
 }
 
@@ -38,5 +40,7 @@ export interface CommandHandlers {
   digestHandler: (args: string, ctx: ExtensionContext) => Promise<void>;
   setReasoningHandler: (args: string, ctx: ExtensionContext) => Promise<void>;
   setDefaultModeHandler: (args: string, ctx: ExtensionContext) => Promise<void>;
+  lookupHandler: (args: string, ctx: ExtensionContext) => Promise<void>;
+  journalHandler: (args: string, ctx: ExtensionContext) => Promise<void>;
   masterCommandHandler: (args: string, ctx: ExtensionContext) => Promise<void>;
 }

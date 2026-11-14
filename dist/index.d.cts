@@ -1,5 +1,5 @@
-import { S as SlotConfig, C as CustomModeConfig, P as PromptSlotConfig, L as LingualResult, a as LingualI18nLabels, E as ExtensionState, M as ModeRuntime } from './index-BHpoeBEe.cjs';
-export { B as BLOCKED_JSON_KEYS, b as CacheStats, c as CustomSlotsConfig, D as DEFAULT_CONFIG, d as DEFAULT_KILL_LIST, H as HudVariant, e as LANGUAGE_PAIR_ANCHORS, f as LANGUAGE_PRESETS, g as LANGUAGE_SPECS, h as LEGACY_SLOT_PRESETS, i as LINGUAL_SYSTEM_PROMPT, j as LanguageAnchor, k as LanguageSpec, l as LinguaI18nLabels, m as LinguaLruCache, n as LingualConfig, o as LingualCoreOptions, p as LingualLruCache, q as LingualMode, r as LingualRequest, s as LingualResponse, t as LoadoutDefinition, u as MAX_TRANSLATION_CHARS, v as MAX_TRANSLATION_LINES, w as ModeAction, x as ModeFlow, y as ModeHud, z as ModeTarget, A as PRESET_LOADOUTS, F as PROMPT_RULE_PRESETS, G as PhrasebookEntry, I as PromptCandidate, R as ReasoningEffort, J as ResolveModeOptions, K as SEED_NAMES, N as SUPPORTED_LANG_CODES, O as SanitizedPromptResult, Q as SeedNames, T as SlotDefinition, U as SlotLabelsDef, V as SlotResult, W as SlotRole, X as TranslationPayload, Y as UserLingualConfig, Z as buildDirectRewriteSystemPrompt, _ as buildModifySystemPrompt, $ as buildPromptCandidatesSystemPrompt, a0 as buildStreamingResult, a1 as buildSystemPrompt, a2 as clearPhrasebook, a3 as clearRepoFileCache, a4 as compileKillListInstruction, a5 as compileModeSystemPrompt, a6 as defaultSlotsForMode, a7 as detectScriptLanguage, a8 as ensureCodeTokensPreserved, a9 as executeLlmCompletion, aa as executeModeRunner, ab as exportPhrasebook, ac as extractCleanJsonField, ad as extractQueryIdentifiers, ae as formatModelSelectionMessage, af as formatNativeReplyGuardHint, ag as formatPhrasebookDigest, ah as formatRepoGroundingHint, ai as formatStatusReport, aj as generatePromptCandidates, ak as getDefaultDirectSlots, al as getDefaultFactoryModes, am as getDefaultModifySlots, an as getDefaultPromptSlots, ao as getDefaultSlots, ap as getPiAgentDir, aq as getPresetLoadout, ar as globalLinguaCache, as as globalLingualCache, at as hasExternalConfigUpdate, au as hasSourceScript, av as interpolatePromptVariables, aw as invalidateUserConfigCache, ax as isDynamicLongInput, ay as isImperativeEngineeringPrompt, az as isNonEnglish, aA as isSupportedLangCode, aB as isTargetLanguageOnly, aC as isTestEnvironment, aD as isUserLingualConfigured, aE as listPresetLoadouts, aF as listRepoFiles, aG as loadUserConfig, aH as loadUserLingualConfig, aI as localizeModeName, aJ as localizeModes, aK as localizeSlotLabel, aL as markConfigSynced, aM as normalizeActiveModeId, aN as normalizeHudVariant, aO as normalizeLangCode, aP as normalizeLingualModeInput, aQ as normalizePromptRules, aR as parseLlmResponse, aS as parsePartialJsonFields, aT as parseVocabEntries, aU as pickPrimaryContent, aV as primarySlot, aW as readPhrasebook, aX as recordPhrasebookFromResult, aY as repairAndParseJsonObject, aZ as resolveCandidateSlotsFromConfig, a_ as resolveDirectSlotsFromConfig, a$ as resolveLabelsForLang, b0 as resolveLangPair, b1 as resolveLanguageName, b2 as resolveLanguagePairAnchors, b3 as resolveModeDisplayName, b4 as resolveModeRuntime, b5 as resolveModesFromConfig, b6 as resolveModifySlotsFromConfig, b7 as resolvePhrasebookPath, b8 as resolvePromptRulePreset, b9 as resolvePromptTargetLangName, ba as resolveRepoFileAnchors, bb as resolveSeedNames, bc as resolveSlotLabels, bd as rewritePromptDirect, be as runtimeLanguagePair, bf as sanitizePromptForTranslation, bg as saveUserLingualConfig, bh as shouldInjectNativeReplyGuard, bi as shouldShieldBypass, bj as shouldTriggerTranslation, bk as stripLingualAnnotation, bl as toCleanString, bm as translateCore, bn as translatePrompt, bo as withStreamingPartial } from './index-BHpoeBEe.cjs';
+import { S as SlotConfig, C as CustomModeConfig, P as PromptSlotConfig, L as LingualResult, a as LingualI18nLabels, b as LookupConfig, c as LookupStrings, d as LookupRequest, E as ExtensionState, M as ModeRuntime } from './index-77UGxb_0.cjs';
+export { B as BLOCKED_JSON_KEYS, e as CacheStats, f as CustomSlotsConfig, D as DEFAULT_CONFIG, g as DEFAULT_KILL_LIST, h as DEFAULT_LOOKUP, H as HudVariant, J as JournalConfig, i as LANGUAGE_PAIR_ANCHORS, j as LANGUAGE_PRESETS, k as LANGUAGE_SPECS, l as LEGACY_SLOT_PRESETS, m as LINGUAL_SYSTEM_PROMPT, n as LOOKUP_MAX_TOKENS, o as LanguageAnchor, p as LanguageSpec, q as LinguaI18nLabels, r as LinguaLruCache, s as LingualConfig, t as LingualCoreOptions, u as LingualLruCache, v as LingualMode, w as LingualRequest, x as LingualResponse, y as LoadoutDefinition, z as LookupDeps, A as LookupError, F as LookupProvider, G as MAX_TRANSLATION_CHARS, I as MAX_TRANSLATION_LINES, K as ModeAction, N as ModeFlow, O as ModeHud, Q as ModeTarget, R as PRESET_LOADOUTS, T as PROMPT_RULE_PRESETS, U as PhrasebookEntry, V as PromptCandidate, W as ReasoningEffort, X as ResolveModeOptions, Y as SEED_NAMES, Z as SUPPORTED_LANG_CODES, _ as SanitizedPromptResult, $ as SeedNames, a0 as SlotDefinition, a1 as SlotLabelsDef, a2 as SlotResult, a3 as SlotRole, a4 as TranslationPayload, a5 as UserLingualConfig, a6 as appendJournalCard, a7 as buildDirectRewriteSystemPrompt, a8 as buildModifySystemPrompt, a9 as buildPromptCandidatesSystemPrompt, aa as buildStreamingResult, ab as buildSystemPrompt, ac as clearJournalMemoryCache, ad as clearPhrasebook, ae as clearRepoFileCache, af as compileKillListInstruction, ag as compileModeSystemPrompt, ah as defaultSlotsForMode, ai as detectScriptLanguage, aj as ensureCodeTokensPreserved, ak as executeLlmCompletion, al as executeModeRunner, am as exportPhrasebook, an as extractCleanJsonField, ao as extractQueryIdentifiers, ap as formatJournalCardMarkdown, aq as formatJournalDate, ar as formatJournalTime, as as formatModelSelectionMessage, at as formatNativeReplyGuardHint, au as formatPhrasebookDigest, av as formatRepoGroundingHint, aw as formatStatusReport, ax as generatePromptCandidates, ay as getDefaultDirectSlots, az as getDefaultFactoryModes, aA as getDefaultModifySlots, aB as getDefaultPromptSlots, aC as getDefaultSlots, aD as getPiAgentDir, aE as getPresetLoadout, aF as globalLinguaCache, aG as globalLingualCache, aH as globalLookupCache, aI as googleTargetCode, aJ as hasExternalConfigUpdate, aK as hasSourceScript, aL as interpolatePromptVariables, aM as invalidateUserConfigCache, aN as isDynamicLongInput, aO as isImperativeEngineeringPrompt, aP as isLookupSelection, aQ as isNonEnglish, aR as isSupportedLangCode, aS as isTargetLanguageOnly, aT as isTestEnvironment, aU as isUserLingualConfigured, aV as listPresetLoadouts, aW as listRepoFiles, aX as loadUserConfig, aY as loadUserLingualConfig, aZ as localizeModeName, a_ as localizeModes, a$ as localizeSlotLabel, b0 as lookupSystemPrompt, b1 as lookupTranslate, b2 as markConfigSynced, b3 as normalizeActiveModeId, b4 as normalizeHudVariant, b5 as normalizeLangCode, b6 as normalizeLingualModeInput, b7 as normalizePromptRules, b8 as normalizeSelection, b9 as parseGoogleLookup, ba as parseLlmResponse, bb as parsePartialJsonFields, bc as parseVocabEntries, bd as pickPrimaryContent, be as primarySlot, bf as readPhrasebook, bg as recordPhrasebookFromResult, bh as repairAndParseJsonObject, bi as resolveCandidateSlotsFromConfig, bj as resolveDailyJournalPath, bk as resolveDirectSlotsFromConfig, bl as resolveJournalConfig, bm as resolveLabelsForLang, bn as resolveLangPair, bo as resolveLanguageName, bp as resolveLanguagePairAnchors, bq as resolveLookupConfig, br as resolveLookupStrings, bs as resolveModeDisplayName, bt as resolveModeRuntime, bu as resolveModesFromConfig, bv as resolveModifySlotsFromConfig, bw as resolvePhrasebookPath, bx as resolvePromptRulePreset, by as resolvePromptTargetLangName, bz as resolveRepoFileAnchors, bA as resolveSeedNames, bB as resolveSlotLabels, bC as rewritePromptDirect, bD as runtimeLanguagePair, bE as sanitizePromptForTranslation, bF as saveUserLingualConfig, bG as shouldInjectNativeReplyGuard, bH as shouldShieldBypass, bI as shouldTriggerTranslation, bJ as stripLingualAnnotation, bK as toCleanString, bL as translateCore, bM as translatePrompt, bN as withStreamingPartial } from './index-77UGxb_0.cjs';
 import { ExtensionContext, ExtensionAPI } from '@earendil-works/pi-coding-agent';
 
 declare const CURRENT_FEATURE_BANNER_VERSION = "0.7.0";
@@ -212,6 +212,75 @@ declare class LingualSessionController {
     reset(): void;
 }
 
+/**
+ * Observing what the user copied in the fullscreen transcript.
+ *
+ * Fullscreen mode owns text selection: a double-click, a drag, and the copy
+ * keybinding all end in the same injected clipboard callback that pi hands to
+ * the alternate-screen renderer. The TUI exposes no copy event and consumes
+ * mouse input before extension listeners see it, so that callback is the only
+ * place a lookup can learn "the user copied this". We wrap it on the live
+ * renderer instance, leave pi's own clipboard behaviour untouched, and notify
+ * only after a copy that actually succeeded.
+ */
+type CopyHookTarget = "copySelection" | "copyTextToClipboard" | "none";
+type CopyListener = (text: string) => void;
+declare function attachCopyHook(tui: unknown, listener: CopyListener): CopyHookTarget;
+
+/**
+ * Wires a copied selection to the lookup popup.
+ *
+ * The controller owns the short-lived state a popup needs: the overlay handle,
+ * the auto-dismiss timer, the in-flight request, and a small cache so that
+ * double-clicking the same word twice does not buy the same lookup twice.
+ * Settings are read through a callback on every use, so `/lang` and
+ * `/lingual lookup` take effect without re-attaching anything.
+ */
+
+type LookupComplete = (text: string, systemPrompt: string, signal: AbortSignal) => Promise<string | null>;
+interface LookupSettings {
+    config: LookupConfig;
+    /** Reader's language: where the copied text is translated to. */
+    nativeLang: string;
+    /** Language of the transcript: what a copied selection is expected to be. */
+    foreignLang: string;
+    strings: LookupStrings;
+    complete?: LookupComplete;
+}
+interface LookupControllerDeps {
+    translate?: (request: LookupRequest, deps: {
+        complete?: LookupComplete;
+    }) => Promise<string>;
+}
+declare class LookupController {
+    private readonly settings;
+    private readonly runLookup;
+    private ctx?;
+    private tui?;
+    private overlay?;
+    private popup?;
+    private dismissTimer?;
+    private abort?;
+    private inFlight?;
+    private last?;
+    private unsupportedWarned;
+    constructor(settings: () => LookupSettings, deps?: LookupControllerDeps);
+    /** The freshest context, so the popup follows `/model` and other session changes. */
+    setContext(ctx: ExtensionContext | null | undefined): void;
+    get lastSelection(): string | undefined;
+    /** Wraps the renderer's clipboard callback. Returns which callback was found. */
+    attach(tui: unknown, notifyUnsupported: (message: string) => void): CopyHookTarget;
+    private onCopy;
+    /** Open the popup for `raw`. Resolves once the translation is on screen or has failed. */
+    show(raw: string): Promise<void>;
+    private showUnsafe;
+    close(): void;
+    private openPopup;
+    private requestRender;
+    private scheduleDismiss;
+    private clearDismissTimer;
+}
+
 interface CommandHandlerDeps {
     state: ExtensionState;
     session: LingualSessionController;
@@ -228,6 +297,7 @@ interface CommandHandlerDeps {
     syncResizeListener: () => void;
     clearPendingTimers: () => void;
     armTuner: () => void;
+    lookupController?: LookupController;
     pi: ExtensionAPI;
 }
 interface CommandHandlers {
@@ -245,6 +315,8 @@ interface CommandHandlers {
     digestHandler: (args: string, ctx: ExtensionContext) => Promise<void>;
     setReasoningHandler: (args: string, ctx: ExtensionContext) => Promise<void>;
     setDefaultModeHandler: (args: string, ctx: ExtensionContext) => Promise<void>;
+    lookupHandler: (args: string, ctx: ExtensionContext) => Promise<void>;
+    journalHandler: (args: string, ctx: ExtensionContext) => Promise<void>;
     masterCommandHandler: (args: string, ctx: ExtensionContext) => Promise<void>;
 }
 
@@ -277,4 +349,56 @@ declare function createModelCompleter(ctx: ExtensionContext, getSelectedModel: (
     onDelta?: (fullText: string) => void;
 }) => Promise<string | null>;
 
-export { CANNOT_START_LINE_CHARS, CURRENT_FEATURE_BANNER_VERSION, type CommandHandlerDeps, type CommandHandlers, CustomModeConfig, ExtensionState, LingualI18nLabels, LingualResult, LingualSessionController, type ModeDisplaySpec, type ModePickerOption, ModeRuntime, type PaginationSnapshot, PromptSlotConfig, SLOT_PRESETS, type SelectPromptSpec, type SessionRequestToken, SlotConfig, type SlotPresetDefinition, addCustomMode, addSlotToList, addSlotToMode, createCommandHandlers, createCustomSlot, createModelCompleter, extractVocabPhrases, formatCapsuleLine, formatLoadingMessage, formatModePickerLines, formatReleaseBannerLines, formatSubRail, formatTerminalAnnotation, formatTreeBranch, formatVocabItemsAtomic, getBannerMaxCols, getEffectiveMaxCols, getPiGlobalDefaultModel, getVisualWidth, moveSlotInList, removeCustomMode, removeSlotFromList, removeSlotFromMode, renderCardLayout, resolveModeDisplaySpec, resolveReleaseBannerLang, resolveSelectPrompts, resolveSlotsForPreset, resolveTargetModel, splitSemanticChunks, spotlightPhrases, stripLingualContextWhenOff, toggleCustomMode, toggleSlotInList, truncateVisual, updateCustomMode, updateSlotInList, wrapVisualText, wrapVocabItemsAtomic };
+/**
+ * The lookup popup.
+ *
+ * Rendered into a non-capturing overlay so typing keeps going to the editor
+ * while the translation is on screen. The layout follows the same open
+ * left-rail idiom as the HUD card (no closed box, width measured with the
+ * UAX #11 helper) because that is what keeps CJK from tearing the frame.
+ */
+
+type LookupPopupStatus = "loading" | "ready" | "error";
+/** Minimal surface of the pi theme object the popup needs. */
+interface PopupTheme {
+    fg(color: string, text: string): string;
+    bold(text: string): string;
+}
+interface MousePress {
+    type: string;
+}
+declare class LookupPopup {
+    private readonly theme;
+    private readonly strings;
+    private readonly headword;
+    private readonly hint;
+    private readonly onDismiss;
+    private status;
+    private body;
+    private cachedWidth?;
+    private cachedLines?;
+    constructor(theme: PopupTheme, strings: LookupStrings, headword: string, hint: string, onDismiss: () => void);
+    get currentStatus(): LookupPopupStatus;
+    get currentBody(): string;
+    setResult(text: string): void;
+    setError(message: string): void;
+    invalidate(): void;
+    handleMouse(event: MousePress): {
+        handled: boolean;
+        render: boolean;
+    } | undefined;
+    render(width: number): string[];
+    private layout;
+    private bodyText;
+    /**
+     * Theme methods must be called through the object: pi implements `fg` as a
+     * class method, so a destructured reference loses `this` and throws inside
+     * the renderer. A dead theme degrades to plain text instead of a crash.
+     */
+    private paint;
+    private strong;
+}
+/** Popup width: half the terminal, clamped so a single word still has room. */
+declare function lookupPopupWidth(columns: number): number;
+
+export { CANNOT_START_LINE_CHARS, CURRENT_FEATURE_BANNER_VERSION, type CommandHandlerDeps, type CommandHandlers, type CopyHookTarget, CustomModeConfig, ExtensionState, LingualI18nLabels, LingualResult, LingualSessionController, type LookupComplete, LookupConfig, LookupController, type LookupControllerDeps, LookupPopup, type LookupPopupStatus, LookupRequest, type LookupSettings, LookupStrings, type ModeDisplaySpec, type ModePickerOption, ModeRuntime, type MousePress, type PaginationSnapshot, type PopupTheme, PromptSlotConfig, SLOT_PRESETS, type SelectPromptSpec, type SessionRequestToken, SlotConfig, type SlotPresetDefinition, addCustomMode, addSlotToList, addSlotToMode, attachCopyHook, createCommandHandlers, createCustomSlot, createModelCompleter, extractVocabPhrases, formatCapsuleLine, formatLoadingMessage, formatModePickerLines, formatReleaseBannerLines, formatSubRail, formatTerminalAnnotation, formatTreeBranch, formatVocabItemsAtomic, getBannerMaxCols, getEffectiveMaxCols, getPiGlobalDefaultModel, getVisualWidth, lookupPopupWidth, moveSlotInList, removeCustomMode, removeSlotFromList, removeSlotFromMode, renderCardLayout, resolveModeDisplaySpec, resolveReleaseBannerLang, resolveSelectPrompts, resolveSlotsForPreset, resolveTargetModel, splitSemanticChunks, spotlightPhrases, stripLingualContextWhenOff, toggleCustomMode, toggleSlotInList, truncateVisual, updateCustomMode, updateSlotInList, wrapVisualText, wrapVocabItemsAtomic };

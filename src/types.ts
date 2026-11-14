@@ -1,3 +1,5 @@
+import type { LookupConfig } from "./lookup.js";
+
 export type LingualMode = "original" | "english" | "select" | "modify" | "off" | string;
 export type ModeAction = "pass-through" | "transform" | "select";
 export type ModeFlow = "translate" | "proofread" | "custom";
@@ -240,6 +242,9 @@ export interface LingualConfig {
   reasoning?: ReasoningEffort | string;
   timeoutMs?: number;
   killList?: string[];             // Mode-level forbidden AI clichés (pass-through modes)
+  lookup?: Partial<LookupConfig>;  // Double-click word lookup (provider, model, popup timing, selection caps)
+  journal?: boolean;               // Opt-in daily Markdown companion log (~/lingual-log/YYYY-MM-DD.md)
+  journalDir?: string;             // Optional directory override for daily Markdown journal
   onDelta?: (fullText: string) => void;              // Streaming transport hook (internal)
   onPartial?: (fields: Record<string, string>) => void; // Parsed partial JSON fields (internal)
   complete?: (text: string, systemPrompt: string, signal?: AbortSignal, options?: { reasoning?: string; onDelta?: (fullText: string) => void }) => Promise<string | null>;

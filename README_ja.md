@@ -7,8 +7,7 @@ Pi Coding Agent のためのバイリンガル・ターミナル HUD ＆ プロ�
 [![npm version](https://img.shields.io/npm/v/pi-lingual?color=blue)](https://www.npmjs.com/package/pi-lingual)
 [![npm downloads](https://img.shields.io/npm/dm/pi-lingual?color=22c55e&label=downloads)](https://www.npmjs.com/package/pi-lingual)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Built for Pi](https://img.shields.io/badge/Built%20for-Pi%20Coding%20Agent-orange)](https://github.com/earendil-works/pi-coding-agent)
-[![Tests](https://img.shields.io/badge/Tests-116%2F116%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
+[![Tests](https://img.shields.io/badge/Tests-146%2F146%20Pass%20(100%25)-brightgreen)](tests/engine.test.ts)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict%20Zero%20Error-blue)](tsconfig.json)
 
 [English](./README.md) | [简体中文](./README_zh.md) | **日本語**
@@ -97,6 +96,37 @@ Enter キーを押した後、LLM がコードを生成するまでには通常 
 
 ---
 
+## ダブルクリック検索：履歴の中で引く辞書
+
+全画面モードで単語をダブルクリック（またはドラッグ選択）すると、コピーはそのままに行われ、入カエリアの上に伴走カードとは逆方向の検索カードが現れます（**外国語 → 母語**）。言語ペアは `/lang` の設定をそのまま使うため、別の設定は不要です。
+
+```text
+  · [検索] over-engineered
+  ┌ 過剰設計；実際に必要な以上に複雑な設計を指すこともある
+  └ クリックで閉じる · 12s
+```
+
+- **既定はキー不要の Google 辞書**：単語検索は数百ミリ秒で返り、モデルの消費はゼロです。`/lingual lookup model` でモデル経路（`/lingual model` のサイドカーモデル）に切り替えられます。
+- **検索に適した選択だけ反応**：コードブロック全体、パス、URL、シェルコマンド、母語の文は反応しません。粒度は `maxWords` / `maxChars` で調整できます。
+- **入力フォーカスを奪わない**：カードは non-capturing のオーバーレイなので、タイピングはそのままエディタに入ります。クリックかタイムアウトで消えます。
+- **全画面モード限定**：regular モードでは端末が選択を所有するため、`/lingual lookup <テキスト>` を利用してください。
+- **無効化**：`/lingual lookup off`（リスナーもリクエストもゼロ）。
+
+---
+
+## デイリー Markdown ジャーナル：学習の振り返りと蓄積
+
+ターミナルがスクロールされても、伴走カードを見失うことはありません。`pi-lingual` は追加のモデル呼び出しなしで、生成された伴走カードを日別の Markdown ノート（`~/lingual-log/YYYY-MM-DD.md`）へ自動記録します。
+
+- **いつでも有効化**：環境変数 `LINGUAL_LOG=1` を設定するか、Pi 内で `/lingual log on` を実行。
+- **モデル呼び出しゼロ**：そのターンの翻訳結果とローカライズされたスロット名（`[原文]`、`[口語]`、`[書面語]`、`[重要表現]`）から直接追記。
+- **日別自動重複排除**：同日内の同一プロンプトは 1 回のみ記録され、ノートをすっきり保ちます。
+- **保存先の変更**：`LINGUAL_LOG_DIR=/path/to/notes` または `/lingual log dir <path>` で指定可能。
+
+---
+
+---
+
 ## 整理されたコマンド構成（単一スーパーコマンド `/lingual` ＆ `/l`）
 
 Pi の `/` コマンドメニューを汚さないよう、登録されるトップレベルコマンドは `/lingual`（および超短縮エイリアス `/l`）と `/lang` のみに絞り込まれています：
@@ -108,6 +138,8 @@ Pi の `/` コマンドメニューを汚さないよう、登録されるトッ
 | ↳ オン／オフ | `/lingual on` \| `off` | 伴走モードの即時有効化または完全オフ（0 ピクセル、0 トークン） |
 | ↳ 言語ペア | `/lingual lang [pair]` または `/lang` | 翻訳方向の切替（例：`/lang ja`, `/lingual lang ja en`） |
 | ↳ 再表示 | `/lingual last` \| `replay` | 直前に生成された伴走カードや差分カードを再表示 |
+| ↳ 単語検索 | `/lingual lookup [on\|off\|google\|model\|status\|<テキスト>]` | 全画面で単語をダブルクリックすると外国語→母語の検索カードを表示（既定は Google、モデル経路も可） |
+| ↳ デイリー手帳 | `/lingual log [on\|off\|status\|dir <パス>]` | 伴走カードを日別 Markdown 手帳（`~/lingual-log/YYYY-MM-DD.md`）へ追記 |
 | ↳ レイアウト | `/lingual compact` | 1 行カプセル表示と開放型ツリー HUD のトグル切替 |
 | ↳ モードロック | `/lingual lock` \| `unlock` | 現在の動作モードを固定し、外部スクリプト等による予期せぬ変動を防止 |
 | ↳ 推論深度 | `/lingual reasoning [low\|medium\|high]` | モードごとの推論思考レベルを設定（日常は `low`、仕様策定は `medium`） |
@@ -181,9 +213,8 @@ Pi の `/` コマンドメニューを汚さないよう、登録されるトッ
 
 ```bash
 npm run typecheck   # TypeScript 厳格型チェック (0 エラー)
-npm test            # 全自動単体テスト (116/116 全件パス)
+npm test            # 全自動単体テスト (146/146 全件パス)
 npm run build       # 多重エントリビルド (拡張機能 + コアエンジン)
-```
 
 ---
 

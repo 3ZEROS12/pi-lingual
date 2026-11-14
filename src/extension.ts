@@ -30,7 +30,10 @@ import { hasActiveUI, safeClearWidget } from "./context.js";
 import { createCommandHandlers } from "./commands.js";
 import { createHudManager } from "./extension/hud.js";
 import { createInputDispatcher } from "./extension/dispatcher.js";
-
+import { createModelCompleter } from "./completer.js";
+import { LookupController } from "./lookup-controller.js";
+import { resolveLookupConfig } from "./lookup.js";
+import { resolveLookupStrings } from "./lookup-strings.js";
 export { extractRecentContextAnchor } from "./context.js";
 
 const initialDiskConfig = isTestEnvironment() ? {} : loadUserLingualConfig();
@@ -91,6 +94,49 @@ export default function (pi: ExtensionAPI) {
   let lastRawInputText = "";
   let showingReleaseBanner = false;
   let tunerArmed = false;
+
+  const lookupController = new LookupController(() => {
+    const disk = loadUserLingualConfig();
+    const raw = (disk as any).lookup;
+    const pinned = String(raw?.model || "").trim();
+    const rawConfig = resolveLookupConfig(raw, { model: pinned || state.selectedModel });
+    const config = { ...rawConfig, enabled: state.mode !== "off" && rawConfig.enabled };
+    const complete =
+      config.provider === "model" && lastContext
+        ? (text: string, systemPrompt: string, signal: AbortSignal) =>
+            createModelCompleter(lastContext!, () => config.model || state.selectedModel, {
+              reasoning: disk.reasoning ?? "low",
+            })(text, systemPrompt, signal)
+        : undefined;
+    return {
+      config,
+      nativeLang: state.sourceLang,
+      foreignLang: state.targetLang,
+      strings: resolveLookupStrings(state.sourceLang),
+      complete,
+    };
+  });
+
+  const attachLookupHost = (ctx: ExtensionContext) => {
+    lookupController.setContext(ctx);
+    if ((ctx as any).mode !== "tui") return;
+    const ui = ctx.ui as any;
+    if (typeof ui?.setWidget !== "function") return;
+    try {
+      ui.setWidget(
+        "lingual_lookup_host",
+        (tui: unknown) => {
+          lookupController.attach(tui, (message) => {
+            try {
+              ctx.ui.notify(`[lingual] ${message}`, "warning");
+            } catch {}
+          });
+          return { render: () => [], invalidate() {} };
+        },
+        { placement: "belowEditor" }
+      );
+    } catch {}
+  };
 
   const renderReleaseBanner = (ctx: ExtensionContext, explicitLang?: string): boolean => {
     if (!hasActiveUI(ctx)) return false;
@@ -159,6 +205,7 @@ export default function (pi: ExtensionAPI) {
       clearTimeout(resizeTimer);
       resizeTimer = undefined;
     }
+    lookupController.close();
   };
 
   pi.on("session_start", async (event: any, ctx) => {
@@ -225,6 +272,7 @@ export default function (pi: ExtensionAPI) {
 
     syncResizeListener();
     if (hasActiveUI(ctx)) {
+      attachLookupHost(ctx);
       safeClearWidget(ctx);
       if (
         state.mode !== "off" &&
@@ -261,6 +309,7 @@ export default function (pi: ExtensionAPI) {
   pi.on("session_shutdown", async () => {
     clearPendingTimers();
     session.abortActive();
+    lookupController.close();
     lastContext = null;
     if (process.stdout && typeof (process.stdout as any).off === "function") {
       (process.stdout as any).off("resize", onResize);
@@ -284,13 +333,14 @@ export default function (pi: ExtensionAPI) {
     armTuner: () => {
       tunerArmed = true;
     },
+    lookupController,
     pi,
   });
 
   pi.registerCommand("lingual", {
     description:
       state.labels.cmdDescMode ||
-      "Interactive mode picker or manage: /lingual [1|2|3|0|on|off|default|lang|last|lock|status]",
+      "Interactive mode picker or manage: /lingual [1|2|3|0|on|off|default|lang|last|lookup|log|lock|status]",
     handler: handlers.masterCommandHandler,
   });
   pi.registerCommand("l", {
