@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.0
+
+- **Double-click word lookup (#2)**: select a word in the transcript and double-click to look up its native-language meaning. The Google dictionary path resolves without spending model tokens; when a definition is missing, the configured model transport takes over, and API failures fall back rather than surfacing an error. Badges use `Theme.fg` so Pi 1.5 theming applies.
+- **Opt-in daily companion journal (#1)**: `LINGUAL_LOG=1` (or `/lingual log`) appends each settled exchange to `~/lingual-log/YYYY-MM-DD.md`. Off by default, zero disk writes when disabled, and repeated identical lines are de-duplicated so a replayed session does not duplicate entries.
+- **Localized slot logs**: slot resolution logs now follow the active UI language instead of mixing registers.
+- Test suite expanded to 146 tests passing.
+
 ## 0.7.1
 
 - **Modular Subsystem Architecture**: Split monolithic source files into cohesive domain modules (`src/i18n/`, `src/modes/`, `src/prompts/`, `src/layout/`, `src/commands/`, `src/engine/`, `src/extension/`).
