@@ -15,6 +15,7 @@ import {
   resolveModeDisplayName,
   localizeModeName,
   resolveSelectPrompts,
+  hasExternalConfigUpdate,
   loadUserLingualConfig,
   resolveModesFromConfig,
   normalizeActiveModeId,
@@ -39,13 +40,14 @@ export async function openModePicker(
   ctx: ExtensionContext,
   opts: OpenModePickerOptions
 ): Promise<string | null> {
+  const externalChanged = hasExternalConfigUpdate();
   const diskForMode = loadUserLingualConfig();
   const diskMode = diskForMode.activeModeId || diskForMode.mode;
   const modes = Array.isArray(opts.modes) && opts.modes.length > 0
     ? opts.modes
     : resolveModesFromConfig(diskForMode, opts.sourceLang);
   let currentMode = opts.mode;
-  if (diskMode && diskMode !== opts.mode) {
+  if (externalChanged && diskMode && diskMode !== opts.mode) {
     currentMode = normalizeActiveModeId({ mode: diskMode, activeModeId: diskMode }, modes);
   }
   const activeModes = modes.filter((m) => m.enabled !== false);

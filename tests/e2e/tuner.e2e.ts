@@ -17,8 +17,8 @@ test("L4a: Tuner contract test (real model config synthesis)", async (t) => {
   }
 
   const skillContent = fs.readFileSync(skillPath, "utf8");
-  const contractMatch = skillContent.match(/## 3\. Physical Persistence Contract[\s\S]*?```jsonc([\s\S]*?)```/);
-  const contractExcerpt = contractMatch ? contractMatch[1] : skillContent.slice(0, 2000);
+  const contractMatch = skillContent.match(/## 4\. Physical Configuration Reference[\s\S]*?```jsonc([\s\S]*?)```/);
+  const contractExcerpt = contractMatch ? contractMatch[1] : skillContent.slice(-2000);
 
   const sysPrompt = [
     "You are the lingual-tuner configuration engine.",

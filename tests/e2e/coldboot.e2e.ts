@@ -5,7 +5,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { e2eEnabled, withSandbox } from "./lib/driver.js";
-import { getDefaultFactoryModes, SUPPORTED_LANG_CODES } from "../../dist/index.js";
+import { CURRENT_FEATURE_BANNER_VERSION, getDefaultFactoryModes, SUPPORTED_LANG_CODES } from "../../dist/index.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "../..");
@@ -94,7 +94,7 @@ test("L8: Persistent config adherence & banner suppression on second boot", asyn
           targetLang: "en",
           mode: "direct",
           activeModeId: "direct",
-          lastSeenVersion: "0.6.0",
+          lastSeenVersion: CURRENT_FEATURE_BANNER_VERSION,
         },
         null,
         2

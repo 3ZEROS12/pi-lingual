@@ -30,103 +30,163 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 // src/core/index.ts
 var core_exports = {};
 __export(core_exports, {
-  CURRENT_FEATURE_BANNER_VERSION: () => CURRENT_FEATURE_BANNER_VERSION,
+  DEFAULT_CONFIG: () => DEFAULT_CONFIG,
   DEFAULT_KILL_LIST: () => DEFAULT_KILL_LIST,
-  LANGUAGE_PAIR_ANCHORS: () => LANGUAGE_PAIR_ANCHORS,
   LANGUAGE_PRESETS: () => LANGUAGE_PRESETS,
-  LANGUAGE_SPECS: () => LANGUAGE_SPECS,
-  LEGACY_SLOT_PRESETS: () => LEGACY_SLOT_PRESETS,
-  LinguaLruCache: () => LinguaLruCache,
   LingualLruCache: () => LingualLruCache,
   PRESET_LOADOUTS: () => PRESET_LOADOUTS,
-  PROMPT_RULE_PRESETS: () => PROMPT_RULE_PRESETS,
-  SEED_NAMES: () => SEED_NAMES,
-  SLOT_PRESETS: () => SLOT_PRESETS,
   SUPPORTED_LANG_CODES: () => SUPPORTED_LANG_CODES,
-  addCustomMode: () => addCustomMode,
-  addSlotToList: () => addSlotToList,
-  addSlotToMode: () => addSlotToMode,
-  buildDirectRewriteSystemPrompt: () => buildDirectRewriteSystemPrompt,
-  buildModifySystemPrompt: () => buildModifySystemPrompt,
-  buildPromptCandidatesSystemPrompt: () => buildPromptCandidatesSystemPrompt,
   buildStreamingResult: () => buildStreamingResult,
   buildSystemPrompt: () => buildSystemPrompt,
+  clearPhrasebook: () => clearPhrasebook,
+  clearRepoFileCache: () => clearRepoFileCache,
   compileKillListInstruction: () => compileKillListInstruction,
-  createCustomSlot: () => createCustomSlot,
-  defaultSlotsForMode: () => defaultSlotsForMode,
+  compileModeSystemPrompt: () => compileModeSystemPrompt,
   detectScriptLanguage: () => detectScriptLanguage,
   ensureCodeTokensPreserved: () => ensureCodeTokensPreserved,
-  formatModelSelectionMessage: () => formatModelSelectionMessage,
-  formatReleaseBannerLines: () => formatReleaseBannerLines,
-  formatStatusReport: () => formatStatusReport,
+  executeModeRunner: () => executeModeRunner,
+  exportPhrasebook: () => exportPhrasebook,
+  extractQueryIdentifiers: () => extractQueryIdentifiers,
+  formatPhrasebookDigest: () => formatPhrasebookDigest,
+  formatRepoGroundingHint: () => formatRepoGroundingHint,
   getDefaultDirectSlots: () => getDefaultDirectSlots,
   getDefaultFactoryModes: () => getDefaultFactoryModes,
   getDefaultModifySlots: () => getDefaultModifySlots,
   getDefaultPromptSlots: () => getDefaultPromptSlots,
   getDefaultSlots: () => getDefaultSlots,
   getPresetLoadout: () => getPresetLoadout,
-  globalLinguaCache: () => globalLinguaCache,
   globalLingualCache: () => globalLingualCache,
   hasSourceScript: () => hasSourceScript,
-  interpolatePromptVariables: () => interpolatePromptVariables,
   invalidateUserConfigCache: () => invalidateUserConfigCache,
-  isImperativeEngineeringPrompt: () => isImperativeEngineeringPrompt,
+  isDynamicLongInput: () => isDynamicLongInput,
   isNonEnglish: () => isNonEnglish,
   isSupportedLangCode: () => isSupportedLangCode,
   isTargetLanguageOnly: () => isTargetLanguageOnly,
-  isTestEnvironment: () => isTestEnvironment,
-  isUserLingualConfigured: () => isUserLingualConfigured,
   listPresetLoadouts: () => listPresetLoadouts,
-  loadUserConfig: () => loadUserConfig,
   loadUserLingualConfig: () => loadUserLingualConfig,
   localizeModeName: () => localizeModeName,
-  localizeModes: () => localizeModes,
   localizeSlotLabel: () => localizeSlotLabel,
-  moveSlotInList: () => moveSlotInList,
   normalizeActiveModeId: () => normalizeActiveModeId,
-  normalizeHudVariant: () => normalizeHudVariant,
-  normalizeLangCode: () => normalizeLangCode,
   normalizeLingualModeInput: () => normalizeLingualModeInput,
-  normalizePromptRules: () => normalizePromptRules,
   parseLlmResponse: () => parseLlmResponse,
   parsePartialJsonFields: () => parsePartialJsonFields,
+  parseVocabEntries: () => parseVocabEntries,
   pickPrimaryContent: () => pickPrimaryContent,
   primarySlot: () => primarySlot,
-  removeCustomMode: () => removeCustomMode,
-  removeSlotFromList: () => removeSlotFromList,
-  removeSlotFromMode: () => removeSlotFromMode,
+  readPhrasebook: () => readPhrasebook,
+  recordPhrasebookFromResult: () => recordPhrasebookFromResult,
   repairAndParseJsonObject: () => repairAndParseJsonObject,
-  resolveCandidateSlotsFromConfig: () => resolveCandidateSlotsFromConfig,
-  resolveDirectSlotsFromConfig: () => resolveDirectSlotsFromConfig,
   resolveLabelsForLang: () => resolveLabelsForLang,
-  resolveLangPair: () => resolveLangPair,
   resolveLanguageName: () => resolveLanguageName,
   resolveLanguagePairAnchors: () => resolveLanguagePairAnchors,
   resolveModeDisplayName: () => resolveModeDisplayName,
-  resolveModeDisplaySpec: () => resolveModeDisplaySpec,
   resolveModeRuntime: () => resolveModeRuntime,
   resolveModesFromConfig: () => resolveModesFromConfig,
-  resolveModifySlotsFromConfig: () => resolveModifySlotsFromConfig,
-  resolvePromptRulePreset: () => resolvePromptRulePreset,
-  resolvePromptTargetLangName: () => resolvePromptTargetLangName,
-  resolveReleaseBannerLang: () => resolveReleaseBannerLang,
-  resolveSeedNames: () => resolveSeedNames,
-  resolveSelectPrompts: () => resolveSelectPrompts,
+  resolveRepoFileAnchors: () => resolveRepoFileAnchors,
   resolveSlotLabels: () => resolveSlotLabels,
-  resolveSlotsForPreset: () => resolveSlotsForPreset,
   runtimeLanguagePair: () => runtimeLanguagePair,
   sanitizePromptForTranslation: () => sanitizePromptForTranslation,
   saveUserLingualConfig: () => saveUserLingualConfig,
   shouldShieldBypass: () => shouldShieldBypass,
-  toggleCustomMode: () => toggleCustomMode,
-  toggleSlotInList: () => toggleSlotInList,
+  shouldTriggerTranslation: () => shouldTriggerTranslation,
+  stripLingualAnnotation: () => stripLingualAnnotation,
   translateCore: () => translateCore,
-  updateCustomMode: () => updateCustomMode,
-  updateSlotInList: () => updateSlotInList
+  translatePrompt: () => translatePrompt
 });
 module.exports = __toCommonJS(core_exports);
 
-// src/prompts.ts
+// src/prompts/rules.ts
+var PROMPT_TARGET_LANGUAGE_NAMES = {
+  en: "English",
+  zh: "Chinese (Simplified)",
+  tw: "Chinese (Traditional)",
+  ja: "Japanese",
+  ko: "Korean",
+  es: "Spanish",
+  fr: "French",
+  de: "German",
+  ru: "Russian",
+  pt: "Portuguese",
+  it: "Italian",
+  vi: "Vietnamese",
+  tr: "Turkish",
+  ar: "Arabic",
+  ms: "Malay"
+};
+function resolveLanguageName(code = "en") {
+  const norm = (code || "en").toLowerCase().split("-")[0];
+  return PROMPT_TARGET_LANGUAGE_NAMES[norm] || code.toUpperCase();
+}
+function interpolatePromptVariables(template, vars) {
+  if (!template || typeof template !== "string") return template;
+  const sCode = (vars.sourceLang || "en").toLowerCase().split("-")[0];
+  const tCode = (vars.targetLang || "en").toLowerCase().split("-")[0];
+  const eCode = (vars.explainLang || sCode).toLowerCase().split("-")[0];
+  const sName = resolveLanguageName(sCode);
+  const tName = resolveLanguageName(tCode);
+  const eName = resolveLanguageName(eCode);
+  return template.replace(/\$\{sourceLang\}/g, sName).replace(/\$\{targetLang\}/g, tName).replace(/\$\{explainLang\}/g, eName).replace(/\$\{sourceLangCode\}/g, sCode).replace(/\$\{targetLangCode\}/g, tCode).replace(/\$\{explainLangCode\}/g, eCode);
+}
+function resolvePromptTargetLangName(sourceLang = "en", targetLang = "en", promptLang) {
+  if (promptLang && promptLang.trim()) {
+    const clean = promptLang.trim().toLowerCase().split("-")[0];
+    return { code: clean, name: resolveLanguageName(clean) };
+  }
+  const s = (sourceLang || "en").toLowerCase().split("-")[0];
+  const t = (targetLang || "").toLowerCase().split("-")[0];
+  const outCode = t ? t : s === "en" ? "ja" : "en";
+  return { code: outCode, name: resolveLanguageName(outCode) };
+}
+var PROMPT_RULE_PRESETS = {
+  concise: "Keep output strictly concise, minimal, and action-oriented. Eliminate all fluff.",
+  spec: "Format output with explicit sections: Objective, Constraints, Edge Cases, and Deliverable.",
+  deep: "Prioritize root-cause tracing, end-to-end flow inspection, and regression boundary checks."
+};
+var DEFAULT_KILL_LIST = [
+  "delve",
+  "tapestry",
+  "seamless",
+  "seamlessly",
+  "robust",
+  "enhance",
+  "streamline",
+  "comprehensive",
+  "in summary",
+  "game-changer",
+  "revolutionize",
+  "unleash",
+  "thrilled to announce",
+  "pivotal",
+  "holistic",
+  "multifaceted"
+];
+function compileKillListInstruction(killList, globalKillList) {
+  const baseGlobal = globalKillList !== void 0 ? globalKillList : DEFAULT_KILL_LIST;
+  const merged = Array.from(
+    new Set([...baseGlobal, ...killList || []].map((w) => w.trim().toLowerCase()).filter(Boolean))
+  );
+  if (merged.length === 0) return "";
+  return `
+
+[KILL LIST - FORBIDDEN AI BUZZWORDS - ZERO TOLERANCE]:
+Strictly forbid using any of the following clich\xE9, artificial, or corporate AI filler words/phrases:
+${merged.map((w) => `\u2022 "${w}"`).join(", ")}.
+Use plain, grounded, authentic developer language instead.`;
+}
+function resolvePromptRulePreset(input) {
+  const key = input.trim().toLowerCase();
+  return PROMPT_RULE_PRESETS[key] || input.trim();
+}
+function normalizePromptRules(rule) {
+  if (!rule) return [];
+  if (Array.isArray(rule)) {
+    return rule.map((r) => resolvePromptRulePreset(String(r || ""))).filter(Boolean);
+  }
+  const s = resolvePromptRulePreset(String(rule));
+  return s ? [s] : [];
+}
+
+// src/prompts/slots.ts
 var SLOT_LABELS_BY_LANG = {
   zh: {
     source: "\u539F\u6587",
@@ -503,6 +563,8 @@ var LEGACY_SLOT_PRESETS = {
     }
   }
 };
+
+// src/prompts/anchors.ts
 var LANGUAGE_SPECS = {
   zh: {
     name: "Chinese",
@@ -746,7 +808,6 @@ var LANGUAGE_SPECS = {
   }
 };
 var LANGUAGE_PAIR_ANCHORS = {
-  // English target pairs
   "zh->en": LANGUAGE_SPECS.zh.anchors,
   "tw->en": LANGUAGE_SPECS.tw.anchors,
   "ja->en": LANGUAGE_SPECS.ja.anchors,
@@ -755,7 +816,6 @@ var LANGUAGE_PAIR_ANCHORS = {
   "fr->en": LANGUAGE_SPECS.fr.anchors,
   "es->en": LANGUAGE_SPECS.es.anchors,
   "ru->en": LANGUAGE_SPECS.ru.anchors,
-  // English source pairs (English -> Chinese, Japanese, etc.)
   "en->zh": [
     {
       input: "This approach feels a bit over-engineered; let's just stick with the standard library.",
@@ -792,7 +852,6 @@ var LANGUAGE_PAIR_ANCHORS = {
       vocab: "\u672C\u756A\u74B0\u5883 (production environment) \xB7 \u30C7\u30D7\u30ED\u30A4 (deploy) \xB7 \u30EA\u30EA\u30FC\u30B9 (release)"
     }
   ],
-  // Cross-lingual Asian pairs (Chinese <-> Japanese)
   "zh->ja": [
     {
       input: "\u8FD9\u4E2A\u65B9\u6848\u6709\u70B9\u8FC7\u5EA6\u8BBE\u8BA1\u4E86\uFF0C\u4E0D\u5982\u76F4\u63A5\u7528\u6807\u51C6\u5E93\u5B9E\u73B0",
@@ -849,96 +908,9 @@ function resolveLanguagePairAnchors(sourceLang = "en", targetLang = "en") {
   }
   return [];
 }
-var PROMPT_TARGET_LANGUAGE_NAMES = {
-  en: "English",
-  zh: "Chinese (Simplified)",
-  tw: "Chinese (Traditional)",
-  ja: "Japanese",
-  ko: "Korean",
-  es: "Spanish",
-  fr: "French",
-  de: "German",
-  ru: "Russian",
-  pt: "Portuguese",
-  it: "Italian",
-  vi: "Vietnamese",
-  tr: "Turkish",
-  ar: "Arabic",
-  ms: "Malay"
-};
-function resolveLanguageName(code = "en") {
-  const norm = (code || "en").toLowerCase().split("-")[0];
-  return PROMPT_TARGET_LANGUAGE_NAMES[norm] || code.toUpperCase();
-}
-function interpolatePromptVariables(template, vars) {
-  if (!template || typeof template !== "string") return template;
-  const sCode = (vars.sourceLang || "en").toLowerCase().split("-")[0];
-  const tCode = (vars.targetLang || "en").toLowerCase().split("-")[0];
-  const eCode = (vars.explainLang || sCode).toLowerCase().split("-")[0];
-  const sName = resolveLanguageName(sCode);
-  const tName = resolveLanguageName(tCode);
-  const eName = resolveLanguageName(eCode);
-  return template.replace(/\$\{sourceLang\}/g, sName).replace(/\$\{targetLang\}/g, tName).replace(/\$\{explainLang\}/g, eName).replace(/\$\{sourceLangCode\}/g, sCode).replace(/\$\{targetLangCode\}/g, tCode).replace(/\$\{explainLangCode\}/g, eCode);
-}
-function resolvePromptTargetLangName(sourceLang = "en", targetLang = "en", promptLang) {
-  if (promptLang && promptLang.trim()) {
-    const clean = promptLang.trim().toLowerCase().split("-")[0];
-    return { code: clean, name: resolveLanguageName(clean) };
-  }
-  const s = (sourceLang || "en").toLowerCase().split("-")[0];
-  const t = (targetLang || "").toLowerCase().split("-")[0];
-  const outCode = t ? t : s === "en" ? "ja" : "en";
-  return { code: outCode, name: resolveLanguageName(outCode) };
-}
-var PROMPT_RULE_PRESETS = {
-  concise: "Keep output strictly concise, minimal, and action-oriented. Eliminate all fluff.",
-  spec: "Format output with explicit sections: Objective, Constraints, Edge Cases, and Deliverable.",
-  deep: "Prioritize root-cause tracing, end-to-end flow inspection, and regression boundary checks."
-};
-var DEFAULT_KILL_LIST = [
-  "delve",
-  "tapestry",
-  "seamless",
-  "seamlessly",
-  "robust",
-  "enhance",
-  "streamline",
-  "comprehensive",
-  "in summary",
-  "game-changer",
-  "revolutionize",
-  "unleash",
-  "thrilled to announce",
-  "pivotal",
-  "holistic",
-  "multifaceted"
-];
-function compileKillListInstruction(killList, globalKillList) {
-  const baseGlobal = globalKillList !== void 0 ? globalKillList : DEFAULT_KILL_LIST;
-  const merged = Array.from(
-    new Set([...baseGlobal, ...killList || []].map((w) => w.trim().toLowerCase()).filter(Boolean))
-  );
-  if (merged.length === 0) return "";
-  return `
 
-[KILL LIST - FORBIDDEN AI BUZZWORDS - ZERO TOLERANCE]:
-Strictly forbid using any of the following clich\xE9, artificial, or corporate AI filler words/phrases:
-${merged.map((w) => `\u2022 "${w}"`).join(", ")}.
-Use plain, grounded, authentic developer language instead.`;
-}
-function resolvePromptRulePreset(input) {
-  const key = input.trim().toLowerCase();
-  return PROMPT_RULE_PRESETS[key] || input.trim();
-}
-function normalizePromptRules(rule) {
-  if (!rule) return [];
-  if (Array.isArray(rule)) {
-    return rule.map((r) => resolvePromptRulePreset(String(r || ""))).filter(Boolean);
-  }
-  const s = resolvePromptRulePreset(String(rule));
-  return s ? [s] : [];
-}
-function buildSystemPrompt(sourceLang = "en", targetLang = "ja", isLongInput = false, context, tone = "general", customSlots, killList, globalKillList) {
+// src/prompts/templates.ts
+function buildSystemPrompt(sourceLang = "en", targetLang = "ja", isLongInput = false, context, tone = "general", customSlots, killList, globalKillList, systemHint, explainLang) {
   const normSource = (sourceLang || "en").toLowerCase().split("-")[0];
   const normTarget = (targetLang || "ja").toLowerCase().split("-")[0];
   const spec = LANGUAGE_SPECS[normSource] || LANGUAGE_SPECS.en;
@@ -1006,10 +978,18 @@ Prioritize RFC, Pull Request, and architectural documentation precision:
     const isCustomWritten = writtenSlot?.instruction && writtenSlot.instruction !== defaultWrittenInst;
     const slot1Name = isCustomSpoken ? spokenSlot.label : legacyConfig?.slot1?.name || defaultSlots.slot1.name;
     const rawSlot1Instruction = isCustomSpoken ? spokenSlot.instruction : legacyConfig?.slot1?.instruction || defaultSlots.slot1.instruction;
-    const slot1Instruction = interpolatePromptVariables(rawSlot1Instruction, { sourceLang, targetLang, explainLang: sourceLang });
+    const slot1Instruction = interpolatePromptVariables(rawSlot1Instruction, {
+      sourceLang,
+      targetLang,
+      explainLang: sourceLang
+    });
     const slot2Name = isCustomWritten ? writtenSlot.label : legacyConfig?.slot2?.name || defaultSlots.slot2.name;
     const rawSlot2Instruction = isCustomWritten ? writtenSlot.instruction : legacyConfig?.slot2?.instruction || defaultSlots.slot2.instruction;
-    const slot2Instruction = interpolatePromptVariables(rawSlot2Instruction, { sourceLang, targetLang, explainLang: sourceLang });
+    const slot2Instruction = interpolatePromptVariables(rawSlot2Instruction, {
+      sourceLang,
+      targetLang,
+      explainLang: sourceLang
+    });
     const jsonFormatHint = isLongInput ? `Strict JSON format:
 {
   "summary": "1-sentence distilled core intent in native ${spec.name} (<= 25 words/chars); spoken & written must translate this condensed intent in <= 28 words each",
@@ -1026,6 +1006,11 @@ Prioritize RFC, Pull Request, and architectural documentation precision:
   "written_meaning": "...",
   "vocab": "..."
 }`;
+    const systemHintList2 = Array.isArray(systemHint) ? systemHint : systemHint ? [systemHint] : [];
+    const hintBlock2 = systemHintList2.length > 0 ? `
+
+[USER SPECIFIED MODE RULES - MANDATORY]:
+${systemHintList2.map((h, i) => `(${i + 1}) ${h}`).join("\n")}` : "";
     return `You are an elite bilingual developer language coach and senior software architect.
 Task:
 Translate the user's message from native ${spec.name} (language A) into TWO distinct authentic ${targetName} registers (Slot 1 and Slot 2), and provide the exact back-translation/nuance ${spec.meaningInstruction} for each register:
@@ -1037,7 +1022,7 @@ Translate the user's message from native ${spec.name} (language A) into TWO dist
 
 [CODE & SYMBOL SHIELD - STRICT RULE]:
 All inline code (\`foo()\`), file paths (@file, path/to/file), CLI flags, UUIDs, and (...) placeholders MUST be preserved 100% verbatim in both spoken and written outputs. Never translate, rephrase, or drop code tokens. CRITICAL: NEVER expand, hallucinate, or fabricate file paths, UUIDs, or timestamps not explicitly in the user's input.
-${condensationDirective}${contextDirective}${toneDirective}${anchorBlock}${compileKillListInstruction(killList, globalKillList)}
+${condensationDirective}${contextDirective}${toneDirective}${hintBlock2}${anchorBlock}${compileKillListInstruction(killList, globalKillList)}
 
 ${jsonFormatHint}
 Output valid JSON ONLY. Never output markdown code fences, backticks, quotes, or explanations.`;
@@ -1046,19 +1031,32 @@ Output valid JSON ONLY. Never output markdown code fences, backticks, quotes, or
   const taskLines = [];
   const jsonProps = [];
   if (isLongInput) {
-    jsonProps.push(`  "summary": "1-sentence distilled core intent in native ${spec.name} (<= 25 words/chars); spoken & written must translate this condensed intent in <= 28 words each"`);
+    jsonProps.push(
+      `  "summary": "1-sentence distilled core intent in native ${spec.name} (<= 25 words/chars); spoken & written must translate this condensed intent in <= 28 words each"`
+    );
   }
   enabledSlots.forEach((slot, idx) => {
     const num = idx + 1;
     const rawInstruction = slot.instruction || `Express the message in ${slot.label} style in authentic ${targetName}.`;
-    const instruction = interpolatePromptVariables(rawInstruction, { sourceLang, targetLang, explainLang: sourceLang });
+    const instruction = interpolatePromptVariables(rawInstruction, {
+      sourceLang,
+      targetLang,
+      explainLang: explainLang || sourceLang
+    });
     taskLines.push(`${num}. "${slot.id}" (${slot.label}): ${instruction}`);
     jsonProps.push(`  "${slot.id}": "..."`);
     if (slot.showMeaning && slot.role !== "vocab") {
-      taskLines.push(`${num}_meaning. "${slot.id}_meaning": The exact nuance and meaning of "${slot.id}" ${spec.meaningInstruction}.`);
+      taskLines.push(
+        `${num}_meaning. "${slot.id}_meaning": The exact nuance and meaning of "${slot.id}" ${spec.meaningInstruction}.`
+      );
       jsonProps.push(`  "${slot.id}_meaning": "..."`);
     }
   });
+  const systemHintList = Array.isArray(systemHint) ? systemHint : systemHint ? [systemHint] : [];
+  const hintBlock = systemHintList.length > 0 ? `
+
+[USER SPECIFIED MODE RULES - MANDATORY]:
+${systemHintList.map((h, i) => `(${i + 1}) ${h}`).join("\n")}` : "";
   const dynamicTasks = taskLines.join("\n");
   const dynamicJsonHint = `Strict JSON format:
 {
@@ -1071,74 +1069,10 @@ ${dynamicTasks}
 
 [CODE & SYMBOL SHIELD - STRICT RULE]:
 All inline code (\`foo()\`), file paths (@file, path/to/file), CLI flags, UUIDs, and (...) placeholders MUST be preserved 100% verbatim in all outputs. Never translate, rephrase, or drop code tokens.
-${condensationDirective}${contextDirective}${toneDirective}${anchorBlock}${compileKillListInstruction(killList, globalKillList)}
+${condensationDirective}${contextDirective}${toneDirective}${hintBlock}${anchorBlock}${compileKillListInstruction(killList, globalKillList)}
 
 ${dynamicJsonHint}
 Output valid JSON ONLY. Never output markdown code fences, backticks, quotes, or explanations.`;
-}
-function buildDirectRewriteSystemPrompt(options) {
-  const normSource = (options.sourceLang || "en").toLowerCase().split("-")[0];
-  const defaultTarget = normSource === "en" ? "ja" : "en";
-  const { name: outLangName } = resolvePromptTargetLangName(
-    options.sourceLang || "en",
-    options.targetLang || defaultTarget,
-    options.promptLang
-  );
-  const spec = LANGUAGE_SPECS[normSource] || LANGUAGE_SPECS.en;
-  const rules = normalizePromptRules(options.promptRule);
-  const customRuleBlock = rules.length > 0 ? `
-
-[USER CUSTOM SPECIFICATION & STACKED CONDITIONS - MANDATORY]:
-Weave and enforce the following user-specified condition(s) directly into the rewritten prompt:
-${rules.map((r, i) => `(${i + 1}) ${r}`).join("\n")}` : "";
-  const contextBlock = options.context && options.context.trim() ? `
-
-[CONVERSATION & PROJECT CONTEXT - USE FOR PRONOUN RESOLUTION]:
-"""
-${options.context.trim().slice(0, 500)}
-"""
-CRITICAL: Use this context strictly to resolve anaphoric pronouns ("here", "this function", "as discussed") and anchor domain terminology. NEVER invent unmentioned requirements or copy unrelated code from the context.` : "";
-  const learnBlock = options.learnInRewrite ? `
-5. **Companion Takeaway ("vocab")**: Also extract 2\u20133 high-value authentic English technical expressions or collocations relevant to this prompt as a single inline string \`term (meaning) \xB7 term2 (meaning)\` ${spec.vocabInstruction}.` : "";
-  const jsonSchema = options.learnInRewrite ? `{
-  "prompt": "...",
-  "vocab": "term1 (...) \xB7 term2 (...)"
-}` : `{
-  "prompt": "..."
-}`;
-  let anchorBlock = "";
-  if (outLangName === "English") {
-    anchorBlock = `[GOLDEN FEW-SHOT ANCHORS (Target: ${outLangName})]:
-- Input: "\u521A\u624D\u767B\u5F55\u63A5\u53E3\u62A5500\u4E86\uFF0C\u6392\u67E5\u4E00\u4E0Bsrc/auth.ts\u91CC\u7684token\u8FC7\u671F\u903B\u8F91\uFF0C\u522B\u52A8\u6570\u636E\u5E93\u914D\u7F6E\uFF0C\u6539\u52A8\u5C3D\u91CF\u5C0F"
-  Output in ${outLangName}: "Diagnose and fix the 500 error on the login endpoint by inspecting the token expiration logic in \`src/auth.ts\`. Keep the diff minimal, leave unrelated code untouched, and do not modify any database configurations."
-- Input: "\u628A\u8FD9\u4E2A\u51FD\u6570\u6539\u6210\u5F02\u6B65\u7684\uFF0C\u987A\u4FBF\u8DD1\u4E00\u4E0B\u6D4B\u8BD5\u786E\u4FDD\u522B\u6302\u4E86"
-  Output in ${outLangName}: "Refactor the function to be asynchronous while preserving its existing contract and behavior. Run the existing test suite to verify zero regressions."
-- Input: "The login session drops on page refresh, check if cookie expiration in src/auth.ts is wrong, keep diff minimal"
-  Output in ${outLangName}: "Inspect \`src/auth.ts\` to diagnose and fix session loss on page refresh, specifically checking cookie expiration settings while keeping the diff minimal and leaving unrelated code untouched."`;
-  } else if (outLangName === "Japanese") {
-    anchorBlock = `[GOLDEN FEW-SHOT ANCHORS (Target: ${outLangName})]:
-- Input: "\u521A\u624D\u767B\u5F55\u63A5\u53E3\u62A5500\u4E86\uFF0C\u6392\u67E5\u4E00\u4E0Bsrc/auth.ts\u91CC\u7684token\u8FC7\u671F\u903B\u8F91\uFF0C\u522B\u52A8\u6570\u636E\u5E93\u914D\u7F6E\uFF0C\u6539\u52A8\u5C3D\u91CF\u5C0F"
-  Output in ${outLangName}: "\u30ED\u30B0\u30A4\u30F3\u30A8\u30F3\u30C9\u30DD\u30A4\u30F3\u30C8\u306E500\u30A8\u30E9\u30FC\u3092\u89E3\u6D88\u3059\u308B\u305F\u3081\u3001\`src/auth.ts\`\u306E\u30C8\u30FC\u30AF\u30F3\u5931\u52B9\u30ED\u30B8\u30C3\u30AF\u3092\u8ABF\u67FB\u30FB\u4FEE\u6B63\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u5DEE\u5206\u306F\u6700\u5C0F\u9650\u306B\u3068\u3069\u3081\u3001\u95A2\u9023\u306E\u306A\u3044\u30B3\u30FC\u30C9\u3084\u30C7\u30FC\u30BF\u30D9\u30FC\u30B9\u8A2D\u5B9A\u306B\u306F\u4E00\u5207\u89E6\u308C\u306A\u3044\u3067\u304F\u3060\u3055\u3044\u3002"
-- Input: "\u628A\u8FD9\u4E2A\u51FD\u6570\u6539\u6210\u5F02\u6B65\u7684\uFF0C\u987A\u4FBF\u8DD1\u4E00\u4E0B\u6D4B\u8BD5\u786E\u4FDD\u522B\u6302\u4E86"
-  Output in ${outLangName}: "\u65E2\u5B58\u306E\u4ED5\u69D8\u304A\u3088\u3073\u52D5\u4F5C\u3092\u7DAD\u6301\u3057\u305F\u307E\u307E\u3001\u3053\u306E\u95A2\u6570\u3092\u975E\u540C\u671F\uFF08async\uFF09\u306B\u30EA\u30D5\u30A1\u30AF\u30BF\u30EA\u30F3\u30B0\u3057\u3066\u304F\u3060\u3055\u3044\u3002\u5B8C\u4E86\u5F8C\u306F\u65E2\u5B58\u306E\u30C6\u30B9\u30C8\u3092\u5B9F\u884C\u3057\u3001\u30EA\u30B0\u30EC\u30C3\u30B7\u30E7\u30F3\u304C\u306A\u3044\u3053\u3068\u3092\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044\u3002"`;
-  }
-  const isZhSource = normSource === "zh" || normSource === "tw";
-  const verbExamples = isZhSource ? `"look into / check / \u770B\u770B / \u6392\u67E5" \u2794 "Inspect" / "Diagnose" / "Trace"; "clean up / tweak / \u6539\u6539 / \u91CD\u6784" \u2794 "Refactor" / "Streamline" / "Harden"; "add / create / \u52A0\u4E0A / \u505A\u4E2A" \u2794 "Implement" / "Scaffold" / "Wire up"; "remove / drop / \u5220\u6389" \u2794 "Prune" / "Deprecate" / "Strip"; "fix / \u641E\u597D" \u2794 "Fix" / "Resolve"` : `"look into / check" \u2794 "Inspect" / "Diagnose" / "Trace"; "clean up / tweak" \u2794 "Refactor" / "Streamline" / "Harden"; "add / create" \u2794 "Implement" / "Scaffold" / "Wire up"; "remove / drop" \u2794 "Prune" / "Deprecate" / "Strip"; "fix" \u2794 "Fix" / "Resolve"`;
-  return `You are an elite AI Coding Intent Compiler & Prompt Architect.
-The user is typing a raw, potentially messy, colloquial, or fragmented instruction for an AI coding agent.
-Compile, structure, and optimize their input into a high-signal, unambiguous engineering prompt in **${outLangName}** that maximizes the AI agent's probability of one-shot success:
-1. **Direct Imperative Opening & Objective Isolation**: Start immediately with an active imperative engineering verb. Accurately map vague conversational intents to sharp, specific engineering actions (e.g., ${verbExamples}). Clearly isolate the core technical objective and eliminate chatty conversational filler (e.g. NEVER use "Please help me", "As an AI, could you...", "I want to...").
-2. **Defensive Blast Radius Guard & Negative Constraints**: When the user expresses or implies caution (e.g. "don't touch X", "keep diff minimal", "avoid regressions", "don't add heavy dependencies"), formalize them into explicit negative constraints (e.g., "Keep diff minimal; leave unrelated files and configurations untouched; do not add unrequested external dependencies").
-3. **Pronoun & Anaphora Resolution**: If the user uses anaphoric pronouns ("here", "this function", "as discussed", "\u521A\u624D\u8BF4\u7684"), resolve them cleanly using the provided context without hallucinating unmentioned file paths or inventing speculative requirements.
-4. **Falsifiable Verification Anchor**: Where appropriate, frame the instruction with verifiable completion expectations (e.g. "Run existing tests to confirm zero regressions").
-5. **100% Intent Fidelity (Zero Hallucination)**: Clarify logic and sharpen terminology in **${outLangName}**, but NEVER invent unmentioned file names, libraries, or speculative scaffolding.
-6. **Code-Switch & CLI Flag Shield**: Preserve all CLI flags (e.g. \`--dry-run\`, \`-rf\`, \`--no-verify\`), package scopes/decorators (e.g. \`@scope/pkg\`, \`@ts-expect-error\`), inline code (\`foo()\`), file paths (@file, path/to/file), and identifiers 100% verbatim. NEVER translate or alter CLI flags.${contextBlock}${learnBlock}${customRuleBlock}${compileKillListInstruction(void 0, DEFAULT_KILL_LIST)}
-${anchorBlock ? `
-${anchorBlock}
-` : ""}
-Strict JSON format:
-${jsonSchema}
-Output valid JSON ONLY. Never output markdown code fences or explanations.`;
 }
 function buildPromptCandidatesSystemPrompt(options) {
   const normSource = (options.sourceLang || "en").toLowerCase().split("-")[0];
@@ -1160,7 +1094,9 @@ function buildPromptCandidatesSystemPrompt(options) {
     if (s.role === "vocab") {
       return `${idx + 1}. "${s.id}" (${s.label}): ${instruction} ${spec.vocabInstruction}`;
     }
-    const hasCustomLangDirective = /target language|output in|日本語|中文|english|spanish|french|german|korean|russian|portuguese/i.test(instruction);
+    const hasCustomLangDirective = /target language|output in|日本語|中文|english|spanish|french|german|korean|russian|portuguese/i.test(
+      instruction
+    );
     const langSuffix = hasCustomLangDirective ? "" : ` (Default language: **${outLangName}** unless instruction specifies otherwise)`;
     return `${idx + 1}. "${s.id}" (${s.label}): ${instruction}${langSuffix}`;
   });
@@ -1189,7 +1125,7 @@ ${rules.map((r, i) => `(${i + 1}) ${r}`).join("\n")}` : "";
 """
 ${options.context.trim().slice(0, 500)}
 """
-CRITICAL: Use this context strictly to resolve anaphoric pronouns ("here", "this function", "as discussed") and domain terminology. NEVER invent unmentioned requirements or copy unrelated code from the context.` : "";
+CRITICAL: Use this context strictly to resolve anaphoric pronouns ("here", "this function", "as discussed"), domain terminology, and explicit [REPO FILE ANCHORS] matching modules named by the user (preferring exact grounded file paths over generic module names). NEVER invent unmentioned requirements or unrelated files.` : "";
   return `You are an elite Bilingual Translation & Prompt Architect.
 Transform the user's raw input into ${slots.length} distinct output slots strictly following each slot's specific instruction and target language:
 ${taskLines.join("\n")}
@@ -1278,7 +1214,13 @@ If the user's input draft contains native ${options.sourceLang || "en"} words or
   let systemHintBlock = "";
   if (options.systemHint) {
     const rawHints = Array.isArray(options.systemHint) ? options.systemHint : [options.systemHint];
-    const hints = rawHints.map((h) => interpolatePromptVariables(h, { sourceLang: options.sourceLang || "en", targetLang: options.targetLang || "en", explainLang: options.explainLang || expNorm }).trim()).filter(Boolean);
+    const hints = rawHints.map(
+      (h) => interpolatePromptVariables(h, {
+        sourceLang: options.sourceLang || "en",
+        targetLang: options.targetLang || "en",
+        explainLang: options.explainLang || expNorm
+      }).trim()
+    ).filter(Boolean);
     if (hints.length > 0) {
       systemHintBlock = `
 
@@ -1306,268 +1248,12 @@ ${jsonProps.join(",\n")}
 Output valid JSON ONLY. Never output markdown code fences or explanations.`;
 }
 
-// src/layout.ts
-var ANSI_ESCAPE_REGEX = /\x1b\[[0-9;?]*[a-zA-Z]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g;
-function getVisualWidth(str) {
-  let width = 0;
-  const clean = str.replace(ANSI_ESCAPE_REGEX, "");
-  let afterZWJ = false;
-  for (const char of clean) {
-    const code = char.codePointAt(0) || 0;
-    if (code === 8205 || code === 65039 || code === 65038 || code >= 127995 && code <= 127999 || code >= 768 && code <= 879 || code >= 6832 && code <= 6911 || code >= 7616 && code <= 7679 || code >= 8400 && code <= 8447 || code >= 65056 && code <= 65071 || code >= 917760 && code <= 917999 || code >= 8203 && code <= 8207) {
-      if (code === 8205) afterZWJ = true;
-      continue;
-    }
-    if (afterZWJ) {
-      afterZWJ = false;
-      continue;
-    }
-    if (code >= 4352 && code <= 4447 || code >= 8986 && code <= 9215 || code >= 9728 && code <= 10175 || code >= 11904 && code <= 42191 || code >= 44032 && code <= 55203 || code >= 63744 && code <= 64255 || code >= 65040 && code <= 65049 || code >= 65072 && code <= 65135 || code >= 65280 && code <= 65376 || code >= 65504 && code <= 65510 || code >= 127744 && code <= 128591 || code >= 128640 && code <= 128767 || code >= 129280 && code <= 129791 || code >= 131072 && code <= 195103) {
-      width += 2;
-    } else {
-      width += 1;
-    }
-  }
-  return width;
-}
-function closingDelimitersFor(text) {
-  const clean = text.replace(ANSI_ESCAPE_REGEX, "");
-  const pairs = {
-    "(": ")",
-    "[": "]",
-    "{": "}",
-    "\uFF08": "\uFF09",
-    "\u3010": "\u3011",
-    "\u300C": "\u300D",
-    "\u300E": "\u300F"
-  };
-  const closersMap = {
-    ")": "(",
-    "]": "[",
-    "}": "{",
-    "\uFF09": "\uFF08",
-    "\u3011": "\u3010",
-    "\u300D": "\u300C",
-    "\u300F": "\u300E"
-  };
-  const stack = [];
-  let inDouble = false;
-  let inSingle = false;
-  let inBacktick = false;
-  for (let i = 0; i < clean.length; i++) {
-    const ch = clean[i];
-    const prev = i > 0 ? clean[i - 1] : "";
-    if (prev === "\\") continue;
-    if (ch === '"' && !inSingle && !inBacktick) {
-      inDouble = !inDouble;
-      continue;
-    }
-    if (ch === "'" && !inDouble && !inBacktick) {
-      const next = i + 1 < clean.length ? clean[i + 1] : "";
-      if (/[a-zA-Z]/.test(prev) && /[a-zA-Z]/.test(next)) {
-        continue;
-      }
-      inSingle = !inSingle;
-      continue;
-    }
-    if (ch === "`" && !inDouble && !inSingle) {
-      inBacktick = !inBacktick;
-      continue;
-    }
-    if (inDouble || inSingle || inBacktick) continue;
-    if (pairs[ch]) {
-      stack.push(pairs[ch]);
-    } else if (closersMap[ch]) {
-      const topIdx = stack.lastIndexOf(ch);
-      if (topIdx !== -1) {
-        stack.splice(topIdx, 1);
-      }
-    }
-  }
-  let quoteCloser = "";
-  if (inDouble) quoteCloser = '"';
-  else if (inSingle) quoteCloser = "'";
-  else if (inBacktick) quoteCloser = "`";
-  return quoteCloser + stack.reverse().join("");
-}
-function truncateVisual(str, maxVisualCols) {
-  if (maxVisualCols <= 0) return "";
-  const singleLine = str.replace(/[\r\n\t]+/g, " ");
-  const fullWidth = getVisualWidth(singleLine);
-  if (fullWidth <= maxVisualCols) return singleLine;
-  if (maxVisualCols <= 3) return ".".repeat(maxVisualCols);
-  const clipAt = (limit) => {
-    let curWidth = 0;
-    let result2 = "";
-    let i = 0;
-    let lastSpaceRawIdx = -1;
-    let lastSpaceVisWidth = 0;
-    while (i < singleLine.length) {
-      ANSI_ESCAPE_REGEX.lastIndex = i;
-      const ansiMatch = ANSI_ESCAPE_REGEX.exec(singleLine);
-      if (ansiMatch && ansiMatch.index === i) {
-        result2 += ansiMatch[0];
-        i += ansiMatch[0].length;
-        continue;
-      }
-      const code = singleLine.codePointAt(i) || 0;
-      const charLen = code > 65535 ? 2 : 1;
-      const ch = singleLine.slice(i, i + charLen);
-      const w = getVisualWidth(ch);
-      if (curWidth + w > limit) {
-        break;
-      }
-      if (ch === " ") {
-        lastSpaceRawIdx = result2.length;
-        lastSpaceVisWidth = curWidth;
-      }
-      result2 += ch;
-      curWidth += w;
-      i += charLen;
-    }
-    const cleanTail = result2.replace(ANSI_ESCAPE_REGEX, "");
-    if (/[a-zA-Z\u0400-\u04FF]$/.test(cleanTail) && lastSpaceRawIdx > 0) {
-      if (lastSpaceVisWidth > limit * 0.45) {
-        result2 = result2.slice(0, lastSpaceRawIdx);
-      }
-    }
-    return result2.replace(/[,'"—\-:;]+\s*$/, "").replace(/\s*[\(\[\{（【]$/, "");
-  };
-  const targetCols = Math.max(1, maxVisualCols - 3);
-  let result = clipAt(targetCols);
-  const closers = closingDelimitersFor(result);
-  const closerWidth = getVisualWidth(closers);
-  if (closerWidth > 0 && targetCols > closerWidth) {
-    result = clipAt(targetCols - closerWidth) + closers;
-  }
-  return result + (singleLine.includes("\x1B") ? "\x1B[0m" : "") + "...";
-}
+// src/config.ts
+var import_node_fs = __toESM(require("fs"), 1);
+var import_node_path = __toESM(require("path"), 1);
+var import_node_os = __toESM(require("os"), 1);
 
-// src/runtime.ts
-var VALID_ACTIONS = /* @__PURE__ */ new Set(["pass-through", "transform", "select"]);
-var VALID_FLOWS = /* @__PURE__ */ new Set(["translate", "proofread", "custom"]);
-function normalizeHudVariant(hud) {
-  switch (hud) {
-    case "none":
-      return "none";
-    case "preview":
-      return "preview";
-    case "adaptive-takeaway":
-      return "takeaway";
-    case "tree":
-    default:
-      return "tree";
-  }
-}
-function normalizeSlots(declared, fallback) {
-  const source = Array.isArray(declared) && declared.length > 0 ? declared : Array.isArray(fallback) ? fallback : [];
-  return source.filter((s) => Boolean(s && typeof s.id === "string")).filter((s) => s.enabled !== false).map((s) => ({
-    ...s,
-    role: s.role || "translation",
-    enabled: s.enabled !== false
-  }));
-}
-function resolveModeRuntime(mode, options) {
-  const flow = VALID_FLOWS.has(mode.flow) ? mode.flow : "translate";
-  const dispatcher = VALID_ACTIONS.has(mode.action) ? mode.action : "transform";
-  const hud = normalizeHudVariant(mode.hud);
-  const target = mode.target === "clipboard" ? "clipboard" : "agent";
-  const sourceLang = options.sourceLang || "en";
-  const targetLang = options.targetLang || "en";
-  const explainLang = options.explainLang || sourceLang;
-  const inputLang = flow === "proofread" ? targetLang : flow === "custom" ? mode.customInputLang || sourceLang : sourceLang;
-  const outputLang = flow === "custom" ? mode.customOutputLang || targetLang : targetLang;
-  const slots = normalizeSlots(mode.slots, options.fallbackSlots);
-  const translationSlots = slots.filter((s) => s.role !== "vocab" && s.role !== "source");
-  const takeawaySlot = slots.find((s) => s.role === "vocab");
-  return {
-    mode,
-    id: mode.id,
-    name: mode.name,
-    dispatcher,
-    flow,
-    hud,
-    target,
-    inputLang,
-    outputLang,
-    explainLang,
-    reasoning: mode.reasoning,
-    slots,
-    translationSlots,
-    takeawaySlot,
-    primarySlotId: mode.primarySlotId,
-    killList: Array.isArray(mode.killList) ? mode.killList : [],
-    globalKillList: options.globalKillList,
-    preserveCodeSwitching: Boolean(mode.preserveCodeSwitching),
-    contextAware: Boolean(mode.contextAware),
-    isProofread: flow === "proofread",
-    isPreview: hud === "preview"
-  };
-}
-function runtimeLanguagePair(rt, sessionPair) {
-  if (rt.flow === "custom") {
-    return `${rt.inputLang} \u21C4 ${rt.outputLang}`;
-  }
-  return sessionPair;
-}
-function primarySlot(rt) {
-  if (rt.primarySlotId) {
-    const match = rt.slots.find(
-      (s) => s.id.toLowerCase() === rt.primarySlotId?.toLowerCase()
-    );
-    if (match) return match;
-  }
-  return rt.translationSlots[0] || rt.slots[0];
-}
-function parsePartialJsonFields(buffer) {
-  const out = {};
-  if (!buffer) return out;
-  const cleaned = buffer.replace(/^\s*```(?:json)?/i, "").replace(/```\s*$/, "");
-  const re = /"([A-Za-z0-9_-]+)"\s*:\s*"((?:[^"\\]|\\.)*)("?)/g;
-  let match;
-  while ((match = re.exec(cleaned)) !== null) {
-    const key = match[1];
-    const raw = match[2];
-    if (!raw) continue;
-    out[key] = unescapeJsonString(raw);
-  }
-  return out;
-}
-function unescapeJsonString(value) {
-  return value.replace(
-    /\\u([0-9a-fA-F]{4})/g,
-    (_m, hex) => String.fromCharCode(parseInt(hex, 16))
-  ).replace(/\\n/g, "\n").replace(/\\r/g, "\r").replace(/\\t/g, "	").replace(/\\"/g, '"').replace(/\\\\/g, "\\");
-}
-function buildStreamingResult(fields, sourceText) {
-  const slotOutputs = {};
-  for (const [key, value] of Object.entries(fields)) {
-    if (key.endsWith("_meaning") || !value) continue;
-    slotOutputs[key] = { content: value, meaning: fields[`${key}_meaning`] };
-  }
-  const summary = fields.summary && fields.summary.trim() ? fields.summary.trim() : void 0;
-  return {
-    sourceText: summary || sourceText,
-    summary,
-    spoken: slotOutputs.spoken?.content || "",
-    spokenMeaning: slotOutputs.spoken?.meaning,
-    written: slotOutputs.written?.content || "",
-    writtenMeaning: slotOutputs.written?.meaning,
-    vocab: slotOutputs.vocab?.content,
-    annotated: "",
-    slotOutputs
-  };
-}
-function pickPrimaryContent(result, rt) {
-  const slot = primarySlot(rt);
-  if (slot && result.slotOutputs?.[slot.id]?.content) {
-    return result.slotOutputs[slot.id].content;
-  }
-  const fromSlots = result.slots?.find((s) => s.role !== "source" && s.role !== "vocab");
-  return fromSlots?.content || result.spoken || void 0;
-}
-
-// src/presets.ts
+// src/modes/names.ts
 var SEED_NAMES = {
   en: {
     companion: "Companion",
@@ -1730,8 +1416,8 @@ function resolveModeDisplayName(modeId, lang = "en") {
         ru: "\u0412\u044B\u043A\u043B",
         en: "Off"
       };
-      const norm2 = (lang || "en").toLowerCase().split("-")[0];
-      return OFF_MAP[norm2] || OFF_MAP.en;
+      const normLang = (lang || "en").toLowerCase().split("-")[0];
+      return OFF_MAP[normLang] || OFF_MAP.en;
     }
     default:
       return modeId;
@@ -1749,7 +1435,7 @@ function localizeModeName(modeId, currentName, sourceLang = "en") {
   }
   return currentName || resolveModeDisplayName(normId, sourceLang);
 }
-function localizeModes(modes, sourceLang = "en", explainLang) {
+function localizeModes(modes, sourceLang = "en", _explainLang) {
   return modes.map((m) => {
     const localizedName = localizeModeName(m.id, m.name, sourceLang);
     const localizedSlots = Array.isArray(m.slots) ? m.slots.map((s) => ({
@@ -1763,10 +1449,11 @@ function localizeModes(modes, sourceLang = "en", explainLang) {
     };
   });
 }
-function getDefaultFactoryModes(sourceLang = "en", explainLang) {
+
+// src/modes/defaults.ts
+function getDefaultFactoryModes(sourceLang = "en", _explainLang) {
   const n = resolveSeedNames(sourceLang);
   return [
-    // Archetype 1: Companion (pass-through) keeps the 5-second-gap learning card alive out of the box.
     {
       id: "companion",
       name: n.companion,
@@ -1919,7 +1606,12 @@ var PRESET_LOADOUTS = {
       hud: "tree",
       target: "clipboard",
       reasoning: "low",
-      killList: ["Sorry for my bad English", "Thank you so much for your kind review", "I would really appreciate it if", "delve"],
+      killList: [
+        "Sorry for my bad English",
+        "Thank you so much for your kind review",
+        "I would really appreciate it if",
+        "delve"
+      ],
       slots: [
         {
           id: "peer_review",
@@ -1951,7 +1643,18 @@ var PRESET_LOADOUTS = {
       hud: "tree",
       target: "clipboard",
       reasoning: "low",
-      killList: ["\u{1F680}", "\u{1F525}", "\u2728", "\u{1F9F5}", "Excited to announce", "Game-changer", "Revolutionize", "Unleash", "delve", "tapestry"],
+      killList: [
+        "\u{1F680}",
+        "\u{1F525}",
+        "\u2728",
+        "\u{1F9F5}",
+        "Excited to announce",
+        "Game-changer",
+        "Revolutionize",
+        "Unleash",
+        "delve",
+        "tapestry"
+      ],
       slots: [
         {
           id: "tweet",
@@ -1980,108 +1683,8 @@ function getPresetLoadout(id, sourceLang = "en", explainLang) {
 function listPresetLoadouts() {
   return Object.values(PRESET_LOADOUTS);
 }
-function createCustomSlot(params) {
-  const normId = params.id.trim().toLowerCase();
-  const role = params.role || (normId === "source" ? "source" : normId === "vocab" ? "vocab" : "translation");
-  return {
-    id: normId,
-    label: params.label.trim(),
-    role,
-    instruction: params.instruction?.trim() || (role === "source" ? void 0 : "Natural expressions matching context."),
-    showMeaning: params.showMeaning !== void 0 ? params.showMeaning : role !== "source" && role !== "vocab",
-    hideWhenLong: Boolean(params.hideWhenLong),
-    enabled: params.enabled !== void 0 ? params.enabled : true
-  };
-}
-function addSlotToList(slots, newSlot) {
-  const normId = newSlot.id.trim().toLowerCase();
-  const existingIndex = slots.findIndex((s) => s.id.toLowerCase() === normId);
-  if (existingIndex >= 0) {
-    const copy = [...slots];
-    copy[existingIndex] = { ...newSlot, id: normId };
-    return copy;
-  }
-  return [...slots, { ...newSlot, id: normId }];
-}
-function removeSlotFromList(slots, slotId) {
-  const normId = slotId.trim().toLowerCase();
-  return slots.filter((s) => s.id.toLowerCase() !== normId);
-}
-function updateSlotInList(slots, slotId, patch) {
-  const normId = slotId.trim().toLowerCase();
-  return slots.map((s) => s.id.toLowerCase() === normId ? { ...s, ...patch } : s);
-}
-function toggleSlotInList(slots, slotId) {
-  const normId = slotId.trim().toLowerCase();
-  return slots.map((s) => s.id.toLowerCase() === normId ? { ...s, enabled: !s.enabled } : s);
-}
-function moveSlotInList(slots, slotId, targetIndex) {
-  const normId = slotId.trim().toLowerCase();
-  const currentIndex = slots.findIndex((s) => s.id.toLowerCase() === normId);
-  if (currentIndex === -1 || targetIndex < 0 || targetIndex >= slots.length || currentIndex === targetIndex) {
-    return slots;
-  }
-  const copy = [...slots];
-  const [removed] = copy.splice(currentIndex, 1);
-  copy.splice(targetIndex, 0, removed);
-  return copy;
-}
-function addCustomMode(modes, newMode) {
-  const normId = newMode.id.trim().toLowerCase();
-  const existingIndex = modes.findIndex((m) => m.id.toLowerCase() === normId);
-  const modeNormalized = {
-    ...newMode,
-    id: normId,
-    name: newMode.name?.trim() || normId,
-    flow: newMode.flow || "translate",
-    action: newMode.action || "transform",
-    hud: newMode.hud || "preview",
-    slots: Array.isArray(newMode.slots) ? newMode.slots : [],
-    enabled: newMode.enabled !== void 0 ? newMode.enabled : true
-  };
-  if (existingIndex >= 0) {
-    const copy = [...modes];
-    copy[existingIndex] = modeNormalized;
-    return copy;
-  }
-  return [...modes, modeNormalized];
-}
-function removeCustomMode(modes, modeId) {
-  const normId = modeId.trim().toLowerCase();
-  return modes.filter((m) => m.id.toLowerCase() !== normId);
-}
-function updateCustomMode(modes, modeId, patch) {
-  const normId = modeId.trim().toLowerCase();
-  return modes.map((m) => m.id.toLowerCase() === normId ? { ...m, ...patch } : m);
-}
-function toggleCustomMode(modes, modeId) {
-  const normId = modeId.trim().toLowerCase();
-  return modes.map((m) => m.id.toLowerCase() === normId ? { ...m, enabled: !m.enabled } : m);
-}
-function addSlotToMode(modes, modeId, slot) {
-  const normModeId = modeId.trim().toLowerCase();
-  const normSlotId = slot.id.trim().toLowerCase();
-  return modes.map((m) => {
-    if (m.id.toLowerCase() !== normModeId) return m;
-    const existingIdx = m.slots.findIndex((s) => s.id.toLowerCase() === normSlotId);
-    let newSlots;
-    if (existingIdx >= 0) {
-      newSlots = [...m.slots];
-      newSlots[existingIdx] = { ...slot, id: normSlotId };
-    } else {
-      newSlots = [...m.slots, { ...slot, id: normSlotId }];
-    }
-    return { ...m, slots: newSlots };
-  });
-}
-function removeSlotFromMode(modes, modeId, slotId) {
-  const normModeId = modeId.trim().toLowerCase();
-  const normSlotId = slotId.trim().toLowerCase();
-  return modes.map((m) => {
-    if (m.id.toLowerCase() !== normModeId) return m;
-    return { ...m, slots: m.slots.filter((s) => s.id.toLowerCase() !== normSlotId) };
-  });
-}
+
+// src/modes/crud.ts
 var SLOT_PRESETS = {
   developer: {
     name: "Developer",
@@ -2093,8 +1696,22 @@ var SLOT_PRESETS = {
     description: "Community building: Hook + Deep + Vocab",
     slots: (_sourceLang = "en") => [
       { id: "source", label: "Source", role: "source", enabled: true },
-      { id: "spoken", label: "Hook", role: "translation", instruction: "High-engagement opening hook for social threads.", showMeaning: true, enabled: true },
-      { id: "written", label: "Deep", role: "translation", instruction: "Insightful technical value and architecture reasoning.", showMeaning: true, enabled: true },
+      {
+        id: "spoken",
+        label: "Hook",
+        role: "translation",
+        instruction: "High-engagement opening hook for social threads.",
+        showMeaning: true,
+        enabled: true
+      },
+      {
+        id: "written",
+        label: "Deep",
+        role: "translation",
+        instruction: "Insightful technical value and architecture reasoning.",
+        showMeaning: true,
+        enabled: true
+      },
       { id: "vocab", label: "Vocab", role: "vocab", instruction: "Key engagement idioms and phrases.", enabled: true }
     ]
   },
@@ -2103,9 +1720,29 @@ var SLOT_PRESETS = {
     description: "Dual-register Japanese companion: \u53E3\u8A9E + \u656C\u8A9E + \u5358\u8A9E",
     slots: (_sourceLang = "en") => [
       { id: "source", label: "\u539F\u6587", role: "source", enabled: true },
-      { id: "spoken", label: "\u53E3\u8A9E", role: "translation", instruction: "Natural, colloquial spoken Japanese (daily casual chat, team talk).", showMeaning: true, enabled: true },
-      { id: "written", label: "\u656C\u8A9E", role: "translation", instruction: "Formal, polite business Japanese (Keigo, professional email/PR).", showMeaning: true, enabled: true },
-      { id: "vocab", label: "\u5358\u8A9E", role: "vocab", instruction: "Key Japanese vocabulary and idiomatic expressions.", enabled: true }
+      {
+        id: "spoken",
+        label: "\u53E3\u8A9E",
+        role: "translation",
+        instruction: "Natural, colloquial spoken Japanese (daily casual chat, team talk).",
+        showMeaning: true,
+        enabled: true
+      },
+      {
+        id: "written",
+        label: "\u656C\u8A9E",
+        role: "translation",
+        instruction: "Formal, polite business Japanese (Keigo, professional email/PR).",
+        showMeaning: true,
+        enabled: true
+      },
+      {
+        id: "vocab",
+        label: "\u5358\u8A9E",
+        role: "vocab",
+        instruction: "Key Japanese vocabulary and idiomatic expressions.",
+        enabled: true
+      }
     ]
   },
   academic: {
@@ -2113,8 +1750,22 @@ var SLOT_PRESETS = {
     description: "Paper & rigorous discussion: Discussion + Paper",
     slots: (_sourceLang = "en") => [
       { id: "source", label: "Source", role: "source", enabled: true },
-      { id: "spoken", label: "Discussion", role: "translation", instruction: "Academic colloquium and seminar discussion tone.", showMeaning: true, enabled: true },
-      { id: "written", label: "Paper", role: "translation", instruction: "Formal, objective academic prose suitable for papers.", showMeaning: true, enabled: true },
+      {
+        id: "spoken",
+        label: "Discussion",
+        role: "translation",
+        instruction: "Academic colloquium and seminar discussion tone.",
+        showMeaning: true,
+        enabled: true
+      },
+      {
+        id: "written",
+        label: "Paper",
+        role: "translation",
+        instruction: "Formal, objective academic prose suitable for papers.",
+        showMeaning: true,
+        enabled: true
+      },
       { id: "vocab", label: "Vocab", role: "vocab", enabled: false }
     ]
   },
@@ -2123,7 +1774,14 @@ var SLOT_PRESETS = {
     description: "Minimalist dual-slot: Source + Target translation only",
     slots: (_sourceLang = "en") => [
       { id: "source", label: "Source", role: "source", enabled: true },
-      { id: "spoken", label: "Translation", role: "translation", instruction: "Natural, idiomatic target language translation.", showMeaning: true, enabled: true },
+      {
+        id: "spoken",
+        label: "Translation",
+        role: "translation",
+        instruction: "Natural, idiomatic target language translation.",
+        showMeaning: true,
+        enabled: true
+      },
       { id: "written", label: "Written", role: "translation", enabled: false },
       { id: "vocab", label: "Vocab", role: "vocab", enabled: false }
     ]
@@ -2134,100 +1792,9 @@ function resolveSlotsForPreset(presetName = "developer", sourceLang = "en") {
   const preset = SLOT_PRESETS[normPreset] || SLOT_PRESETS.developer;
   return preset.slots(sourceLang);
 }
-var LANGUAGE_PRESETS = {
-  en: {
-    slot1Label: "Spoken",
-    slot2Label: "Written",
-    vocabLabel: "Vocab",
-    sourceLabel: "Source",
-    hudTitle: "en \u21C4 ja",
-    statusOriginal: "en \u21C4 ja",
-    statusEnglish: "en \u21C4 ja",
-    statusOff: "en \u21C4 ja: off",
-    subNuanceLabel: "\u21B3",
-    notifyOriginal: "[en \u21C4 ja] Companion mode: raw send + HUD learning card above",
-    notifyEnglish: "[en \u21C4 ja] Direct mode: prompt optimized into target language",
-    notifyOff: "[en \u21C4 ja] Companion disabled",
-    notifyPaging: "[en \u21C4 ja] Long sentence paginated, use Alt+. or Alt+, to navigate",
-    notifyNoHistory: "[en \u21C4 ja] No previous companion card recorded",
-    notifyHistoryRestored: "[en \u21C4 ja] Restored previous companion card",
-    notifyAgentHelp: "\u{1F4A1} Built-in lingual-tuner skill: Ask the agent to configure companion settings anytime.",
-    notifyModelSwitched: "Companion model switched to: {model}",
-    notifyLangSwitched: "Companion language switched to: {lang}",
-    notifyLangInvalid: "Invalid language code. Supported: zh, tw, ja, ko, en, es, fr, de, ru",
-    notifyCompactOn: "[en \u21C4 ja] Capsule mode enabled: single-line compact view",
-    notifyCompactOff: "[en \u21C4 ja] Tree branch mode enabled: full multi-slot view",
-    notifyTimeout: "[en \u21C4 ja] Prompt rewrite timed out; original prompt passed",
-    notifyError: "[en \u21C4 ja] Prompt rewrite error; original prompt passed",
-    notifyModeNotFound: "[{pair}] Mode [{mode}] is not in your active registry. Run /lingual mode list to view available modes.",
-    notifyModeLockedCycleBlocked: "[{pair}] Mode is locked to [{mode}]. Run /lingual unlock to cycle modes or specify mode directly.",
-    notifyModeLockedSuccess: "[{pair}] Session mode locked to [{mode}]. Mode cycling is blocked. Run /lingual unlock to release.",
-    notifyModeUnlockedSuccess: "[{pair}] Mode lock released. Free mode cycling and configuration sync restored.",
-    notifyUnrecognizedSubcommand: '[{pair}] Unrecognized subcommand: "{cmd}". Current mode unchanged. Available: /lingual [1|2|3|0|on|off|lang|last|lock|status] or /l',
-    notifyClipboardCopied: "Copied to clipboard (prompt intercepted - not sent to agent). Ready to paste into GitHub, PR, or X.",
-    notifyTargetSwitched: "Target language switched to: {target} (native {source} unchanged)",
-    langHelpText: "[Companion Language: {flow}]\n\u2022 Quick switch: /lang ja (target Japanese) \xB7 /lang en (target English)\n\u2022 Pair switch: /lang en ja \xB7 /lang ja en \xB7 /lang es en\n\u2022 Supported codes: zh, tw, ja, ko, en, es, fr, de, ru",
-    modeSwitchedTemplate: "[{pair}] Switched to [{num}. {name} ({id})] ({slot})",
-    loadingOptimizePrompt: "  \u22EF [lingual] optimizing prompt...",
-    loadingFixSyntax: "  \u22EF [lingual] fixing syntax & typos...",
-    loadingCandidates: "  \u22EF [lingual] generating prompt candidates...",
-    statusLoadingOptimize: "[lingual] optimizing...",
-    statusLoadingFix: "[lingual] fixing...",
-    statusLoadingCandidates: "[lingual] generating candidates...",
-    cmdDescMode: "Interactive mode picker or manage: /lingual [1|2|3|0|on|off|lang|last|lock|status]",
-    cmdDescStatus: "Display companion status report & model diagnostics: /lingual status",
-    cmdDescModel: "View or change companion model: /lingual model [model-id|auto]",
-    cmdDescLang: "Switch companion language: /lingual lang <pair> or /lang <pair>",
-    cmdDescLast: "Replay previous companion card: /lingual last (or /last)",
-    shortcutNextPage: "Next companion page segment",
-    shortcutPrevPage: "Previous companion page segment",
-    modePickerTitle: "Mode Switch",
-    modePickerHint: "Press 1/2/3/0 to switch, Esc to cancel",
-    capsuleSlot1Prefix: "Spk",
-    capsuleSlot2Prefix: "Wrt",
-    layoutCapsule: "Single-Line Capsule (1-Line)",
-    layoutTree: "Trifecta Minimalist Left-Rail Tree (\xB7 \u250C \u251C \u2514)",
-    statusReportTitle: "Companion Status Report",
-    statusReportMode: "Mode",
-    statusReportFlow: "Language Flow",
-    statusReportModel: "Model",
-    statusReportCache: "Cache",
-    statusReportLayout: "Layout: Trifecta Minimalist Left-Rail Tree",
-    statusReportAuth: "Auth: Pi Native In-Process Credentials",
-    statusReportShortcuts: "Shortcuts: /lingual (or /l) \xB7 /lingual lang (or /lang) \xB7 /lingual last \xB7 /lingual compact",
-    statusReportTuner: "Slot Tuner: Built-in lingual-tuner skill",
-    modeDescOriginal: "Companion \xB7 0ms pass-through",
-    modeDescEnglish: "Direct \xB7 Deep code reasoning",
-    modeDescLiveFlow: "Live Flow \xB7 i18n takeaway diffs",
-    modeDescOff: "Disabled",
-    modelCurrentLabel: "Current companion model",
-    modelFollowSession: "follow session",
-    modelAvailableListHeader: "Available models (/lingual model <id>):",
-    langUsageHint: "Usage: /lang <source> [target] (e.g. /lang ja en or /lang en zh)",
-    langList: ["\u2022 zh", "\u2022 ja", "\u2022 en", "\u2022 es", "\u2022 fr", "\u2022 de", "\u2022 ru", "\u2022 ko"],
-    slotsHeader: "Dynamic Slots Architecture",
-    slotsActiveTag: "active",
-    slotsNone: "No slots configured",
-    slotsStatusEnabled: "enabled",
-    slotsStatusDisabled: "disabled",
-    slotsWithNuance: " +nuance",
-    slotsNlTitle: "\u{1F4AC} Natural Language Customization:",
-    slotsNlExamples: ['\u2022 "Customize slots: show tweets and deep analysis, no source"'],
-    slotsCliTitle: "CLI Management Commands:",
-    slotsCliHelp: ["\u2022 /slots add <id> <label> [instruction...]", "\u2022 /slots rm <id>", "\u2022 /slots toggle <id>", "\u2022 /slots reset"],
-    slotsResetSuccess: "[{pair}] Reset slots to clean defaults",
-    slotsRemovedSuccess: '[{pair}] Removed slot [{id}] ("{label}")',
-    slotsRemovedSourceNote: " (Source line will no longer appear on cards)",
-    slotsToggled: "[{pair}] Slot [{id}] is now {status}",
-    slotsAdded: '[{pair}] Added/updated slot [{id}] "{label}"',
-    slotsNotFound: "[{pair}] Slot [{id}] not found",
-    slotsUsageAdd: "Usage: /slots add <id> <label> [instruction...]",
-    slotsUsageRm: "Usage: /slots rm <slot-id>",
-    slotsUsageToggle: "Usage: /slots toggle <slot-id>",
-    slotsUnknown: 'Unknown slot command or preset "{cmd}".',
-    spokenLabel: "Spoken",
-    writtenLabel: "Written"
-  },
+
+// src/i18n/cjk.ts
+var CJK_LANGUAGE_PRESETS = {
   zh: {
     slot1Label: "\u53E3\u8BED",
     slot2Label: "\u5199\u4F5C",
@@ -2307,7 +1874,12 @@ var LANGUAGE_PRESETS = {
     slotsNlTitle: "\u{1F4AC} \u81EA\u7136\u8BED\u8A00\u5B9A\u5236\uFF08\u76F4\u63A5\u5BF9 Agent \u8BF4\u5373\u53EF\u5B9A\u5236\uFF09\uFF1A",
     slotsNlExamples: ['\u2022 "\u5E2E\u6211\u5B9A\u5236\u4F34\u5B66\uFF1A\u53EA\u8981\u63A8\u6587\u548C\u6DF1\u5EA6\u5206\u6790\uFF0C\u4E0D\u8981\u539F\u6587"'],
     slotsCliTitle: "\u5E38\u7528\u5FEB\u6377\u547D\u4EE4\uFF1A",
-    slotsCliHelp: ["\u2022 /slots add <id> <label> [instruction...]", "\u2022 /slots rm <id>", "\u2022 /slots toggle <id>", "\u2022 /slots reset"],
+    slotsCliHelp: [
+      "\u2022 /slots add <id> <label> [instruction...]",
+      "\u2022 /slots rm <id>",
+      "\u2022 /slots toggle <id>",
+      "\u2022 /slots reset"
+    ],
     slotsResetSuccess: "[{pair}] \u5DF2\u91CD\u7F6E\u69FD\u4F4D\u4E3A\u521D\u59CB\u9ED8\u8BA4\u72B6\u6001",
     slotsRemovedSuccess: '[{pair}] \u5DF2\u79FB\u9664\u69FD\u4F4D [{id}] ("{label}")',
     slotsRemovedSourceNote: " (\u5DF2\u7269\u7406\u9690\u85CF\u539F\u6587\u884C)",
@@ -2341,7 +1913,7 @@ var LANGUAGE_PRESETS = {
     notifyModelSwitched: "\u4F34\u5B78\u6A21\u578B\u5DF2\u5207\u63DB\u70BA: {model}",
     notifyLangSwitched: "\u4F34\u5B78\u8A9E\u8A00\u5DF2\u5207\u63DB\u70BA: {lang}",
     notifyLangInvalid: "\u7121\u6548\u7684\u8A9E\u8A00\u4EE3\u78BC\u3002\u652F\u63F4: zh, tw, ja, en, es, fr, de, ko, ru",
-    notifyCompactOn: "[tw \u21C4 en] \u5DF2\u958B\u555F\u55AE\u884C\u81A0\u56CA\u6A21\u5F0F\uFF1A\u6975\u7C21\u5360\u4F4D",
+    notifyCompactOn: "[tw \u21C4 en] \u5DF2\u958B\u555F\u55AE\u884C\u81A0\u56CA\u6A21\u5F0F\uFF1A\u6975\u7C21\u4F54\u4F4D",
     notifyCompactOff: "[tw \u21C4 en] \u5DF2\u5207\u63DB\u70BA\u5DE6\u5C0E\u8ECC\u6A39\u72C0\u67B6\u69CB\uFF1A\u5C55\u793A\u5B8C\u6574\u591A\u69FD\u8207\u8A9E\u611F",
     notifyTimeout: "[tw \u21C4 en] \u63D0\u793A\u8A5E\u512A\u5316\u8ACB\u6C42\u672A\u5C31\u7DD2\u6216\u8D85\u6642\uFF0C\u672C\u6B21\u5DF2\u653E\u884C\u539F\u6587",
     notifyError: "[tw \u21C4 en] \u63D0\u793A\u8A5E\u512A\u5316\u8ACB\u6C42\u7570\u5E38\uFF0C\u672C\u6B21\u5DF2\u653E\u884C\u539F\u6587",
@@ -2400,7 +1972,12 @@ var LANGUAGE_PRESETS = {
     slotsNlTitle: "\u{1F4AC} \u81EA\u7136\u8A9E\u8A00\u5B9A\u5236\uFF1A",
     slotsNlExamples: ['\u2022 "\u5E6B\u6211\u5B9A\u5236\u4F34\u5B78\uFF1A\u53EA\u8981\u63A8\u6587\u548C\u6DF1\u5EA6\u5206\u6790\uFF0C\u4E0D\u8981\u539F\u6587"'],
     slotsCliTitle: "\u5E38\u7528\u5FEB\u6377\u6307\u4EE4\uFF1A",
-    slotsCliHelp: ["\u2022 /slots add <id> <label> [instruction...]", "\u2022 /slots rm <id>", "\u2022 /slots toggle <id>", "\u2022 /slots reset"],
+    slotsCliHelp: [
+      "\u2022 /slots add <id> <label> [instruction...]",
+      "\u2022 /slots rm <id>",
+      "\u2022 /slots toggle <id>",
+      "\u2022 /slots reset"
+    ],
     slotsResetSuccess: "[{pair}] \u5DF2\u91CD\u7F6E\u69FD\u4F4D\u70BA\u521D\u59CB\u9810\u8A2D\u72C0\u614B",
     slotsRemovedSuccess: '[{pair}] \u5DF2\u79FB\u9664\u69FD\u4F4D [{id}] ("{label}")',
     slotsRemovedSourceNote: " (\u5DF2\u7269\u7406\u96B1\u85CF\u539F\u6587\u884C)",
@@ -2493,7 +2070,12 @@ var LANGUAGE_PRESETS = {
     slotsNlTitle: "\u{1F4AC} \u81EA\u7136\u8A00\u8A9E\u30AB\u30B9\u30BF\u30DE\u30A4\u30BA:",
     slotsNlExamples: ['\u2022 "\u30C4\u30A4\u30FC\u30C8\u3068\u6280\u8853\u8003\u5BDF\u3060\u3051\u8868\u793A\u3057\u3066\u539F\u6587\u306F\u975E\u8868\u793A\u306B\u3057\u3066"'],
     slotsCliTitle: "CLI\u30B3\u30DE\u30F3\u30C9:",
-    slotsCliHelp: ["\u2022 /slots add <id> <label> [instruction...]", "\u2022 /slots rm <id>", "\u2022 /slots toggle <id>", "\u2022 /slots reset"],
+    slotsCliHelp: [
+      "\u2022 /slots add <id> <label> [instruction...]",
+      "\u2022 /slots rm <id>",
+      "\u2022 /slots toggle <id>",
+      "\u2022 /slots reset"
+    ],
     slotsResetSuccess: "[{pair}] \u30C7\u30D5\u30A9\u30EB\u30C8\u8A2D\u5B9A\u306B\u30EA\u30BB\u30C3\u30C8\u3057\u307E\u3057\u305F",
     slotsRemovedSuccess: "[{pair}] \u30B9\u30ED\u30C3\u30C8 [{id}] \u3092\u524A\u9664\u3057\u307E\u3057\u305F",
     slotsRemovedSourceNote: " (\u539F\u6587\u306F\u8868\u793A\u3055\u308C\u306A\u304F\u306A\u308A\u307E\u3059)",
@@ -2506,6 +2088,224 @@ var LANGUAGE_PRESETS = {
     slotsUnknown: '\u4E0D\u660E\u306A\u30B9\u30ED\u30C3\u30C8\u30B3\u30DE\u30F3\u30C9 "{cmd}" \u3067\u3059\u3002',
     spokenLabel: "\u53E3\u8A9E",
     writtenLabel: "\u6587\u9762"
+  },
+  ko: {
+    slot1Label: "\uAD6C\uC5B4\uCCB4",
+    slot2Label: "\uBB38\uC5B4\uCCB4",
+    vocabLabel: "\uD575\uC2EC\uD45C\uD604",
+    sourceLabel: "\uC6D0\uBB38",
+    hudTitle: "ko \u21C4 en",
+    statusOriginal: "ko \u21C4 en",
+    statusEnglish: "ko \u21C4 en",
+    statusOff: "ko \u21C4 en: off",
+    subNuanceLabel: "\u21B3",
+    notifyOriginal: "[ko \u21C4 en] [\uC6D0\uBB38 \uBAA8\uB4DC] \uD65C\uC131\uD654: \uC6D0\uBB38\uC774 \uADF8\uB300\uB85C \uC804\uB2EC\uB429\uB2C8\uB2E4",
+    notifyEnglish: "[ko \u21C4 en] [\uC601\uC5B4 \uBAA8\uB4DC] \uD65C\uC131\uD654: \uAE30\uC220 \uC601\uC5B4\uB85C \uC790\uB3D9 \uBCC0\uD658\uB418\uC5B4 \uC804\uB2EC\uB429\uB2C8\uB2E4",
+    notifyOff: "[ko \u21C4 en] \uB3D9\uBC18 \uBAA8\uB4DC \uAEBC\uC9D0",
+    notifyPaging: "[ko \u21C4 en] \uC7A5\uBB38 \uBD84\uD560\uB428. Alt+. \uB610\uB294 Alt+, \uD0A4\uB85C \uD0D0\uC0C9",
+    notifyNoHistory: "[ko \u21C4 en] \uC774\uC804 \uAE30\uB85D\uC774 \uC5C6\uC2B5\uB2C8\uB2E4",
+    notifyHistoryRestored: "[ko \u21C4 en] \uC774\uC804 \uCE74\uB4DC\uAC00 \uBCF5\uC6D0\uB418\uC5C8\uC2B5\uB2C8\uB2E4",
+    notifyAgentHelp: '\u{1F4A1} lingual-tuner \uAE30\uB2A5 \uB0B4\uC7A5: \uC5D0\uC774\uC804\uD2B8\uC5D0\uAC8C "\uC6D0\uBB38 \uC5C6\uC774 \uD575\uC2EC \uC694\uC57D\uB9CC \uD45C\uC2DC\uD574\uC918"\uB77C\uACE0 \uC694\uCCAD\uD558\uBA74 \uC790\uB3D9 \uC124\uC815\uB429\uB2C8\uB2E4.',
+    notifyModelSwitched: "\uB3D9\uBC18 \uBAA8\uB378 \uBCC0\uACBD\uB428: {model}",
+    notifyLangSwitched: "\uBAA8\uAD6D\uC5B4 \uBCC0\uACBD\uB428: {lang}",
+    notifyLangInvalid: "\uC720\uD6A8\uD558\uC9C0 \uC54A\uC740 \uC5B8\uC5B4 \uCF54\uB4DC\uC785\uB2C8\uB2E4. \uC9C0\uC6D0: zh, ja, en, ko, es, fr, de, ru",
+    notifyCompactOn: "[ko \u21C4 en] \uB2E8\uC77C \uD589 \uCEA1\uC290 \uBAA8\uB4DC \uCF1C\uC9D0",
+    notifyCompactOff: "[ko \u21C4 en] \uD2B8\uB9AC \uB808\uC774\uC544\uC6C3 \uBCF5\uC6D0\uB428",
+    notifyTimeout: "[ko \u21C4 en] \uBC88\uC5ED \uC2DC\uAC04 \uCD08\uACFC; \uC6D0\uBB38\uC774 \uADF8\uB300\uB85C \uC804\uB2EC\uB418\uC5C8\uC2B5\uB2C8\uB2E4",
+    notifyError: "[ko \u21C4 en] \uBC88\uC5ED \uC624\uB958; \uC6D0\uBB38\uC774 \uADF8\uB300\uB85C \uC804\uB2EC\uB418\uC5C8\uC2B5\uB2C8\uB2E4",
+    notifyModeNotFound: "[{pair}] \uBAA8\uB4DC [{mode}]\uAC00 \uD65C\uC131 \uB808\uC9C0\uC2A4\uD2B8\uB9AC\uC5D0 \uC5C6\uC2B5\uB2C8\uB2E4. /lingual mode list\uB85C \uD655\uC778\uD558\uC138\uC694.",
+    notifyModeLockedCycleBlocked: "[{pair}] \uD604\uC7AC \uBAA8\uB4DC\uAC00 \u3010{mode}\u3011(\uC73C)\uB85C \uC7A0\uACA8 \uC788\uC2B5\uB2C8\uB2E4. \uC21C\uD658\uD558\uB824\uBA74 /lingual unlock \uC73C\uB85C \uD574\uC81C\uD558\uAC70\uB098 /lingual 1|2|3|0 \uC73C\uB85C \uC9C1\uC811 \uC9C0\uC815\uD558\uC138\uC694.",
+    notifyModeLockedSuccess: "[{pair}] \uC138\uC158 \uBAA8\uB4DC\uAC00 \u3010{mode}\u3011(\uC73C)\uB85C \uACE0\uC815\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uC678\uBD80 \uBCC0\uACBD \uBC0F \uC758\uB3C4\uCE58 \uC54A\uC740 \uC804\uD658\uC744 \uBC29\uC9C0\uD569\uB2C8\uB2E4. /lingual unlock \uC73C\uB85C \uD574\uC81C \uAC00\uB2A5.",
+    notifyModeUnlockedSuccess: "[{pair}] \uBAA8\uB4DC \uC7A0\uAE08\uC774 \uD574\uC81C\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uC790\uC720 \uC804\uD658\uACFC \uC124\uC815 \uB3D9\uAE30\uD654\uAC00 \uBCF5\uC6D0\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
+    notifyUnrecognizedSubcommand: '[{pair}] \uC778\uC2DD\uD560 \uC218 \uC5C6\uB294 \uD558\uC704 \uBA85\uB839: "{cmd}". \uD604\uC7AC \uBAA8\uB4DC\uAC00 \uC720\uC9C0\uB429\uB2C8\uB2E4. \uC0AC\uC6A9 \uAC00\uB2A5: /lingual [1|2|3|0|on|off|lang|last|lock|status] \uB610\uB294 /l',
+    notifyClipboardCopied: "\uD074\uB9BD\uBCF4\uB4DC\uC5D0 \uBCF5\uC0AC\uB418\uC5C8\uC2B5\uB2C8\uB2E4 (Agent \uBBF8\uC804\uC1A1). GitHub, PR \uB610\uB294 SNS\uC5D0 \uBD99\uC5EC\uB123\uAE30 \uAC00\uB2A5.",
+    notifyTargetSwitched: "\uBAA9\uD45C \uC5B8\uC5B4\uAC00 {target}(\uC73C)\uB85C \uBCC0\uACBD\uB418\uC5C8\uC2B5\uB2C8\uB2E4 (\uBAA8\uAD6D\uC5B4 {source} \uC720\uC9C0)",
+    langHelpText: "[\uD604\uC7AC \uB3D9\uBC18 \uC5B8\uC5B4: {flow}]\n\u2022 \uBE60\uB978 \uC804\uD658: /lang ja (\uC77C\uBCF8\uC5B4\uB85C) \xB7 /lang en (\uC601\uC5B4\uB85C)\n\u2022 \uC591\uBC29\uD5A5 \uC804\uD658: /lang ko en \xB7 /lang en ko \xB7 /lang ko ja\n\u2022 \uC9C0\uC6D0 \uCF54\uB4DC: zh, tw, ja, ko, en, es, fr, de, ru",
+    modeSwitchedTemplate: "[{pair}] \u3010{num}. {name} ({id})\u3011(\uC73C)\uB85C \uC804\uD658\uB418\uC5C8\uC2B5\uB2C8\uB2E4 ({slot})",
+    loadingOptimizePrompt: "  \u22EF [lingual] \uD504\uB86C\uD504\uD2B8 \uCD5C\uC801\uD654 \uC911...",
+    loadingFixSyntax: "  \u22EF [lingual] \uBB38\uBC95 \uBC0F \uC624\uD0C0 \uC218\uC815 \uC911...",
+    loadingCandidates: "  \u22EF [lingual] \uD6C4\uBCF4 \uD504\uB86C\uD504\uD2B8 \uC0DD\uC131 \uC911...",
+    statusLoadingOptimize: "[lingual] \uCD5C\uC801\uD654 \uC911...",
+    statusLoadingFix: "[lingual] \uC218\uC815 \uC911...",
+    statusLoadingCandidates: "[lingual] \uC0DD\uC131 \uC911...",
+    cmdDescMode: "\uB300\uD654\uD615 \uBAA8\uB4DC \uC804\uD658 \uBC0F \uAD00\uB9AC: /lingual [1|2|3|0|on|off|lang|last|lock|status]",
+    cmdDescStatus: "\uC0C1\uD0DC \uBCF4\uACE0\uC11C \uBC0F \uC9C4\uB2E8 \uD655\uC778: /lingual status",
+    cmdDescModel: "\uBAA8\uB378 \uD655\uC778 \uBC0F \uBCC0\uACBD: /lingual model [model-id|auto]",
+    cmdDescLang: "\uBAA8\uAD6D\uC5B4 \uD655\uC778 \uBC0F \uBCC0\uACBD: /lingual lang [\uCF54\uB4DC] \uB610\uB294 /lang [\uC5B8\uC5B4\uC30D]",
+    cmdDescSlots: "\uC2AC\uB86F \uAD6C\uC131 \uBCC0\uACBD: /lingual slots [add|rm|toggle|reset]",
+    cmdDescCompact: "\uB2E8\uC77C \uD589 \uCEA1\uC290 \uBAA8\uB4DC \uD1A0\uAE00: /lingual compact",
+    cmdDescLast: "\uC774\uC804 \uCE74\uB4DC \uB2E4\uC2DC \uBCF4\uAE30: /lingual last (\uB610\uB294 /last)",
+    cmdDescAgent: "\uC0AC\uC6A9\uC790 \uC124\uC815 \uAC00\uC774\uB4DC: /lingual tuner",
+    shortcutNextPage: "\uB2E4\uC74C \uC138\uADF8\uBA3C\uD2B8\uB85C \uC774\uB3D9",
+    shortcutPrevPage: "\uC774\uC804 \uC138\uADF8\uBA3C\uD2B8\uB85C \uC774\uB3D9",
+    modePickerTitle: "\uB3D9\uD589\uD559\uC2B5 \uBAA8\uB4DC \uC804\uD658",
+    modePickerHint: "\uC22B\uC790 \uD0A4 1/2/3/0 \uC989\uC2DC \uC801\uC6A9, Esc \uCDE8\uC18C",
+    capsuleSlot1Prefix: "\uAD6C",
+    capsuleSlot2Prefix: "\uBB38",
+    layoutCapsule: "\uB2E8\uC77C \uD589 \uCEA1\uC290 (1-Line Capsule)",
+    layoutTree: "Trifecta \uC88C\uCE21 \uB808\uC77C \uD2B8\uB9AC (\xB7 \u250C \u251C \u2514)",
+    statusReportTitle: "\uC0C1\uD0DC \uBCF4\uACE0\uC11C",
+    statusReportMode: "\uD604\uC7AC \uBAA8\uB4DC",
+    statusReportFlow: "\uC5B8\uC5B4 \uD750\uB984",
+    statusReportModel: "\uB3D9\uBC18 \uBAA8\uB378",
+    statusReportCache: "\uC138\uC158 \uCE90\uC2DC",
+    statusReportLayout: "HUD \uB808\uC774\uC544\uC6C3: Trifecta \uC88C\uCE21 \uB808\uC77C \uD2B8\uB9AC (\xB7 \u250C \u251C \u2514)",
+    statusReportAuth: "\uC778\uC99D \uBAA8\uB4DC: Pi \uD504\uB85C\uC138\uC2A4 \uB0B4 \uC9C1\uC811 \uC778\uC99D (Zero Config)",
+    statusReportShortcuts: "\uBA85\uB839\uC5B4: /lingual (\uB610\uB294 /l) \xB7 /lingual lang (\uB610\uB294 /lang) \xB7 /lingual last \xB7 /lingual compact",
+    statusReportTuner: "\uC2AC\uB86F \uD29C\uB108: lingual-tuner \uB0B4\uC7A5",
+    modeDescOriginal: "\uC6D0\uBB38 \uC9C1\uD1B5 \xB7 0ms \uBE44\uCC28\uB2E8",
+    modeDescEnglish: "\uC601\uC5B4 \uBAA8\uB4DC \xB7 \uC2EC\uCE35 \uCF54\uB4DC \uCD94\uB860",
+    modeDescLiveFlow: "\uC2E4\uC2DC\uAC04 \uAD50\uC815 \xB7 0ms \uC9C1\uD1B5 \uBC0F \uCC28\uC774\uC810",
+    modeDescOff: "\uAEBC\uC9D0",
+    modelCurrentLabel: "\uD604\uC7AC \uBAA8\uB378",
+    modelFollowSession: "\uC138\uC158 \uB530\uB984",
+    modelAvailableListHeader: "\uC0AC\uC6A9 \uAC00\uB2A5\uD55C \uBAA8\uB378 (/lingual model <id>):",
+    modelAutoFollowDesc: "auto (\uD604\uC7AC \uC138\uC158 \uC8FC \uBAA8\uB378 \uC790\uB3D9 \uCD94\uC885)",
+    modelSelectHint: "/lingual model <id> \uB610\uB294 auto \uC9C0\uC815.",
+    langUsageHint: "\uC0AC\uC6A9\uBC95: /lang <\uCF54\uB4DC> [\uBAA9\uD45C\uC5B8\uC5B4]",
+    langList: [
+      "\u2022 zh (\uC911\uAD6D\uC5B4 \u2794 \uC601\uC5B4)",
+      "\u2022 ja (\uC77C\uBCF8\uC5B4 \u2794 \uC601\uC5B4)",
+      "\u2022 en (\uC601\uC5B4 \u2794 \uC77C\uBCF8\uC5B4/\uD55C\uAD6D\uC5B4)",
+      "\u2022 ko (\uD55C\uAD6D\uC5B4 \u2794 \uC601\uC5B4)",
+      "\u2022 es (\uC2A4\uD398\uC778\uC5B4 \u2794 \uC601\uC5B4)",
+      "\u2022 fr (\uD504\uB791\uC2A4\uC5B4 \u2794 \uC601\uC5B4)",
+      "\u2022 de (\uB3C5\uC77C\uC5B4 \u2794 \uC601\uC5B4)",
+      "\u2022 ru (\uB7EC\uC2DC\uC544\uC5B4 \u2794 \uC601\uC5B4)"
+    ],
+    slotsHeader: "\uB3D9\uC801 \uC2AC\uB86F \uC544\uD0A4\uD14D\uCC98",
+    slotsActiveTag: "\uD65C\uC131",
+    slotsNone: "\uAD6C\uC131\uB41C \uC2AC\uB86F \uC5C6\uC74C",
+    slotsStatusEnabled: "\uD65C\uC131\uD654\uB428",
+    slotsStatusDisabled: "\uBE44\uD65C\uC131\uD654\uB428",
+    slotsWithNuance: " +\uB258\uC559\uC2A4",
+    slotsNlTitle: "\u{1F4AC} \uC790\uC5F0\uC5B4 \uC124\uC815:",
+    slotsNlExamples: [
+      '\u2022 "\uC6D0\uBB38 \uC5C6\uC774 \uCE90\uC8FC\uC5BC\uACFC \uACA9\uC2DD\uCCB4\uB9CC \uBCF4\uC5EC\uC918"',
+      '\u2022 "\uB2E8\uC77C \uD589 \uC21C\uC218 \uBC88\uC5ED\uC73C\uB85C \uBCC0\uACBD\uD574\uC918"',
+      '\u2022 "\uAE30\uBCF8 \uC2AC\uB86F\uC73C\uB85C \uBCF5\uC6D0\uD574\uC918"'
+    ],
+    slotsCliTitle: "\u26A1\uFE0F \uBE60\uB978 CLI \uBA85\uB839\uC5B4:",
+    slotsCliHelp: [
+      "\u2022 /slots rm source       - \uC6D0\uBB38 \uD589 \uC228\uAE30\uAE30",
+      "\u2022 /slots compact2        - \uCD5C\uC18C \uB4C0\uC5BC \uC2AC\uB86F",
+      "\u2022 /slots reset           - \uAE30\uBCF8\uAC12\uC73C\uB85C \uBCF5\uC6D0",
+      "\u2022 /slots toggle <id>     - \uC2AC\uB86F \uCF1C\uAE30/\uB044\uAE30"
+    ],
+    slotsResetSuccess: "[{pair}] \uC2AC\uB86F\uC774 \uAE30\uBCF8\uAC12\uC73C\uB85C \uBCF5\uC6D0\uB418\uC5C8\uC2B5\uB2C8\uB2E4",
+    slotsRemovedSuccess: '[{pair}] \uC2AC\uB86F [{id}] ("{label}") \uC81C\uAC70\uB428',
+    slotsRemovedSourceNote: " (\uC6D0\uBB38 \uD589\uC774 \uB354 \uC774\uC0C1 \uD45C\uC2DC\uB418\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4)",
+    slotsToggled: "[{pair}] \uC2AC\uB86F [{id}] \uC0C1\uD0DC: {status}",
+    slotsAdded: '[{pair}] \uC2AC\uB86F [{id}] "{label}" \uCD94\uAC00/\uC5C5\uB370\uC774\uD2B8\uB428',
+    slotsNotFound: "[{pair}] \uC2AC\uB86F [{id}]\uC744(\uB97C) \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
+    slotsUsageAdd: "\uC0AC\uC6A9\uBC95: /slots add <id> <\uB77C\uBCA8> [\uD504\uB86C\uD504\uD2B8...]",
+    slotsUsageRm: "\uC0AC\uC6A9\uBC95: /slots rm <\uC2AC\uB86F_id>",
+    slotsUsageToggle: "\uC0AC\uC6A9\uBC95: /slots toggle <\uC2AC\uB86F_id>",
+    slotsUnknown: '[{pair}] \uC54C \uC218 \uC5C6\uB294 \uBA85\uB839\uC5B4 "{cmd}". /slots \uB3C4\uC6C0\uB9D0 \uCC38\uC870',
+    spokenLabel: "\uAD6C\uC5B4",
+    writtenLabel: "\uBB38\uC5B4"
+  }
+};
+
+// src/i18n/latin.ts
+var LATIN_LANGUAGE_PRESETS = {
+  en: {
+    slot1Label: "Spoken",
+    slot2Label: "Written",
+    vocabLabel: "Vocab",
+    sourceLabel: "Source",
+    hudTitle: "en \u21C4 ja",
+    statusOriginal: "en \u21C4 ja",
+    statusEnglish: "en \u21C4 ja",
+    statusOff: "en \u21C4 ja: off",
+    subNuanceLabel: "\u21B3",
+    notifyOriginal: "[en \u21C4 ja] Companion mode: raw send + HUD learning card above",
+    notifyEnglish: "[en \u21C4 ja] Direct mode: prompt optimized into target language",
+    notifyOff: "[en \u21C4 ja] Companion disabled",
+    notifyPaging: "[en \u21C4 ja] Long sentence paginated, use Alt+. or Alt+, to navigate",
+    notifyNoHistory: "[en \u21C4 ja] No previous companion card recorded",
+    notifyHistoryRestored: "[en \u21C4 ja] Restored previous companion card",
+    notifyAgentHelp: "\u{1F4A1} Built-in lingual-tuner skill: Ask the agent to configure companion settings anytime.",
+    notifyModelSwitched: "Companion model switched to: {model}",
+    notifyLangSwitched: "Companion language switched to: {lang}",
+    notifyLangInvalid: "Invalid language code. Supported: zh, tw, ja, ko, en, es, fr, de, ru",
+    notifyCompactOn: "[en \u21C4 ja] Capsule mode enabled: single-line compact view",
+    notifyCompactOff: "[en \u21C4 ja] Tree branch mode enabled: full multi-slot view",
+    notifyTimeout: "[en \u21C4 ja] Prompt rewrite timed out; original prompt passed",
+    notifyError: "[en \u21C4 ja] Prompt rewrite error; original prompt passed",
+    notifyModeNotFound: "[{pair}] Mode [{mode}] is not in your active registry. Run /lingual mode list to view available modes.",
+    notifyModeLockedCycleBlocked: "[{pair}] Mode is locked to [{mode}]. Run /lingual unlock to cycle modes or specify mode directly.",
+    notifyModeLockedSuccess: "[{pair}] Session mode locked to [{mode}]. Mode cycling is blocked. Run /lingual unlock to release.",
+    notifyModeUnlockedSuccess: "[{pair}] Mode lock released. Free mode cycling and configuration sync restored.",
+    notifyUnrecognizedSubcommand: '[{pair}] Unrecognized subcommand: "{cmd}". Current mode unchanged. Available: /lingual [1|2|3|0|on|off|lang|last|lock|status] or /l',
+    notifyClipboardCopied: "Copied to clipboard (prompt intercepted - not sent to agent). Ready to paste into GitHub, PR, or X.",
+    notifyTargetSwitched: "Target language switched to: {target} (native {source} unchanged)",
+    langHelpText: "[Companion Language: {flow}]\n\u2022 Quick switch: /lang ja (target Japanese) \xB7 /lang en (target English)\n\u2022 Pair switch: /lang en ja \xB7 /lang ja en \xB7 /lang es en\n\u2022 Supported codes: zh, tw, ja, ko, en, es, fr, de, ru",
+    modeSwitchedTemplate: "[{pair}] Switched to [{num}. {name} ({id})] ({slot})",
+    loadingOptimizePrompt: "  \u22EF [lingual] optimizing prompt...",
+    loadingFixSyntax: "  \u22EF [lingual] fixing syntax & typos...",
+    loadingCandidates: "  \u22EF [lingual] generating prompt candidates...",
+    statusLoadingOptimize: "[lingual] optimizing...",
+    statusLoadingFix: "[lingual] fixing...",
+    statusLoadingCandidates: "[lingual] generating candidates...",
+    cmdDescMode: "Interactive mode picker or manage: /lingual [1|2|3|0|on|off|lang|last|lock|status]",
+    cmdDescStatus: "Display companion status report & model diagnostics: /lingual status",
+    cmdDescModel: "View or change companion model: /lingual model [model-id|auto]",
+    cmdDescLang: "Switch companion language: /lingual lang <pair> or /lang <pair>",
+    cmdDescLast: "Replay previous companion card: /lingual last (or /last)",
+    shortcutNextPage: "Next companion page segment",
+    shortcutPrevPage: "Previous companion page segment",
+    modePickerTitle: "Mode Switch",
+    modePickerHint: "Press 1/2/3/0 to switch, Esc to cancel",
+    capsuleSlot1Prefix: "Spk",
+    capsuleSlot2Prefix: "Wrt",
+    layoutCapsule: "Single-Line Capsule (1-Line)",
+    layoutTree: "Trifecta Minimalist Left-Rail Tree (\xB7 \u250C \u251C \u2514)",
+    statusReportTitle: "Companion Status Report",
+    statusReportMode: "Mode",
+    statusReportFlow: "Language Flow",
+    statusReportModel: "Model",
+    statusReportCache: "Cache",
+    statusReportLayout: "Layout: Trifecta Minimalist Left-Rail Tree",
+    statusReportAuth: "Auth: Pi Native In-Process Credentials",
+    statusReportShortcuts: "Shortcuts: /lingual (or /l) \xB7 /lingual lang (or /lang) \xB7 /lingual last \xB7 /lingual compact",
+    statusReportTuner: "Slot Tuner: Built-in lingual-tuner skill",
+    modeDescOriginal: "Companion \xB7 0ms pass-through",
+    modeDescEnglish: "Direct \xB7 Deep code reasoning",
+    modeDescLiveFlow: "Live Flow \xB7 i18n takeaway diffs",
+    modeDescOff: "Disabled",
+    modelCurrentLabel: "Current companion model",
+    modelFollowSession: "follow session",
+    modelAvailableListHeader: "Available models (/lingual model <id>):",
+    langUsageHint: "Usage: /lang <source> [target] (e.g. /lang ja en or /lang en zh)",
+    langList: ["\u2022 zh", "\u2022 ja", "\u2022 en", "\u2022 es", "\u2022 fr", "\u2022 de", "\u2022 ru", "\u2022 ko"],
+    slotsHeader: "Dynamic Slots Architecture",
+    slotsActiveTag: "active",
+    slotsNone: "No slots configured",
+    slotsStatusEnabled: "enabled",
+    slotsStatusDisabled: "disabled",
+    slotsWithNuance: " +nuance",
+    slotsNlTitle: "\u{1F4AC} Natural Language Customization:",
+    slotsNlExamples: ['\u2022 "Customize slots: show tweets and deep analysis, no source"'],
+    slotsCliTitle: "CLI Management Commands:",
+    slotsCliHelp: [
+      "\u2022 /slots add <id> <label> [instruction...]",
+      "\u2022 /slots rm <id>",
+      "\u2022 /slots toggle <id>",
+      "\u2022 /slots reset"
+    ],
+    slotsResetSuccess: "[{pair}] Reset slots to clean defaults",
+    slotsRemovedSuccess: '[{pair}] Removed slot [{id}] ("{label}")',
+    slotsRemovedSourceNote: " (Source line will no longer appear on cards)",
+    slotsToggled: "[{pair}] Slot [{id}] is now {status}",
+    slotsAdded: '[{pair}] Added/updated slot [{id}] "{label}"',
+    slotsNotFound: "[{pair}] Slot [{id}] not found",
+    slotsUsageAdd: "Usage: /slots add <id> <label> [instruction...]",
+    slotsUsageRm: "Usage: /slots rm <slot-id>",
+    slotsUsageToggle: "Usage: /slots toggle <slot-id>",
+    slotsUnknown: 'Unknown slot command or preset "{cmd}".',
+    spokenLabel: "Spoken",
+    writtenLabel: "Written"
   },
   es: {
     slot1Label: "Coloquial",
@@ -2593,7 +2393,6 @@ var LANGUAGE_PRESETS = {
       "\u2022 de (Alem\xE1n \u2794 Ingl\xE9s)",
       "\u2022 ru (Ruso \u2794 Ingl\xE9s)"
     ],
-    // Ranuras dinámicas (Español)
     slotsHeader: "Arquitectura de ranuras din\xE1micas",
     slotsActiveTag: "activas",
     slotsNone: "No hay ranuras configuradas",
@@ -2636,39 +2435,41 @@ var LANGUAGE_PRESETS = {
     statusEnglish: "fr \u21C4 en",
     statusOff: "fr \u21C4 en: off",
     subNuanceLabel: "\u21B3",
-    notifyOriginal: "[fr \u21C4 en] Mode [Original] activ\xE9 : Votre texte reste inchang\xE9",
-    notifyEnglish: "[fr \u21C4 en] Mode [Anglais] activ\xE9 : Votre prompt est traduit en anglais technique",
+    notifyOriginal: "[fr \u21C4 en] Mode [Original] activ\xE9 : le texte est transmis tel quel",
+    notifyEnglish: "[fr \u21C4 en] Mode [Anglais] activ\xE9 : le texte est traduit en anglais technique",
     notifyOff: "[fr \u21C4 en] Compagnon d\xE9sactiv\xE9",
-    notifyPaging: "[fr \u21C4 en] Long texte segment\xE9. Appuyez sur Alt+. ou Alt+, pour parcourir",
+    notifyPaging: "[fr \u21C4 en] Texte long segment\xE9. Utilisez Alt+. ou Alt+, pour naviguer",
     notifyNoHistory: "[fr \u21C4 en] Aucun historique pr\xE9c\xE9dent",
     notifyHistoryRestored: "[fr \u21C4 en] Carte pr\xE9c\xE9dente restaur\xE9e",
-    notifyAgentHelp: '\u{1F4A1} Comp\xE9tence lingual-tuner int\xE9gr\xE9e : Dites simplement \xE0 votre Agent "Personnalise le compagnon : uniquement tweet et analyse, sans texte original" pour ajuster les emplacements. Changez de langue avec /lang <code>.',
+    notifyAgentHelp: '\u{1F4A1} Comp\xE9tence lingual-tuner int\xE9gr\xE9e : Dites simplement \xE0 votre Agent "Personnalise le compagnon : uniquement tweet et analyse, sans texte original" pour configurer les emplacements instantan\xE9ment. Changez de langue avec /lang <code>.',
     notifyModelSwitched: "Mod\xE8le chang\xE9 pour : {model}",
-    notifyLangSwitched: "Langue maternelle chang\xE9e en : {lang} (Note : L'autocompl\xE9tion des commandes sera actualis\xE9e apr\xE8s red\xE9marrage du terminal)",
-    notifyLangInvalid: "Code de langue invalide. Pris en charge : zh, tw, ja, ko, en, es, fr, de, ru",
-    notifyCompactOn: "[fr \u21C4 en] Mode capsule sur une seule ligne activ\xE9",
-    notifyCompactOff: "[fr \u21C4 en] Mode arborescence compl\xE8te restaur\xE9",
-    notifyTimeout: "[fr \u21C4 en] La traduction en anglais a expir\xE9 ; le prompt original a \xE9t\xE9 transmis",
-    notifyError: "[fr \u21C4 en] Erreur de traduction en anglais ; le prompt original a \xE9t\xE9 transmis",
-    notifyModeNotFound: "[{pair}] Le mode [{mode}] n'est pas dans votre registre actif. Ex\xE9cutez /lingual mode list pour voir les modes disponibles.",
+    notifyLangSwitched: "Langue maternelle chang\xE9e pour : {lang} (Note : les descriptions des commandes seront mises \xE0 jour au red\xE9marrage du terminal)",
+    notifyLangInvalid: "Code de langue non valide. Pris en charge : zh, tw, ja, ko, en, es, fr, de, ru",
+    notifyCompactOn: "[fr \u21C4 en] Mode capsule sur une ligne activ\xE9",
+    notifyCompactOff: "[fr \u21C4 en] Mode arbre complet restaur\xE9",
+    notifySlotSwitched: "[fr \u21C4 en] Architecture d'emplacements chang\xE9e pour [{preset}] : {desc}",
+    notifyTimeout: "[fr \u21C4 en] La traduction anglaise a expir\xE9 ; le texte original a \xE9t\xE9 envoy\xE9",
+    notifyError: "[fr \u21C4 en] Erreur lors de la traduction anglaise ; le texte original a \xE9t\xE9 envoy\xE9",
+    notifyModeNotFound: "[{pair}] Le mode [{mode}] n'est pas dans le registre actif. Ex\xE9cutez /lingual mode list pour voir les modes disponibles.",
     notifyModeLockedCycleBlocked: "[{pair}] Le mode est verrouill\xE9 sur [{mode}]. Ex\xE9cutez /lingual unlock pour d\xE9verrouiller ou sp\xE9cifiez le mode directement.",
-    notifyModeLockedSuccess: "[{pair}] Mode de session verrouill\xE9 sur [{mode}]. D\xE9filement bloqu\xE9. Ex\xE9cutez /lingual unlock pour lib\xE9rer.",
-    notifyModeUnlockedSuccess: "[{pair}] Verrouillage du mode d\xE9sactiv\xE9. D\xE9filement libre et synchronisation restaur\xE9s.",
+    notifyModeLockedSuccess: "[{pair}] Mode de session verrouill\xE9 sur [{mode}]. Changement cyclique bloqu\xE9. Ex\xE9cutez /lingual unlock pour lib\xE9rer.",
+    notifyModeUnlockedSuccess: "[{pair}] Verrouillage du mode lev\xE9. Cycle libre et synchronisation restaur\xE9s.",
     notifyUnrecognizedSubcommand: '[{pair}] Sous-commande non reconnue : "{cmd}". Mode actuel inchang\xE9. Disponibles : /lingual [1|2|3|0|on|off|lang|last|lock|status] ou /l',
     notifyClipboardCopied: "Copi\xE9 dans le presse-papiers (prompt intercept\xE9, non envoy\xE9 \xE0 l'agent). Pr\xEAt \xE0 coller.",
-    notifyTargetSwitched: "Langue cible chang\xE9e en : {target} (langue native {source} inchang\xE9e)",
-    langHelpText: "[Paire de langues : {flow}]\n\u2022 Changement rapide : /lang ja (japonais) \xB7 /lang en (anglais)\n\u2022 Changement de paire : /lang fr en \xB7 /lang en fr\n\u2022 Codes pris en charge : zh, tw, ja, ko, en, es, fr, de, ru",
-    modeSwitchedTemplate: "[{pair}] Chang\xE9 en [{num}. {name} ({id})] ({slot})",
+    notifyTargetSwitched: "Langue cible chang\xE9e pour : {target} (langue maternelle {source} inchang\xE9e)",
+    langHelpText: "[Paire linguistique : {flow}]\n\u2022 Changement rapide : /lang ja (japonais) \xB7 /lang en (anglais)\n\u2022 Changement de paire : /lang fr en \xB7 /lang en fr\n\u2022 Codes pris en charge : zh, tw, ja, ko, en, es, fr, de, ru",
+    modeSwitchedTemplate: "[{pair}] Pass\xE9 \xE0 [{num}. {name} ({id})] ({slot})",
     loadingOptimizePrompt: "  \u22EF [lingual] optimisation du prompt...",
     loadingFixSyntax: "  \u22EF [lingual] correction de la syntaxe et des fautes...",
-    loadingCandidates: "  \u22EF [lingual] g\xE9n\xE9ration des variantes de prompt...",
+    loadingCandidates: "  \u22EF [lingual] g\xE9n\xE9ration de variantes de prompt...",
     statusLoadingOptimize: "[lingual] optimisation...",
     statusLoadingFix: "[lingual] correction...",
     statusLoadingCandidates: "[lingual] g\xE9n\xE9ration...",
     cmdDescMode: "S\xE9lecteur interactif de mode ou gestion : /lingual [1|2|3|0|on|off|lang|last|lock|status]",
-    cmdDescStatus: "Afficher le rapport d'\xE9tat et le diagnostic: /lingual status",
-    cmdDescModel: "Consulter ou changer de mod\xE8le : /lingual model [model-id|auto]",
-    cmdDescLang: "Afficher ou changer la langue d'assistance : /lingual lang [code] ou /lang [paire]",
+    cmdDescStatus: "Afficher le diagnostic et l'\xE9tat du mod\xE8le : /lingual status",
+    cmdDescModel: "V\xE9rifier ou changer le mod\xE8le : /lingual model [model-id|auto]",
+    cmdDescLang: "Afficher ou changer la langue : /lingual lang [code] ou /lang [paire]",
+    cmdDescSlots: "Inspecter ou modifier les emplacements : /lingual slots [add|rm|toggle|reset]",
     cmdDescCompact: "Basculer le mode capsule sur une ligne : /lingual compact",
     cmdDescLast: "R\xE9afficher la carte pr\xE9c\xE9dente : /lingual last (ou /last)",
     cmdDescAgent: "Lancer l'assistant de personnalisation : /lingual tuner",
@@ -2710,7 +2511,6 @@ var LANGUAGE_PRESETS = {
       "\u2022 de (Allemand \u2794 Anglais)",
       "\u2022 ru (Russe \u2794 Anglais)"
     ],
-    // Emplacements dynamiques (Français)
     slotsHeader: "Architecture d'emplacements dynamiques",
     slotsActiveTag: "actifs",
     slotsNone: "Aucun emplacement configur\xE9",
@@ -2829,7 +2629,6 @@ var LANGUAGE_PRESETS = {
       "\u2022 de (Deutsch \u2794 Englisch)",
       "\u2022 ru (Russisch \u2794 Englisch)"
     ],
-    // Dynamische Slot-Architektur (Deutsch)
     slotsHeader: "Dynamische Slot-Architektur",
     slotsActiveTag: "aktiv",
     slotsNone: "Keine Slots konfiguriert",
@@ -2861,122 +2660,6 @@ var LANGUAGE_PRESETS = {
     slotsUnknown: '[{pair}] Unbekannter Befehl oder Preset "{cmd}". /slots f\xFCr Hilfe eingeben',
     spokenLabel: "Gesprochen",
     writtenLabel: "Schriftlich"
-  },
-  ko: {
-    slot1Label: "\uAD6C\uC5B4\uCCB4",
-    slot2Label: "\uBB38\uC5B4\uCCB4",
-    vocabLabel: "\uD575\uC2EC\uD45C\uD604",
-    sourceLabel: "\uC6D0\uBB38",
-    hudTitle: "ko \u21C4 en",
-    statusOriginal: "ko \u21C4 en",
-    statusEnglish: "ko \u21C4 en",
-    statusOff: "ko \u21C4 en: off",
-    subNuanceLabel: "\u21B3",
-    notifyOriginal: "[ko \u21C4 en] [\uC6D0\uBB38 \uBAA8\uB4DC] \uD65C\uC131\uD654: \uC6D0\uBB38\uC774 \uADF8\uB300\uB85C \uC804\uB2EC\uB429\uB2C8\uB2E4",
-    notifyEnglish: "[ko \u21C4 en] [\uC601\uC5B4 \uBAA8\uB4DC] \uD65C\uC131\uD654: \uAE30\uC220 \uC601\uC5B4\uB85C \uC790\uB3D9 \uBCC0\uD658\uB418\uC5B4 \uC804\uB2EC\uB429\uB2C8\uB2E4",
-    notifyOff: "[ko \u21C4 en] \uB3D9\uBC18 \uBAA8\uB4DC \uAEBC\uC9D0",
-    notifyPaging: "[ko \u21C4 en] \uC7A5\uBB38 \uBD84\uD560\uB428. Alt+. \uB610\uB294 Alt+, \uD0A4\uB85C \uD0D0\uC0C9",
-    notifyNoHistory: "[ko \u21C4 en] \uC774\uC804 \uAE30\uB85D\uC774 \uC5C6\uC2B5\uB2C8\uB2E4",
-    notifyHistoryRestored: "[ko \u21C4 en] \uC774\uC804 \uCE74\uB4DC\uAC00 \uBCF5\uC6D0\uB418\uC5C8\uC2B5\uB2C8\uB2E4",
-    notifyAgentHelp: '\u{1F4A1} lingual-tuner \uAE30\uB2A5 \uB0B4\uC7A5: \uC5D0\uC774\uC804\uD2B8\uC5D0\uAC8C "\uC6D0\uBB38 \uC5C6\uC774 \uD575\uC2EC \uC694\uC57D\uB9CC \uD45C\uC2DC\uD574\uC918"\uB77C\uACE0 \uC694\uCCAD\uD558\uBA74 \uC790\uB3D9 \uC124\uC815\uB429\uB2C8\uB2E4.',
-    notifyModelSwitched: "\uB3D9\uBC18 \uBAA8\uB378 \uBCC0\uACBD\uB428: {model}",
-    notifyLangSwitched: "\uBAA8\uAD6D\uC5B4 \uBCC0\uACBD\uB428: {lang}",
-    notifyLangInvalid: "\uC720\uD6A8\uD558\uC9C0 \uC54A\uC740 \uC5B8\uC5B4 \uCF54\uB4DC\uC785\uB2C8\uB2E4. \uC9C0\uC6D0: zh, ja, en, ko, es, fr, de, ru",
-    notifyCompactOn: "[ko \u21C4 en] \uB2E8\uC77C \uD589 \uCEA1\uC290 \uBAA8\uB4DC \uCF1C\uC9D0",
-    notifyCompactOff: "[ko \u21C4 en] \uD2B8\uB9AC \uB808\uC774\uC544\uC6C3 \uBCF5\uC6D0\uB428",
-    notifyTimeout: "[ko \u21C4 en] \uBC88\uC5ED \uC2DC\uAC04 \uCD08\uACFC; \uC6D0\uBB38\uC774 \uADF8\uB300\uB85C \uC804\uB2EC\uB418\uC5C8\uC2B5\uB2C8\uB2E4",
-    notifyError: "[ko \u21C4 en] \uBC88\uC5ED \uC624\uB958; \uC6D0\uBB38\uC774 \uADF8\uB300\uB85C \uC804\uB2EC\uB418\uC5C8\uC2B5\uB2C8\uB2E4",
-    notifyModeNotFound: "[{pair}] \uBAA8\uB4DC [{mode}]\uAC00 \uD65C\uC131 \uB808\uC9C0\uC2A4\uD2B8\uB9AC\uC5D0 \uC5C6\uC2B5\uB2C8\uB2E4. /lingual mode list\uB85C \uD655\uC778\uD558\uC138\uC694.",
-    notifyModeLockedCycleBlocked: "[{pair}] \uD604\uC7AC \uBAA8\uB4DC\uAC00 \u3010{mode}\u3011(\uC73C)\uB85C \uC7A0\uACA8 \uC788\uC2B5\uB2C8\uB2E4. \uC21C\uD658\uD558\uB824\uBA74 /lingual unlock \uC73C\uB85C \uD574\uC81C\uD558\uAC70\uB098 /lingual 1|2|3|0 \uC73C\uB85C \uC9C1\uC811 \uC9C0\uC815\uD558\uC138\uC694.",
-    notifyModeLockedSuccess: "[{pair}] \uC138\uC158 \uBAA8\uB4DC\uAC00 \u3010{mode}\u3011(\uC73C)\uB85C \uACE0\uC815\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uC678\uBD80 \uBCC0\uACBD \uBC0F \uC758\uB3C4\uCE58 \uC54A\uC740 \uC804\uD658\uC744 \uBC29\uC9C0\uD569\uB2C8\uB2E4. /lingual unlock \uC73C\uB85C \uD574\uC81C \uAC00\uB2A5.",
-    notifyModeUnlockedSuccess: "[{pair}] \uBAA8\uB4DC \uC7A0\uAE08\uC774 \uD574\uC81C\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uC790\uC720 \uC804\uD658\uACFC \uC124\uC815 \uB3D9\uAE30\uD654\uAC00 \uBCF5\uC6D0\uB418\uC5C8\uC2B5\uB2C8\uB2E4.",
-    notifyUnrecognizedSubcommand: '[{pair}] \uC778\uC2DD\uD560 \uC218 \uC5C6\uB294 \uD558\uC704 \uBA85\uB839: "{cmd}". \uD604\uC7AC \uBAA8\uB4DC\uAC00 \uC720\uC9C0\uB429\uB2C8\uB2E4. \uC0AC\uC6A9 \uAC00\uB2A5: /lingual [1|2|3|0|on|off|lang|last|lock|status] \uB610\uB294 /l',
-    notifyClipboardCopied: "\uD074\uB9BD\uBCF4\uB4DC\uC5D0 \uBCF5\uC0AC\uB418\uC5C8\uC2B5\uB2C8\uB2E4 (Agent \uBBF8\uC804\uC1A1). GitHub, PR \uB610\uB294 SNS\uC5D0 \uBD99\uC5EC\uB123\uAE30 \uAC00\uB2A5.",
-    notifyTargetSwitched: "\uBAA9\uD45C \uC5B8\uC5B4\uAC00 {target}(\uC73C)\uB85C \uBCC0\uACBD\uB418\uC5C8\uC2B5\uB2C8\uB2E4 (\uBAA8\uAD6D\uC5B4 {source} \uC720\uC9C0)",
-    langHelpText: "[\uD604\uC7AC \uB3D9\uBC18 \uC5B8\uC5B4: {flow}]\n\u2022 \uBE60\uB978 \uC804\uD658: /lang ja (\uC77C\uBCF8\uC5B4\uB85C) \xB7 /lang en (\uC601\uC5B4\uB85C)\n\u2022 \uC591\uBC29\uD5A5 \uC804\uD658: /lang ko en \xB7 /lang en ko \xB7 /lang ko ja\n\u2022 \uC9C0\uC6D0 \uCF54\uB4DC: zh, tw, ja, ko, en, es, fr, de, ru",
-    modeSwitchedTemplate: "[{pair}] \u3010{num}. {name} ({id})\u3011(\uC73C)\uB85C \uC804\uD658\uB418\uC5C8\uC2B5\uB2C8\uB2E4 ({slot})",
-    loadingOptimizePrompt: "  \u22EF [lingual] \uD504\uB86C\uD504\uD2B8 \uCD5C\uC801\uD654 \uC911...",
-    loadingFixSyntax: "  \u22EF [lingual] \uBB38\uBC95 \uBC0F \uC624\uD0C0 \uC218\uC815 \uC911...",
-    loadingCandidates: "  \u22EF [lingual] \uD6C4\uBCF4 \uD504\uB86C\uD504\uD2B8 \uC0DD\uC131 \uC911...",
-    statusLoadingOptimize: "[lingual] \uCD5C\uC801\uD654 \uC911...",
-    statusLoadingFix: "[lingual] \uC218\uC815 \uC911...",
-    statusLoadingCandidates: "[lingual] \uC0DD\uC131 \uC911...",
-    cmdDescMode: "\uB300\uD654\uD615 \uBAA8\uB4DC \uC804\uD658 \uBC0F \uAD00\uB9AC: /lingual [1|2|3|0|on|off|lang|last|lock|status]",
-    cmdDescStatus: "\uC0C1\uD0DC \uBCF4\uACE0\uC11C \uBC0F \uC9C4\uB2E8 \uD655\uC778: /lingual status",
-    cmdDescModel: "\uBAA8\uB378 \uD655\uC778 \uBC0F \uBCC0\uACBD: /lingual model [model-id|auto]",
-    cmdDescLang: "\uBAA8\uAD6D\uC5B4 \uD655\uC778 \uBC0F \uBCC0\uACBD: /lingual lang [\uCF54\uB4DC] \uB610\uB294 /lang [\uC5B8\uC5B4\uC30D]",
-    cmdDescSlots: "\uC2AC\uB86F \uAD6C\uC131 \uBCC0\uACBD: /lingual slots [add|rm|toggle|reset]",
-    cmdDescCompact: "\uB2E8\uC77C \uD589 \uCEA1\uC290 \uBAA8\uB4DC \uD1A0\uAE00: /lingual compact",
-    cmdDescLast: "\uC774\uC804 \uCE74\uB4DC \uB2E4\uC2DC \uBCF4\uAE30: /lingual last (\uB610\uB294 /last)",
-    cmdDescAgent: "\uC0AC\uC6A9\uC790 \uC124\uC815 \uAC00\uC774\uB4DC: /lingual tuner",
-    shortcutNextPage: "\uB2E4\uC74C \uC138\uADF8\uBA3C\uD2B8\uB85C \uC774\uB3D9",
-    shortcutPrevPage: "\uC774\uC804 \uC138\uADF8\uBA3C\uD2B8\uB85C \uC774\uB3D9",
-    modePickerTitle: "\uB3D9\uD589\uD559\uC2B5 \uBAA8\uB4DC \uC804\uD658",
-    modePickerHint: "\uC22B\uC790 \uD0A4 1/2/3/0 \uC989\uC2DC \uC801\uC6A9, Esc \uCDE8\uC18C",
-    capsuleSlot1Prefix: "\uAD6C",
-    capsuleSlot2Prefix: "\uBB38",
-    layoutCapsule: "\uB2E8\uC77C \uD589 \uCEA1\uC290 (1-Line Capsule)",
-    layoutTree: "Trifecta \uC88C\uCE21 \uB808\uC77C \uD2B8\uB9AC (\xB7 \u250C \u251C \u2514)",
-    statusReportTitle: "\uC0C1\uD0DC \uBCF4\uACE0\uC11C",
-    statusReportMode: "\uD604\uC7AC \uBAA8\uB4DC",
-    statusReportFlow: "\uC5B8\uC5B4 \uD750\uB984",
-    statusReportModel: "\uB3D9\uBC18 \uBAA8\uB378",
-    statusReportCache: "\uC138\uC158 \uCE90\uC2DC",
-    statusReportLayout: "HUD \uB808\uC774\uC544\uC6C3: Trifecta \uC88C\uCE21 \uB808\uC77C \uD2B8\uB9AC (\xB7 \u250C \u251C \u2514)",
-    statusReportAuth: "\uC778\uC99D \uBAA8\uB4DC: Pi \uD504\uB85C\uC138\uC2A4 \uB0B4 \uC9C1\uC811 \uC778\uC99D (Zero Config)",
-    statusReportShortcuts: "\uBA85\uB839\uC5B4: /lingual (\uB610\uB294 /l) \xB7 /lingual lang (\uB610\uB294 /lang) \xB7 /lingual last \xB7 /lingual compact",
-    statusReportTuner: "\uC2AC\uB86F \uD29C\uB108: lingual-tuner \uB0B4\uC7A5",
-    modeDescOriginal: "\uC6D0\uBB38 \uC9C1\uD1B5 \xB7 0ms \uBE44\uCC28\uB2E8",
-    modeDescEnglish: "\uC601\uC5B4 \uBAA8\uB4DC \xB7 \uC2EC\uCE35 \uCF54\uB4DC \uCD94\uB860",
-    modeDescLiveFlow: "\uC2E4\uC2DC\uAC04 \uAD50\uC815 \xB7 0ms \uC9C1\uD1B5 \uBC0F \uCC28\uC774\uC810",
-    modeDescOff: "\uAEBC\uC9D0",
-    modelCurrentLabel: "\uD604\uC7AC \uBAA8\uB378",
-    modelFollowSession: "\uC138\uC158 \uB530\uB984",
-    modelAvailableListHeader: "\uC0AC\uC6A9 \uAC00\uB2A5\uD55C \uBAA8\uB378 (/lingual model <id>):",
-    modelAutoFollowDesc: "auto (\uD604\uC7AC \uC138\uC158 \uC8FC \uBAA8\uB378 \uC790\uB3D9 \uCD94\uC885)",
-    modelSelectHint: "/lingual model <id> \uB610\uB294 auto \uC9C0\uC815.",
-    langUsageHint: "\uC0AC\uC6A9\uBC95: /lang <\uCF54\uB4DC> [\uBAA9\uD45C\uC5B8\uC5B4]",
-    langList: [
-      "\u2022 zh (\uC911\uAD6D\uC5B4 \u2794 \uC601\uC5B4)",
-      "\u2022 ja (\uC77C\uBCF8\uC5B4 \u2794 \uC601\uC5B4)",
-      "\u2022 en (\uC601\uC5B4 \u2794 \uC77C\uBCF8\uC5B4/\uD55C\uAD6D\uC5B4)",
-      "\u2022 ko (\uD55C\uAD6D\uC5B4 \u2794 \uC601\uC5B4)",
-      "\u2022 es (\uC2A4\uD398\uC778\uC5B4 \u2794 \uC601\uC5B4)",
-      "\u2022 fr (\uD504\uB791\uC2A4\uC5B4 \u2794 \uC601\uC5B4)",
-      "\u2022 de (\uB3C5\uC77C\uC5B4 \u2794 \uC601\uC5B4)",
-      "\u2022 ru (\uB7EC\uC2DC\uC544\uC5B4 \u2794 \uC601\uC5B4)"
-    ],
-    slotsHeader: "\uB3D9\uC801 \uC2AC\uB86F \uC544\uD0A4\uD14D\uCC98",
-    slotsActiveTag: "\uD65C\uC131",
-    slotsNone: "\uAD6C\uC131\uB41C \uC2AC\uB86F \uC5C6\uC74C",
-    slotsStatusEnabled: "\uD65C\uC131\uD654\uB428",
-    slotsStatusDisabled: "\uBE44\uD65C\uC131\uD654\uB428",
-    slotsWithNuance: " +\uB258\uC559\uC2A4",
-    slotsNlTitle: "\u{1F4AC} \uC790\uC5F0\uC5B4 \uC124\uC815:",
-    slotsNlExamples: [
-      '\u2022 "\uC6D0\uBB38 \uC5C6\uC774 \uCE90\uC8FC\uC5BC\uACFC \uACA9\uC2DD\uCCB4\uB9CC \uBCF4\uC5EC\uC918"',
-      '\u2022 "\uB2E8\uC77C \uD589 \uC21C\uC218 \uBC88\uC5ED\uC73C\uB85C \uBCC0\uACBD\uD574\uC918"',
-      '\u2022 "\uAE30\uBCF8 \uC2AC\uB86F\uC73C\uB85C \uBCF5\uC6D0\uD574\uC918"'
-    ],
-    slotsCliTitle: "\u26A1\uFE0F \uBE60\uB978 CLI \uBA85\uB839\uC5B4:",
-    slotsCliHelp: [
-      "\u2022 /slots rm source       - \uC6D0\uBB38 \uD589 \uC228\uAE30\uAE30",
-      "\u2022 /slots compact2        - \uCD5C\uC18C \uB4C0\uC5BC \uC2AC\uB86F",
-      "\u2022 /slots reset           - \uAE30\uBCF8\uAC12\uC73C\uB85C \uBCF5\uC6D0",
-      "\u2022 /slots toggle <id>     - \uC2AC\uB86F \uCF1C\uAE30/\uB044\uAE30"
-    ],
-    slotsResetSuccess: "[{pair}] \uC2AC\uB86F\uC774 \uAE30\uBCF8\uAC12\uC73C\uB85C \uBCF5\uC6D0\uB418\uC5C8\uC2B5\uB2C8\uB2E4",
-    slotsRemovedSuccess: '[{pair}] \uC2AC\uB86F [{id}] ("{label}") \uC81C\uAC70\uB428',
-    slotsRemovedSourceNote: " (\uC6D0\uBB38 \uD589\uC774 \uB354 \uC774\uC0C1 \uD45C\uC2DC\uB418\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4)",
-    slotsToggled: "[{pair}] \uC2AC\uB86F [{id}] \uC0C1\uD0DC: {status}",
-    slotsAdded: '[{pair}] \uC2AC\uB86F [{id}] "{label}" \uCD94\uAC00/\uC5C5\uB370\uC774\uD2B8\uB428',
-    slotsNotFound: "[{pair}] \uC2AC\uB86F [{id}]\uC744(\uB97C) \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4",
-    slotsUsageAdd: "\uC0AC\uC6A9\uBC95: /slots add <id> <\uB77C\uBCA8> [\uD504\uB86C\uD504\uD2B8...]",
-    slotsUsageRm: "\uC0AC\uC6A9\uBC95: /slots rm <\uC2AC\uB86F_id>",
-    slotsUsageToggle: "\uC0AC\uC6A9\uBC95: /slots toggle <\uC2AC\uB86F_id>",
-    slotsUnknown: '[{pair}] \uC54C \uC218 \uC5C6\uB294 \uBA85\uB839\uC5B4 "{cmd}". /slots \uB3C4\uC6C0\uB9D0 \uCC38\uC870',
-    spokenLabel: "\uAD6C\uC5B4",
-    writtenLabel: "\uBB38\uC5B4"
   },
   ru: {
     slot1Label: "\u0420\u0430\u0437\u0433\u043E\u0432\u043E\u0440\u043D\u044B\u0439",
@@ -3095,31 +2778,15 @@ var LANGUAGE_PRESETS = {
     writtenLabel: "\u0414\u0435\u043B\u043E\u0432\u043E\u0439"
   }
 };
+
+// src/i18n/index.ts
+var LANGUAGE_PRESETS = {
+  ...LATIN_LANGUAGE_PRESETS,
+  ...CJK_LANGUAGE_PRESETS
+};
 var SUPPORTED_LANG_CODES = ["zh", "tw", "ja", "ko", "en", "es", "fr", "de", "ru"];
 function isSupportedLangCode(code) {
   return SUPPORTED_LANG_CODES.includes((code || "").toLowerCase().split(/[-_]/)[0]);
-}
-function normalizeLangCode(input) {
-  const s = (input || "").trim().toLowerCase().replace(/[-_].*$/, "");
-  if (s === "zh" || s === "cn" || s === "chinese" || s === "\u4E2D\u6587") return "zh";
-  if (s === "tw" || s === "zh-tw" || s === "traditional" || s === "\u7E41\u4E2D" || s === "\u7E41\u9AD4\u4E2D\u6587") return "tw";
-  if (s === "ja" || s === "jp" || s === "japanese" || s === "\u65E5\u672C\u8A9E" || s === "\u65E5\u6587" || s === "\u65E5\u8BED") return "ja";
-  if (s === "ko" || s === "kr" || s === "korean" || s === "\uD55C\uAD6D\uC5B4" || s === "\u97E9\u8BED" || s === "\u97E9\u6587" || s === "\u97D3\u8A9E" || s === "\u97D3\u6587") return "ko";
-  if (s === "en" || s === "eng" || s === "english" || s === "\u82F1\u8BED" || s === "\u82F1\u6587") return "en";
-  if (s === "es" || s === "spanish" || s === "espa\xF1ol" || s === "\u897F\u8BED" || s === "\u897F\u73ED\u7259\u8BED") return "es";
-  if (s === "fr" || s === "french" || s === "fran\xE7ais" || s === "\u6CD5\u8BED" || s === "\u6CD5\u6587") return "fr";
-  if (s === "de" || s === "german" || s === "deutsch" || s === "\u5FB7\u8BED" || s === "\u5FB7\u6587") return "de";
-  if (s === "ru" || s === "russian" || s === "\u0440\u0443\u0441\u0441\u043A\u0438\u0439" || s === "\u4FC4\u8BED" || s === "\u4FC4\u6587") return "ru";
-  return s;
-}
-function resolveLangPair(input, fallbackPair) {
-  const [fallbackSource, fallbackTarget] = (fallbackPair || "en ja").trim().split(/\s+/);
-  const [rawSource, rawTarget] = (input || "").trim().split(/\s+/);
-  const normalizedSource = normalizeLangCode(rawSource || "");
-  const normalizedTarget = normalizeLangCode(rawTarget || "");
-  const source = isSupportedLangCode(normalizedSource) ? normalizedSource : fallbackSource || "en";
-  const target = isSupportedLangCode(normalizedTarget) ? normalizedTarget : source === "en" ? fallbackTarget && isSupportedLangCode(fallbackTarget) && fallbackTarget !== "en" ? fallbackTarget : "ja" : "en";
-  return { source, target: target === source ? source === "en" ? "ja" : "en" : target };
 }
 function resolveLabelsForLang(lang = "en", overrides, targetLang) {
   const norm = (lang || "en").toLowerCase().split("-")[0];
@@ -3128,15 +2795,12 @@ function resolveLabelsForLang(lang = "en", overrides, targetLang) {
   const pairTitle = `${norm} \u21C4 ${actualTarget}`;
   const merged = {
     ...LANGUAGE_PRESETS.en,
-    // 1. Universal English baseline
     ...target,
-    // 2. Localized native language preset
     hudTitle: pairTitle,
     statusOriginal: pairTitle,
     statusEnglish: pairTitle,
     statusOff: `${pairTitle}: off`,
     ...overrides || {}
-    // 3. User explicit overrides
   };
   for (const [key, val] of Object.entries(merged)) {
     if (typeof val === "string") {
@@ -3145,41 +2809,1020 @@ function resolveLabelsForLang(lang = "en", overrides, targetLang) {
   }
   return merged;
 }
-function formatStatusReport(labels, info) {
-  const modeDesc = info.mode === "companion" || info.mode === "original" ? labels.modeDescOriginal || "Companion \xB7 0ms pass-through" : info.mode === "direct" || info.mode === "english" ? labels.modeDescEnglish || "Logical Spec \xB7 Deep reasoning" : info.mode === "live-flow" || info.mode === "modify" || info.mode === "raw" ? labels.modeDescLiveFlow || "Live Flow \xB7 i18n takeaway diffs" : info.mode === "off" ? labels.modeDescOff || "Off" : resolveModeDisplayName(info.mode, info.sourceLang);
-  const layoutDesc = info.layout === "capsule" ? labels.layoutCapsule || "Single-Line Capsule (1-Line)" : labels.layoutTree || "Trifecta Minimalist Left-Rail Tree (\xB7 \u250C \u251C \u2514)";
-  const lines = [
-    `\u21C4 [${labels.hudTitle}] ${labels.statusReportTitle || "Status Report"}`,
-    `\u2022 ${labels.statusReportMode || "Mode"}: [${info.mode}] (${modeDesc})`,
-    `\u2022 ${labels.statusReportFlow || "Flow"}: [${info.sourceLang} \u2794 ${info.targetLang || "en"}]`,
-    `\u2022 ${labels.statusReportModel || "Model"}: ${info.activeModel}`
-  ];
-  if (info.cacheStats) {
-    const total = info.cacheStats.hits + info.cacheStats.misses;
-    const rate = total > 0 ? Math.round(info.cacheStats.hits / total * 100) : 0;
-    lines.push(
-      `\u2022 ${labels.statusReportCache || "Cache"}: ${info.cacheStats.hits} hits / ${total} total (${rate}% hit rate) \xB7 ${info.cacheStats.size}/${info.cacheStats.capacity} items`
-    );
+
+// src/config.ts
+var cachedUserConfig = null;
+var lastConfigCheckTime = 0;
+var lastKnownConfigMtimeMs = -1;
+var CONFIG_CACHE_TTL_MS = 2e3;
+function readLingualFileMtimeMs() {
+  try {
+    const lingualFile = import_node_path.default.join(getPiAgentDir(), "lingual.json");
+    if (!import_node_fs.default.existsSync(lingualFile)) return 0;
+    return import_node_fs.default.statSync(lingualFile).mtimeMs;
+  } catch {
+    return 0;
   }
-  lines.push(
-    `\u2022 ${labels.statusReportLayout || "Layout"}: ${layoutDesc}`,
-    `\u2022 ${labels.statusReportAuth || "Auth: Pi Native In-Process Auth"}`,
-    `\u2022 ${labels.statusReportTuner || "Slot Tuner: Built-in lingual-tuner skill (Just describe preferences to Agent)"}`,
-    `\u2022 ${labels.statusReportShortcuts || "Shortcuts: /lingual (or /l) \xB7 /lingual lang (or /lang) \xB7 /lingual last \xB7 /lingual compact"}`
-  );
+}
+function invalidateUserConfigCache() {
+  cachedUserConfig = null;
+  lastConfigCheckTime = 0;
+}
+function isTestEnvironment() {
+  return process.env.NODE_ENV === "test" || process.env.NODE_TEST_CONTEXT !== void 0 || process.execArgv.some((a) => a.startsWith("--test") || a === "--test") || process.argv.some((a) => a === "--test" || a.startsWith("--test=") || /\.(?:test|spec)\.[cm]?[jt]s$/i.test(a)) || process.env.npm_lifecycle_event === "test";
+}
+function getPiAgentDir() {
+  return process.env.PI_CODING_AGENT_DIR || process.env.PI_CONFIG_DIR || import_node_path.default.join(import_node_os.default.homedir(), ".pi", "agent");
+}
+var MODE_ALIAS_MAP = {
+  "1": "original",
+  companion: "original",
+  learn: "original",
+  study: "original",
+  original: "original",
+  orig: "original",
+  "\u7EAF\u4F34\u5B66": "original",
+  "\u7D14\u4F34\u5B78": "original",
+  "\u4F34\u5B66": "original",
+  "\u4F34\u8D70": "original",
+  "2": "english",
+  direct: "english",
+  rewrite: "english",
+  refine: "english",
+  english: "english",
+  en: "english",
+  eng: "english",
+  lazy: "english",
+  "\u89C4\u8303\u76F4\u53D1": "english",
+  "\u76F4\u63A5\u6539": "english",
+  "\u76F4\u6539": "english",
+  "\u76F4\u51FA": "english",
+  "\u4ED5\u69D8\u76F4\u884C": "english",
+  "3": "select",
+  candidates: "select",
+  candidate: "select",
+  select: "select",
+  choices: "select",
+  choice: "select",
+  pick: "select",
+  "\u6311\u5019\u9009": "select",
+  "\u6311\u5019\u9078": "select",
+  "\u5019\u9009": "select",
+  "\u5019\u88DC\u9078": "select",
+  "4": "modify",
+  modify: "modify",
+  polish: "modify",
+  fix: "modify",
+  proofread: "modify",
+  raw: "modify",
+  "live-flow": "modify",
+  "\u5B9E\u6218\u72C2\u98D9": "modify",
+  "\u539F\u53E5\u4FEE\u8865": "modify",
+  "\u539F\u53E5\u4FEE\u88DC": "modify",
+  "\u4FEE\u8865": "modify",
+  "\u5B9F\u6226\u75BE\u8D70": "modify",
+  "\u539F\u6587\u4FEE\u6B63": "modify",
+  "0": "off",
+  off: "off",
+  disable: "off",
+  stop: "off",
+  "\u5DF2\u5173\u95ED": "off",
+  "\u5DF2\u95DC\u9589": "off",
+  "\u5173\u95ED": "off",
+  "\u30AA\u30D5": "off"
+};
+function normalizeLingualModeInput(raw) {
+  if (!raw) return null;
+  return MODE_ALIAS_MAP[raw.trim().toLowerCase()] || null;
+}
+function loadUserLingualConfig() {
+  if (isTestEnvironment()) {
+    return {};
+  }
+  const now = Date.now();
+  if (cachedUserConfig && now - lastConfigCheckTime < CONFIG_CACHE_TTL_MS) {
+    return cachedUserConfig;
+  }
+  const agentDir = getPiAgentDir();
+  const lingualFile = import_node_path.default.join(agentDir, "lingual.json");
+  const settingsFile = import_node_path.default.join(agentDir, "settings.json");
+  let target = null;
+  if (import_node_fs.default.existsSync(lingualFile)) {
+    try {
+      const raw = import_node_fs.default.readFileSync(lingualFile, "utf8");
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        const inner = parsed["pi-lingual"] || parsed;
+        target = inner && typeof inner === "object" && !Array.isArray(inner) ? inner : null;
+      }
+    } catch {
+      target = null;
+    }
+  }
+  if (!target && import_node_fs.default.existsSync(settingsFile)) {
+    try {
+      const raw = import_node_fs.default.readFileSync(settingsFile, "utf8");
+      const parsed = JSON.parse(raw);
+      const legacyBlock = parsed["pi-lingual"];
+      if (legacyBlock && typeof legacyBlock === "object") {
+        target = legacyBlock;
+        try {
+          if (!import_node_fs.default.existsSync(agentDir)) {
+            import_node_fs.default.mkdirSync(agentDir, { recursive: true });
+          }
+          import_node_fs.default.writeFileSync(lingualFile, JSON.stringify(target, null, 2), "utf8");
+        } catch {
+        }
+      }
+    } catch {
+      target = null;
+    }
+  }
+  if (target) {
+    const endpoint = target.endpoint || target.antigravity?.endpoint;
+    const apiKey = target.apiKey || target.antigravity?.apiKey;
+    const model = target.model || target.antigravity?.model;
+    const selectedModel = target.selectedModel || target.model;
+    const sourceLang = target.sourceLang;
+    const targetLang = target.targetLang;
+    const compact = target.compact;
+    const slotPreset = target.slotPreset;
+    const filterSlots = (arr) => Array.isArray(arr) ? arr.filter((s) => s && typeof s === "object" && typeof s.id === "string" && typeof s.label === "string") : void 0;
+    const filterModes = (arr) => Array.isArray(arr) ? arr.filter((m) => m && typeof m === "object" && typeof m.id === "string") : void 0;
+    const modes = filterModes(target.modes);
+    const activeModeId = typeof target.activeModeId === "string" ? target.activeModeId : void 0;
+    const globalKillList = Array.isArray(target.globalKillList) ? target.globalKillList : void 0;
+    const slots = filterSlots(target.slots);
+    const directSlots = filterSlots(target.directSlots);
+    const promptSlots = filterSlots(target.promptSlots);
+    const modifySlots = filterSlots(target.modifySlots);
+    const lastSeenVersion = typeof target.lastSeenVersion === "string" ? target.lastSeenVersion : void 0;
+    const reasoning = typeof target.reasoning === "string" ? target.reasoning : void 0;
+    const timeoutMs = typeof target.timeoutMs === "number" && Number.isFinite(target.timeoutMs) ? Math.min(6e4, Math.max(1e3, target.timeoutMs)) : void 0;
+    const replyInSourceLang = target.replyInSourceLang !== void 0 ? Boolean(target.replyInSourceLang) : void 0;
+    const modeLocked = target.modeLocked !== void 0 ? Boolean(target.modeLocked) : void 0;
+    const labels = resolveLabelsForLang(sourceLang || "en", target.labels, targetLang || "ja");
+    const normalizedMode = typeof target.mode === "string" ? normalizeLingualModeInput(target.mode) || target.mode : void 0;
+    cachedUserConfig = {
+      ...target,
+      ...endpoint ? { endpoint } : {},
+      ...apiKey ? { apiKey } : {},
+      ...model ? { model } : {},
+      ...selectedModel ? { selectedModel } : {},
+      ...normalizedMode ? { mode: normalizedMode } : {},
+      ...modeLocked !== void 0 ? { modeLocked } : {},
+      ...compact !== void 0 ? { compact: Boolean(compact) } : {},
+      ...slotPreset ? { slotPreset } : {},
+      ...modes ? { modes } : {},
+      ...activeModeId ? { activeModeId } : {},
+      ...globalKillList ? { globalKillList } : {},
+      ...slots ? { slots } : {},
+      ...directSlots ? { directSlots } : {},
+      ...promptSlots ? { promptSlots } : {},
+      ...modifySlots ? { modifySlots } : {},
+      ...lastSeenVersion ? { lastSeenVersion } : {},
+      ...sourceLang ? { sourceLang } : {},
+      ...targetLang ? { targetLang } : {},
+      ...reasoning ? { reasoning } : {},
+      ...timeoutMs ? { timeoutMs } : {},
+      ...replyInSourceLang !== void 0 ? { replyInSourceLang } : {},
+      labels
+    };
+    lastConfigCheckTime = now;
+    return cachedUserConfig;
+  }
+  cachedUserConfig = {};
+  lastConfigCheckTime = now;
+  return {};
+}
+function saveUserLingualConfig(patch) {
+  if (isTestEnvironment()) {
+    return;
+  }
+  try {
+    const agentDir = getPiAgentDir();
+    const configFile = import_node_path.default.join(agentDir, "lingual.json");
+    if (!import_node_fs.default.existsSync(agentDir)) {
+      import_node_fs.default.mkdirSync(agentDir, { recursive: true });
+    }
+    let existing = {};
+    if (import_node_fs.default.existsSync(configFile)) {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const raw = import_node_fs.default.readFileSync(configFile, "utf8");
+          if (raw && raw.trim()) {
+            existing = JSON.parse(raw);
+            break;
+          }
+        } catch {
+          try {
+            const start = Date.now();
+            while (Date.now() - start < 15) {
+            }
+          } catch {
+          }
+        }
+      }
+    }
+    for (const [k, v] of Object.entries(patch)) {
+      const isEmptyArray = Array.isArray(v) && v.length === 0;
+      if (v === void 0 || v === "" || isEmptyArray || v === "auto" || k === "compact" && v === false || k === "modeLocked" && v === false) {
+        delete existing[k];
+      } else if (k === "mode") {
+        const canonical = v === "english" ? "direct" : v === "select" ? "candidates" : v;
+        existing.mode = canonical;
+        if (!patch.activeModeId) {
+          existing.activeModeId = canonical;
+        }
+      } else if (k === "defaultMode") {
+        const canonical = v === "1" ? "companion" : v === "2" ? "direct" : v === "3" ? "live-flow" : v === "0" ? "off" : v === "english" ? "direct" : v === "select" ? "candidates" : v;
+        existing.defaultMode = canonical;
+      } else if (k === "activeModeId") {
+        existing.activeModeId = v;
+        if (!patch.mode) {
+          existing.mode = v === "english" ? "direct" : v === "select" ? "candidates" : v;
+        }
+      } else {
+        existing[k] = v;
+      }
+    }
+    const content = JSON.stringify(existing, null, 2);
+    const tmpFile = `${configFile}.${Date.now()}.${Math.random().toString(36).slice(2, 6)}.tmp`;
+    try {
+      import_node_fs.default.writeFileSync(tmpFile, content, "utf8");
+      try {
+        import_node_fs.default.renameSync(tmpFile, configFile);
+      } catch {
+        try {
+          import_node_fs.default.unlinkSync(configFile);
+        } catch {
+        }
+        import_node_fs.default.renameSync(tmpFile, configFile);
+      }
+    } catch {
+      try {
+        import_node_fs.default.writeFileSync(configFile, content, "utf8");
+      } catch {
+      }
+      try {
+        if (import_node_fs.default.existsSync(tmpFile)) import_node_fs.default.unlinkSync(tmpFile);
+      } catch {
+      }
+    }
+    invalidateUserConfigCache();
+    lastKnownConfigMtimeMs = readLingualFileMtimeMs();
+  } catch {
+  }
+}
+function resolveDirectSlotsFromConfig(cfg) {
+  if (Array.isArray(cfg.directSlots) && cfg.directSlots.length > 0) {
+    const enabled = cfg.directSlots.filter((s) => s.enabled !== false);
+    if (enabled.length > 0) return enabled;
+  }
+  return getDefaultDirectSlots(cfg.sourceLang);
+}
+function resolveCandidateSlotsFromConfig(cfg) {
+  if (Array.isArray(cfg.promptSlots) && cfg.promptSlots.length > 0) {
+    const enabled = cfg.promptSlots.filter((s) => s.enabled !== false);
+    if (enabled.length > 0) return enabled;
+  }
+  return getDefaultPromptSlots(cfg.sourceLang);
+}
+function resolveModifySlotsFromConfig(cfg) {
+  if (Array.isArray(cfg.modifySlots) && cfg.modifySlots.length > 0) {
+    const enabled = cfg.modifySlots.filter((s) => s.enabled !== false);
+    if (enabled.length > 0) return enabled;
+  }
+  return getDefaultModifySlots(cfg.sourceLang, cfg.explainLang);
+}
+function defaultSlotsForMode(mode, sourceLang, explainLang) {
+  if (mode.action === "pass-through") return [];
+  if (mode.action === "select") return getDefaultPromptSlots(sourceLang);
+  return mode.flow === "proofread" ? getDefaultModifySlots(sourceLang, explainLang) : getDefaultDirectSlots(sourceLang);
+}
+function resolveModesFromConfig(cfg, fallbackSourceLang = "en") {
+  const sourceLang = cfg.sourceLang || fallbackSourceLang;
+  const explainLang = cfg.explainLang || sourceLang;
+  if (Array.isArray(cfg.modes) && cfg.modes.length > 0) {
+    const valid = cfg.modes.filter((m) => m && typeof m.id === "string" && m.id.trim()).map((m) => {
+      if (Array.isArray(m.slots) && m.slots.length > 0) return m;
+      return { ...m, slots: defaultSlotsForMode(m, sourceLang, explainLang) };
+    });
+    if (valid.length > 0) return localizeModes(valid, sourceLang, explainLang);
+  }
+  const hasLegacyCustomSlots = Array.isArray(cfg.slots) || Array.isArray(cfg.directSlots) || Array.isArray(cfg.promptSlots) || Array.isArray(cfg.modifySlots);
+  if (hasLegacyCustomSlots) {
+    const directSlots = resolveDirectSlotsFromConfig({ sourceLang, directSlots: cfg.directSlots });
+    const modifySlots = resolveModifySlotsFromConfig({ sourceLang, explainLang, modifySlots: cfg.modifySlots });
+    const promptSlots = resolveCandidateSlotsFromConfig({ sourceLang, promptSlots: cfg.promptSlots });
+    const companionSlots = (Array.isArray(cfg.slots) && cfg.slots.length > 0 ? cfg.slots : getDefaultSlots(sourceLang)).map((s) => ({
+      id: s.id,
+      label: s.label,
+      role: s.role === "source" ? "source" : s.role === "vocab" ? "vocab" : s.role === "translation" ? "translation" : "rewrite",
+      instruction: s.instruction || "Natural expressions matching context",
+      ...s.showMeaning !== void 0 ? { showMeaning: s.showMeaning } : {},
+      enabled: s.enabled !== false
+    }));
+    const n = resolveSeedNames(sourceLang);
+    return [
+      {
+        id: "direct",
+        name: n.direct,
+        flow: "translate",
+        action: "transform",
+        hud: "preview",
+        slots: directSlots,
+        enabled: true
+      },
+      {
+        id: "live-flow",
+        name: n.liveFlow,
+        flow: "proofread",
+        action: "transform",
+        hud: "adaptive-takeaway",
+        slots: modifySlots,
+        enabled: true
+      },
+      {
+        id: "companion",
+        name: n.companion,
+        flow: "translate",
+        action: "pass-through",
+        hud: "tree",
+        slots: companionSlots,
+        enabled: true
+      },
+      {
+        id: "candidates",
+        name: n.candidates,
+        flow: "translate",
+        action: "select",
+        hud: "tree",
+        slots: promptSlots,
+        enabled: true
+      }
+    ];
+  }
+  return getDefaultFactoryModes(sourceLang, explainLang);
+}
+function normalizeActiveModeId(cfg, modes) {
+  if (cfg.mode === "off" || cfg.activeModeId === "off") return "off";
+  const activeModes = modes.filter((m) => m.enabled !== false);
+  const targetId = cfg.activeModeId || cfg.mode;
+  if (!targetId) {
+    return activeModes[0]?.id || "companion";
+  }
+  const legacyMap = {
+    original: "companion",
+    companion: "companion",
+    english: "direct",
+    direct: "direct",
+    lazy: "direct",
+    select: "candidates",
+    candidates: "candidates",
+    modify: "live-flow",
+    "live-flow": "live-flow",
+    raw: "live-flow",
+    polish: "live-flow"
+  };
+  const mappedId = legacyMap[targetId] || targetId;
+  if (activeModes.some((m) => m.id === mappedId)) {
+    return mappedId;
+  }
+  if (activeModes.some((m) => m.id === targetId)) {
+    return targetId;
+  }
+  return activeModes[0]?.id || "companion";
+}
+
+// src/banner.ts
+var import_node_fs2 = __toESM(require("fs"), 1);
+var import_node_path2 = __toESM(require("path"), 1);
+var import_node_os2 = __toESM(require("os"), 1);
+
+// src/layout/width.ts
+var CANNOT_START_LINE_CHARS = /* @__PURE__ */ new Set([
+  ",",
+  ".",
+  ";",
+  "!",
+  "?",
+  ":",
+  "\uFF0C",
+  "\u3002",
+  "\uFF1B",
+  "\uFF01",
+  "\uFF1F",
+  "\uFF1A",
+  "\u3001",
+  ")",
+  "]",
+  "}",
+  "\uFF09",
+  "\u3011",
+  "\u201D",
+  "\u2019",
+  "\xBB"
+]);
+var ANSI_ESCAPE_REGEX = /\x1b\[[0-9;?]*[a-zA-Z]|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g;
+function getVisualWidth(str) {
+  let width = 0;
+  const clean = str.replace(ANSI_ESCAPE_REGEX, "");
+  let afterZWJ = false;
+  for (const char of clean) {
+    const code = char.codePointAt(0) || 0;
+    if (code === 8205 || code === 65039 || code === 65038 || code >= 127995 && code <= 127999 || code >= 768 && code <= 879 || code >= 6832 && code <= 6911 || code >= 7616 && code <= 7679 || code >= 8400 && code <= 8447 || code >= 65056 && code <= 65071 || code >= 917760 && code <= 917999 || code >= 8203 && code <= 8207) {
+      if (code === 8205) afterZWJ = true;
+      continue;
+    }
+    if (afterZWJ) {
+      afterZWJ = false;
+      continue;
+    }
+    if (code >= 4352 && code <= 4447 || code >= 8986 && code <= 9215 || code >= 9728 && code <= 10175 || code >= 11904 && code <= 42191 || code >= 44032 && code <= 55203 || code >= 63744 && code <= 64255 || code >= 65040 && code <= 65049 || code >= 65072 && code <= 65135 || code >= 65280 && code <= 65376 || code >= 65504 && code <= 65510 || code >= 127744 && code <= 128591 || code >= 128640 && code <= 128767 || code >= 129280 && code <= 129791 || code >= 131072 && code <= 195103) {
+      width += 2;
+    } else {
+      width += 1;
+    }
+  }
+  return width;
+}
+function wrapVisualText(text, maxWidth) {
+  if (maxWidth <= 0) return [text];
+  const rawLines = [];
+  let currentLine = "";
+  let currentWidth = 0;
+  const tokenRegex = /\x1b\[[0-9;]*[a-zA-Z]|\s+|[\u4e00-\u9fa5\u3040-\u30ff\uac00-\ud7af]|[^\s\u4e00-\u9fa5\u3040-\u30ff\uac00-\ud7af\x1b]+/g;
+  let match;
+  while ((match = tokenRegex.exec(text)) !== null) {
+    const token = match[0];
+    const tokenWidth = getVisualWidth(token);
+    if (tokenWidth === 0) {
+      currentLine += token;
+      continue;
+    }
+    if (currentWidth + tokenWidth <= maxWidth) {
+      currentLine += token;
+      currentWidth += tokenWidth;
+    } else {
+      if (currentLine === "") {
+        if (tokenWidth > maxWidth) {
+          let curToken = token;
+          while (getVisualWidth(curToken) > maxWidth) {
+            let sliceIdx = 0;
+            let accW = 0;
+            for (const ch of curToken) {
+              const chW = getVisualWidth(ch);
+              if (accW + chW > maxWidth) break;
+              accW += chW;
+              sliceIdx += ch.length;
+            }
+            if (sliceIdx === 0) sliceIdx = 1;
+            rawLines.push(curToken.slice(0, sliceIdx));
+            curToken = curToken.slice(sliceIdx);
+          }
+          if (curToken.trim()) {
+            currentLine = curToken;
+            currentWidth = getVisualWidth(curToken);
+          }
+          continue;
+        }
+        rawLines.push(token);
+        continue;
+      }
+      rawLines.push(currentLine.trimEnd());
+      currentLine = token.trimStart();
+      currentWidth = getVisualWidth(currentLine);
+    }
+  }
+  if (currentLine.trim()) {
+    rawLines.push(currentLine.trimEnd());
+  }
+  const lines = [];
+  for (let i = 0; i < rawLines.length; i++) {
+    let line = rawLines[i];
+    if (i > 0 && line.length > 0 && lines.length > 0) {
+      const firstChar = line[0];
+      if (CANNOT_START_LINE_CHARS.has(firstChar)) {
+        const prevIdx = lines.length - 1;
+        const prevLine = lines[prevIdx];
+        if (getVisualWidth(prevLine) + getVisualWidth(firstChar) <= maxWidth) {
+          lines[prevIdx] = prevLine + firstChar;
+          line = line.slice(1).trimStart();
+        } else {
+          const prevChars = Array.from(prevLine);
+          if (prevChars.length > 1) {
+            const pulledChar = prevChars.pop();
+            lines[prevIdx] = prevChars.join("");
+            line = pulledChar + line;
+          }
+        }
+      }
+    }
+    if (line.trim()) lines.push(line);
+  }
+  return lines.length > 0 ? lines : [text];
+}
+
+// src/layout/tree.ts
+function formatTreeBranch(branchChar, contChar, tag, content, prefixDecorator = (s) => s, tagDecorator = (s) => s, contDecorator = (s) => s, lineDecorator = (s) => s, maxCols = (process.stdout?.columns || 80) - 8) {
+  const actualLineDecorator = typeof lineDecorator === "function" ? lineDecorator : (s) => s;
+  const actualMaxCols = typeof lineDecorator === "number" ? lineDecorator : typeof maxCols === "number" ? maxCols : (process.stdout?.columns || 80) - 8;
+  const rawPrefix = `  ${branchChar} [${tag}] `;
+  const prefixW = getVisualWidth(rawPrefix);
+  const rawCont = `  ${contChar}${" ".repeat(Math.max(1, prefixW - 3))}`;
+  const availW = Math.max(25, actualMaxCols - prefixW);
+  const lines = wrapVisualText(content, availW);
+  if (lines.length === 0) {
+    return [prefixDecorator(`  ${branchChar} `) + tagDecorator(`[${tag}]`)];
+  }
+  return lines.map((line, idx) => {
+    if (idx === 0) {
+      return prefixDecorator(`  ${branchChar} `) + tagDecorator(`[${tag}] `) + actualLineDecorator(line);
+    }
+    return contDecorator(rawCont) + actualLineDecorator(line);
+  });
+}
+function formatSubRail(contChar, nuanceText, arrow = "\u21B3", contDecorator = (s) => s, lineDecorator = (s) => s, maxCols = (process.stdout?.columns || 80) - 8, indentCols = 11) {
+  if (!nuanceText || !nuanceText.trim()) return [];
+  const rawPrefix = `  ${contChar}${" ".repeat(Math.max(1, indentCols - 5))}${arrow} `;
+  const prefixW = getVisualWidth(rawPrefix);
+  const rawCont = `  ${contChar}${" ".repeat(Math.max(1, prefixW - 3))}`;
+  const availW = Math.max(20, maxCols - prefixW);
+  const cleanText = nuanceText.startsWith("(") && nuanceText.endsWith(")") ? nuanceText : `(${nuanceText})`;
+  const lines = wrapVisualText(cleanText, availW);
+  return lines.map((line, idx) => {
+    if (idx === 0) return contDecorator(rawPrefix) + lineDecorator(line);
+    return contDecorator(rawCont) + lineDecorator(line);
+  });
+}
+function extractVocabPhrases(vocab) {
+  if (!vocab || !vocab.trim()) return [];
+  const items = vocab.split(/\s*(?:·|•|,)\s*/);
+  const phrases = [];
+  for (const raw of items) {
+    const clean = raw.replace(/\s*(?:\(.*?\)|（.*?）)\s*$/, "").trim();
+    if (clean.length >= 2 && !phrases.includes(clean)) {
+      phrases.push(clean);
+    }
+  }
+  return phrases.sort((a, b) => b.length - a.length);
+}
+function spotlightPhrases(text, phrases) {
+  if (!text || phrases.length === 0) return text;
+  const sorted = [...new Set(phrases.filter(Boolean))].sort((a, b) => b.length - a.length);
+  if (sorted.length === 0) return text;
+  const alts = sorted.map((phrase) => {
+    const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const startsWithAscii = /^[a-zA-Z0-9]/.test(phrase);
+    const endsWithAscii = /[a-zA-Z0-9]$/.test(phrase);
+    return `${startsWithAscii ? "(?<=\\b|^)" : ""}${escaped}${endsWithAscii ? "(?=\\b|$)" : ""}`;
+  });
+  const combined = new RegExp(`(?:${alts.join("|")})`, "gi");
+  return text.replace(combined, (matched) => `\x1B[4m${matched}\x1B[24m`);
+}
+function formatTerminalAnnotation(sourceText, spoken, written, vocab, options = {}) {
+  const slot1 = options.slot1Label || "Spoken";
+  const slot2 = options.slot2Label || "Written";
+  const vocabTag = options.vocabLabel || "Vocab";
+  const sourceTag = options.sourceLabel || "Original";
+  const hasSlot2 = Boolean(written && written.trim());
+  const hasVocab = Boolean(vocab && vocab.trim());
+  const spotlightEnabled = options.spotlight !== false;
+  const phrases = hasVocab && spotlightEnabled ? extractVocabPhrases(vocab) : [];
+  const displaySpoken = phrases.length > 0 ? spotlightPhrases(spoken, phrases) : spoken;
+  const displayWritten = written && phrases.length > 0 ? spotlightPhrases(written, phrases) : written;
+  const cleanSource = sourceText.replace(/\r?\n+/g, " ").trim();
+  const lines = [`  \xB7 [${sourceTag}] ${cleanSource}`];
+  const branch1Char = hasSlot2 || hasVocab ? "\u250C" : "\u2514";
+  const cont1Char = hasSlot2 || hasVocab ? "\u2502" : " ";
+  lines.push(...formatTreeBranch(branch1Char, cont1Char, slot1, displaySpoken));
+  if (options.spokenMeaning) {
+    lines.push(...formatSubRail(cont1Char, options.spokenMeaning));
+  }
+  if (hasSlot2) {
+    const branchChar = hasVocab ? "\u251C" : "\u2514";
+    const contChar = hasVocab ? "\u2502" : " ";
+    lines.push(...formatTreeBranch(branchChar, contChar, slot2, displayWritten));
+    if (options.writtenMeaning) {
+      lines.push(...formatSubRail(contChar, options.writtenMeaning));
+    }
+  }
+  if (hasVocab) {
+    lines.push(...formatTreeBranch("\u2514", " ", vocabTag, vocab));
+  }
   return lines.join("\n");
 }
-function formatModelSelectionMessage(labels, currentActive, availableList) {
-  let msg = `[${labels.hudTitle}] ${labels.modelCurrentLabel || "Current model"}: ${currentActive}
-`;
-  if (availableList) {
-    msg += `${labels.modelAvailableListHeader || "Available models:"}
-${availableList}
-\u2022 ${labels.modelAutoFollowDesc || "auto"}
-`;
+
+// src/banner.ts
+var MODE_DISPLAY_BY_LANG = {
+  zh: {
+    companion: SEED_NAMES.zh.companion,
+    direct: SEED_NAMES.zh.direct,
+    candidates: SEED_NAMES.zh.candidates,
+    modify: SEED_NAMES.zh.liveFlow,
+    off: "\u5DF2\u5173\u95ED",
+    notifyOff: (p) => `[${p}] \u5DF2\u5207\u6362\u81F3\u30100 \u5DF2\u5173\u95ED (off)\u3011\uFF1A\u5E95\u680F\u9690\u85CF \xB7 \u76D1\u542C\u5DF2\u5378 \xB7 0 Token \u96F6\u8D1F\u62C5`
+  },
+  tw: {
+    companion: SEED_NAMES.tw.companion,
+    direct: SEED_NAMES.tw.direct,
+    candidates: SEED_NAMES.tw.candidates,
+    modify: SEED_NAMES.tw.liveFlow,
+    off: "\u5DF2\u95DC\u9589",
+    notifyOff: (p) => `[${p}] \u5DF2\u5207\u63DB\u81F3\u30100 \u5DF2\u95DC\u9589 (off)\u3011\uFF1A\u5E95\u6B04\u96B1\u85CF \xB7 \u76E3\u807D\u5DF2\u5378 \xB7 0 Token \u96F6\u8CA0\u64D4`
+  },
+  ja: {
+    companion: SEED_NAMES.ja.companion,
+    direct: SEED_NAMES.ja.direct,
+    candidates: SEED_NAMES.ja.candidates,
+    modify: SEED_NAMES.ja.liveFlow,
+    off: "\u30AA\u30D5",
+    notifyOff: (p) => `[${p}] \u30100 \u30AA\u30D5 (off)\u3011\uFF1A\u4E0B\u90E8\u30D0\u30FC\u975E\u8868\u793A\u30FB\u76E3\u8996\u505C\u6B62\u30FB0 Token \u7121\u8CA0\u8377`
+  },
+  ko: {
+    companion: SEED_NAMES.ko.companion,
+    direct: SEED_NAMES.ko.direct,
+    candidates: SEED_NAMES.ko.candidates,
+    modify: SEED_NAMES.ko.liveFlow,
+    off: "\uAEBC\uC9D0",
+    notifyOff: (p) => `[${p}] \u30100 \uAEBC\uC9D0 (off)\u3011\uFF1A\uC0C1\uD0DC \uC228\uAE40 \xB7 \uB9AC\uC2A4\uB108 \uBD84\uB9AC \xB7 0 \uD1A0\uD070`
+  },
+  es: {
+    companion: SEED_NAMES.es.companion,
+    direct: SEED_NAMES.es.direct,
+    candidates: SEED_NAMES.es.candidates,
+    modify: SEED_NAMES.es.liveFlow,
+    off: "Apagado",
+    notifyOff: (p) => `[${p}] Cambiado a [0 Apagado]: Estado oculto \xB7 0 tokens`
+  },
+  fr: {
+    companion: SEED_NAMES.fr.companion,
+    direct: SEED_NAMES.fr.direct,
+    candidates: SEED_NAMES.fr.candidates,
+    modify: SEED_NAMES.fr.liveFlow,
+    off: "D\xE9sactiv\xE9",
+    notifyOff: (p) => `[${p}] Pass\xE9 en mode [0 D\xE9sactiv\xE9] : Statut masqu\xE9 \xB7 0 tokens`
+  },
+  de: {
+    companion: SEED_NAMES.de.companion,
+    direct: SEED_NAMES.de.direct,
+    candidates: SEED_NAMES.de.candidates,
+    modify: SEED_NAMES.de.liveFlow,
+    off: "Aus",
+    notifyOff: (p) => `[${p}] Gewechselt zu [0 Aus]: Status ausgeblendet \xB7 0 Tokens`
+  },
+  ru: {
+    companion: SEED_NAMES.ru.companion,
+    direct: SEED_NAMES.ru.direct,
+    candidates: SEED_NAMES.ru.candidates,
+    modify: SEED_NAMES.ru.liveFlow,
+    off: "\u0412\u044B\u043A\u043B",
+    notifyOff: (p) => `[${p}] \u041F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0435\u043D\u043E \u0432 \u0440\u0435\u0436\u0438\u043C [0 \u0412\u044B\u043A\u043B]: \u0441\u043A\u0440\u044B\u0442 \u0441\u0442\u0430\u0442\u0443\u0441 \xB7 0 \u0442\u043E\u043A\u0435\u043D\u043E\u0432`
+  },
+  en: {
+    companion: SEED_NAMES.en.companion,
+    direct: SEED_NAMES.en.direct,
+    candidates: SEED_NAMES.en.candidates,
+    modify: SEED_NAMES.en.liveFlow,
+    off: "Off",
+    notifyOff: (p) => `[${p}] Switched to [0 Off] mode: Status hidden \xB7 listeners detached \xB7 0 tokens`
   }
-  msg += labels.modelSelectHint || "Specify model with /lingual model <model-id> or auto.";
-  return msg;
+};
+
+// src/engine/parser.ts
+var BLOCKED_JSON_KEYS = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
+function toCleanString(val) {
+  if (typeof val === "string") return val.trim();
+  if (typeof val === "number" || typeof val === "boolean") return String(val);
+  if (Array.isArray(val)) return val.map(toCleanString).filter(Boolean).join(" \xB7 ");
+  return "";
+}
+function repairAndParseJsonObject(raw) {
+  try {
+    if (!raw || typeof raw !== "string" || raw.length > 32768) return null;
+    const stripped = raw.replace(/<(?:think|thought)>[\s\S]*?<\/(?:think|thought)>/gi, "").trim();
+    const tryParseCandidate = (candidate) => {
+      const first = candidate.indexOf("{");
+      const last = candidate.lastIndexOf("}");
+      if (first === -1 || last <= first) return null;
+      const jsonSubstr = candidate.slice(first, last + 1);
+      let parsed;
+      try {
+        parsed = JSON.parse(jsonSubstr);
+      } catch {
+        const repaired = jsonSubstr.replace(/,\s*([}\]])/g, "$1").replace(
+          /("[a-zA-Z0-9_-]+"\s*:\s*")([\s\S]*?)("(?=\s*,\s*"|\s*\}))/g,
+          (_m, prefix, content, suffix) => prefix + content.replace(/(?<!\\)"/g, '\\"') + suffix
+        );
+        parsed = JSON.parse(repaired);
+      }
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null;
+    };
+    const greedyFence = stripped.match(/```(?:json|jsonc)?\s*([\s\S]*)\s*```/i);
+    if (greedyFence) {
+      const fromFence = tryParseCandidate(greedyFence[1].trim());
+      if (fromFence) return fromFence;
+    }
+    return tryParseCandidate(stripped);
+  } catch {
+    return null;
+  }
+}
+function extractCleanJsonField(raw, fieldName) {
+  const obj = repairAndParseJsonObject(raw);
+  if (obj && !BLOCKED_JSON_KEYS.has(fieldName)) {
+    const val = obj[fieldName] ?? obj.prompt ?? obj.written ?? obj.spoken;
+    if (typeof val === "string" && val.trim()) return val.trim();
+  }
+  const cleaned = raw.replace(/<(?:think|thought)>[\s\S]*?<\/(?:think|thought)>/gi, "").replace(/```(?:json)?|```/gi, "").trim();
+  const regexFallback = cleaned.match(/"(?:prompt|written|spoken)"\s*:\s*"([\s\S]*?)"\s*\}/);
+  if (regexFallback && regexFallback[1].trim()) {
+    return regexFallback[1].replace(/\\"/g, '"').replace(/\\n/g, "\n").trim();
+  }
+  if (cleaned.startsWith("{") && cleaned.endsWith("}")) {
+    return "";
+  }
+  return cleaned.replace(/^["']|["']$/g, "").trim();
+}
+function parseLlmResponse(raw) {
+  const parsed = repairAndParseJsonObject(raw);
+  if (!parsed) return null;
+  const spoken = toCleanString(parsed.spoken ?? parsed.casual ?? parsed.slot1);
+  const spokenMeaning = toCleanString(parsed.spoken_meaning ?? parsed.spokenMeaning);
+  const written = toCleanString(parsed.written ?? parsed.academic ?? parsed.slot2);
+  const writtenMeaning = toCleanString(parsed.written_meaning ?? parsed.writtenMeaning);
+  const vocab = toCleanString(parsed.vocab);
+  const summary = toCleanString(parsed.summary ?? parsed.core_intent ?? parsed.coreIntent);
+  const slotOutputs = /* @__PURE__ */ Object.create(null);
+  for (const [k, v] of Object.entries(parsed)) {
+    if (BLOCKED_JSON_KEYS.has(k) || k.endsWith("_meaning") || k === "summary" || k === "core_intent" || k === "coreIntent") continue;
+    const textVal = toCleanString(v);
+    if (textVal) {
+      const meaningVal = toCleanString(parsed[k + "_meaning"]);
+      slotOutputs[k] = {
+        content: textVal,
+        meaning: meaningVal || void 0
+      };
+    }
+  }
+  const nonVocabOutputs = Object.entries(slotOutputs).filter(([k]) => k !== "vocab").map(([, val]) => val);
+  const effectiveSpoken = spoken || nonVocabOutputs[0]?.content || vocab || "";
+  const effectiveSpokenMeaning = spokenMeaning || nonVocabOutputs[0]?.meaning || "";
+  if (!effectiveSpoken) return null;
+  return {
+    spoken: effectiveSpoken,
+    spokenMeaning: effectiveSpokenMeaning || void 0,
+    written: written || void 0,
+    writtenMeaning: writtenMeaning || void 0,
+    vocab: vocab || void 0,
+    summary: summary || void 0,
+    slotOutputs: Object.keys(slotOutputs).length > 0 ? slotOutputs : void 0
+  };
+}
+function stripLingualAnnotation(annotatedText) {
+  const lines = annotatedText.split("\n");
+  const rawLines = [];
+  let spoken;
+  let written;
+  let vocab;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    const sourceMatch = trimmed.match(/^·\s*\[?(?:原文|source|original|quelle)\]?\s+(.*)$/i);
+    if (sourceMatch) {
+      rawLines.push(sourceMatch[1].trim());
+      continue;
+    }
+    if (/^(?:[│\s]*↳\s*\(.*\)|↳\s*\(.*\))/.test(trimmed)) {
+      continue;
+    }
+    const slotMatch = trimmed.match(/^(?:[┌├└│]\s*|↳\s*)\[([^\]]+)\]\s*(.*)$/);
+    if (slotMatch) {
+      const tag = slotMatch[1].trim();
+      let text = slotMatch[2].trim().replace(/\x1b\[[0-9;]*[a-zA-Z]/g, "");
+      const parenIdx = text.lastIndexOf(" (");
+      if (parenIdx !== -1 && text.endsWith(")")) {
+        text = text.slice(0, parenIdx).trim();
+      }
+      if (/^(?:口语|spoken|口語|slack|slot1)$/i.test(tag)) {
+        spoken = text;
+      } else if (/^(?:写作|written|文面|rfc|slot2|敬語)$/i.test(tag)) {
+        written = text;
+      } else if (/^(?:重点|vocab|単語|词汇)$/i.test(tag)) {
+        vocab = text;
+      }
+    } else {
+      rawLines.push(line);
+    }
+  }
+  return { raw: rawLines.join("\n").trim(), spoken, written, vocab };
+}
+
+// src/runtime.ts
+var VALID_ACTIONS = /* @__PURE__ */ new Set(["pass-through", "transform", "select"]);
+var VALID_FLOWS = /* @__PURE__ */ new Set(["translate", "proofread", "custom"]);
+function normalizeHudVariant(hud) {
+  switch (hud) {
+    case "none":
+      return "none";
+    case "preview":
+      return "preview";
+    case "adaptive-takeaway":
+      return "takeaway";
+    case "tree":
+    default:
+      return "tree";
+  }
+}
+function normalizeSlots(declared, fallback) {
+  const source = Array.isArray(declared) && declared.length > 0 ? declared : Array.isArray(fallback) ? fallback : [];
+  return source.filter((s) => Boolean(s && typeof s.id === "string")).filter((s) => s.enabled !== false).map((s) => ({
+    ...s,
+    role: s.role || "translation",
+    enabled: s.enabled !== false
+  }));
+}
+function resolveModeRuntime(mode, options) {
+  const flow = VALID_FLOWS.has(mode.flow) ? mode.flow : "translate";
+  const dispatcher = VALID_ACTIONS.has(mode.action) ? mode.action : "transform";
+  const hud = normalizeHudVariant(mode.hud);
+  const target = mode.target === "clipboard" ? "clipboard" : "agent";
+  const sourceLang = options.sourceLang || "en";
+  const targetLang = options.targetLang || "en";
+  const explainLang = options.explainLang || sourceLang;
+  const inputLang = flow === "proofread" ? targetLang : flow === "custom" ? mode.customInputLang || sourceLang : sourceLang;
+  const outputLang = flow === "custom" ? mode.customOutputLang || targetLang : targetLang;
+  const slots = normalizeSlots(mode.slots, options.fallbackSlots);
+  const translationSlots = slots.filter((s) => s.role !== "vocab" && s.role !== "source");
+  const takeawaySlot = slots.find((s) => s.role === "vocab");
+  return {
+    mode,
+    id: mode.id,
+    name: mode.name,
+    dispatcher,
+    flow,
+    hud,
+    target,
+    inputLang,
+    outputLang,
+    explainLang,
+    reasoning: mode.reasoning,
+    slots,
+    translationSlots,
+    takeawaySlot,
+    primarySlotId: mode.primarySlotId,
+    killList: Array.isArray(mode.killList) ? mode.killList : [],
+    globalKillList: options.globalKillList,
+    preserveCodeSwitching: Boolean(mode.preserveCodeSwitching),
+    contextAware: Boolean(mode.contextAware),
+    isProofread: flow === "proofread",
+    isPreview: hud === "preview"
+  };
+}
+function runtimeLanguagePair(rt, sessionPair) {
+  if (rt.flow === "custom") {
+    return `${rt.inputLang} \u21C4 ${rt.outputLang}`;
+  }
+  return sessionPair;
+}
+function primarySlot(rt) {
+  if (rt.primarySlotId) {
+    const match = rt.slots.find(
+      (s) => s.id.toLowerCase() === rt.primarySlotId?.toLowerCase()
+    );
+    if (match) return match;
+  }
+  return rt.translationSlots[0] || rt.slots[0];
+}
+function parsePartialJsonFields(buffer) {
+  const out = {};
+  if (!buffer) return out;
+  const cleaned = buffer.replace(/^\s*```(?:json)?/i, "").replace(/```\s*$/, "");
+  const re = /"([A-Za-z0-9_-]+)"\s*:\s*"((?:[^"\\]|\\.)*)("?)/g;
+  let match;
+  while ((match = re.exec(cleaned)) !== null) {
+    const key = match[1];
+    const raw = match[2];
+    if (!raw) continue;
+    out[key] = unescapeJsonString(raw);
+  }
+  return out;
+}
+function unescapeJsonString(value) {
+  return value.replace(
+    /\\u([0-9a-fA-F]{4})/g,
+    (_m, hex) => String.fromCharCode(parseInt(hex, 16))
+  ).replace(/\\n/g, "\n").replace(/\\r/g, "\r").replace(/\\t/g, "	").replace(/\\"/g, '"').replace(/\\\\/g, "\\");
+}
+function buildStreamingResult(fields, sourceText) {
+  const slotOutputs = {};
+  for (const [key, value] of Object.entries(fields)) {
+    if (key.endsWith("_meaning") || !value) continue;
+    slotOutputs[key] = { content: value, meaning: fields[`${key}_meaning`] };
+  }
+  const summary = fields.summary && fields.summary.trim() ? fields.summary.trim() : void 0;
+  return {
+    sourceText: summary || sourceText,
+    summary,
+    spoken: slotOutputs.spoken?.content || "",
+    spokenMeaning: slotOutputs.spoken?.meaning,
+    written: slotOutputs.written?.content || "",
+    writtenMeaning: slotOutputs.written?.meaning,
+    vocab: slotOutputs.vocab?.content,
+    annotated: "",
+    slotOutputs
+  };
+}
+function pickPrimaryContent(result, rt) {
+  const slot = primarySlot(rt);
+  if (slot && result.slotOutputs?.[slot.id]?.content) {
+    return result.slotOutputs[slot.id].content;
+  }
+  const fromSlots = result.slots?.find((s) => s.role !== "source" && s.role !== "vocab");
+  return fromSlots?.content || result.spoken || void 0;
+}
+
+// src/engine/llm.ts
+var DEFAULT_CONFIG = {
+  endpoint: process.env.LINGUAL_ENDPOINT || "",
+  apiKey: process.env.LINGUAL_API_KEY || "",
+  model: process.env.LINGUAL_MODEL || "",
+  selectedModel: "auto",
+  mode: "direct",
+  sourceLang: "en",
+  targetLang: "ja",
+  temperature: 0.2,
+  timeoutMs: 3e4
+};
+function withStreamingPartial(cfg) {
+  if (!cfg.onPartial) return cfg;
+  return {
+    ...cfg,
+    onDelta: (full) => {
+      try {
+        cfg.onPartial(parsePartialJsonFields(full));
+      } catch {
+      }
+      try {
+        cfg.onDelta?.(full);
+      } catch {
+      }
+    }
+  };
+}
+async function executeLlmCompletion(text, sysPrompt, cfg) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), cfg.timeoutMs);
+  let onAbort;
+  if (cfg.signal) {
+    if (cfg.signal.aborted) {
+      clearTimeout(timer);
+      return null;
+    }
+    onAbort = () => controller.abort();
+    cfg.signal.addEventListener("abort", onAbort, { once: true });
+  }
+  try {
+    if (typeof cfg.complete === "function") {
+      return await cfg.complete(text, sysPrompt, controller.signal, {
+        reasoning: cfg.reasoning,
+        onDelta: cfg.onDelta
+      });
+    }
+    if (cfg.endpoint) {
+      const headers = { "Content-Type": "application/json" };
+      if (cfg.apiKey) headers["Authorization"] = `Bearer ${cfg.apiKey}`;
+      const requestBody = {
+        model: cfg.model || "gemini-3.8-flash",
+        messages: [
+          { role: "system", content: sysPrompt },
+          { role: "user", content: text }
+        ]
+      };
+      if (cfg.reasoning) {
+        requestBody.reasoning = cfg.reasoning;
+      } else if (cfg.temperature !== void 0) {
+        requestBody.temperature = cfg.temperature;
+      }
+      const response = await fetch(cfg.endpoint, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(requestBody),
+        signal: controller.signal
+      });
+      if (!response.ok) return null;
+      const json = await response.json();
+      return json?.choices?.[0]?.message?.content ?? null;
+    }
+    return null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+    if (cfg.signal && onAbort) {
+      cfg.signal.removeEventListener("abort", onAbort);
+    }
+  }
 }
 
 // src/shield.ts
@@ -3320,56 +3963,6 @@ function hasSourceScript(text, sourceLang) {
       return /[a-zA-Z]/.test(text);
   }
 }
-var IMPERATIVE_ENGINEERING_VERBS = /* @__PURE__ */ new Set([
-  "fix",
-  "add",
-  "refactor",
-  "update",
-  "remove",
-  "delete",
-  "implement",
-  "replace",
-  "clean",
-  "create",
-  "optimize",
-  "ensure",
-  "extract",
-  "handle",
-  "support",
-  "use",
-  "simplify",
-  "upgrade",
-  "allow",
-  "block",
-  "prevent",
-  "enable",
-  "disable",
-  "init",
-  "setup",
-  "test",
-  "verify",
-  "pass",
-  "return",
-  "build",
-  "compile",
-  "sync",
-  "drop",
-  "bump",
-  "revert",
-  "merge",
-  "format",
-  "render",
-  "export",
-  "import",
-  "align",
-  "isolate",
-  "clamp",
-  "clampvisual",
-  "truncate",
-  "resolve",
-  "settle",
-  "dispatch"
-]);
 function isTargetLanguageOnly(text, sourceLang, targetLang = "en") {
   const normSource = (sourceLang || "en").toLowerCase().split("-")[0];
   const normTarget = (targetLang || "en").toLowerCase().split("-")[0];
@@ -3397,13 +3990,6 @@ function isTargetLanguageOnly(text, sourceLang, targetLang = "en") {
     return /[\u4e00-\u9fa5]/.test(text);
   }
   return false;
-}
-function isImperativeEngineeringPrompt(text) {
-  const trimmed = text.trim();
-  const firstWordMatch = trimmed.match(/^[a-zA-Z]+/);
-  if (!firstWordMatch) return false;
-  const firstWord = firstWordMatch[0].toLowerCase();
-  return IMPERATIVE_ENGINEERING_VERBS.has(firstWord);
 }
 function detectScriptLanguage(text) {
   if (/[\u3040-\u30ff]/.test(text)) {
@@ -3512,397 +4098,7 @@ var LingualLruCache = class {
     };
   }
 };
-var LinguaLruCache = LingualLruCache;
 var globalLingualCache = new LingualLruCache(50);
-var globalLinguaCache = globalLingualCache;
-
-// src/config.ts
-var import_node_fs = __toESM(require("fs"), 1);
-var import_node_path = __toESM(require("path"), 1);
-var import_node_os = __toESM(require("os"), 1);
-var cachedUserConfig = null;
-var lastConfigCheckTime = 0;
-var CONFIG_CACHE_TTL_MS = 2e3;
-function invalidateUserConfigCache() {
-  cachedUserConfig = null;
-  lastConfigCheckTime = 0;
-}
-function isTestEnvironment() {
-  return process.env.NODE_ENV === "test" || process.env.NODE_TEST_CONTEXT !== void 0 || process.execArgv.some((a) => a.startsWith("--test") || a === "--test") || process.argv.some((a) => a === "--test" || a.startsWith("--test=") || /\.(?:test|spec)\.[cm]?[jt]s$/i.test(a)) || process.env.npm_lifecycle_event === "test";
-}
-function isUserLingualConfigured() {
-  if (isTestEnvironment()) return true;
-  const agentDir = import_node_path.default.join(import_node_os.default.homedir(), ".pi", "agent");
-  const lingualFile = import_node_path.default.join(agentDir, "lingual.json");
-  if (!import_node_fs.default.existsSync(lingualFile)) return false;
-  try {
-    const raw = import_node_fs.default.readFileSync(lingualFile, "utf8");
-    const parsed = JSON.parse(raw);
-    const inner = parsed && (parsed["pi-lingual"] || parsed);
-    return Boolean(inner && (inner.configured || inner.sourceLang && inner.targetLang));
-  } catch {
-    return false;
-  }
-}
-var MODE_ALIAS_MAP = {
-  "1": "original",
-  companion: "original",
-  learn: "original",
-  study: "original",
-  original: "original",
-  orig: "original",
-  "\u7EAF\u4F34\u5B66": "original",
-  "\u7D14\u4F34\u5B78": "original",
-  "\u4F34\u5B66": "original",
-  "\u4F34\u8D70": "original",
-  "2": "english",
-  direct: "english",
-  rewrite: "english",
-  refine: "english",
-  english: "english",
-  en: "english",
-  eng: "english",
-  lazy: "english",
-  "\u89C4\u8303\u76F4\u53D1": "english",
-  "\u76F4\u63A5\u6539": "english",
-  "\u76F4\u6539": "english",
-  "\u76F4\u51FA": "english",
-  "\u4ED5\u69D8\u76F4\u884C": "english",
-  "3": "select",
-  candidates: "select",
-  candidate: "select",
-  select: "select",
-  choices: "select",
-  choice: "select",
-  pick: "select",
-  "\u6311\u5019\u9009": "select",
-  "\u6311\u5019\u9078": "select",
-  "\u5019\u9009": "select",
-  "\u5019\u88DC\u9078": "select",
-  "4": "modify",
-  modify: "modify",
-  polish: "modify",
-  fix: "modify",
-  proofread: "modify",
-  raw: "modify",
-  "live-flow": "modify",
-  "\u5B9E\u6218\u72C2\u98D9": "modify",
-  "\u539F\u53E5\u4FEE\u8865": "modify",
-  "\u539F\u53E5\u4FEE\u88DC": "modify",
-  "\u4FEE\u8865": "modify",
-  "\u5B9F\u6226\u75BE\u8D70": "modify",
-  "\u539F\u6587\u4FEE\u6B63": "modify",
-  "0": "off",
-  off: "off",
-  disable: "off",
-  stop: "off",
-  "\u5DF2\u5173\u95ED": "off",
-  "\u5DF2\u95DC\u9589": "off",
-  "\u5173\u95ED": "off",
-  "\u30AA\u30D5": "off"
-};
-function normalizeLingualModeInput(raw) {
-  if (!raw) return null;
-  return MODE_ALIAS_MAP[raw.trim().toLowerCase()] || null;
-}
-function loadUserLingualConfig() {
-  if (isTestEnvironment()) {
-    return {};
-  }
-  const now = Date.now();
-  if (cachedUserConfig && now - lastConfigCheckTime < CONFIG_CACHE_TTL_MS) {
-    return cachedUserConfig;
-  }
-  const agentDir = import_node_path.default.join(import_node_os.default.homedir(), ".pi", "agent");
-  const lingualFile = import_node_path.default.join(agentDir, "lingual.json");
-  const settingsFile = import_node_path.default.join(agentDir, "settings.json");
-  let target = null;
-  if (import_node_fs.default.existsSync(lingualFile)) {
-    try {
-      const raw = import_node_fs.default.readFileSync(lingualFile, "utf8");
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-        const inner = parsed["pi-lingual"] || parsed;
-        target = inner && typeof inner === "object" && !Array.isArray(inner) ? inner : null;
-      }
-    } catch {
-      target = null;
-    }
-  }
-  if (!target && import_node_fs.default.existsSync(settingsFile)) {
-    try {
-      const raw = import_node_fs.default.readFileSync(settingsFile, "utf8");
-      const parsed = JSON.parse(raw);
-      const legacyBlock = parsed["pi-lingual"];
-      if (legacyBlock && typeof legacyBlock === "object") {
-        target = legacyBlock;
-        try {
-          if (!import_node_fs.default.existsSync(agentDir)) {
-            import_node_fs.default.mkdirSync(agentDir, { recursive: true });
-          }
-          import_node_fs.default.writeFileSync(lingualFile, JSON.stringify(target, null, 2), "utf8");
-        } catch {
-        }
-      }
-    } catch {
-      target = null;
-    }
-  }
-  if (target) {
-    const endpoint = target.endpoint || target.antigravity?.endpoint;
-    const apiKey = target.apiKey || target.antigravity?.apiKey;
-    const model = target.model || target.antigravity?.model;
-    const selectedModel = target.selectedModel || target.model;
-    const sourceLang = target.sourceLang;
-    const targetLang = target.targetLang;
-    const compact = target.compact;
-    const slotPreset = target.slotPreset;
-    const filterSlots = (arr) => Array.isArray(arr) ? arr.filter((s) => s && typeof s === "object" && typeof s.id === "string" && typeof s.label === "string") : void 0;
-    const filterModes = (arr) => Array.isArray(arr) ? arr.filter((m) => m && typeof m === "object" && typeof m.id === "string") : void 0;
-    const modes = filterModes(target.modes);
-    const activeModeId = typeof target.activeModeId === "string" ? target.activeModeId : void 0;
-    const globalKillList = Array.isArray(target.globalKillList) ? target.globalKillList : void 0;
-    const slots = filterSlots(target.slots);
-    const directSlots = filterSlots(target.directSlots);
-    const promptSlots = filterSlots(target.promptSlots);
-    const modifySlots = filterSlots(target.modifySlots);
-    const lastSeenVersion = typeof target.lastSeenVersion === "string" ? target.lastSeenVersion : void 0;
-    const reasoning = typeof target.reasoning === "string" ? target.reasoning : void 0;
-    const timeoutMs = typeof target.timeoutMs === "number" && Number.isFinite(target.timeoutMs) ? Math.min(6e4, Math.max(1e3, target.timeoutMs)) : void 0;
-    const replyInSourceLang = target.replyInSourceLang !== void 0 ? Boolean(target.replyInSourceLang) : void 0;
-    const modeLocked = target.modeLocked !== void 0 ? Boolean(target.modeLocked) : void 0;
-    const labels = resolveLabelsForLang(sourceLang || "en", target.labels, targetLang || "ja");
-    const normalizedMode = typeof target.mode === "string" ? normalizeLingualModeInput(target.mode) || target.mode : void 0;
-    cachedUserConfig = {
-      ...target,
-      ...endpoint ? { endpoint } : {},
-      ...apiKey ? { apiKey } : {},
-      ...model ? { model } : {},
-      ...selectedModel ? { selectedModel } : {},
-      ...normalizedMode ? { mode: normalizedMode } : {},
-      ...modeLocked !== void 0 ? { modeLocked } : {},
-      ...compact !== void 0 ? { compact: Boolean(compact) } : {},
-      ...slotPreset ? { slotPreset } : {},
-      ...modes ? { modes } : {},
-      ...activeModeId ? { activeModeId } : {},
-      ...globalKillList ? { globalKillList } : {},
-      ...slots ? { slots } : {},
-      ...directSlots ? { directSlots } : {},
-      ...promptSlots ? { promptSlots } : {},
-      ...modifySlots ? { modifySlots } : {},
-      ...lastSeenVersion ? { lastSeenVersion } : {},
-      ...sourceLang ? { sourceLang } : {},
-      ...targetLang ? { targetLang } : {},
-      ...reasoning ? { reasoning } : {},
-      ...timeoutMs ? { timeoutMs } : {},
-      ...replyInSourceLang !== void 0 ? { replyInSourceLang } : {},
-      labels
-    };
-    lastConfigCheckTime = now;
-    return cachedUserConfig;
-  }
-  cachedUserConfig = {};
-  lastConfigCheckTime = now;
-  return {};
-}
-function saveUserLingualConfig(patch) {
-  if (isTestEnvironment()) {
-    return;
-  }
-  try {
-    const agentDir = import_node_path.default.join(import_node_os.default.homedir(), ".pi", "agent");
-    const configFile = import_node_path.default.join(agentDir, "lingual.json");
-    if (!import_node_fs.default.existsSync(agentDir)) {
-      import_node_fs.default.mkdirSync(agentDir, { recursive: true });
-    }
-    let existing = {};
-    if (import_node_fs.default.existsSync(configFile)) {
-      for (let attempt = 0; attempt < 3; attempt++) {
-        try {
-          const raw = import_node_fs.default.readFileSync(configFile, "utf8");
-          if (raw && raw.trim()) {
-            existing = JSON.parse(raw);
-            break;
-          }
-        } catch {
-          try {
-            const start = Date.now();
-            while (Date.now() - start < 15) {
-            }
-          } catch {
-          }
-        }
-      }
-    }
-    for (const [k, v] of Object.entries(patch)) {
-      const isEmptyArray = Array.isArray(v) && v.length === 0;
-      if (v === void 0 || v === "" || isEmptyArray || v === "auto" || k === "compact" && v === false || k === "modeLocked" && v === false) {
-        delete existing[k];
-      } else if (k === "mode") {
-        const canonical = v === "english" ? "direct" : v === "select" ? "candidates" : v;
-        existing.mode = canonical;
-        if (!patch.activeModeId) {
-          existing.activeModeId = canonical;
-        }
-      } else if (k === "defaultMode") {
-        const canonical = v === "1" ? "companion" : v === "2" ? "direct" : v === "3" ? "live-flow" : v === "0" ? "off" : v === "english" ? "direct" : v === "select" ? "candidates" : v;
-        existing.defaultMode = canonical;
-      } else if (k === "activeModeId") {
-        existing.activeModeId = v;
-        if (!patch.mode) {
-          existing.mode = v === "english" ? "direct" : v === "select" ? "candidates" : v;
-        }
-      } else {
-        existing[k] = v;
-      }
-    }
-    const content = JSON.stringify(existing, null, 2);
-    const tmpFile = `${configFile}.${Date.now()}.${Math.random().toString(36).slice(2, 6)}.tmp`;
-    try {
-      import_node_fs.default.writeFileSync(tmpFile, content, "utf8");
-      try {
-        import_node_fs.default.renameSync(tmpFile, configFile);
-      } catch {
-        try {
-          import_node_fs.default.unlinkSync(configFile);
-        } catch {
-        }
-        import_node_fs.default.renameSync(tmpFile, configFile);
-      }
-    } catch {
-      try {
-        import_node_fs.default.writeFileSync(configFile, content, "utf8");
-      } catch {
-      }
-      try {
-        if (import_node_fs.default.existsSync(tmpFile)) import_node_fs.default.unlinkSync(tmpFile);
-      } catch {
-      }
-    }
-    invalidateUserConfigCache();
-  } catch {
-  }
-}
-var loadUserConfig = loadUserLingualConfig;
-function resolveDirectSlotsFromConfig(cfg) {
-  if (Array.isArray(cfg.directSlots) && cfg.directSlots.length > 0) {
-    const enabled = cfg.directSlots.filter((s) => s.enabled !== false);
-    if (enabled.length > 0) return enabled;
-  }
-  return getDefaultDirectSlots(cfg.sourceLang);
-}
-function resolveCandidateSlotsFromConfig(cfg) {
-  if (Array.isArray(cfg.promptSlots) && cfg.promptSlots.length > 0) {
-    const enabled = cfg.promptSlots.filter((s) => s.enabled !== false);
-    if (enabled.length > 0) return enabled;
-  }
-  return getDefaultPromptSlots(cfg.sourceLang);
-}
-function resolveModifySlotsFromConfig(cfg) {
-  if (Array.isArray(cfg.modifySlots) && cfg.modifySlots.length > 0) {
-    const enabled = cfg.modifySlots.filter((s) => s.enabled !== false);
-    if (enabled.length > 0) return enabled;
-  }
-  return getDefaultModifySlots(cfg.sourceLang, cfg.explainLang);
-}
-function defaultSlotsForMode(mode, sourceLang, explainLang) {
-  if (mode.action === "pass-through") return [];
-  if (mode.action === "select") return getDefaultPromptSlots(sourceLang);
-  return mode.flow === "proofread" ? getDefaultModifySlots(sourceLang, explainLang) : getDefaultDirectSlots(sourceLang);
-}
-function resolveModesFromConfig(cfg, fallbackSourceLang = "en") {
-  const sourceLang = cfg.sourceLang || fallbackSourceLang;
-  const explainLang = cfg.explainLang || sourceLang;
-  if (Array.isArray(cfg.modes) && cfg.modes.length > 0) {
-    const valid = cfg.modes.filter((m) => m && typeof m.id === "string" && m.id.trim()).map((m) => {
-      if (Array.isArray(m.slots) && m.slots.length > 0) return m;
-      return { ...m, slots: defaultSlotsForMode(m, sourceLang, explainLang) };
-    });
-    if (valid.length > 0) return localizeModes(valid, sourceLang, explainLang);
-  }
-  const hasLegacyCustomSlots = Array.isArray(cfg.slots) || Array.isArray(cfg.directSlots) || Array.isArray(cfg.promptSlots) || Array.isArray(cfg.modifySlots);
-  if (hasLegacyCustomSlots) {
-    const directSlots = resolveDirectSlotsFromConfig({ sourceLang, directSlots: cfg.directSlots });
-    const modifySlots = resolveModifySlotsFromConfig({ sourceLang, explainLang, modifySlots: cfg.modifySlots });
-    const promptSlots = resolveCandidateSlotsFromConfig({ sourceLang, promptSlots: cfg.promptSlots });
-    const companionSlots = (Array.isArray(cfg.slots) && cfg.slots.length > 0 ? cfg.slots : getDefaultSlots(sourceLang)).map((s) => ({
-      id: s.id,
-      label: s.label,
-      role: s.role === "vocab" ? "vocab" : "rewrite",
-      instruction: s.instruction || "Natural expressions matching context",
-      enabled: s.enabled !== false
-    }));
-    const n = resolveSeedNames(sourceLang);
-    return [
-      {
-        id: "direct",
-        name: n.direct,
-        flow: "translate",
-        action: "transform",
-        hud: "preview",
-        slots: directSlots,
-        enabled: true
-      },
-      {
-        id: "live-flow",
-        name: n.liveFlow,
-        flow: "proofread",
-        action: "transform",
-        hud: "adaptive-takeaway",
-        slots: modifySlots,
-        enabled: true
-      },
-      {
-        id: "companion",
-        name: n.companion,
-        flow: "translate",
-        action: "pass-through",
-        hud: "tree",
-        slots: companionSlots,
-        enabled: true
-      },
-      {
-        id: "candidates",
-        name: n.candidates,
-        flow: "translate",
-        action: "select",
-        hud: "tree",
-        slots: promptSlots,
-        enabled: true
-      }
-    ];
-  }
-  return getDefaultFactoryModes(sourceLang, explainLang);
-}
-function normalizeActiveModeId(cfg, modes) {
-  if (cfg.mode === "off" || cfg.activeModeId === "off") return "off";
-  const activeModes = modes.filter((m) => m.enabled !== false);
-  const targetId = cfg.activeModeId || cfg.mode;
-  if (!targetId) {
-    return activeModes[0]?.id || "companion";
-  }
-  const legacyMap = {
-    original: "companion",
-    companion: "companion",
-    english: "direct",
-    direct: "direct",
-    lazy: "direct",
-    select: "candidates",
-    candidates: "candidates",
-    modify: "live-flow",
-    "live-flow": "live-flow",
-    raw: "live-flow",
-    polish: "live-flow"
-  };
-  const mappedId = legacyMap[targetId] || targetId;
-  if (activeModes.some((m) => m.id === mappedId)) {
-    return mappedId;
-  }
-  if (activeModes.some((m) => m.id === targetId)) {
-    return targetId;
-  }
-  return activeModes[0]?.id || "companion";
-}
 
 // src/sanitizer.ts
 var TARGETED_CLIPBOARD_PATH_REGEX = /(?:[a-zA-Z]:[\\\/](?:[^:\r\n\t]+[\\\/])?pi-clipboard-[a-zA-Z0-9\-]+\.png|\/(?:[^\r\n\t]+[\\\/])?pi-clipboard-[a-zA-Z0-9\-]+\.png)/gi;
@@ -4107,383 +4303,47 @@ function ensureCodeTokensPreserved(sourceText, rewrittenText) {
   return `${rewrittenText.trimEnd()}${appendix}`;
 }
 
-// src/banner.ts
-var import_node_fs2 = __toESM(require("fs"), 1);
-var import_node_path2 = __toESM(require("path"), 1);
-var import_node_os2 = __toESM(require("os"), 1);
-var CURRENT_FEATURE_BANNER_VERSION = "0.7.0";
-var MODE_DISPLAY_BY_LANG = {
-  zh: {
-    companion: SEED_NAMES.zh.companion,
-    direct: SEED_NAMES.zh.direct,
-    candidates: SEED_NAMES.zh.candidates,
-    modify: SEED_NAMES.zh.liveFlow,
-    off: "\u5DF2\u5173\u95ED",
-    notifyOff: (p) => `[${p}] \u5DF2\u5207\u6362\u81F3\u30100 \u5DF2\u5173\u95ED (off)\u3011\uFF1A\u5E95\u680F\u9690\u85CF \xB7 \u76D1\u542C\u5DF2\u5378 \xB7 0 Token \u96F6\u8D1F\u62C5`
-  },
-  tw: {
-    companion: SEED_NAMES.tw.companion,
-    direct: SEED_NAMES.tw.direct,
-    candidates: SEED_NAMES.tw.candidates,
-    modify: SEED_NAMES.tw.liveFlow,
-    off: "\u5DF2\u95DC\u9589",
-    notifyOff: (p) => `[${p}] \u5DF2\u5207\u63DB\u81F3\u30100 \u5DF2\u95DC\u9589 (off)\u3011\uFF1A\u5E95\u6B04\u96B1\u85CF \xB7 \u76E3\u807D\u5DF2\u5378 \xB7 0 Token \u96F6\u8CA0\u64D4`
-  },
-  ja: {
-    companion: SEED_NAMES.ja.companion,
-    direct: SEED_NAMES.ja.direct,
-    candidates: SEED_NAMES.ja.candidates,
-    modify: SEED_NAMES.ja.liveFlow,
-    off: "\u30AA\u30D5",
-    notifyOff: (p) => `[${p}] \u30100 \u30AA\u30D5 (off)\u3011\uFF1A\u4E0B\u90E8\u30D0\u30FC\u975E\u8868\u793A\u30FB\u76E3\u8996\u505C\u6B62\u30FB0 Token \u7121\u8CA0\u8377`
-  },
-  ko: {
-    companion: SEED_NAMES.ko.companion,
-    direct: SEED_NAMES.ko.direct,
-    candidates: SEED_NAMES.ko.candidates,
-    modify: SEED_NAMES.ko.liveFlow,
-    off: "\uAEBC\uC9D0",
-    notifyOff: (p) => `[${p}] \u30100 \uAEBC\uC9D0 (off)\u3011\uFF1A\uC0C1\uD0DC \uC228\uAE40 \xB7 \uB9AC\uC2A4\uB108 \uBD84\uB9AC \xB7 0 \uD1A0\uD070`
-  },
-  es: {
-    companion: SEED_NAMES.es.companion,
-    direct: SEED_NAMES.es.direct,
-    candidates: SEED_NAMES.es.candidates,
-    modify: SEED_NAMES.es.liveFlow,
-    off: "Apagado",
-    notifyOff: (p) => `[${p}] Cambiado a [0 Apagado]: Estado oculto \xB7 0 tokens`
-  },
-  fr: {
-    companion: SEED_NAMES.fr.companion,
-    direct: SEED_NAMES.fr.direct,
-    candidates: SEED_NAMES.fr.candidates,
-    modify: SEED_NAMES.fr.liveFlow,
-    off: "D\xE9sactiv\xE9",
-    notifyOff: (p) => `[${p}] Pass\xE9 en mode [0 D\xE9sactiv\xE9] : Statut masqu\xE9 \xB7 0 tokens`
-  },
-  de: {
-    companion: SEED_NAMES.de.companion,
-    direct: SEED_NAMES.de.direct,
-    candidates: SEED_NAMES.de.candidates,
-    modify: SEED_NAMES.de.liveFlow,
-    off: "Aus",
-    notifyOff: (p) => `[${p}] Gewechselt zu [0 Aus]: Status ausgeblendet \xB7 0 Tokens`
-  },
-  ru: {
-    companion: SEED_NAMES.ru.companion,
-    direct: SEED_NAMES.ru.direct,
-    candidates: SEED_NAMES.ru.candidates,
-    modify: SEED_NAMES.ru.liveFlow,
-    off: "\u0412\u044B\u043A\u043B",
-    notifyOff: (p) => `[${p}] \u041F\u0435\u0440\u0435\u043A\u043B\u044E\u0447\u0435\u043D\u043E \u0432 \u0440\u0435\u0436\u0438\u043C [0 \u0412\u044B\u043A\u043B]: \u0441\u043A\u0440\u044B\u0442 \u0441\u0442\u0430\u0442\u0443\u0441 \xB7 0 \u0442\u043E\u043A\u0435\u043D\u043E\u0432`
-  },
-  en: {
-    companion: SEED_NAMES.en.companion,
-    direct: SEED_NAMES.en.direct,
-    candidates: SEED_NAMES.en.candidates,
-    modify: SEED_NAMES.en.liveFlow,
-    off: "Off",
-    notifyOff: (p) => `[${p}] Switched to [0 Off] mode: Status hidden \xB7 listeners detached \xB7 0 tokens`
-  }
-};
-function resolveModeDisplaySpec(sourceLang = "en") {
-  const norm = (sourceLang || "en").toLowerCase().split("-")[0];
-  return MODE_DISPLAY_BY_LANG[norm] || MODE_DISPLAY_BY_LANG.en;
-}
-function normalizeLocaleTag(raw) {
-  return (raw || "").toLowerCase().replace(/_/g, "-").split(".")[0];
-}
-function isTraditionalChineseLocale(tag) {
-  return tag.startsWith("zh-tw") || tag.startsWith("zh-hk") || tag.startsWith("zh-hant") || tag === "zh-mo";
-}
-function resolveReleaseBannerLang(explicitSourceLang, sessionEntries) {
-  const supported = /* @__PURE__ */ new Set(["zh", "tw", "ja", "ko", "es", "fr", "de", "ru", "en"]);
-  if (explicitSourceLang && explicitSourceLang.trim()) {
-    const clean = explicitSourceLang.trim().toLowerCase().split(/[-_]/)[0];
-    return supported.has(clean) ? clean : "en";
-  }
-  if (Array.isArray(sessionEntries) && sessionEntries.length > 0) {
-    for (let i = sessionEntries.length - 1; i >= 0; i--) {
-      const e = sessionEntries[i];
-      if (e?.type === "message" && e?.message?.role === "user") {
-        const text = Array.isArray(e.message.content) ? e.message.content.map((c) => c?.text || "").join(" ") : String(e.message.content || "");
-        if (/[\u3040-\u309f\u30a0-\u30ff]/.test(text)) return "ja";
-        if (/[\uac00-\ud7af]/.test(text)) return "ko";
-        if (/[\u0400-\u04ff]/.test(text)) return "ru";
-        if (/[\u4e00-\u9fa5]/.test(text)) return "zh";
-      }
-    }
-  }
-  try {
-    const i18nFile = import_node_path2.default.join(import_node_os2.default.homedir(), ".config", "rpiv-i18n", "config.json");
-    if (import_node_fs2.default.existsSync(i18nFile)) {
-      const raw = JSON.parse(import_node_fs2.default.readFileSync(i18nFile, "utf8"));
-      const loc = normalizeLocaleTag(String(raw?.locale || raw?.lang || ""));
-      if (isTraditionalChineseLocale(loc)) return "tw";
-      const prefix = loc.split("-")[0];
-      if (supported.has(prefix)) return prefix;
-    }
-  } catch {
-  }
-  try {
-    const envLocale = normalizeLocaleTag(
-      process.env.LC_ALL || process.env.LANGUAGE || process.env.LANG || Intl.DateTimeFormat().resolvedOptions().locale || "en"
-    );
-    if (isTraditionalChineseLocale(envLocale)) return "tw";
-    const prefix = envLocale.split("-")[0];
-    if (supported.has(prefix)) return prefix;
-  } catch {
-  }
-  return "en";
-}
-function resolveSelectPrompts(lang = "en", candidatesCount = 3) {
-  const norm = (lang || "en").toLowerCase().split("-")[0];
-  const selectPrompts = {
-    zh: {
-      title: "\u2726 \u6311\u5019\u9009\u53D1\u9001",
-      keepOrig: "\u539F\u8BDD\u76F4\u53D1",
-      hint: `\u6309\u6570\u5B57 1-${candidatesCount} \u76F4\u63A5\u53D1\u51FA \xB7 \u2190\u2192/\u2191\u2193 \u5207\u6362 Enter \u786E\u8BA4 \xB7 0/Esc \u53D1\u539F\u8BDD`
-    },
-    tw: {
-      title: "\u2726 \u6311\u5019\u9078\u767C\u9001",
-      keepOrig: "\u539F\u8A71\u76F4\u767C",
-      hint: `\u6309\u6578\u5B57 1-${candidatesCount} \u76F4\u63A5\u767C\u51FA \xB7 \u2190\u2192/\u2191\u2193 \u5207\u63DB Enter \u78BA\u8A8D \xB7 0/Esc \u767C\u539F\u8A71`
-    },
-    ja: {
-      title: "\u2726 \u5019\u88DC\u3092\u9078\u3093\u3067\u9001\u4FE1",
-      keepOrig: "\u539F\u6587\u306E\u307E\u307E",
-      hint: `\u6570\u5B57 1-${candidatesCount} \u3067\u5373\u9001\u4FE1 \xB7 \u2190\u2192/\u2191\u2193 \u9078\u629E Enter \u78BA\u5B9A \xB7 0/Esc \u539F\u6587\u9001\u4FE1`
-    },
-    ko: {
-      title: "\u2726 \uD6C4\uBCF4 \uC120\uD0DD \uC804\uC1A1",
-      keepOrig: "\uC6D0\uBB38 \uC804\uC1A1",
-      hint: `\uC22B\uC790 1-${candidatesCount} \uC989\uC2DC \uC804\uC1A1 \xB7 \u2190\u2192/\u2191\u2193 Enter \uD655\uC778 \xB7 0/Esc \uC6D0\uBB38 \uC804\uC1A1`
-    },
-    es: {
-      title: "\u2726 Elegir candidato",
-      keepOrig: "Texto original",
-      hint: `1-${candidatesCount} enviar \xB7 \u2190\u2192/\u2191\u2193 Enter confirmar \xB7 0/Esc original`
-    },
-    fr: {
-      title: "\u2726 Choisir une variante",
-      keepOrig: "Texte original",
-      hint: `1-${candidatesCount} envoyer \xB7 \u2190\u2192/\u2191\u2193 Entr\xE9e valider \xB7 0/Esc original`
-    },
-    de: {
-      title: "\u2726 Variante w\xE4hlen",
-      keepOrig: "Originaltext",
-      hint: `1-${candidatesCount} senden \xB7 \u2190\u2192/\u2191\u2193 Eingabe best\xE4tigen \xB7 0/Esc Original`
-    },
-    ru: {
-      title: "\u2726 \u0412\u044B\u0431\u043E\u0440 \u0432\u0430\u0440\u0438\u0430\u043D\u0442\u0430",
-      keepOrig: "\u0418\u0441\u0445\u043E\u0434\u043D\u044B\u0439 \u0442\u0435\u043A\u0441\u0442",
-      hint: `1-${candidatesCount} \u043E\u0442\u043F\u0440\u0430\u0432\u0438\u0442\u044C \xB7 \u2190\u2192/\u2191\u2193 Enter \u043F\u043E\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044C \xB7 0/Esc \u0438\u0441\u0445\u043E\u0434\u043D\u044B\u0439`
-    },
-    en: {
-      title: "\u2726 Pick candidate",
-      keepOrig: "Send original",
-      hint: `1-${candidatesCount} send \xB7 \u2190\u2192/\u2191\u2193 Enter \xB7 0/Esc original`
-    }
-  };
-  return selectPrompts[norm] || selectPrompts.en;
-}
-function formatReleaseBannerLines(sourceLang = "en", maxCols = 80, fg = (_c, t) => t) {
-  const norm = (sourceLang || "en").toLowerCase().split("-")[0];
-  const effectiveCols = typeof maxCols === "number" && maxCols > 0 ? maxCols : 80;
-  const copyByLang = {
-    zh: {
-      title: "\xB7 [pi-lingual v0.7.0] \u4E09\u6838\u51FA\u5382\uFF1A\u4F34\u5B66 \xB7 \u89C4\u8303\u76F4\u53D1 \xB7 \u5B9E\u6218\u72C2\u98D9",
-      subtitle: "\u2502 \u5728 AI \u751F\u6210\u7684 5-15 \u79D2\u95F4\u9699\u987A\u624B\u6361\u8BED\u611F\uFF1B\u63D0\u793A\u8BCD\u59CB\u7EC8\u7EAF\u51C0\u82F1\u6587",
-      rows: [
-        "\u250C [\u5B9A\u5236\u4E2D\u5FC3 \xB7 Tuner] \u6572 /tuner \u8DDF AI \u8BF4\u8BDD\uFF0C\u968F\u610F\u589E\u5220\u6539\u6A21\u5F0F",
-        "\u2502   (4 \u5927\u914D\u88C5\u5C31\u7EEA\uFF1Aspec \u538B\u94F8 \xB7 commit \u8131\u6C34 \xB7 oss \u5BF9\u7EBF \xB7 yap \u53D1\u63A8)",
-        "\u251C [1 \u7EAF\u4F34\u5B66 \xB7 companion] \u4E2D\u6587\u539F\u6837\u76F4\u53D1\uFF1B\u4E0A\u65B9\u6D6E\u51FA\u53CC\u8BED\u5BF9\u7167\u5361",
-        "\u251C [2 \u89C4\u8303\u76F4\u53D1 \xB7 direct] \u6572\u4E2D\u6587\uFF0C0ms \u8F6C\u6210\u89C4\u8303\u82F1\u6587\u5DE5\u7A0B\u6307\u4EE4",
-        "\u251C [3 \u5B9E\u6218\u72C2\u98D9 \xB7 live-flow] \u6253\u82F1\u6587\uFF1B\u53EA\u4FEE\u9519\u8BCD\uFF0C\u7C97\u53E3\u60C5\u7EEA 100% \u4FDD\u7559",
-        "\u2514   (/lingual 1|2|3 \u6309\u6CE8\u518C\u8868\u987A\u5E8F\uFF1B/lingual <id> \u6C38\u8FDC\u6709\u6548)"
-      ]
-    },
-    tw: {
-      title: "\xB7 [pi-lingual v0.7.0] \u4E09\u6838\u51FA\u5EE0\uFF1A\u7D14\u4F34\u5B78 \xB7 \u898F\u7BC4\u76F4\u767C \xB7 \u5BE6\u6230\u72C2\u98C6",
-      subtitle: "\u2502 \u5728 AI \u751F\u6210\u7684 5-15 \u79D2\u9593\u9699\u9806\u624B\u64BF\u8A9E\u611F\uFF1B\u63D0\u793A\u8A5E\u59CB\u7D42\u7D14\u6DE8\u82F1\u6587",
-      rows: [
-        "\u250C [\u5B9A\u88FD\u4E2D\u5FC3 \xB7 Tuner] \u6572 /tuner \u8DDF AI \u8AAA\u8A71\uFF0C\u96A8\u610F\u589E\u522A\u6539\u6A21\u5F0F",
-        "\u2502   (4 \u5927\u914D\u88DD\u5C31\u7DD2\uFF1Aspec \u58D3\u9444 \xB7 commit \u812B\u6C34 \xB7 oss \u5C0D\u7DDA \xB7 yap \u767C\u63A8)",
-        "\u251C [1 \u7D14\u4F34\u5B78 \xB7 companion] \u4E2D\u6587\u539F\u6A23\u76F4\u767C\uFF1B\u4E0A\u65B9\u6D6E\u51FA\u96D9\u8A9E\u5C0D\u7167\u5361",
-        "\u251C [2 \u898F\u7BC4\u76F4\u767C \xB7 direct] \u6572\u4E2D\u6587\uFF0C0ms \u8F49\u6210\u898F\u7BC4\u82F1\u6587\u5DE5\u7A0B\u6307\u4EE4",
-        "\u251C [3 \u5BE6\u6230\u72C2\u98C6 \xB7 live-flow] \u6253\u82F1\u6587\uFF1B\u53EA\u4FEE\u932F\u8A5E\uFF0C\u7C97\u53E3\u60C5\u7DD2 100% \u4FDD\u7559",
-        "\u2514   (/lingual 1|2|3 \u6309\u8A3B\u518A\u8868\u9806\u5E8F\uFF1B/lingual <id> \u6C38\u9060\u6709\u6548)"
-      ]
-    },
-    ja: {
-      title: "\xB7 [pi-lingual v0.7.0] 3\u30B3\u30A2\uFF1A\u4F34\u8D70 \xB7 \u4ED5\u69D8\u76F4\u884C \xB7 \u5B9F\u6226\u75BE\u8D70",
-      subtitle: "\u2502 AI \u751F\u6210\u306E 5-15 \u79D2\u306B\u8A9E\u611F\u3092\u62FE\u3046\uFF1B\u30D7\u30ED\u30F3\u30D7\u30C8\u306F\u5E38\u306B\u7D14\u82F1\u8A9E",
-      rows: [
-        "\u250C [\u8A2D\u8A08\u30BB\u30F3\u30BF\u30FC \xB7 Tuner] /tuner \u3067 AI \u3068\u5BFE\u8A71\u3057\u30E2\u30FC\u30C9\u3092\u7DE8\u96C6",
-        "\u2502   (4\u5927\u30EC\u30B7\u30D4\uFF1Aspec \u5727\u7E2E \xB7 commit \u8131\u6C34 \xB7 oss \u5BFE\u8AD6 \xB7 yap \u6295\u7A3F)",
-        "\u251C [1 \u4F34\u8D70 \xB7 companion] \u6BCD\u8A9E\u3092\u305D\u306E\u307E\u307E\u9001\u4FE1\uFF1B\u4E0A\u90E8\u306B\u4E8C\u8A00\u8A9E\u30AB\u30FC\u30C9",
-        "\u251C [2 \u4ED5\u69D8\u76F4\u884C \xB7 direct] 0ms \u3067\u6BCD\u8A9E \u2794 \u898F\u7BC4\u7684\u306A\u82F1\u8A9E\u4ED5\u69D8\u306B\u6574\u5F62",
-        "\u251C [3 \u5B9F\u6226\u75BE\u8D70 \xB7 live-flow] \u82F1\u8A9E\u5165\u529B\uFF1B\u8AA4\u5B57\u306E\u307F\u4FEE\u6B63\u3001\u611F\u60C5\u306F\u4FDD\u6301",
-        "\u2514   (/lingual 1|2|3 \u306F\u767B\u9332\u9806\uFF1B/lingual <id> \u306F\u5E38\u306B\u6709\u52B9)"
-      ]
-    },
-    ko: {
-      title: "\xB7 [pi-lingual v0.7.0] 3\uCF54\uC5B4: \uB3D9\uD589\uD559\uC2B5 \xB7 \uB17C\uB9AC\uC815\uC81C \xB7 \uC2E4\uC804\uC9C8\uC8FC",
-      subtitle: "\u2502 AI \uC0DD\uC131 5-15\uCD08\uC5D0 \uC5B4\uAC10\uC744 \uC90D\uB294\uB2E4; \uD504\uB86C\uD504\uD2B8\uB294 \uC21C\uC218 \uC601\uC5B4",
-      rows: [
-        "\u250C [\uC124\uACC4 \uC13C\uD130 \xB7 Tuner] /tuner \uB85C AI \uC640 \uBAA8\uB4DC\uB97C \uD3B8\uC9D1",
-        "\u2502   (4\uB300 \uB808\uC2DC\uD53C: spec \xB7 commit \xB7 oss \xB7 yap)",
-        "\u251C [1 \uB3D9\uD589\uD559\uC2B5 \xB7 companion] \uBAA8\uAD6D\uC5B4 \uC6D0\uBB38 \uC804\uC1A1; \uC774\uC911\uC5B8\uC5B4 \uCE74\uB4DC",
-        "\u251C [2 \uB17C\uB9AC\uC815\uC81C \xB7 direct] 0ms \uB85C \uBAA8\uAD6D\uC5B4 \u2794 \uADDC\uACA9 \uC601\uC5B4 \uC0AC\uC591",
-        "\u251C [3 \uC2E4\uC804\uC9C8\uC8FC \xB7 live-flow] \uC601\uC5B4 \uC785\uB825; \uC624\uD0C0\uB9CC \uC218\uC815, \uAC10\uC815 \uC720\uC9C0",
-        "\u2514   (/lingual 1|2|3 \uC740 \uB4F1\uB85D \uC21C\uC11C; /lingual <id> \uB294 \uD56D\uC0C1 \uC720\uD6A8)"
-      ]
-    },
-    es: {
-      title: "\xB7 [pi-lingual v0.7.0] Tres n\xFAcleos: Compa\xF1ero \xB7 Directo \xB7 Live Flow",
-      subtitle: "\u2502 Aprovecha los 5-15 s; tu prompt siempre en ingl\xE9s limpio",
-      rows: [
-        "\u250C [Centro Tuner] /tuner para crear o editar modos con AI",
-        "\u2502   (4 recetas: spec \xB7 commit \xB7 oss \xB7 yap)",
-        "\u251C [1 Aprendizaje \xB7 companion] Idioma nativo intacto; tarjeta arriba",
-        "\u251C [2 Directo L\xF3gico \xB7 direct] 0ms nativo \u2794 especificaci\xF3n inglesa",
-        "\u251C [3 Flujo en Vivo \xB7 live-flow] Escribe en ingl\xE9s; solo corrige erratas",
-        "\u2514   (/lingual 1|2|3 por registro; /lingual <id> siempre funciona)"
-      ]
-    },
-    fr: {
-      title: "\xB7 [pi-lingual v0.7.0] Trois c\u0153urs : Compagnon \xB7 Direct \xB7 Live Flow",
-      subtitle: "\u2502 Profitez des 5-15 s ; prompt toujours en anglais propre",
-      rows: [
-        "\u250C [Centre Tuner]   Tapez /tuner pour cr\xE9er ou modifier des modes",
-        "\u2502   (4 recettes : spec \xB7 commit \xB7 oss \xB7 yap)",
-        "\u251C [1 Compagnon \xB7 companion] Langue native brute ; carte au-dessus",
-        "\u251C [2 Direct Logique \xB7 direct] 0ms natif \u2794 spec anglaise structur\xE9e",
-        "\u251C [3 Flux en Direct \xB7 live-flow] Tapez en anglais ; seules fautes fix\xE9es",
-        "\u2514   (/lingual 1|2|3 selon registre ; /lingual <id> marche toujours)"
-      ]
-    },
-    de: {
-      title: "\xB7 [pi-lingual v0.7.0] Drei Kerne: Begleitung \xB7 Logik \xB7 Live Flow",
-      subtitle: "\u2502 Nutze die 5-15 s; Prompt bleibt klares Englisch",
-      rows: [
-        "\u250C [Tuner-Zentrale]  /tuner f\xFCr Modi im Gespr\xE4ch",
-        "\u2502   (4 Rezepte: spec \xB7 commit \xB7 oss \xB7 yap)",
-        "\u251C [1 Begleitung \xB7 companion] Muttersprache roh; Karte dar\xFCber",
-        "\u251C [2 Direkte Logik \xB7 direct] 0ms nativ \u2794 englische Spezifikation",
-        "\u251C [3 Live-Fluss \xB7 live-flow] Englisch tippen; nur Fehler korrigiert",
-        "\u2514   (/lingual 1|2|3 nach Registry; /lingual <id> l\xF6st immer auf)"
-      ]
-    },
-    ru: {
-      title: "\xB7 [pi-lingual v0.7.0] \u0422\u0440\u0438 \u044F\u0434\u0440\u0430: \u0421\u043E\u043F\u0440\u043E\u0432\u043E\u0436\u0434\u0435\u043D\u0438\u0435 \xB7 \u041B\u043E\u0433\u0438\u043A\u0430 \xB7 Live Flow",
-      subtitle: "\u2502 \u041B\u043E\u0432\u0438\u0442\u0435 \u044F\u0437\u044B\u043A \u0432 \u043F\u0430\u0443\u0437\u0435 5-15 \u0441; \u043F\u0440\u043E\u043C\u043F\u0442 \u2014 \u0447\u0438\u0441\u0442\u044B\u0439 \u0430\u043D\u0433\u043B\u0438\u0439\u0441\u043A\u0438\u0439",
-      rows: [
-        "\u250C [\u0426\u0435\u043D\u0442\u0440 Tuner]    /tuner \u2014 \u043F\u0440\u0430\u0432\u044C\u0442\u0435 \u0440\u0435\u0436\u0438\u043C\u044B \u0432 \u0434\u0438\u0430\u043B\u043E\u0433\u0435",
-        "\u2502   (4 \u0440\u0435\u0446\u0435\u043F\u0442\u0430: spec \xB7 commit \xB7 oss \xB7 yap)",
-        "\u251C [1 \u0421\u043E\u043F\u0440\u043E\u0432\u043E\u0436\u0434\u0435\u043D\u0438\u0435 \xB7 companion] \u0420\u043E\u0434\u043D\u043E\u0439 \u0442\u0435\u043A\u0441\u0442 \u043A\u0430\u043A \u0435\u0441\u0442\u044C; \u043A\u0430\u0440\u0442\u043E\u0447\u043A\u0430",
-        "\u251C [2 \u041F\u0440\u044F\u043C\u043E\u0439 \u043F\u043E\u0442\u043E\u043A \xB7 direct] 0ms \u0440\u043E\u0434\u043D\u043E\u0439 \u2794 \u0430\u043D\u0433\u043B. \u0441\u043F\u0435\u0446\u0438\u0444\u0438\u043A\u0430\u0446\u0438\u044F",
-        "\u251C [3 \u0416\u0438\u0432\u043E\u0439 \u043F\u043E\u0442\u043E\u043A \xB7 live-flow] English-\u0432\u0432\u043E\u0434; \u043F\u0440\u0430\u0432\u044F\u0442\u0441\u044F \u0442\u043E\u043B\u044C\u043A\u043E \u043E\u043F\u0435\u0447\u0430\u0442\u043A\u0438",
-        "\u2514   (/lingual 1|2|3 \u043F\u043E \u0440\u0435\u0435\u0441\u0442\u0440\u0443; /lingual <id> \u0432\u0441\u0435\u0433\u0434\u0430 \u0440\u0430\u0431\u043E\u0442\u0430\u0435\u0442)"
-      ]
-    },
-    en: {
-      title: "\xB7 [pi-lingual v0.7.0] Three cores: Companion \xB7 Spec \xB7 Live Flow",
-      subtitle: "\u2502 Catch phrasing in the 5-15 s gap; prompts stay clean English",
-      rows: [
-        "\u250C [Architect Tuner] Run /tuner to add or edit modes with AI",
-        "\u2502   (4 tactical loadouts: spec \xB7 commit \xB7 oss \xB7 yap)",
-        "\u251C [1 Companion \xB7 companion] Native text sent raw; card above",
-        "\u251C [2 Logical Spec \xB7 direct] 0ms native \u2794 imperative English spec",
-        "\u251C [3 Live Flow \xB7 live-flow] Draft English; only typos fixed, tone kept",
-        "\u2514   (/lingual 1|2|3 = registry order; /lingual <id> always works)"
-      ]
-    }
-  };
-  const c = copyByLang[norm] || copyByLang.en;
-  const allRawLines = [c.title, c.subtitle, ...c.rows];
-  return allRawLines.map((line) => truncateVisual(`  ${fg("muted", line)}`, effectiveCols));
-}
-
-// src/engine.ts
-var DEFAULT_CONFIG = {
-  endpoint: process.env.LINGUAL_ENDPOINT || "",
-  apiKey: process.env.LINGUAL_API_KEY || "",
-  model: process.env.LINGUAL_MODEL || "",
-  selectedModel: "auto",
-  mode: "direct",
-  sourceLang: "en",
-  targetLang: "ja",
-  temperature: 0.2,
-  timeoutMs: 3e4
-};
+// src/engine/runner.ts
 var LINGUAL_SYSTEM_PROMPT = buildSystemPrompt("en", "ja");
-var BLOCKED_JSON_KEYS = /* @__PURE__ */ new Set(["__proto__", "constructor", "prototype"]);
-function toCleanString(val) {
-  if (typeof val === "string") return val.trim();
-  if (typeof val === "number" || typeof val === "boolean") return String(val);
-  if (Array.isArray(val)) return val.map(toCleanString).filter(Boolean).join(" \xB7 ");
-  return "";
-}
-function repairAndParseJsonObject(raw) {
-  try {
-    if (!raw || typeof raw !== "string" || raw.length > 32768) return null;
-    let cleaned = raw.replace(/<(?:think|thought)>[\s\S]*?<\/(?:think|thought)>/gi, "").trim();
-    const fence = cleaned.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-    if (fence) cleaned = fence[1].trim();
-    const first = cleaned.indexOf("{");
-    const last = cleaned.lastIndexOf("}");
-    if (first === -1 || last <= first) return null;
-    const jsonSubstr = cleaned.slice(first, last + 1);
-    let parsed;
-    try {
-      parsed = JSON.parse(jsonSubstr);
-    } catch {
-      const repaired = jsonSubstr.replace(/,\s*([}\]])/g, "$1").replace(
-        /("[a-zA-Z0-9_-]+"\s*:\s*")([\s\S]*?)("(?=\s*,\s*"|\s*\}))/g,
-        (_m, prefix, content, suffix) => prefix + content.replace(/(?<!\\)"/g, '\\"') + suffix
-      );
-      parsed = JSON.parse(repaired);
-    }
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null;
-  } catch {
-    return null;
+var MAX_TRANSLATION_CHARS = 2500;
+var MAX_TRANSLATION_LINES = 30;
+function shouldTriggerTranslation(text, sourceLang = "en", allowSameLangPromptOpt = false) {
+  const trimmed = text.trim();
+  if (!trimmed) return false;
+  if (trimmed.length > MAX_TRANSLATION_CHARS) return false;
+  if (trimmed.split(/\r?\n/).length > MAX_TRANSLATION_LINES) return false;
+  if (/^#{1,6}\s/.test(trimmed) || trimmed.startsWith("---")) return false;
+  if (shouldShieldBypass(trimmed)) return false;
+  if (allowSameLangPromptOpt) {
+    if (isNonEnglish(trimmed)) return true;
+    const words2 = trimmed.split(/\s+/);
+    return words2.length >= 2 && /[a-zA-Z]{2,}/.test(trimmed);
   }
-}
-function parseLlmResponse(raw) {
-  const parsed = repairAndParseJsonObject(raw);
-  if (!parsed) return null;
-  const spoken = toCleanString(parsed.spoken ?? parsed.casual ?? parsed.slot1);
-  const spokenMeaning = toCleanString(parsed.spoken_meaning ?? parsed.spokenMeaning);
-  const written = toCleanString(parsed.written ?? parsed.academic ?? parsed.slot2);
-  const writtenMeaning = toCleanString(parsed.written_meaning ?? parsed.writtenMeaning);
-  const vocab = toCleanString(parsed.vocab);
-  const summary = toCleanString(parsed.summary ?? parsed.core_intent ?? parsed.coreIntent);
-  const slotOutputs = /* @__PURE__ */ Object.create(null);
-  for (const [k, v] of Object.entries(parsed)) {
-    if (BLOCKED_JSON_KEYS.has(k) || k.endsWith("_meaning") || k === "summary") continue;
-    const textVal = toCleanString(v);
-    if (textVal) {
-      const meaningVal = toCleanString(parsed[k + "_meaning"]);
-      slotOutputs[k] = {
-        content: textVal,
-        meaning: meaningVal || void 0
-      };
-    }
+  const normSource = (sourceLang || "en").toLowerCase().split("-")[0];
+  const nonLatinLangs = /* @__PURE__ */ new Set(["zh", "tw", "ja", "ko", "ru", "ar"]);
+  if (nonLatinLangs.has(normSource)) {
+    return isNonEnglish(trimmed);
   }
-  const nonVocabOutputs = Object.entries(slotOutputs).filter(([k]) => k !== "vocab").map(([, val]) => val);
-  const effectiveSpoken = spoken || nonVocabOutputs[0]?.content || vocab || "";
-  const effectiveSpokenMeaning = spokenMeaning || nonVocabOutputs[0]?.meaning || "";
-  if (!effectiveSpoken) return null;
-  return {
-    spoken: effectiveSpoken,
-    spokenMeaning: effectiveSpokenMeaning || void 0,
-    written: written || void 0,
-    writtenMeaning: writtenMeaning || void 0,
-    vocab: vocab || void 0,
-    summary: summary || void 0,
-    slotOutputs: Object.keys(slotOutputs).length > 0 ? slotOutputs : void 0
-  };
+  if (isNonEnglish(trimmed)) return true;
+  const words = trimmed.split(/\s+/);
+  return words.length >= 2 && /[a-zA-Z]{2,}/.test(trimmed);
+}
+function isDynamicLongInput(text, sourceLang = "en") {
+  const trimmed = text.trim();
+  if (!trimmed) return false;
+  const normSource = (sourceLang || "en").toLowerCase().split("-")[0];
+  const hasCjk = /[\u4e00-\u9fa5\u3040-\u30ff\uac00-\ud7af]/.test(trimmed);
+  const isCjk = normSource === "zh" || normSource === "tw" || normSource === "ja" || normSource === "ko" || hasCjk;
+  if (isCjk) {
+    if (trimmed.length >= 45) return true;
+    const sentenceCount = (trimmed.match(/[。！？；\n]/g) || []).length;
+    if (sentenceCount >= 2 && trimmed.length >= 30) return true;
+  } else {
+    if (trimmed.length >= 85) return true;
+    const sentenceCount = (trimmed.match(/[.!?](\s+|$)|[\n;]/g) || []).length;
+    if (sentenceCount >= 2 && trimmed.length >= 50) return true;
+  }
+  return trimmed.length >= 85;
 }
 async function translateCore(req, options) {
   const text = (req.text || "").trim();
@@ -4559,99 +4419,616 @@ async function translateCore(req, options) {
     shieldBypassed: false
   };
 }
+async function translatePrompt(text, userConfig = {}) {
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+  const diskConfig = loadUserLingualConfig();
+  const activeMode = userConfig.modeConfig;
+  const cfg = {
+    ...DEFAULT_CONFIG,
+    ...diskConfig,
+    ...userConfig,
+    sourceLang: activeMode?.customInputLang || userConfig.sourceLang || diskConfig.sourceLang || DEFAULT_CONFIG.sourceLang,
+    targetLang: activeMode?.customOutputLang || userConfig.targetLang || diskConfig.targetLang || DEFAULT_CONFIG.targetLang,
+    reasoning: activeMode?.reasoning ?? userConfig.reasoning ?? diskConfig.reasoning
+  };
+  if (!shouldTriggerTranslation(trimmed, cfg.sourceLang)) return null;
+  if (shouldShieldBypass(trimmed)) return null;
+  const effectiveSlots = (activeMode?.slots && activeMode.slots.length > 0 ? activeMode.slots : void 0) || cfg.slots || (cfg.slotPreset ? resolveSlotsForPreset(cfg.slotPreset, cfg.sourceLang) : void 0);
+  const slotSig = Array.isArray(effectiveSlots) ? effectiveSlots.filter((s) => s.enabled !== false).map((s) => s.id).join(",") : void 0;
+  const modeSig = activeMode ? `${activeMode.id}:${slotSig || ""}` : slotSig;
+  const cacheKey = LingualLruCache.buildKey(trimmed, cfg.sourceLang, cfg.targetLang, modeSig);
+  const cached = globalLingualCache.get(cacheKey);
+  if (cached) return cached;
+  const isLongInput = isDynamicLongInput(trimmed, cfg.sourceLang);
+  const sysPrompt = activeMode ? compileModeSystemPrompt(
+    { ...activeMode, slots: effectiveSlots || activeMode.slots },
+    {
+      sourceLang: cfg.sourceLang,
+      targetLang: cfg.targetLang,
+      explainLang: cfg.explainLang,
+      globalKillList: cfg.globalKillList,
+      context: cfg.context,
+      isLongInput
+    }
+  ) : buildSystemPrompt(
+    cfg.sourceLang,
+    cfg.targetLang,
+    isLongInput,
+    cfg.context,
+    "general",
+    effectiveSlots,
+    cfg.killList,
+    cfg.globalKillList,
+    void 0,
+    cfg.explainLang
+  );
+  const content = await executeLlmCompletion(trimmed, sysPrompt, withStreamingPartial(cfg));
+  if (typeof content !== "string" || !content.trim()) return null;
+  const payload = parseLlmResponse(content);
+  if (!payload || !payload.spoken) return null;
+  const labels = resolveLabelsForLang(cfg.sourceLang || "en", cfg.labels, cfg.targetLang || "ja");
+  const slot1Label = labels.slot1Label || labels.spokenLabel || "Spoken";
+  const slot2Label = labels.slot2Label || labels.writtenLabel || "Written";
+  const vocabLabel = labels.vocabLabel || "Vocab";
+  const sourceLabel = labels.sourceLabel || "Source";
+  const effectiveSourceText = isLongInput && payload.summary && payload.summary.trim() ? payload.summary.trim() : trimmed;
+  const result = {
+    spoken: payload.spoken,
+    spokenMeaning: payload.spokenMeaning,
+    written: payload.written || "",
+    writtenMeaning: payload.writtenMeaning,
+    vocab: payload.vocab,
+    summary: payload.summary,
+    sourceText: effectiveSourceText,
+    slotOutputs: payload.slotOutputs,
+    annotated: formatTerminalAnnotation(
+      effectiveSourceText,
+      payload.spoken,
+      payload.written,
+      payload.vocab,
+      {
+        spokenMeaning: payload.spokenMeaning,
+        writtenMeaning: payload.writtenMeaning,
+        slot1Label,
+        slot2Label,
+        vocabLabel,
+        sourceLabel
+      }
+    )
+  };
+  globalLingualCache.set(cacheKey, result);
+  return result;
+}
+function compileModeSystemPrompt(mode, options) {
+  const sourceLang = mode.customInputLang || options.sourceLang || "en";
+  const targetLang = mode.customOutputLang || options.targetLang || "en";
+  const explainLang = options.explainLang || sourceLang;
+  const rawSlots = Array.isArray(mode.slots) && mode.slots.length > 0 ? mode.slots : defaultSlotsForMode(mode, sourceLang, explainLang);
+  const interpolatedSlots = rawSlots.map((s) => ({
+    ...s,
+    instruction: s.instruction ? interpolatePromptVariables(s.instruction, {
+      sourceLang,
+      targetLang,
+      explainLang
+    }) : ""
+  }));
+  const slotKillLists = rawSlots.flatMap((s) => s.killList || []);
+  const combinedKillList = [...mode.killList || [], ...slotKillLists];
+  if (mode.action === "pass-through" && (mode.flow === "translate" || mode.flow === "custom")) {
+    return buildSystemPrompt(
+      sourceLang,
+      targetLang,
+      Boolean(options.isLongInput),
+      options.context,
+      "general",
+      interpolatedSlots,
+      combinedKillList,
+      options.globalKillList,
+      mode.systemHint,
+      explainLang
+    );
+  }
+  if (mode.flow === "proofread") {
+    return buildModifySystemPrompt({
+      sourceLang,
+      targetLang,
+      explainLang,
+      customSlots: interpolatedSlots,
+      context: options.context,
+      killList: combinedKillList,
+      globalKillList: options.globalKillList,
+      preserveCodeSwitching: mode.preserveCodeSwitching,
+      systemHint: mode.systemHint
+    });
+  }
+  return buildPromptCandidatesSystemPrompt({
+    sourceLang,
+    targetLang,
+    promptSlots: interpolatedSlots,
+    context: options.context,
+    promptRule: mode.systemHint,
+    killList: combinedKillList,
+    globalKillList: options.globalKillList
+  });
+}
+async function executeModeRunner(text, mode, userConfig = {}) {
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+  const diskConfig = loadUserLingualConfig();
+  const cfg = { ...DEFAULT_CONFIG, ...diskConfig, ...userConfig };
+  if (!shouldTriggerTranslation(trimmed, cfg.sourceLang, true)) {
+    return null;
+  }
+  const resolvedReasoning = mode.reasoning ?? cfg.reasoning ?? "low";
+  const effectiveCfg = {
+    ...cfg,
+    reasoning: resolvedReasoning
+  };
+  const effectiveSourceLang = effectiveCfg.sourceLang || "en";
+  const effectiveTargetLang = effectiveCfg.targetLang || "en";
+  const slotSig = Array.isArray(mode.slots) ? mode.slots.filter((s) => s.enabled !== false).map((s) => s.id).join(",") : "";
+  const cacheKey = LingualLruCache.buildKey(
+    trimmed,
+    effectiveSourceLang,
+    effectiveTargetLang,
+    `${mode.id}:${slotSig}:${effectiveCfg.context || ""}`
+  );
+  const cached = globalLingualCache.getCandidates(cacheKey);
+  if (cached) {
+    return cached;
+  }
+  const sysPrompt = compileModeSystemPrompt(mode, {
+    sourceLang: effectiveCfg.sourceLang,
+    targetLang: effectiveCfg.targetLang,
+    explainLang: effectiveCfg.explainLang,
+    globalKillList: effectiveCfg.globalKillList,
+    context: effectiveCfg.context || userConfig.context
+  });
+  const raw = await executeLlmCompletion(trimmed, sysPrompt, withStreamingPartial(effectiveCfg));
+  if (typeof raw !== "string" || !raw.trim()) return null;
+  const obj = repairAndParseJsonObject(raw);
+  if (!obj) {
+    const fallbackSingle = extractCleanJsonField(raw, mode.slots[0]?.id || "prompt");
+    if (fallbackSingle) {
+      const fallbackResult = [
+        {
+          id: mode.slots[0]?.id || "concise",
+          label: mode.slots[0]?.label || "Direct",
+          content: ensureCodeTokensPreserved(trimmed, fallbackSingle.trim())
+        }
+      ];
+      globalLingualCache.setCandidates(cacheKey, fallbackResult);
+      return fallbackResult;
+    }
+    return null;
+  }
+  const enabledSlots = mode.slots.filter((s) => s.enabled !== false);
+  const vocabSlot = enabledSlots.find((s) => s.role === "vocab" || s.id === "vocab" || s.id === "fixes");
+  const extractedVocab = vocabSlot && !BLOCKED_JSON_KEYS.has(vocabSlot.id) && typeof obj[vocabSlot.id] === "string" && obj[vocabSlot.id].trim() ? obj[vocabSlot.id].trim() : typeof obj.fixes === "string" && obj.fixes.trim() ? obj.fixes.trim() : typeof obj.vocab === "string" && obj.vocab.trim() ? obj.vocab.trim() : void 0;
+  const rewriteSlots = enabledSlots.filter((s) => s.role !== "vocab" && s.id !== "source");
+  const candidates = [];
+  for (const slot of rewriteSlots) {
+    if (BLOCKED_JSON_KEYS.has(slot.id)) continue;
+    let val = obj[slot.id];
+    if (!val) {
+      if (slot.id === "fixed" && typeof obj.fixed === "string") val = obj.fixed;
+      else if (slot.id === "native" && typeof obj.native === "string") val = obj.native;
+      else if (rewriteSlots.length === 1) val = obj.prompt ?? obj.direct_spec ?? obj.fixed ?? obj.spoken;
+    }
+    const meaningVal = typeof obj[`${slot.id}_meaning`] === "string" ? obj[`${slot.id}_meaning`].trim() : void 0;
+    if (typeof val === "string" && val.trim()) {
+      const finalContent = slot.role !== "vocab" && slot.role !== "source" ? ensureCodeTokensPreserved(trimmed, val.trim()) : val.trim();
+      candidates.push({
+        id: slot.id,
+        label: slot.label,
+        content: finalContent,
+        meaning: meaningVal,
+        ...extractedVocab ? { vocab: extractedVocab } : {},
+        hideWhenLong: Boolean(slot.hideWhenLong)
+      });
+    }
+  }
+  if (mode.primarySlotId && candidates.length > 1) {
+    const pIdx = candidates.findIndex((c) => c.id.toLowerCase() === mode.primarySlotId?.toLowerCase());
+    if (pIdx > 0) {
+      const [primary] = candidates.splice(pIdx, 1);
+      candidates.unshift(primary);
+    }
+  }
+  if (candidates.length > 0) {
+    globalLingualCache.setCandidates(cacheKey, candidates);
+    return candidates;
+  }
+  return null;
+}
+
+// src/grounding.ts
+var import_node_child_process = require("child_process");
+var FILE_LIST_CACHE = /* @__PURE__ */ new Map();
+var FILE_LIST_TTL_MS = 15e3;
+var MAX_INDEXED_FILES = 5e3;
+var STOP_WORDS = /* @__PURE__ */ new Set([
+  "the",
+  "and",
+  "for",
+  "with",
+  "that",
+  "this",
+  "from",
+  "into",
+  "when",
+  "where",
+  "which",
+  "what",
+  "have",
+  "has",
+  "had",
+  "not",
+  "but",
+  "are",
+  "was",
+  "were",
+  "will",
+  "can",
+  "could",
+  "should",
+  "would",
+  "make",
+  "keep",
+  "only",
+  "also",
+  "then",
+  "than",
+  "here",
+  "there",
+  "fix",
+  "add",
+  "update",
+  "remove",
+  "delete",
+  "check",
+  "inspect",
+  "trace",
+  "refactor",
+  "implement",
+  "change",
+  "modify",
+  "clean",
+  "run",
+  "test",
+  "tests",
+  "build",
+  "error",
+  "bug",
+  "issue",
+  "code",
+  "file",
+  "files",
+  "function",
+  "method",
+  "class",
+  "logic",
+  "diff",
+  "minimal",
+  "please",
+  "help",
+  "want",
+  "need",
+  "let",
+  "use",
+  "using",
+  "don",
+  "dont"
+]);
+function clearRepoFileCache() {
+  FILE_LIST_CACHE.clear();
+}
+function listRepoFiles(cwd = process.cwd()) {
+  const now = Date.now();
+  const cached = FILE_LIST_CACHE.get(cwd);
+  if (cached && now - cached.scannedAt < FILE_LIST_TTL_MS) {
+    return cached.files;
+  }
+  try {
+    const out = (0, import_node_child_process.execFileSync)(
+      "git",
+      ["ls-files", "--cached", "--others", "--exclude-standard"],
+      {
+        cwd,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+        timeout: 1500
+      }
+    );
+    const files = out.split(/\r?\n/).map((f) => f.trim().replace(/\\/g, "/")).filter((f) => f && !f.startsWith("node_modules/") && !f.startsWith("dist/")).slice(0, MAX_INDEXED_FILES);
+    FILE_LIST_CACHE.set(cwd, { files, scannedAt: now });
+    return files;
+  } catch {
+    return [];
+  }
+}
+function extractQueryIdentifiers(text) {
+  if (!text) return [];
+  const rawTokens = text.match(/[a-zA-Z_][a-zA-Z0-9_.-]{2,}/g) || [];
+  const seen = /* @__PURE__ */ new Set();
+  const tokens = [];
+  for (const raw of rawTokens) {
+    if (raw.includes("/")) continue;
+    const cleaned = raw.replace(/^[._-]+|[._-]+$/g, "").toLowerCase();
+    if (cleaned.length < 3) continue;
+    if (STOP_WORDS.has(cleaned)) continue;
+    if (!seen.has(cleaned)) {
+      seen.add(cleaned);
+      tokens.push(cleaned);
+    }
+  }
+  return tokens;
+}
+function resolveRepoFileAnchors(text, cwd = process.cwd(), maxResults = 5, filesOverride) {
+  const tokens = extractQueryIdentifiers(text);
+  if (tokens.length === 0) return [];
+  const files = filesOverride ?? listRepoFiles(cwd);
+  if (files.length === 0) return [];
+  const scored = [];
+  for (const file of files) {
+    const lower = file.toLowerCase();
+    if (text.toLowerCase().includes(lower)) continue;
+    const segments = lower.split("/");
+    const baseName = segments[segments.length - 1] || "";
+    const stem = baseName.replace(/\.[^.]+$/, "");
+    let score = 0;
+    for (const tok of tokens) {
+      if (baseName === tok || stem === tok) {
+        score += 10;
+      } else if (segments.includes(tok)) {
+        score += 6;
+      } else if (stem.startsWith(tok) || stem.includes(`-${tok}`) || stem.includes(`_${tok}`)) {
+        score += 4;
+      }
+    }
+    if (score >= 6) {
+      scored.push({ file, score });
+    }
+  }
+  scored.sort((a, b) => b.score - a.score || a.file.length - b.file.length);
+  return scored.slice(0, maxResults).map((s) => s.file);
+}
+function formatRepoGroundingHint(anchors) {
+  if (!anchors || anchors.length === 0) return "";
+  return `[REPO FILE ANCHORS (resolve module references only if clearly intended; never invent unrelated targets)]: ${anchors.join(", ")}`;
+}
+
+// src/phrasebook.ts
+var import_node_fs3 = __toESM(require("fs"), 1);
+var import_node_path3 = __toESM(require("path"), 1);
+var import_node_os3 = __toESM(require("os"), 1);
+var MAX_PHRASEBOOK_ENTRIES = 500;
+function resolvePhrasebookPath(customPath) {
+  if (customPath) return customPath;
+  if (process.env.PI_LINGUAL_PHRASEBOOK_PATH) {
+    return process.env.PI_LINGUAL_PHRASEBOOK_PATH;
+  }
+  if (isTestEnvironment()) {
+    return null;
+  }
+  const agentDir = process.env.PI_CODING_AGENT_DIR || import_node_path3.default.join(import_node_os3.default.homedir(), ".pi", "agent");
+  return import_node_path3.default.join(agentDir, "lingual-phrasebook.jsonl");
+}
+function parseVocabEntries(vocabText) {
+  if (!vocabText || !vocabText.trim()) return [];
+  const parts = vocabText.split(/\s*(?:·|•)\s*/);
+  const results = [];
+  for (const rawPart of parts) {
+    const clean = rawPart.trim();
+    if (!clean || clean === "..." || clean === "\u2026") continue;
+    const parenMatch = clean.match(/^(.*?)\s*[(（]([^()（）]+)[)）]\s*$/);
+    if (parenMatch) {
+      const term = parenMatch[1].trim();
+      const meaning = parenMatch[2].trim();
+      if (term.length >= 2) {
+        results.push({ term, meaning });
+      }
+    } else if (clean.length >= 2) {
+      results.push({ term: clean, meaning: "" });
+    }
+  }
+  return results;
+}
+function readPhrasebook(customPath) {
+  const filePath = resolvePhrasebookPath(customPath);
+  if (!filePath || !import_node_fs3.default.existsSync(filePath)) return [];
+  try {
+    const raw = import_node_fs3.default.readFileSync(filePath, "utf8");
+    const entries = [];
+    for (const line of raw.split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (parsed && typeof parsed.term === "string" && parsed.term.trim()) {
+          entries.push(parsed);
+        }
+      } catch {
+      }
+    }
+    return entries;
+  } catch {
+    return [];
+  }
+}
+function writePhrasebook(filePath, entries) {
+  const dir = import_node_path3.default.dirname(filePath);
+  if (!import_node_fs3.default.existsSync(dir)) {
+    import_node_fs3.default.mkdirSync(dir, { recursive: true });
+  }
+  const trimmed = entries.length > MAX_PHRASEBOOK_ENTRIES ? [...entries].sort((a, b) => b.count - a.count || b.lastSeenAt - a.lastSeenAt).slice(0, MAX_PHRASEBOOK_ENTRIES) : entries;
+  const content = trimmed.map((e) => JSON.stringify(e)).join("\n") + (trimmed.length > 0 ? "\n" : "");
+  import_node_fs3.default.writeFileSync(filePath, content, "utf8");
+}
+function recordPhrasebookFromResult(params, customPath) {
+  const filePath = resolvePhrasebookPath(customPath);
+  if (!filePath) return 0;
+  const parsed = parseVocabEntries(params.vocab);
+  if (parsed.length === 0) return 0;
+  const langPair = `${params.sourceLang} \u2794 ${params.targetLang}`;
+  const contextSnippet = (params.sourceText || "").replace(/\s*\r?\n\s*/g, " ").trim().slice(0, 80);
+  const now = Date.now();
+  const existing = readPhrasebook(filePath);
+  const byKey = /* @__PURE__ */ new Map();
+  for (const item of existing) {
+    byKey.set(`${item.term.toLowerCase()}::${item.langPair}`, item);
+  }
+  let updatedCount = 0;
+  for (const { term, meaning } of parsed) {
+    const key = `${term.toLowerCase()}::${langPair}`;
+    const prev = byKey.get(key);
+    if (prev) {
+      prev.count += 1;
+      prev.lastSeenAt = now;
+      if (meaning) prev.meaning = meaning;
+      if (contextSnippet) prev.contextSnippet = contextSnippet;
+    } else {
+      byKey.set(key, {
+        term,
+        meaning,
+        langPair,
+        modeId: params.modeId,
+        contextSnippet,
+        count: 1,
+        firstSeenAt: now,
+        lastSeenAt: now
+      });
+    }
+    updatedCount += 1;
+  }
+  try {
+    writePhrasebook(filePath, Array.from(byKey.values()));
+    return updatedCount;
+  } catch {
+    return 0;
+  }
+}
+function clearPhrasebook(customPath) {
+  const filePath = resolvePhrasebookPath(customPath);
+  if (!filePath) return false;
+  try {
+    if (import_node_fs3.default.existsSync(filePath)) {
+      import_node_fs3.default.unlinkSync(filePath);
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+function formatPhrasebookDigest(entries, limit = 12) {
+  if (!entries || entries.length === 0) {
+    return "\u2726 [pi-lingual Phrasebook] No phrases captured yet. Keep coding with pi-lingual active to build your contextual phrasebook.";
+  }
+  const sorted = [...entries].sort((a, b) => b.lastSeenAt - a.lastSeenAt || b.count - a.count);
+  const top = sorted.slice(0, limit);
+  const lines = top.map((e, i) => {
+    const meaningPart = e.meaning ? ` \u2014 ${e.meaning}` : "";
+    const countTag = e.count > 1 ? ` (\xD7${e.count})` : "";
+    const ctxPart = e.contextSnippet ? `  \xB7 "${e.contextSnippet}"` : "";
+    return `  ${i + 1}. ${e.term}${meaningPart}${countTag}${ctxPart}`;
+  });
+  return `\u2726 [pi-lingual Phrasebook] (${entries.length} captured expressions \xB7 showing latest ${top.length})
+` + lines.join("\n") + `
+
+Export: /lingual digest export md | /lingual digest export anki | /lingual digest clear`;
+}
+function exportPhrasebook(entries, format, outDir = process.cwd()) {
+  const sorted = [...entries].sort((a, b) => b.count - a.count || b.lastSeenAt - a.lastSeenAt);
+  if (!import_node_fs3.default.existsSync(outDir)) {
+    import_node_fs3.default.mkdirSync(outDir, { recursive: true });
+  }
+  if (format === "anki") {
+    const filePath2 = import_node_path3.default.join(outDir, "lingual-anki.tsv");
+    const rows = sorted.map((e) => {
+      const clean = (s) => (s || "").replace(/\t/g, " ").replace(/\r?\n/g, " ").trim();
+      return `${clean(e.term)}	${clean(e.meaning)}	${clean(e.contextSnippet)} [${e.langPair}]`;
+    });
+    import_node_fs3.default.writeFileSync(filePath2, rows.join("\n") + (rows.length > 0 ? "\n" : ""), "utf8");
+    return { filePath: filePath2, count: sorted.length };
+  }
+  const filePath = import_node_path3.default.join(outDir, "lingual-digest.md");
+  const lines = [
+    "# pi-lingual Contextual Phrasebook Digest",
+    "",
+    "| Term / Pattern | Meaning / Nuance | Coding Context | Pair | Hits |",
+    "| :--- | :--- | :--- | :--- | ---: |",
+    ...sorted.map((e) => {
+      const esc = (s) => (s || "").replace(/\|/g, "\\|").replace(/\r?\n/g, " ").trim();
+      return `| \`${esc(e.term)}\` | ${esc(e.meaning)} | ${esc(e.contextSnippet)} | ${esc(e.langPair)} | ${e.count} |`;
+    }),
+    ""
+  ];
+  import_node_fs3.default.writeFileSync(filePath, lines.join("\n"), "utf8");
+  return { filePath, count: sorted.length };
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
-  CURRENT_FEATURE_BANNER_VERSION,
+  DEFAULT_CONFIG,
   DEFAULT_KILL_LIST,
-  LANGUAGE_PAIR_ANCHORS,
   LANGUAGE_PRESETS,
-  LANGUAGE_SPECS,
-  LEGACY_SLOT_PRESETS,
-  LinguaLruCache,
   LingualLruCache,
   PRESET_LOADOUTS,
-  PROMPT_RULE_PRESETS,
-  SEED_NAMES,
-  SLOT_PRESETS,
   SUPPORTED_LANG_CODES,
-  addCustomMode,
-  addSlotToList,
-  addSlotToMode,
-  buildDirectRewriteSystemPrompt,
-  buildModifySystemPrompt,
-  buildPromptCandidatesSystemPrompt,
   buildStreamingResult,
   buildSystemPrompt,
+  clearPhrasebook,
+  clearRepoFileCache,
   compileKillListInstruction,
-  createCustomSlot,
-  defaultSlotsForMode,
+  compileModeSystemPrompt,
   detectScriptLanguage,
   ensureCodeTokensPreserved,
-  formatModelSelectionMessage,
-  formatReleaseBannerLines,
-  formatStatusReport,
+  executeModeRunner,
+  exportPhrasebook,
+  extractQueryIdentifiers,
+  formatPhrasebookDigest,
+  formatRepoGroundingHint,
   getDefaultDirectSlots,
   getDefaultFactoryModes,
   getDefaultModifySlots,
   getDefaultPromptSlots,
   getDefaultSlots,
   getPresetLoadout,
-  globalLinguaCache,
   globalLingualCache,
   hasSourceScript,
-  interpolatePromptVariables,
   invalidateUserConfigCache,
-  isImperativeEngineeringPrompt,
+  isDynamicLongInput,
   isNonEnglish,
   isSupportedLangCode,
   isTargetLanguageOnly,
-  isTestEnvironment,
-  isUserLingualConfigured,
   listPresetLoadouts,
-  loadUserConfig,
   loadUserLingualConfig,
   localizeModeName,
-  localizeModes,
   localizeSlotLabel,
-  moveSlotInList,
   normalizeActiveModeId,
-  normalizeHudVariant,
-  normalizeLangCode,
   normalizeLingualModeInput,
-  normalizePromptRules,
   parseLlmResponse,
   parsePartialJsonFields,
+  parseVocabEntries,
   pickPrimaryContent,
   primarySlot,
-  removeCustomMode,
-  removeSlotFromList,
-  removeSlotFromMode,
+  readPhrasebook,
+  recordPhrasebookFromResult,
   repairAndParseJsonObject,
-  resolveCandidateSlotsFromConfig,
-  resolveDirectSlotsFromConfig,
   resolveLabelsForLang,
-  resolveLangPair,
   resolveLanguageName,
   resolveLanguagePairAnchors,
   resolveModeDisplayName,
-  resolveModeDisplaySpec,
   resolveModeRuntime,
   resolveModesFromConfig,
-  resolveModifySlotsFromConfig,
-  resolvePromptRulePreset,
-  resolvePromptTargetLangName,
-  resolveReleaseBannerLang,
-  resolveSeedNames,
-  resolveSelectPrompts,
+  resolveRepoFileAnchors,
   resolveSlotLabels,
-  resolveSlotsForPreset,
   runtimeLanguagePair,
   sanitizePromptForTranslation,
   saveUserLingualConfig,
   shouldShieldBypass,
-  toggleCustomMode,
-  toggleSlotInList,
+  shouldTriggerTranslation,
+  stripLingualAnnotation,
   translateCore,
-  updateCustomMode,
-  updateSlotInList
+  translatePrompt
 });

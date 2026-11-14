@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.1
+
+- **Modular Subsystem Architecture**: Split monolithic source files into cohesive domain modules (`src/i18n/`, `src/modes/`, `src/prompts/`, `src/layout/`, `src/commands/`, `src/engine/`, `src/extension/`).
+- **Unified Runtime & Pass-Through Custom Flows**: Converged `translateCore`, `translatePrompt`, and `executeModeRunner` onto one streaming/repair pipeline; `flow: "custom"` + `action: "pass-through"` modes compile full bilingual companion prompts with custom input/output language pairs and honor `modeConfig.systemHint`.
+- **Multi-Session Config Isolation & Mtime Hot-Reload**: Tracked `lingual.json` modification time so brand-new sessions keep `defaultMode` (`companion`) without being clobbered by another session's `activeModeId`, while still live-reloading external `lingual.json` edits.
+- **Terminal Layout & Clipboard Hardening**: Fixed single-pass `spotlightPhrases` alternation (zero nested underline ANSI corruption), atomic `term (meaning)` wrapping in tree & preview HUDs, `pageTag` width accounting in `preview`, and BOM-free UTF-16LE `clip.exe` clipboard writes on Windows.
+- **JSON Parser & Stream Cancellation**: Fixed `repairAndParseJsonObject` when model JSON strings embed nested markdown fences, excluded `core_intent` from `slotOutputs`, prioritized `defaultProvider` in `resolveTargetModel`, and wired `AbortController` stream cancellation on timeout.
+
 ## 0.6.0
 
 - **Three-Core Factory Defaults**: the registry now ships `companion` (pass-through + bilingual card) alongside `Logical Spec` and `Live Flow`, so the 5-second-gap companion experience from the project's origin story works on a fresh install. Bar numerals resolve positionally from the active registry, and the release banner names each shipped mode.

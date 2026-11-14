@@ -26,6 +26,7 @@
     "assets/*.svg",
     "README.md",
     "README_zh.md",
+    "README_ja.md",
     "CHANGELOG.md",
     "LICENSE"
   ],

@@ -14,4 +14,6 @@ export * from "./runtime.js";
 export * from "./commands.js";
 export * from "./completer.js";
 export * from "./core/index.js";
+export * from "./grounding.js";
+export * from "./phrasebook.js";
 

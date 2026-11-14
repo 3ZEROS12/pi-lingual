@@ -10,7 +10,7 @@ import { loadUserLingualConfig } from "./engine.js";
  */
 export function getPiGlobalDefaultModel(): { modelId?: string; provider?: string } | null {
   try {
-    const configDir = process.env.PI_CONFIG_DIR || path.join(os.homedir(), ".pi", "agent");
+    const configDir = process.env.PI_CODING_AGENT_DIR || process.env.PI_CONFIG_DIR || path.join(os.homedir(), ".pi", "agent");
     const settingsPath = path.join(configDir, "settings.json");
     if (!fs.existsSync(settingsPath)) return null;
     const raw = fs.readFileSync(settingsPath, "utf-8");
@@ -78,16 +78,18 @@ export function resolveTargetModel(
   const piDefault = getPiGlobalDefaultModel();
   if (piDefault?.modelId) {
     const target = piDefault.modelId.toLowerCase();
-    const matched = available.find((m: any) => {
-      const full = `${m.provider}/${m.id}`.toLowerCase();
-      const id = (m.id || "").toLowerCase();
-      return (
-        full === target ||
-        id === target ||
-        full.endsWith(`/${target}`) ||
-        (piDefault.provider && m.provider === piDefault.provider && id === target)
-      );
-    });
+    const prov = piDefault.provider?.toLowerCase();
+    const matched =
+      (prov &&
+        available.find(
+          (m: any) => (m.provider || "").toLowerCase() === prov && (m.id || "").toLowerCase() === target
+        )) ||
+      available.find((m: any) => `${m.provider}/${m.id}`.toLowerCase() === target) ||
+      available.find((m: any) => {
+        const full = `${m.provider}/${m.id}`.toLowerCase();
+        const id = (m.id || "").toLowerCase();
+        return id === target || full.endsWith(`/${target}`);
+      });
     if (matched) {
       return matched;
     }
@@ -120,20 +122,35 @@ export function createModelCompleter(
 
       if (!targetModel) return null;
 
-      // 2. Invoke Pi native streamSimple with credentials managed by host
-      // Max tokens expanded to 1500 to prevent multi-slot JSON truncation
+      // 2. Invoke Pi native streamSimple with credentials managed by host.
+      // Scale maxTokens by reasoning effort so thinking models never truncate multi-slot JSON.
       const diskConfig = loadUserLingualConfig();
       const effectiveReasoning =
         callOpts?.reasoning ||
         defaultOpts?.reasoning ||
         diskConfig.reasoning ||
         "low";
+      const tokenBudget =
+        effectiveReasoning === "high"
+          ? 4096
+          : effectiveReasoning === "medium"
+            ? 2800
+            : 2200;
+
+      const diskTimeout = diskConfig.timeoutMs || 15000;
+      const callController = new AbortController();
+      let abortListener: (() => void) | undefined;
+      if (signal) {
+        if (signal.aborted) return null;
+        abortListener = () => callController.abort();
+        signal.addEventListener("abort", abortListener, { once: true });
+      }
 
       const requestOptions: Record<string, any> = {
-        maxTokens: 1500,
+        maxTokens: tokenBudget,
         reasoning: effectiveReasoning,
+        signal: callController.signal,
       };
-
       const stream = ctx.modelRegistry.streamSimple(
         targetModel,
         {
@@ -149,22 +166,32 @@ export function createModelCompleter(
         requestOptions as any
       );
 
-      // Timeout fuse: default 15s timeout with abort signal cooperation
-      const timeoutMs = diskConfig.timeoutMs || 15000;
       let timeoutHandle: NodeJS.Timeout | undefined;
       const timeoutPromise = new Promise<null>((_, reject) => {
-        timeoutHandle = setTimeout(() => reject(new Error("Lingual translation timed out")), timeoutMs);
+        timeoutHandle = setTimeout(() => {
+          callController.abort();
+          try {
+            (stream as any)?.abort?.();
+          } catch {}
+          reject(new Error("Lingual translation timed out"));
+        }, diskTimeout);
       });
-      let abortListener: (() => void) | undefined;
       const abortPromise = new Promise<null>((_, reject) => {
-        if (signal?.aborted) {
+        if (callController.signal.aborted) {
           reject(new Error("Lingual translation aborted"));
           return;
         }
-        abortListener = () => reject(new Error("Lingual translation aborted"));
-        signal?.addEventListener("abort", abortListener, { once: true });
+        callController.signal.addEventListener(
+          "abort",
+          () => {
+            try {
+              (stream as any)?.abort?.();
+            } catch {}
+            reject(new Error("Lingual translation aborted"));
+          },
+          { once: true }
+        );
       });
-
       let res: any;
       try {
         if (
@@ -177,9 +204,14 @@ export function createModelCompleter(
           let buffer = "";
           const consume = (async () => {
             for await (const ev of stream as any) {
-              if (signal?.aborted) break;
+              if (callController.signal.aborted) break;
               if (ev?.type === "text_delta" && typeof ev.delta === "string") {
                 buffer += ev.delta;
+                try {
+                  onDelta(buffer);
+                } catch {}
+              } else if (ev?.type === "text_end" && !buffer && typeof ev.content === "string") {
+                buffer = ev.content;
                 try {
                   onDelta(buffer);
                 } catch {}

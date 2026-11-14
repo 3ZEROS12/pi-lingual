@@ -1,6 +1,4 @@
 export type LingualMode = "original" | "english" | "select" | "modify" | "off" | string;
-export type LinguaMode = LingualMode;
-
 export type ModeAction = "pass-through" | "transform" | "select";
 export type ModeFlow = "translate" | "proofread" | "custom";
 export type ModeHud = "tree" | "adaptive-takeaway" | "preview" | "none";
@@ -248,9 +246,7 @@ export interface LingualConfig {
   signal?: AbortSignal;
   [key: string]: any;
 }
-export type LinguaConfig = LingualConfig;
 export type UserLingualConfig = LingualConfig;
-
 export interface LingualResult {
   spoken: string;
   spokenMeaning?: string;
@@ -263,8 +259,6 @@ export interface LingualResult {
   slots?: SlotResult[];
   slotOutputs?: Record<string, { content: string; meaning?: string }>;
 }
-export type LinguaResult = LingualResult;
-
 export interface TranslationPayload {
   spoken: string;
   spokenMeaning?: string;

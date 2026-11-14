@@ -23,13 +23,43 @@ import {
 
 let cachedUserConfig: Partial<LingualConfig> | null = null;
 let lastConfigCheckTime = 0;
+let lastKnownConfigMtimeMs = -1;
 const CONFIG_CACHE_TTL_MS = 2000;
+
+function readLingualFileMtimeMs(): number {
+  try {
+    const lingualFile = path.join(getPiAgentDir(), "lingual.json");
+    if (!fs.existsSync(lingualFile)) return 0;
+    return fs.statSync(lingualFile).mtimeMs;
+  } catch {
+    return 0;
+  }
+}
+
+export function markConfigSynced(): void {
+  if (isTestEnvironment()) return;
+  lastKnownConfigMtimeMs = readLingualFileMtimeMs();
+}
+
+export function hasExternalConfigUpdate(): boolean {
+  if (isTestEnvironment()) return false;
+  const current = readLingualFileMtimeMs();
+  if (lastKnownConfigMtimeMs < 0) {
+    lastKnownConfigMtimeMs = current;
+    return false;
+  }
+  if (current !== lastKnownConfigMtimeMs) {
+    lastKnownConfigMtimeMs = current;
+    invalidateUserConfigCache();
+    return true;
+  }
+  return false;
+}
 
 export function invalidateUserConfigCache(): void {
   cachedUserConfig = null;
   lastConfigCheckTime = 0;
 }
-
 export function isTestEnvironment(): boolean {
   return (
     process.env.NODE_ENV === "test" ||
@@ -41,11 +71,15 @@ export function isTestEnvironment(): boolean {
 }
 
 /**
- * Check if user lingual config is already configured on disk.
+ * Resolve Pi agent directory (respecting PI_CODING_AGENT_DIR / PI_CONFIG_DIR for sandbox isolation).
  */
+export function getPiAgentDir(): string {
+  return process.env.PI_CODING_AGENT_DIR || process.env.PI_CONFIG_DIR || path.join(os.homedir(), ".pi", "agent");
+}
+
 export function isUserLingualConfigured(): boolean {
   if (isTestEnvironment()) return true;
-  const agentDir = path.join(os.homedir(), ".pi", "agent");
+  const agentDir = getPiAgentDir();
   const lingualFile = path.join(agentDir, "lingual.json");
   if (!fs.existsSync(lingualFile)) return false;
   try {
@@ -91,7 +125,7 @@ export function loadUserLingualConfig(): Partial<LingualConfig> {
     return cachedUserConfig;
   }
 
-  const agentDir = path.join(os.homedir(), ".pi", "agent");
+  const agentDir = getPiAgentDir();
   const lingualFile = path.join(agentDir, "lingual.json");
   const settingsFile = path.join(agentDir, "settings.json");
 
@@ -206,7 +240,7 @@ export function saveUserLingualConfig(patch: Record<string, any>): void {
   }
 
   try {
-    const agentDir = path.join(os.homedir(), ".pi", "agent");
+    const agentDir = getPiAgentDir();
     const configFile = path.join(agentDir, "lingual.json");
 
     if (!fs.existsSync(agentDir)) {
@@ -281,6 +315,7 @@ export function saveUserLingualConfig(patch: Record<string, any>): void {
     }
 
     invalidateUserConfigCache();
+    lastKnownConfigMtimeMs = readLingualFileMtimeMs();
   } catch {}
 }
 
@@ -362,8 +397,9 @@ export function resolveModesFromConfig(cfg: Partial<LingualConfig>, fallbackSour
       .map((s) => ({
         id: s.id,
         label: s.label,
-        role: (s.role === "vocab" ? "vocab" : "rewrite") as "vocab" | "rewrite",
+        role: (s.role === "source" ? "source" : s.role === "vocab" ? "vocab" : s.role === "translation" ? "translation" : "rewrite") as any,
         instruction: s.instruction || "Natural expressions matching context",
+        ...(s.showMeaning !== undefined ? { showMeaning: s.showMeaning } : {}),
         enabled: s.enabled !== false,
       }));
 

@@ -110,10 +110,12 @@ export function extractRecentContextAnchor(ctx: ExtensionContext | null | undefi
 
 export function copyToClipboard(text: string): boolean {
   if (!text) return false;
-  // Emit ANSI OSC 52 sequence for SSH / tmux / modern terminal clipboard sync
+  // Emit ANSI OSC 52 only on TTYs so piped JSON/RPC stdout stays clean
   try {
-    const base64 = Buffer.from(text, "utf8").toString("base64");
-    process.stdout.write(`\x1b]52;c;${base64}\x07`);
+    if (process.stdout?.isTTY) {
+      const base64 = Buffer.from(text, "utf8").toString("base64");
+      process.stdout.write(`\x1b]52;c;${base64}\x07`);
+    }
   } catch {}
 
   try {
@@ -121,7 +123,8 @@ export function copyToClipboard(text: string): boolean {
       const proc = spawn("clip.exe", { stdio: ["pipe", "ignore", "ignore"] });
       proc.on("error", () => {});
       proc.stdin.on("error", () => {});
-      proc.stdin.write(text, "utf8");
+      // clip.exe handles raw UTF-16LE cleanly without injecting a leading U+FEFF BOM
+      proc.stdin.write(Buffer.from(text, "utf16le"));
       proc.stdin.end();
       return true;
     } else if (process.platform === "darwin") {
@@ -156,9 +159,10 @@ export function copyToClipboard(text: string): boolean {
 /**
  * Captures a brief git diff or git status snippet to ground commit or context-aware modes.
  */
-export function captureGitContextSnapshot(): string {
+export function captureGitContextSnapshot(cwd: string = process.cwd()): string {
   try {
     const diffOutput = execFileSync("git", ["diff", "--stat", "HEAD"], {
+      cwd,
       encoding: "utf8",
       timeout: 250,
       stdio: ["ignore", "pipe", "ignore"],
@@ -167,6 +171,7 @@ export function captureGitContextSnapshot(): string {
       return `[GIT DIFF]:\n${diffOutput.trim().slice(0, 300)}`;
     }
     const statusOutput = execFileSync("git", ["status", "--short"], {
+      cwd,
       encoding: "utf8",
       timeout: 250,
       stdio: ["ignore", "pipe", "ignore"],

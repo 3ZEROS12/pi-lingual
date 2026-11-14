@@ -62,14 +62,43 @@ export function runModel(
   }: { timeoutMs?: number; extraArgs?: string[]; label?: string } = {}
 ): RunModelResult {
   return withSandbox((home: string) => {
+    const hostAgentDir = process.env.PI_CODING_AGENT_DIR || path.join(os.homedir(), ".pi", "agent");
+    const sandboxAgentDir = path.join(home, ".pi", "agent");
+    fs.mkdirSync(sandboxAgentDir, { recursive: true });
+    for (const file of ["models.json", "auth.json"]) {
+      const src = path.join(hostAgentDir, file);
+      if (fs.existsSync(src)) fs.copyFileSync(src, path.join(sandboxAgentDir, file));
+    }
+    const hostSettingsPath = path.join(hostAgentDir, "settings.json");
+    let defaultProvider: string | undefined;
+    let defaultModel: string | undefined;
+    if (fs.existsSync(hostSettingsPath)) {
+      try {
+        const hs = JSON.parse(fs.readFileSync(hostSettingsPath, "utf8"));
+        defaultProvider = hs.defaultProvider;
+        defaultModel = hs.defaultModel;
+      } catch {}
+    }
+    fs.writeFileSync(
+      path.join(sandboxAgentDir, "settings.json"),
+      JSON.stringify({
+        ...(defaultProvider ? { defaultProvider } : {}),
+        ...(defaultModel ? { defaultModel } : {}),
+        defaultThinkingLevel: "low",
+        packages: [],
+        extensions: [],
+      }),
+      "utf8"
+    );
+
     const spFile = path.join(home, "system-prompt.txt");
     fs.writeFileSync(spFile, systemPrompt, "utf8");
     const started = Date.now();
     const res = spawnSync(
       "pi",
-      ["-p", "--no-session", "-ne", "-ns", "-nt", "--append-system-prompt", spFile, ...extraArgs, userInput],
+      ["-p", "--no-session", "-ne", "-ns", "-np", "--no-themes", "-nt", "--append-system-prompt", spFile, ...extraArgs, userInput],
       {
-        env: { ...process.env, HOME: home, USERPROFILE: home },
+        env: { ...process.env, HOME: home, USERPROFILE: home, PI_CODING_AGENT_DIR: sandboxAgentDir },
         encoding: "utf8",
         shell: true,
         timeout: timeoutMs,

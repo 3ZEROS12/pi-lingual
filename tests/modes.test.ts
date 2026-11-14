@@ -23,6 +23,7 @@ import {
   resolveSeedNames,
   resolveModeDisplayName,
   SEED_NAMES,
+  getDefaultSlots,
 } from "../src/index.js";
 import type { CustomModeConfig } from "../src/types.js";
 import extensionFactory from "../src/extension.js";
@@ -684,4 +685,40 @@ test("modes: resolveModeDisplayName ensures structural consistency across badge,
 
   // Teardown back to 1
   await registeredCommands["lingual"].handler("1", mockCtx);
+});
+
+test("slots: dynamic slot manipulation and custom buildSystemPrompt schema", () => {
+  let slots = getDefaultSlots("zh");
+  assert.equal(slots.length, 4);
+  const tweetSlot = {
+    id: "twitter",
+    label: "推文",
+    role: "translation" as const,
+    instruction: "Punchy developer tweet under 280 chars",
+    enabled: true,
+  };
+  slots = [...slots, tweetSlot];
+  assert.equal(slots.length, 5);
+  slots = slots.filter((s) => s.id !== "written");
+  assert.ok(!slots.some((s) => s.id === "written"));
+
+  const customSlots = [
+    { id: "source", label: "原文", role: "source" as const, enabled: true },
+    { id: "email", label: "邮件", role: "translation" as const, instruction: "Formal client email", showMeaning: true, enabled: true },
+    { id: "slack", label: "Slack", role: "translation" as const, instruction: "Casual team ping", showMeaning: false, enabled: true },
+  ];
+  const customMode = {
+    id: "custom-comms",
+    name: "Custom Comms",
+    flow: "translate" as const,
+    action: "pass-through" as const,
+    hud: "tree" as const,
+    slots: customSlots,
+    enabled: true,
+  };
+  const prompt = compileModeSystemPrompt(customMode, { sourceLang: "zh", targetLang: "en" });
+  assert.ok(prompt.includes('"email" (邮件): Formal client email'));
+  assert.ok(prompt.includes('"email_meaning"'));
+  assert.ok(prompt.includes('"slack" (Slack): Casual team ping'));
+  assert.ok(!prompt.includes('"slack_meaning"'));
 });
